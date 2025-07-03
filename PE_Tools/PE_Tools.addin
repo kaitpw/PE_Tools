@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RevitAddIns>
+  <AddIn Type="Command">
+    <Text>PE_Tools - Command 1</Text>
+    <Description>Some description</Description>
+    <Assembly>PE_Tools\PE_Tools.dll</Assembly>
+    <FullClassName>PE_Tools.Command1</FullClassName>
+    <ClientId>db22b616-41ac-47e4-96ce-647aab086098</ClientId>
+    <VendorId>com.YOUR COMPANY NAME</VendorId>
+    <VendorDescription>YOUR COMPANY NAME, YOUR COMPANY URL</VendorDescription>
+  </AddIn>
+  <AddIn Type="Command">
+    <Text>PE_Tools - Command 2</Text>
+    <Description>Some description</Description>
+    <Assembly>PE_Tools\PE_Tools.dll</Assembly>
+    <FullClassName>PE_Tools.Command2</FullClassName>
+    <ClientId>4abb158d-b707-4ca5-9b9b-4b4d18ee2587</ClientId>
+    <VendorId>com.YOUR COMPANY NAME</VendorId>
+    <VendorDescription>YOUR COMPANY NAME, YOUR COMPANY URL</VendorDescription>
+  </AddIn>
+  <AddIn Type="Application">
+    <Name>PE_Tools</Name>
+    <Assembly>PE_Tools\PE_Tools.dll</Assembly>
+    <FullClassName>PE_Tools.App</FullClassName>
+    <ClientId>bf11223f-e87f-483f-8ce3-c3b01ea96703</ClientId>
+    <VendorId>com.YOUR COMPANY NAME</VendorId>
+    <VendorDescription>YOUR COMPANY NAME, YOUR COMPANY URL</VendorDescription>
+  </AddIn>
+</RevitAddIns>
