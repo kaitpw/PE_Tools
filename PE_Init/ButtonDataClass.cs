@@ -1,14 +1,19 @@
 ﻿using System.Windows.Media.Imaging;
 
-namespace PE_Tools.Common
+namespace PE_Init
 {
     internal class ButtonDataClass
     {
         public PushButtonData Data { get; set; }
-        public ButtonDataClass(string name, string text, string className,
+
+        public ButtonDataClass(
+            string name,
+            string text,
+            string className,
             byte[] largeImage,
             byte[] smallImage,
-            string toolTip)
+            string toolTip
+        )
         {
             Data = new PushButtonData(name, text, GetAssemblyName(), className);
             Data.ToolTip = toolTip;
@@ -20,12 +25,17 @@ namespace PE_Tools.Common
             string nameSpace = this.GetType().Namespace;
             Data.AvailabilityClassName = $"{nameSpace}.CommandAvailability";
         }
-        public ButtonDataClass(string name, string text, string className,
+
+        public ButtonDataClass(
+            string name,
+            string text,
+            string className,
             byte[] largeImage,
             byte[] smallImage,
             byte[] largeImageDark,
             byte[] smallImageDark,
-            string toolTip)
+            string toolTip
+        )
         {
             Data = new PushButtonData(name, text, GetAssemblyName(), className);
             Data.ToolTip = toolTip;
@@ -47,10 +57,12 @@ namespace PE_Tools.Common
             string nameSpace = this.GetType().Namespace;
             Data.AvailabilityClassName = $"{nameSpace}.CommandAvailability";
         }
+
         public static Assembly GetAssembly()
         {
             return Assembly.GetExecutingAssembly();
         }
+
         public static string GetAssemblyName()
         {
             return GetAssembly().Location;
@@ -69,6 +81,21 @@ namespace PE_Tools.Common
 
                 return bmi;
             }
+        }
+
+        public bool IsCommandAvailable(
+            UIApplication applicationData,
+            CategorySet selectedCategories
+        )
+        {
+            bool result = false;
+            UIDocument activeDoc = applicationData.ActiveUIDocument;
+            if (activeDoc != null && activeDoc.Document != null)
+            {
+                result = true;
+            }
+
+            return result;
         }
     }
 }

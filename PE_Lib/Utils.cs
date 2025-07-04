@@ -1,12 +1,18 @@
-﻿using Autodesk.Revit.DB;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB.Plumbing;
-using Autodesk.Revit.UI;
 
-namespace Lib
+namespace PE_Lib
 {
-    public class Utils
+    internal class Utils
     {
+        public static int Num()
+        {
+            return 5;
+        }
+
         /// <summary>
         /// Retrieves the associated Level of the active View in Revit.
         /// </summary>
@@ -36,7 +42,7 @@ namespace Lib
             where T : Element
         {
             if (doc == null)
-                return Enumerable.Empty<T>();
+                return [];
 
             var collector = new FilteredElementCollector(doc);
             var elements = collector.OfClass(typeof(T)).OfType<T>();
