@@ -18,7 +18,8 @@ using Serilog;
     "continuous",
     GitHubActionsImage.WindowsLatest,
     On = new[] { GitHubActionsTrigger.Push },
-    InvokedTargets = new[] { nameof(Build) }
+    InvokedTargets = new[] { nameof(Build) },
+    EnableGitHubToken = true
 )]
 class Build : NukeBuild, IPublishRevit
 {
