@@ -79,13 +79,8 @@
   </ItemGroup>
   <PropertyGroup>
     <PostBuildEvent>
-echo *** Configuration: $(Configuration)
-echo *** Copying results to $(RevitVersion)
-echo *** $(MSBuildProjectDirectory)
-if not exist "$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\PE_Tools" mkdir "$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\PE_Tools"
-copy "$(MSBuildProjectDirectory)\*.addin" "$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)"
-copy "$(TargetDir)*.dll" "$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\PE_Tools"
-	</PostBuildEvent>
+      powershell.exe -ExecutionPolicy Bypass -File "$(MSBuildProjectDirectory)\PostBuildActions.ps1" -Configuration "$(Configuration)" -RevitVersion "$(RevitVersion)" -MSBuildProjectDirectory "$(MSBuildProjectDirectory)" -AppData "$(AppData)"
+    </PostBuildEvent>
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>
     <Copyright>2025</Copyright>
@@ -116,6 +111,9 @@ copy "$(TargetDir)*.dll" "$(AppData)\Autodesk\REVIT\Addins\$(RevitVersion)\PE_To
     <None Update="RegisterAddin.addin">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="NukeFiles\" />
   </ItemGroup>
   <Import Project="..\PE_Init\PE_Init.projitems" Label="Shared" />
   <Import Project="..\PE_Lib\PE_Lib.projitems" Label="Shared" />

@@ -1,33 +1,19 @@
 using System;
-using System.Linq;
+using System.IO;
 using Nuke.Common;
-using Nuke.Common.CI;
-using Nuke.Common.Execution;
 using Nuke.Common.IO;
-using Nuke.Common.ProjectModel;
-using Nuke.Common.Tooling;
-using Nuke.Common.Utilities.Collections;
-using static Nuke.Common.EnvironmentInfo;
-//using static Nuke.Common.IO.FileSystemTasks;
-using static Nuke.Common.IO.PathConstruction;
+using ricaun.Nuke;
+using ricaun.Nuke.Components;
+using Serilog;
 
-class Build : NukeBuild
+class Build : NukeBuild, IPublishRevit
 {
-    /// Support plugins are available for:
-    ///   - JetBrains ReSharper        https://nuke.build/resharper
-    ///   - JetBrains Rider            https://nuke.build/rider
-    ///   - Microsoft VisualStudio     https://nuke.build/visualstudio
-    ///   - Microsoft VSCode           https://nuke.build/vscode
-    public static int Main() => Execute<Build>(x => x.Compile);
+    //string IHazMainProject.MainName => "PE_Tools";
+    string IHazRevitPackageBuilder.VendorId => "Positive Energy"; // necessary
+    string IHazRevitPackageBuilder.VendorDescription => "An ATX based MEP firm";
+    string IHazInstallationFiles.InstallationFiles => "NukeFiles"; // directory with innstaller assets
+    IssConfiguration IHazInstallationFiles.IssConfiguration =>
+        new IssConfiguration() { Title = "PE Tools" }; // not necessary, just changes name of installer
 
-    [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
-    readonly Configuration Configuration = IsLocalBuild
-        ? Configuration.Debug
-        : Configuration.Release;
-
-    Target Clean => _ => _.Before(Restore).Executes(() => { });
-
-    Target Restore => _ => _.Executes(() => { });
-
-    Target Compile => _ => _.DependsOn(Restore).Executes(() => { });
+    public static int Main() => Execute<Build>(x => x.From<IPublishRevit>().Build);
 }
