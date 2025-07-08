@@ -64,6 +64,7 @@
     <EmbeddedResource Include="Resources\Yellow_32.png" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="GitVersion.Core" Version="6.3.0" />
     <PackageReference Include="GitVersion.MsBuild" Version="6.3.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
