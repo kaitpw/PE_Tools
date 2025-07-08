@@ -12,6 +12,5 @@
   <ItemGroup>
     <PackageReference Include="Nuke.Common" Version="8.1.4" />
     <PackageReference Include="ricaun.Nuke.PackageBuilder" Version="1.8.3" />
-    <PackageReference Include="GitVersion.CommandLine" Version="*" />
   </ItemGroup>
 </Project>

@@ -76,6 +76,7 @@
       IncludeAssets="build; compile"
       PrivateAssets="All"
     />
+    <PackageReference Include="GitVersion.CommandLine" Version="*" />
   </ItemGroup>
   <PropertyGroup>
     <PostBuildEvent>
