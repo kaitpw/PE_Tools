@@ -5,10 +5,11 @@ param(
     [string]$AppData
 )
 
-if ($env:GITHUB_ACTIONS -eq "true") {
+if ($env:GITHUB_ACTIONS -eq "true" -or $env:GITHUB_RUN_ID) {
     Write-Host ""
     Write-Host "****** SKIPPING LOCAL DEV ADDIN COPY *******"
     Write-Host "****** env:GITHUB_ACTIONS: $env:GITHUB_ACTIONS *******"
+    Write-Host "****** env:GITHUB_RUN_ID: $env:GITHUB_RUN_ID *******"
     Write-Host ""
     exit 0 # Exit execution with success code
 }
