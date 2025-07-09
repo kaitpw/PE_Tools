@@ -5,6 +5,14 @@ param(
     [string]$AppData
 )
 
+if ($env:GITHUB_ACTIONS -eq "true") {
+    Write-Host ""
+    Write-Host "****** SKIPPING LOCAL DEV ADDIN COPY *******"
+    Write-Host "****** env:GITHUB_ACTIONS: $env:GITHUB_ACTIONS *******"
+    Write-Host ""
+    exit 0 # Exit execution with success code
+}
+
 # Define path variables
 $BuildOutputPath = "$MSBuildProjectDirectory\bin\Debug\$RevitVersion"
 $RvtAddinsAddinPath = "$AppData\Autodesk\REVIT\Addins\$RevitVersion"
