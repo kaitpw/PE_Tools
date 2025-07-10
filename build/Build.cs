@@ -24,9 +24,9 @@ using ricaun.Nuke.Tools;
     FetchDepth = 0,
     // Enable Release publishing for GITHUB_TOKEN. Write permissions implicitly include read.
     EnableGitHubToken = true,
-    WritePermissions = new[] { GitHubActionsPermissions.Contents },
-    // Enable generation of env vars in the build yaml.
-    // ImportSecrets = new[] { nameof(SignFile), nameof(SignPassword) }
+    WritePermissions = new[] { GitHubActionsPermissions.Contents }
+// Enable generation of env vars in the build yaml.
+// ImportSecrets = new[] { nameof(SignFile), nameof(SignPassword) }
 )]
 public class Build : NukeBuild, IPublishRevit
 {
