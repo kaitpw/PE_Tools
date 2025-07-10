@@ -15,11 +15,14 @@ using Serilog;
 //   SignFile: ${{ secrets.SIGN_FILE }}
 //   SignPassword: ${{ secrets.SIGN_PASSWORD }}
 [GitHubActions(
-    "continuous",
+    "nuke",
     GitHubActionsImage.WindowsLatest,
     On = new[] { GitHubActionsTrigger.Push },
-    InvokedTargets = new[] { nameof(Build) },
-    EnableGitHubToken = true
+    // Enable full repo history checkout, necessary for GitVersion (not an issue with checkout@v1 though)
+    FetchDepth = 0,
+    // Enable Release publishing for GITHUB_TOKEN. Write permissions implicitly include read.
+    EnableGitHubToken = true,
+    WritePermissions = new[] { GitHubActionsPermissions.Contents }
 )]
 class Build : NukeBuild, IPublishRevit
 {
