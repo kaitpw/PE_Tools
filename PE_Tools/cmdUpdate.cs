@@ -27,7 +27,7 @@ namespace PE_Tools
                         Console.WriteLine(text);
                     }
                 );
-                Utils.ShowBalloon($"Download: {result}");
+                UiUtils.ShowBalloon($"Download: {result}");
             });
 
             return Result.Succeeded;

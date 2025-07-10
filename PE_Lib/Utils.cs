@@ -1,25 +1,16 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
-using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB.Plumbing;
+using static PE_Lib.Filters; // Fixes CS0138 by using 'using static' for the Filters type
 
 namespace PE_Lib
 {
     internal class Utils
     {
-        // from ricaun.Github, checkt he buildingcoder implementation too
-        public static void ShowBalloon(string title, string category = null)
-        {
-            if (title == null)
-                return;
-            Autodesk.Internal.InfoCenter.ResultItem ri =
-                new Autodesk.Internal.InfoCenter.ResultItem();
-            ri.Category = category ?? typeof(Utils).Assembly.GetName().Name;
-            ri.Title = title.Trim();
-            Autodesk.Windows.ComponentManager.InfoCenterPaletteManager.ShowBalloon(ri);
-        }
-
         // Helper method to get current Revit version
         public static string GetRevitVersion()
         {
@@ -43,127 +34,78 @@ namespace PE_Lib
         }
 
         /// <summary>
-        /// Retrieves the associated Level of the active View in Revit.
+        /// Gets the total length of all Pipe elements in the document, optionally filtered by material name.
         /// </summary>
-        /// <param name="view">The View object for which to find the associated Level.</param>
-        /// <returns>The Level object associated with the view, or null if no level is associated or found.</returns>
-        public static Level LevelOfActiveView(View view)
+        public static double TotalPipeLength(Document doc, string materialName = null)
         {
-            if (view == null)
-                return null;
-
-            var doc = view.Document;
-            var levelId = view.GenLevel.Id;
-
-            if (levelId != ElementId.InvalidElementId && levelId != null)
-                return doc.GetElement(levelId) as Level;
-
-            return null;
+            var pipes = AllElementsOfType<Pipe>(doc);
+            double totalLength = 0.0;
+            foreach (var pipe in pipes)
+            {
+                // If materialName is specified, filter by materia
+                if (!string.IsNullOrEmpty(materialName))
+                {
+                    var matIds = pipe.GetMaterialIds(false);
+                    bool hasMaterial = matIds
+                        .Select(id => doc.GetElement(id) as Material)
+                        .Any(mat =>
+                            mat != null
+                            && mat.Name.Equals(materialName, StringComparison.OrdinalIgnoreCase)
+                        );
+                    if (!hasMaterial)
+                        continue;
+                }
+                var lengthParam = pipe.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH);
+                if (lengthParam != null && lengthParam.StorageType == StorageType.Double)
+                    totalLength += lengthParam.AsDouble();
+            }
+            // Convert from internal units (feet) to linear feet
+            return totalLength;
         }
 
         /// <summary>
-        /// Retrieves all elements of a specified type from the Revit document.
-        /// This is a general method for finding multiple elements.
+        /// Gets the total volume of all Pipe elements in the document, optionally filtered by system type name.
         /// </summary>
-        /// <typeparam name="T">The type of Element to retrieve. Must inherit from Autodesk.Revit.DB.Element.</typeparam>
-        /// <returns>An IEnumerable of elements of the specified type that match the predicate. Returns an empty enumerable if none are found.</returns>
-        public static IEnumerable<T> AllElementsOfType<T>(Document doc, Func<T, bool> filter = null)
-            where T : Element
+        public static double TotalPipeVolume(Document doc, string pst = "")
         {
-            if (doc == null)
-                return [];
-
-            var collector = new FilteredElementCollector(doc);
-            var elements = collector.OfClass(typeof(T)).OfType<T>();
-
-            if (filter != null)
-                return elements.Where(filter);
-            else
-                return elements;
-        }
-
-        /// <summary>
-        /// Retrieves the first element of a specified type from the Revit document.
-        /// This method generalizes the pattern of collecting elements by class and casting them.
-        /// </summary>
-        /// <typeparam name="T">The type of Element to retrieve. Must inherit from Autodesk.Revit.DB.Element.</typeparam>
-        /// <returns>The first element of the specified type that matches the predicate, or null if none is found.</returns>
-        public static T FirstElementOfType<T>(Document doc, Func<T, bool> filter = null)
-            where T : Element
-        {
-            if (doc == null)
-                return null;
-
-            var collector = new FilteredElementCollector(doc);
-            var elements = collector.OfClass(typeof(T)).OfType<T>();
-
-            if (filter != null)
-                return elements.Where(filter).FirstOrDefault();
-            else
-                return elements.FirstOrDefault();
-        }
-
-        /// <summary>
-        /// Retrieves a FamilySymbol by its Family Name and Family Symbol Name (Type Name).
-        /// Performs case-insensitive comparison.
-        /// </summary>
-        /// <param name="doc">The active Revit Document.</param>
-        /// <param name="familyName">The name of the Family.</param>
-        /// <param name="familySymbolName">The name of the Family Symbol (Type).</param>
-        /// <returns>The matching FamilySymbol, or null if not found.</returns>
-        public static FamilySymbol GetByNameFamilySymbol(
-            Document doc,
-            string familyName,
-            string familySymbolName
-        )
-        {
-            return FirstElementOfType<FamilySymbol>(
+            var pipes = AllElementsOfType<Pipe>(
                 doc,
-                fs =>
-                    fs.FamilyName.Equals(familyName, StringComparison.OrdinalIgnoreCase)
-                    && fs.Name.Equals(familySymbolName, StringComparison.OrdinalIgnoreCase)
+                pipe =>
+                    pipe.get_Parameter(BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM) // EXTRACT THIS LATER
+                        .AsValueString() == pst
             );
-        }
-
-        // --- Specialized Methods using the Generic Helpers ---
-
-        /// <summary>
-        /// Retrieves an MEPSystemType by its Name.
-        /// Performs case-insensitive comparison.
-        /// </summary>
-        /// <returns>The matching MEPSystemType, or null if not found.</returns>
-        public static MEPSystemType GetByNameMEPSystemType(Document doc, string name)
-        {
-            return FirstElementOfType<MEPSystemType>(
-                doc,
-                mst => mst.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
-            );
+            double totalVolume = 0.0;
+            foreach (var pipe in pipes)
+            {
+                var volParam = pipe.get_Parameter(BuiltInParameter.HOST_VOLUME_COMPUTED);
+                if (volParam != null && volParam.StorageType == StorageType.Double)
+                {
+                    double volume = volParam.AsDouble();
+                    totalVolume += volume;
+                }
+            }
+            return totalVolume;
         }
 
         /// <summary>
-        /// Retrieves a DuctType by its Name.
-        /// Performs case-insensitive comparison.
+        /// Gets a dictionary of MEP equipment counts by family and type name.
         /// </summary>
-        /// <returns>The matching DuctType, or null if not found.</returns>
-        public static DuctType GetByNameDuctType(Document doc, string name)
+        public static Dictionary<string, int> CountMEPEquipmentByType(Document doc)
         {
-            return FirstElementOfType<DuctType>(
-                doc,
-                dt => dt.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
-            );
-        }
-
-        /// <summary>
-        /// Retrieves a PipeType by its Name.
-        /// Performs case-insensitive comparison.
-        /// </summary>
-        /// <returns>The matching PipeType, or null if not found.</returns>
-        public static PipeType GetByNamePipeType(Document doc, string name)
-        {
-            return FirstElementOfType<PipeType>(
-                doc,
-                pt => pt.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
-            );
+            var equipmentCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var collector = new FilteredElementCollector(doc)
+                .OfCategory(BuiltInCategory.OST_MechanicalEquipment)
+                .OfClass(typeof(FamilyInstance));
+            foreach (FamilyInstance fi in collector)
+            {
+                string familyName = fi.Symbol?.Family?.Name ?? "<No Family>";
+                string typeName = fi.Symbol?.Name ?? "<No Type>";
+                string key = $"{familyName} : {typeName}";
+                if (!equipmentCounts.ContainsKey(key))
+                    equipmentCounts[key] = 0;
+                equipmentCounts[key]++;
+            }
+            return equipmentCounts;
         }
     }
 }

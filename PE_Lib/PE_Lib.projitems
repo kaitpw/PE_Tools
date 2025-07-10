@@ -9,6 +9,8 @@
     <Import_RootNamespace>PE_Lib</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Filters.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UiUtils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Utils.cs" />
   </ItemGroup>
 </Project>
