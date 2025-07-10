@@ -4,7 +4,7 @@ using ricaun.Revit.Github;
 namespace PE_Tools
 {
     [Transaction(TransactionMode.Manual)]
-    public class Update : IExternalCommand
+    public class cmdUpdate : IExternalCommand
     {
         public Result Execute(
             ExternalCommandData commandData,
@@ -29,8 +29,6 @@ namespace PE_Tools
                 );
                 Utils.ShowBalloon($"Download: {result}");
             });
-
-            TaskDialog.Show("a message", $"message {PE_Lib.Utils.Num()}");
 
             return Result.Succeeded;
         }

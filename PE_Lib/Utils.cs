@@ -8,11 +8,6 @@ namespace PE_Lib
 {
     internal class Utils
     {
-        public static int Num()
-        {
-            return 10000;
-        }
-
         // from ricaun.Github, checkt he buildingcoder implementation too
         public static void ShowBalloon(string title, string category = null)
         {
