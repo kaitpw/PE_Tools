@@ -19,8 +19,9 @@ namespace PE_Tools
             RibbonPanel panel = PE_Init.UiHelpers.CreateRibbonPanel(app, tabName, "Revit Tools 1");
 
             // 3. Create button data instances
-            PushButtonData btnData1 = Command1.GetButtonData();
+            PushButtonData btnData1 = Update.GetButtonData();
 
+            // 4. Add buttons to panel
             PushButton myButton1 = panel.AddItem(btnData1) as PushButton;
 
             return Result.Succeeded;

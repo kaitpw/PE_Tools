@@ -1,18 +1,34 @@
-﻿namespace PE_Tools
+﻿using PE_Lib;
+using ricaun.Revit.Github;
+
+namespace PE_Tools
 {
     [Transaction(TransactionMode.Manual)]
-    public class Command1 : IExternalCommand
+    public class Update : IExternalCommand
     {
         public Result Execute(
             ExternalCommandData commandData,
             ref string message,
-            ElementSet elements
+            ElementSet elementSet
         )
         {
             // Revit application and document variables
             UIApplication uiapp = commandData.Application;
             UIDocument uidoc = uiapp.ActiveUIDocument;
             Document doc = uidoc.Document;
+
+            // Fetch the latest Github release
+            var request = new GithubRequestService("kaitpw", "PE_Tools");
+            Task.Run(async () =>
+            {
+                var result = await request.Initialize(
+                    (text) =>
+                    {
+                        Console.WriteLine(text);
+                    }
+                );
+                Utils.ShowBalloon($"Download: {result}");
+            });
 
             TaskDialog.Show("a message", $"message {PE_Lib.Utils.Num()}");
 
@@ -21,9 +37,8 @@
 
         internal static PushButtonData GetButtonData()
         {
-            // use this method to define the properties for this command in the Revit ribbon
-            string buttonInternalName = "btnCommand1";
-            string buttonTitle = "Button 1";
+            string buttonInternalName = "CmdBtnUpdate";
+            string buttonTitle = "Update";
 
             PE_Init.ButtonDataClass myButtonData = new PE_Init.ButtonDataClass(
                 buttonInternalName,
@@ -31,7 +46,7 @@
                 MethodBase.GetCurrentMethod().DeclaringType?.FullName,
                 Properties.Resources.Blue_32,
                 Properties.Resources.Blue_16,
-                "This is a tooltip for Button 1"
+                "Click this button to update PE Tools to the latest release."
             );
 
             return myButtonData.Data;

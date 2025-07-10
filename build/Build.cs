@@ -1,11 +1,13 @@
 using System;
-using System.IO;
 using Nuke.Common;
 using Nuke.Common.CI.GitHubActions;
 using Nuke.Common.IO;
+using Nuke.Common.ProjectModel;
+using Nuke.Common.Utilities.Collections;
 using ricaun.Nuke;
 using ricaun.Nuke.Components;
-using Serilog;
+using ricaun.Nuke.Extensions;
+using ricaun.Nuke.Tools;
 
 // This allows generation of a GitHub Actions workflow file, however env vars needto be added manually
 // env:
@@ -22,10 +24,21 @@ using Serilog;
     FetchDepth = 0,
     // Enable Release publishing for GITHUB_TOKEN. Write permissions implicitly include read.
     EnableGitHubToken = true,
-    WritePermissions = new[] { GitHubActionsPermissions.Contents }
+    WritePermissions = new[] { GitHubActionsPermissions.Contents },
+    // Enable generation of env vars in the build yaml.
+    // ImportSecrets = new[] { nameof(SignFile), nameof(SignPassword) }
 )]
-class Build : NukeBuild, IPublishRevit
+public class Build : NukeBuild, IPublishRevit
 {
+    // Even though these are defined in ricaun.Nuke, Nuke expects them to be accessible for parameter injection)
+    // [Secret]
+    // [Parameter("Path or content of the signing file")]
+    // public string SignFile;
+
+    // [Secret]
+    // [Parameter("Password for the signing file")]
+    // public string SignPassword;
+
     //string IHazMainProject.MainName => "PE_Tools";
     string IHazRevitPackageBuilder.VendorId => "Positive Energy"; // necessary
     string IHazRevitPackageBuilder.VendorDescription => "An ATX based MEP firm";
