@@ -64,10 +64,6 @@
     <EmbeddedResource Include="Resources\Yellow_32.png" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="GitVersion.MsBuild" Version="6.3.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference
       Include="System.Drawing.Common"
       Version="8.0.3"
