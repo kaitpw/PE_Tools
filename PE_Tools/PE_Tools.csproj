@@ -118,4 +118,5 @@
   </ItemGroup>
   <Import Project="..\PE_Init\PE_Init.projitems" Label="Shared" />
   <Import Project="..\PE_Lib\PE_Lib.projitems" Label="Shared" />
+  <Import Project="..\PE_CommandPalette\PE_CommandPalette.projitems" Label="Shared" />
 </Project>

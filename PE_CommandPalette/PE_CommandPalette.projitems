@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>PE_CommandPalette</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Models\PostableCommandItem.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\PostableCommandService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\CommandExecutionService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ViewModels\CommandPaletteViewModel.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Views\CommandPaletteWindow.xaml.cs">
+      <DependentUpon>CommandPaletteWindow.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)Views\CommandPaletteWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+</Project>
