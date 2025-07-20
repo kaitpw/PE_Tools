@@ -1,15 +1,13 @@
 using System;
-using System.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace PE_CommandPalette.Models
 {
     /// <summary>
     /// Represents a PostableCommand item with additional metadata for the command palette
     /// </summary>
-    public class PostableCommandItem : INotifyPropertyChanged
+    public partial class PostableCommandItem : ObservableObject
     {
-        private bool _isSelected;
-
         /// <summary>
         /// The actual PostableCommand enum value
         /// </summary>
@@ -38,30 +36,13 @@ namespace PE_CommandPalette.Models
         /// <summary>
         /// Whether this item is currently selected in the UI
         /// </summary>
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set
-            {
-                if (_isSelected != value)
-                {
-                    _isSelected = value;
-                    OnPropertyChanged(nameof(IsSelected));
-                }
-            }
-        }
+        [ObservableProperty]
+        private bool _isSelected;
 
         /// <summary>
         /// Search relevance score for filtering
         /// </summary>
         public double SearchScore { get; set; }
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
 
         public override string ToString()
         {

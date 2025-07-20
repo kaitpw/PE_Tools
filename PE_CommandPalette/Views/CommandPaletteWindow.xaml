@@ -94,9 +94,9 @@
                      Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                      TextChanged="SearchTextBox_TextChanged">
                 <TextBox.InputBindings>
-                    <KeyBinding Key="Down" Command="{Binding MoveDownCommand}"/>
-                    <KeyBinding Key="Up" Command="{Binding MoveUpCommand}"/>
-                    <KeyBinding Key="Enter" Command="{Binding ExecuteCommand}"/>
+                    <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}"/>
+                    <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}"/>
+                    <KeyBinding Key="Enter" Command="{Binding ExecuteSelectedCommandCommand}"/>
                     <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}"/>
                 </TextBox.InputBindings>
             </TextBox>

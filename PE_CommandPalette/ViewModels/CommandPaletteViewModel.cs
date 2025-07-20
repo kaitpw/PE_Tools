@@ -1,9 +1,10 @@
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using PE_CommandPalette.Models;
 using PE_CommandPalette.Services;
 
@@ -12,13 +13,14 @@ namespace PE_CommandPalette.ViewModels
     /// <summary>
     /// ViewModel for the Command Palette window
     /// </summary>
-    public class CommandPaletteViewModel : INotifyPropertyChanged
+    public partial class CommandPaletteViewModel : ObservableObject
     {
         private readonly CommandExecutionService _executionService;
-        private string _searchText = string.Empty;
-        private PostableCommandItem _selectedCommand;
-        private int _selectedIndex = -1;
-        private bool _isLoading = true;
+
+        /// <summary>
+        /// Event fired when a command execution completes
+        /// </summary>
+        public event EventHandler<CommandExecutionCompletedEventArgs> CommandExecutionCompleted;
 
         public CommandPaletteViewModel(UIApplication uiApplication)
         {
@@ -34,71 +36,32 @@ namespace PE_CommandPalette.ViewModels
         /// <summary>
         /// Current search text
         /// </summary>
-        public string SearchText
-        {
-            get => _searchText;
-            set
-            {
-                if (_searchText != value)
-                {
-                    _searchText = value;
-                    OnPropertyChanged(nameof(SearchText));
-                    FilterCommands();
-                }
-            }
-        }
+        [ObservableProperty]
+        private string _searchText = string.Empty;
 
         /// <summary>
         /// Currently selected command
         /// </summary>
-        public PostableCommandItem SelectedCommand
-        {
-            get => _selectedCommand;
-            set
-            {
-                if (_selectedCommand != value)
-                {
-                    // Clear previous selection
-                    if (_selectedCommand != null)
-                        _selectedCommand.IsSelected = false;
-
-                    _selectedCommand = value;
-
-                    // Set new selection
-                    if (_selectedCommand != null)
-                        _selectedCommand.IsSelected = true;
-
-                    OnPropertyChanged(nameof(SelectedCommand));
-                    OnPropertyChanged(nameof(CommandStatus));
-                }
-            }
-        }
+        [ObservableProperty]
+        private PostableCommandItem _selectedCommand;
 
         /// <summary>
         /// Currently selected index in the filtered list
         /// </summary>
-        public int SelectedIndex
-        {
-            get => _selectedIndex;
-            set
-            {
-                if (_selectedIndex != value)
-                {
-                    _selectedIndex = value;
-                    OnPropertyChanged(nameof(SelectedIndex));
-                    
-                    // Update selected command based on index
-                    if (_selectedIndex >= 0 && _selectedIndex < FilteredCommands.Count)
-                    {
-                        SelectedCommand = FilteredCommands[_selectedIndex];
-                    }
-                    else
-                    {
-                        SelectedCommand = null;
-                    }
-                }
-            }
-        }
+        [ObservableProperty]
+        private int _selectedIndex = -1;
+
+        /// <summary>
+        /// Whether the command list is currently loading
+        /// </summary>
+        [ObservableProperty]
+        private bool _isLoading = true;
+
+        /// <summary>
+        /// Whether a command is currently being executed
+        /// </summary>
+        [ObservableProperty]
+        private bool _isExecutingCommand = false;
 
         /// <summary>
         /// Filtered list of commands based on search text
@@ -120,22 +83,6 @@ namespace PE_CommandPalette.ViewModels
         }
 
         /// <summary>
-        /// Whether the command list is currently loading
-        /// </summary>
-        public bool IsLoading
-        {
-            get => _isLoading;
-            set
-            {
-                if (_isLoading != value)
-                {
-                    _isLoading = value;
-                    OnPropertyChanged(nameof(IsLoading));
-                }
-            }
-        }
-
-        /// <summary>
         /// Total number of available commands
         /// </summary>
         public int TotalCommandCount => PostableCommandService.Instance.GetAllCommands().Count;
@@ -144,17 +91,76 @@ namespace PE_CommandPalette.ViewModels
 
         #region Commands
 
-        private ICommand _executeCommand;
-        public ICommand ExecuteCommand => _executeCommand ??= new RelayCommand(ExecuteSelectedCommand, CanExecuteSelectedCommand);
+        /// <summary>
+        /// Executes the currently selected command
+        /// </summary>
+        [RelayCommand(CanExecute = nameof(CanExecuteSelectedCommand))]
+        private async Task ExecuteSelectedCommandAsync()
+        {
+            if (SelectedCommand == null) return;
 
-        private ICommand _moveUpCommand;
-        public ICommand MoveUpCommand => _moveUpCommand ??= new RelayCommand(MoveSelectionUp);
+            IsExecutingCommand = true;
+            
+            try
+            {
+                // Execute command on background thread to avoid blocking UI
+                bool success = await Task.Run(() => _executionService.ExecuteCommand(SelectedCommand));
+                
+                // Fire completion event
+                CommandExecutionCompleted?.Invoke(this, new CommandExecutionCompletedEventArgs
+                {
+                    Command = SelectedCommand,
+                    Success = success
+                });
+            }
+            catch (Exception ex)
+            {
+                // Fire completion event with error
+                CommandExecutionCompleted?.Invoke(this, new CommandExecutionCompletedEventArgs
+                {
+                    Command = SelectedCommand,
+                    Success = false,
+                    Error = ex
+                });
+            }
+            finally
+            {
+                IsExecutingCommand = false;
+            }
+        }
 
-        private ICommand _moveDownCommand;
-        public ICommand MoveDownCommand => _moveDownCommand ??= new RelayCommand(MoveSelectionDown);
+        /// <summary>
+        /// Moves selection up in the list
+        /// </summary>
+        [RelayCommand]
+        private void MoveSelectionUp()
+        {
+            if (SelectedIndex > 0)
+            {
+                SelectedIndex--;
+            }
+        }
 
-        private ICommand _clearSearchCommand;
-        public ICommand ClearSearchCommand => _clearSearchCommand ??= new RelayCommand(ClearSearch);
+        /// <summary>
+        /// Moves selection down in the list
+        /// </summary>
+        [RelayCommand]
+        private void MoveSelectionDown()
+        {
+            if (SelectedIndex < FilteredCommands.Count - 1)
+            {
+                SelectedIndex++;
+            }
+        }
+
+        /// <summary>
+        /// Clears the search text
+        /// </summary>
+        [RelayCommand]
+        private void ClearSearch()
+        {
+            SearchText = string.Empty;
+        }
 
         #endregion
 
@@ -208,96 +214,77 @@ namespace PE_CommandPalette.ViewModels
         }
 
         /// <summary>
-        /// Executes the currently selected command
-        /// </summary>
-        private void ExecuteSelectedCommand()
-        {
-            if (SelectedCommand != null)
-            {
-                _executionService.ExecuteCommand(SelectedCommand);
-            }
-        }
-
-        /// <summary>
         /// Checks if the selected command can be executed
         /// </summary>
         private bool CanExecuteSelectedCommand()
         {
-            return SelectedCommand != null && _executionService.IsCommandAvailable(SelectedCommand);
-        }
-
-        /// <summary>
-        /// Moves selection up in the list
-        /// </summary>
-        private void MoveSelectionUp()
-        {
-            if (SelectedIndex > 0)
-            {
-                SelectedIndex--;
-            }
-        }
-
-        /// <summary>
-        /// Moves selection down in the list
-        /// </summary>
-        private void MoveSelectionDown()
-        {
-            if (SelectedIndex < FilteredCommands.Count - 1)
-            {
-                SelectedIndex++;
-            }
-        }
-
-        /// <summary>
-        /// Clears the search text
-        /// </summary>
-        private void ClearSearch()
-        {
-            SearchText = string.Empty;
+            return SelectedCommand != null && 
+                   _executionService.IsCommandAvailable(SelectedCommand) && 
+                   !IsExecutingCommand;
         }
 
         #endregion
 
-        #region INotifyPropertyChanged
+        #region Property Change Handlers
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected virtual void OnPropertyChanged(string propertyName)
+        /// <summary>
+        /// Handles changes to the SearchText property
+        /// </summary>
+        partial void OnSearchTextChanged(string value)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            FilterCommands();
+        }
+
+        /// <summary>
+        /// Handles changes to the SelectedCommand property
+        /// </summary>
+        partial void OnSelectedCommandChanged(PostableCommandItem value)
+        {
+            // Clear previous selection
+            if (FilteredCommands.Any(cmd => cmd != value))
+            {
+                foreach (var cmd in FilteredCommands)
+                {
+                    cmd.IsSelected = false;
+                }
+            }
+
+            // Set new selection
+            if (value != null)
+            {
+                value.IsSelected = true;
+            }
+
+            // Notify that CommandStatus has changed
+            OnPropertyChanged(nameof(CommandStatus));
+        }
+
+        /// <summary>
+        /// Handles changes to the SelectedIndex property
+        /// </summary>
+        partial void OnSelectedIndexChanged(int value)
+        {
+            // Update selected command based on index
+            if (value >= 0 && value < FilteredCommands.Count)
+            {
+                SelectedCommand = FilteredCommands[value];
+            }
+            else
+            {
+                SelectedCommand = null;
+            }
         }
 
         #endregion
     }
 
     /// <summary>
-    /// Simple RelayCommand implementation for MVVM
+    /// Event arguments for command execution completion
     /// </summary>
-    public class RelayCommand : ICommand
+    public class CommandExecutionCompletedEventArgs : EventArgs
     {
-        private readonly Action _execute;
-        private readonly Func<bool> _canExecute;
-
-        public RelayCommand(Action execute, Func<bool> canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
-
-        public event EventHandler CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
-
-        public bool CanExecute(object parameter)
-        {
-            return _canExecute?.Invoke() ?? true;
-        }
-
-        public void Execute(object parameter)
-        {
-            _execute();
-        }
+        public PostableCommandItem Command { get; set; }
+        public bool Success { get; set; }
+        public Exception Error { get; set; }
     }
 }

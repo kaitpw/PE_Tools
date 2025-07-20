@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using PE_CommandPalette.ViewModels;
 using System.Globalization;
 using System.Windows.Data;
+using System.Threading.Tasks;
 
 namespace PE_CommandPalette.Views
 {
@@ -15,6 +16,8 @@ namespace PE_CommandPalette.Views
     {
         private CommandPaletteViewModel _viewModel;
         private DispatcherTimer _searchTimer;
+        private bool _isClosing = false;
+        private bool _isExecutingCommand = false;
 
         public CommandPaletteWindow(UIApplication uiApplication)
         {
@@ -22,6 +25,9 @@ namespace PE_CommandPalette.Views
             
             _viewModel = new CommandPaletteViewModel(uiApplication);
             DataContext = _viewModel;
+
+            // Subscribe to command execution completion event
+            _viewModel.CommandExecutionCompleted += OnCommandExecutionCompleted;
 
             // Initialize search debounce timer
             _searchTimer = new DispatcherTimer
@@ -40,42 +46,30 @@ namespace PE_CommandPalette.Views
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            if (_isClosing) return; // Prevent handling if already closing
+
             switch (e.Key)
             {
                 case Key.Escape:
-                    if (string.IsNullOrEmpty(_viewModel.SearchText))
-                    {
-                        // Close window if search is empty
-                        Close();
-                    }
-                    else
-                    {
-                        // Clear search if there's text
-                        _viewModel.ClearSearchCommand.Execute(null);
-                    }
+                    HandleEscapeKey();
                     e.Handled = true;
                     break;
 
                 case Key.Enter:
-                    // Execute selected command and close window
-                    if (_viewModel.ExecuteCommand.CanExecute(null))
-                    {
-                        _viewModel.ExecuteCommand.Execute(null);
-                        Close();
-                    }
+                    HandleEnterKey();
                     e.Handled = true;
                     break;
 
                 case Key.Down:
                     // Move selection down
-                    _viewModel.MoveDownCommand.Execute(null);
+                    _viewModel.MoveSelectionDownCommand.Execute(null);
                     EnsureSelectedItemVisible();
                     e.Handled = true;
                     break;
 
                 case Key.Up:
                     // Move selection up
-                    _viewModel.MoveUpCommand.Execute(null);
+                    _viewModel.MoveSelectionUpCommand.Execute(null);
                     EnsureSelectedItemVisible();
                     e.Handled = true;
                     break;
@@ -84,6 +78,43 @@ namespace PE_CommandPalette.Views
                     // Prevent tab from changing focus
                     e.Handled = true;
                     break;
+            }
+        }
+
+        private void HandleEscapeKey()
+        {
+            if (string.IsNullOrEmpty(_viewModel.SearchText))
+            {
+                // Close window if search is empty
+                CloseWindow();
+            }
+            else
+            {
+                // Clear search if there's text
+                _viewModel.ClearSearchCommand.Execute(null);
+            }
+        }
+
+        private async void HandleEnterKey()
+        {
+            if (_isExecutingCommand || _viewModel.IsExecutingCommand) return; // Prevent multiple executions
+
+            // Execute selected command
+            if (_viewModel.ExecuteSelectedCommandCommand.CanExecute(null))
+            {
+                _isExecutingCommand = true;
+                
+                try
+                {
+                    // Execute command asynchronously
+                    await _viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
+                    
+                    // Command execution completion will be handled by OnCommandExecutionCompleted
+                }
+                finally
+                {
+                    _isExecutingCommand = false;
+                }
             }
         }
 
@@ -101,13 +132,26 @@ namespace PE_CommandPalette.Views
             EnsureSelectedItemVisible();
         }
 
-        private void CommandListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        private async void CommandListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
+            if (_isExecutingCommand || _isClosing || _viewModel.IsExecutingCommand) return; // Prevent multiple executions
+
             // Execute command on double-click
-            if (_viewModel.ExecuteCommand.CanExecute(null))
+            if (_viewModel.ExecuteSelectedCommandCommand.CanExecute(null))
             {
-                _viewModel.ExecuteCommand.Execute(null);
-                Close();
+                _isExecutingCommand = true;
+                
+                try
+                {
+                    // Execute command asynchronously
+                    await _viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
+                    
+                    // Command execution completion will be handled by OnCommandExecutionCompleted
+                }
+                finally
+                {
+                    _isExecutingCommand = false;
+                }
             }
         }
 
@@ -119,11 +163,59 @@ namespace PE_CommandPalette.Views
             }
         }
 
+        /// <summary>
+        /// Unified method to close the window with proper state management
+        /// </summary>
+        private void CloseWindow()
+        {
+            if (_isClosing) return; // Prevent multiple close attempts
+            
+            _isClosing = true;
+            
+            try
+            {
+                Close();
+            }
+            catch (InvalidOperationException)
+            {
+                // Window is already closing, ignore the exception
+            }
+        }
+
+        /// <summary>
+        /// Handles command execution completion
+        /// </summary>
+        private void OnCommandExecutionCompleted(object sender, CommandExecutionCompletedEventArgs e)
+        {
+            // Close window after command execution completes
+            CloseWindow();
+        }
+
         protected override void OnDeactivated(EventArgs e)
         {
-            // Close window when it loses focus (like VS Code command palette)
-            base.OnDeactivated(e);
-            Close();
+            // Only close on deactivation if we're not already closing and not executing a command
+            if (!_isClosing && !_isExecutingCommand && !_viewModel.IsExecutingCommand)
+            {
+                base.OnDeactivated(e);
+                CloseWindow();
+            }
+        }
+
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            // Mark as closing to prevent further operations
+            _isClosing = true;
+            
+            // Unsubscribe from events
+            if (_viewModel != null)
+            {
+                _viewModel.CommandExecutionCompleted -= OnCommandExecutionCompleted;
+            }
+            
+            // Stop the search timer
+            _searchTimer?.Stop();
+            
+            base.OnClosing(e);
         }
 
         protected override void OnSourceInitialized(EventArgs e)

@@ -65,6 +65,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="ricaun.Revit.Github" Version="0.4.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <PackageReference
       Include="System.Drawing.Common"
       Version="8.0.3"
