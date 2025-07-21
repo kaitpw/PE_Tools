@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Models\PostableCommandItem.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\PostableCommandService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Services\CommandExecutionService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Services\KeyboardShortcutsService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ViewModels\CommandPaletteViewModel.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Views\CommandPaletteWindow.xaml.cs">
       <DependentUpon>CommandPaletteWindow.xaml</DependentUpon>

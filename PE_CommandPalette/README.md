@@ -1,175 +1,95 @@
 # PE Command Palette
 
-A modern command palette for Revit that provides quick access to all
-PostableCommand enumeration values with search and keyboard navigation.
+A modern command palette for Autodesk Revit that provides quick access to all PostableCommand enumeration values with search and keyboard navigation.
 
 ## Features
 
-- **Fast Search**: Real-time filtering with fuzzy matching
-- **Keyboard Navigation**: Arrow keys to navigate, Enter to execute, Escape to
-  close
-- **Usage Tracking**: Tracks command usage frequency for better prioritization
-- **Modern UI**: VS Code-style command palette with dark theme
-- **Performance Optimized**: Lazy loading and virtualized scrolling for fast
-  startup
-- **MVVM Architecture**: Built with CommunityToolkit.MVVM for clean, maintainable code
+- **Fast Search**: Fuzzy search through all available Revit commands
+- **Keyboard Navigation**: Use arrow keys to navigate and Enter to execute
+- **Modern UI**: Dark theme with smooth animations and modern styling
+- **Keyboard Shortcuts**: Displays Revit keyboard shortcuts for each command
+- **Menu Paths**: Shows where each command can be found in the Revit UI
+- **Usage Tracking**: Tracks command usage for better prioritization
+- **Performance Optimized**: Virtualized list for smooth scrolling with large command sets
 
 ## Architecture
 
-### Components
+The command palette is built using the MVVM pattern with the following components:
 
 - **Models/PostableCommandItem.cs**: Data model for command items with metadata
-- **Services/PostableCommandService.cs**: Singleton service for managing
-  PostableCommand enumeration
-- **Services/CommandExecutionService.cs**: Service for executing commands in
-  Revit
-- **ViewModels/CommandPaletteViewModel.cs**: MVVM view model with search and
-  navigation logic using CommunityToolkit.MVVM
-- **Views/CommandPaletteWindow.xaml**: WPF window with modern styling
-- **Views/CommandPaletteWindow.xaml.cs**: Code-behind with keyboard handling
+- **Services/PostableCommandService.cs**: Singleton service for managing PostableCommand enumeration
+- **Services/CommandExecutionService.cs**: Service for executing commands in Revit
+- **Services/KeyboardShortcutsService.cs**: Service for parsing Revit keyboard shortcuts XML
+- **ViewModels/CommandPaletteViewModel.cs**: Main view model with search and navigation logic
+- **Views/CommandPaletteWindow.xaml**: Modern WPF UI with dark theme
 
-### CommunityToolkit.MVVM Implementation
+## Keyboard Shortcuts Integration
 
-This project has been refactored to use **CommunityToolkit.MVVM**, a modern MVVM library that simplifies development through source generators and built-in functionality.
+The command palette automatically loads and displays keyboard shortcuts from Revit's KeyboardShortcuts.xml file:
 
-#### Key Concepts Used:
+- **Automatic Detection**: Detects the current Revit version and loads the appropriate shortcuts file
+- **HTML Entity Decoding**: Properly handles XML entities like `&gt;` and `&amp;`
+- **Command Name Override**: Uses official command names from the XML file when available
+- **Shortcut Display**: Shows primary keyboard shortcuts in a highlighted badge
+- **Path Information**: Displays truncated menu paths with full paths available on hover
 
-##### 1. **ObservableObject** - Base Class for ViewModels
-- **What it does**: Automatically implements `INotifyPropertyChanged` and provides helper methods
-- **Benefits**: No more manual property change notifications, cleaner code
-- **Usage**: `public partial class CommandPaletteViewModel : ObservableObject`
-
-##### 2. **ObservableProperty** - Automatic Property Generation
-- **What it does**: Source generator that creates full properties from private fields
-- **Benefits**: Reduces boilerplate code, automatic change notifications
-- **Usage**: `[ObservableProperty] private string _searchText = string.Empty;`
-- **Generated**: Creates `SearchText` property with getter, setter, and change notifications
-
-##### 3. **RelayCommand** - Modern Command Implementation
-- **What it does**: Provides type-safe command implementation with async support
-- **Benefits**: No manual `ICommand` implementation, supports async operations
-- **Usage**: `[RelayCommand(CanExecute = nameof(CanExecuteSelectedCommand))] private void ExecuteSelectedCommand()`
-- **Generated**: Creates `ExecuteSelectedCommandCommand` property
-
-##### 4. **Partial Methods** - Property Change Handlers
-- **What it does**: Automatically generated methods for handling property changes
-- **Benefits**: Clean separation of concerns, automatic invocation
-- **Usage**: `partial void OnSearchTextChanged(string value) { FilterCommands(); }`
-
-#### Before vs After Comparison:
-
-**Before (Manual MVVM):**
-```csharp
-public class CommandPaletteViewModel : INotifyPropertyChanged
-{
-    private string _searchText = string.Empty;
-    
-    public string SearchText
-    {
-        get => _searchText;
-        set
-        {
-            if (_searchText != value)
-            {
-                _searchText = value;
-                OnPropertyChanged(nameof(SearchText));
-                FilterCommands();
-            }
-        }
-    }
-    
-    private ICommand _executeCommand;
-    public ICommand ExecuteCommand => _executeCommand ??= new RelayCommand(ExecuteSelectedCommand, CanExecuteSelectedCommand);
-    
-    public event PropertyChangedEventHandler PropertyChanged;
-    protected virtual void OnPropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
-}
+### File Location
+The keyboard shortcuts file is located at:
 ```
-
-**After (CommunityToolkit.MVVM):**
-```csharp
-public partial class CommandPaletteViewModel : ObservableObject
-{
-    [ObservableProperty]
-    private string _searchText = string.Empty;
-    
-    [RelayCommand(CanExecute = nameof(CanExecuteSelectedCommand))]
-    private void ExecuteSelectedCommand()
-    {
-        // Implementation
-    }
-    
-    partial void OnSearchTextChanged(string value)
-    {
-        FilterCommands();
-    }
-}
+C:\Users\[username]\AppData\Roaming\Autodesk\Revit\Autodesk Revit [version]\KeyboardShortcuts.xml
 ```
-
-#### Benefits of the Refactoring:
-
-1. **Reduced Code**: ~60% less boilerplate code
-2. **Better Performance**: Source generators create optimized code at compile time
-3. **Type Safety**: Strongly typed commands and properties
-4. **Maintainability**: Cleaner, more readable code
-5. **Modern Patterns**: Uses latest .NET and MVVM best practices
-
-### Key Features
-
-#### Search Algorithm
-
-- Exact match: 100 points
-- Starts with search: 90 points
-- Contains search: 70 points
-- Fuzzy match: 0-50 points based on character matching
-
-#### Performance Optimizations
-
-- Singleton pattern for command service
-- Lazy initialization of command list
-- Virtualized ListBox for large datasets
-- Debounced search input (150ms delay)
-- Limited result sets (100 items max)
-
-#### Keyboard Shortcuts
-
-- `↑/↓`: Navigate selection
-- `Enter`: Execute selected command
-- `Escape`: Clear search or close window
-- `Tab`: Disabled to maintain focus
 
 ## Usage
 
-The command palette is accessible via:
+1. **Open Command Palette**: Use the ribbon button or assigned keyboard shortcut
+2. **Search Commands**: Type to filter commands by name
+3. **Navigate**: Use ↑/↓ arrow keys to move through results
+4. **Execute**: Press Enter to execute the selected command
+5. **Close**: Press Escape to close the palette
 
-1. **Ribbon Button**: "Command Palette" button in the PE TOOLS tab
-2. **Hotkey Support**: Ready for Ctrl+K binding (implementation in main project)
+## Search Features
 
-## Integration
+- **Fuzzy Matching**: Finds commands even with partial or misspelled search terms
+- **Priority Scoring**: Commands are ranked by:
+  - Search relevance score
+  - Usage frequency
+  - Last used timestamp
+- **Real-time Filtering**: Results update as you type
 
-This shared project integrates with PE_Tools via:
+## UI Features
 
-- `PE_Tools/cmdCommandPalette.cs`: External command entry point
-- `PE_Tools/App.cs`: Ribbon button registration
-- Shared project reference in PE_Tools.csproj
+- **Dark Theme**: Modern dark interface that matches contemporary IDEs
+- **Smooth Animations**: Subtle animations for better user experience
+- **Responsive Design**: Adapts to different window sizes
+- **Tooltips**: Hover over paths to see full menu locations
+- **Status Bar**: Shows command status and usage information
+
+## Performance
+
+- **Virtualized List**: Only renders visible items for smooth scrolling
+- **Background Loading**: Commands load asynchronously to prevent UI blocking
+- **Caching**: Shortcuts and command data are cached for fast access
+- **Efficient Search**: Optimized search algorithms for large command sets
 
 ## Dependencies
 
-- Autodesk Revit API (PostableCommand, UIApplication)
-- WPF (.NET Framework 4.8 / .NET 8.0-windows)
-- System.Windows.Interop (for Alt+Tab hiding)
-- **CommunityToolkit.MVVM** (8.2.2) - Modern MVVM library
+- **Autodesk Revit API** (PostableCommand, UIApplication)
+- **CommunityToolkit.Mvvm** (MVVM framework)
+- **System.Xml.Linq** (XML parsing for shortcuts)
+- **Custom command registration beyond PostableCommand**
+
+## Development
+
+The project uses the MVVM pattern with:
+- **ObservableObject**: For property change notifications
+- **RelayCommand**: For command binding
+- **Dependency Injection**: For service management
+- **Async/Await**: For non-blocking operations
 
 ## Future Enhancements
 
-- Custom command registration beyond PostableCommand
-- Command categories and grouping
-- Keyboard shortcut display
-- Command history persistence
-- Theme customization
-- Plugin command integration
-- Async command execution with progress indicators
-- Command validation and error handling
+- Custom command registration
+- Command categories and filtering
+- User-defined shortcuts
+- Command history and favorites
+- Integration with external tools

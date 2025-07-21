@@ -28,28 +28,27 @@ namespace PE_CommandPalette.Services
 
             try
             {
-                // Get the RevitCommandId for the PostableCommand
-                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(
-                    commandItem.Command
-                );
+                RevitCommandId commandId = null;
+                if (!string.IsNullOrEmpty(commandItem.CustomCommandId))
+                    commandId = RevitCommandId.LookupCommandId(commandItem.CustomCommandId);
+                else
+                    commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
 
                 if (commandId == null)
                 {
                     ShowError($"Command '{commandItem.Name}' is not available in this context.");
                     return false;
                 }
+
+                // For custom commands, CanPostCommand may always return true or may not be reliable.
                 var canPost = _uiApplication.CanPostCommand(commandId);
-                // Check if the command can be executed
                 if (!canPost)
                 {
                     ShowError($"Command '{commandItem.Name}' cannot be executed at this time.");
                     return false;
                 }
 
-                // Post the command to Revit
                 _uiApplication.PostCommand(commandId);
-
-                // Update usage statistics
                 PostableCommandService.Instance.UpdateCommandUsage(commandItem);
 
                 return true;
@@ -73,10 +72,19 @@ namespace PE_CommandPalette.Services
 
             try
             {
-                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(
-                    commandItem.Command
-                );
-                return commandId != null && _uiApplication.CanPostCommand(commandId);
+                RevitCommandId commandId = null;
+                if (!string.IsNullOrEmpty(commandItem.CustomCommandId))
+                    commandId = RevitCommandId.LookupCommandId(commandItem.CustomCommandId);
+                else
+                    commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
+
+                // For custom commands, CanPostCommand may not be meaningful, so just check commandId.
+                return commandId != null
+                    && (
+                        string.IsNullOrEmpty(commandItem.CustomCommandId)
+                            ? _uiApplication.CanPostCommand(commandId)
+                            : true
+                    );
             }
             catch
             {
@@ -96,12 +104,17 @@ namespace PE_CommandPalette.Services
 
             try
             {
-                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(
-                    commandItem.Command
-                );
+                RevitCommandId commandId = null;
+                if (!string.IsNullOrEmpty(commandItem.CustomCommandId))
+                    commandId = RevitCommandId.LookupCommandId(commandItem.CustomCommandId);
+                else
+                    commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
 
                 if (commandId == null)
                     return "Command not available";
+
+                if (!string.IsNullOrEmpty(commandItem.CustomCommandId))
+                    return "Ready"; // For custom commands, assume always ready
 
                 if (!_uiApplication.CanPostCommand(commandId))
                     return "Command disabled";
@@ -119,27 +132,13 @@ namespace PE_CommandPalette.Services
         /// </summary>
         private void ShowError(string message)
         {
-            try
+            TaskDialog dialog = new TaskDialog("Command Palette Error")
             {
-                // Use TaskDialog for error messages
-                TaskDialog dialog = new TaskDialog("Command Palette Error")
-                {
-                    MainContent = message,
-                    CommonButtons = TaskDialogCommonButtons.Ok,
-                    DefaultButton = TaskDialogResult.Ok,
-                };
-                dialog.Show();
-            }
-            catch
-            {
-                // Fallback to system message if TaskDialog fails
-                System.Windows.MessageBox.Show(
-                    message,
-                    "Command Palette Error",
-                    System.Windows.MessageBoxButton.OK,
-                    System.Windows.MessageBoxImage.Error
-                );
-            }
+                MainContent = message,
+                CommonButtons = TaskDialogCommonButtons.Ok,
+                DefaultButton = TaskDialogResult.Ok,
+            };
+            dialog.Show();
         }
     }
 }

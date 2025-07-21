@@ -12,24 +12,18 @@ namespace PE_Lib
     internal class Utils
     {
         // Helper method to get current Revit version
-        public static string GetRevitVersion()
+        public static string? GetRevitVersion()
         {
-#if Revit2017
-            return "2017";
-#elif Revit2018
-            return "2018";
-#elif Revit2019
-            return "2019";
-#elif Revit2020
-            return "2020";
-#elif Revit2021
-            return "2021";
-#elif Revit2022
-            return "2022";
-#elif Revit2023
+#if REVIT2023
             return "2023";
+#elif REVIT2024
+            return "2024";
+#elif REVIT2025
+            return "2025";
+#elif REVIT2026
+            return "2026";
 #else
-            return "Undefined";
+            return null;
 #endif
         }
 

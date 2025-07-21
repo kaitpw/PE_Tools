@@ -31,6 +31,12 @@ namespace PE_CommandPalette.Views
             // Initialize search debounce timer
             _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
             _searchTimer.Tick += (s, e) => _searchTimer.Stop();
+
+            // Subscribe to selection changed to scroll selected item into view
+            this.Loaded += (s, e) =>
+            {
+                CommandListBox.SelectionChanged += CommandListBox_SelectionChanged;
+            };
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -203,7 +209,19 @@ namespace PE_CommandPalette.Views
 
         #endregion
 
-        private void HandleChooseCommand(object sender, MouseButtonEventArgs e) { }
+        private void HandleChooseCommand(object sender, MouseButtonEventArgs e)
+        {
+            // Only activate on double-click of a list item
+            if (e.ClickCount == 2 && CommandListBox.SelectedItem != null)
+            {
+                HandleChooseCommand();
+            }
+        }
+
+        private void CommandListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            EnsureSelectedItemVisible();
+        }
     }
 
     #region Value Converters
@@ -240,7 +258,7 @@ namespace PE_CommandPalette.Views
     }
 
     /// <summary>
-    /// Converter for showing usage count only when > 0
+    /// Converter for showing usage count only when > 0, or strings when not empty
     /// </summary>
     public class VisibilityConverter : IValueConverter
     {
@@ -251,6 +269,12 @@ namespace PE_CommandPalette.Views
             if (value is int intValue)
             {
                 return intValue > 0
+                    ? System.Windows.Visibility.Visible
+                    : System.Windows.Visibility.Collapsed;
+            }
+            else if (value is string stringValue)
+            {
+                return !string.IsNullOrWhiteSpace(stringValue)
                     ? System.Windows.Visibility.Visible
                     : System.Windows.Visibility.Collapsed;
             }
