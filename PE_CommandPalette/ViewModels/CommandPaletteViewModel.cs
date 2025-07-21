@@ -22,16 +22,23 @@ namespace PE_CommandPalette.ViewModels
         /// </summary>
         public event EventHandler<CommandExecutionCompletedEventArgs> CommandExecutionCompleted;
 
-        public CommandPaletteViewModel(UIApplication uiApplication)
+        public CommandPaletteViewModel(UIApplication UIApplication)
         {
-            _executionService = new CommandExecutionService(uiApplication);
+            uiapp = UIApplication;
+            _executionService = new CommandExecutionService(uiapp);
             FilteredCommands = new ObservableCollection<PostableCommandItem>();
-            
+
             // Initialize commands asynchronously for better startup performance
             Task.Run(LoadCommandsAsync);
         }
 
         #region Properties
+
+        /// <summary>
+        /// The UI application instance for executing commands
+        /// </summary>
+        [ObservableProperty]
+        private UIApplication uiapp;
 
         /// <summary>
         /// Current search text
@@ -82,11 +89,6 @@ namespace PE_CommandPalette.ViewModels
             }
         }
 
-        /// <summary>
-        /// Total number of available commands
-        /// </summary>
-        public int TotalCommandCount => PostableCommandService.Instance.GetAllCommands().Count;
-
         #endregion
 
         #region Commands
@@ -97,31 +99,40 @@ namespace PE_CommandPalette.ViewModels
         [RelayCommand(CanExecute = nameof(CanExecuteSelectedCommand))]
         private async Task ExecuteSelectedCommandAsync()
         {
-            if (SelectedCommand == null) return;
+            if (SelectedCommand == null)
+                return;
 
             IsExecutingCommand = true;
-            
+
             try
             {
                 // Execute command on background thread to avoid blocking UI
-                bool success = await Task.Run(() => _executionService.ExecuteCommand(SelectedCommand));
-                
+                bool success = await Task.Run(() =>
+                    _executionService.ExecuteCommand(SelectedCommand)
+                );
+
                 // Fire completion event
-                CommandExecutionCompleted?.Invoke(this, new CommandExecutionCompletedEventArgs
-                {
-                    Command = SelectedCommand,
-                    Success = success
-                });
+                CommandExecutionCompleted?.Invoke(
+                    this,
+                    new CommandExecutionCompletedEventArgs
+                    {
+                        Command = SelectedCommand,
+                        Success = success,
+                    }
+                );
             }
             catch (Exception ex)
             {
                 // Fire completion event with error
-                CommandExecutionCompleted?.Invoke(this, new CommandExecutionCompletedEventArgs
-                {
-                    Command = SelectedCommand,
-                    Success = false,
-                    Error = ex
-                });
+                CommandExecutionCompleted?.Invoke(
+                    this,
+                    new CommandExecutionCompletedEventArgs
+                    {
+                        Command = SelectedCommand,
+                        Success = false,
+                        Error = ex,
+                    }
+                );
             }
             finally
             {
@@ -175,22 +186,22 @@ namespace PE_CommandPalette.ViewModels
             {
                 // Load commands on background thread
                 var commands = PostableCommandService.Instance.GetAllCommands();
-                
+
                 // Update UI on main thread
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
                     FilteredCommands.Clear();
-                    foreach (var command in commands.Take(50)) // Show first 50 initially for performance
+                    foreach (var command in commands) // Show first 50 initially for performance
                     {
                         FilteredCommands.Add(command);
                     }
-                    
+
                     // Select first item by default
                     if (FilteredCommands.Count > 0)
                     {
                         SelectedIndex = 0;
                     }
-                    
+
                     IsLoading = false;
                 });
             });
@@ -202,9 +213,9 @@ namespace PE_CommandPalette.ViewModels
         private void FilterCommands()
         {
             var filtered = PostableCommandService.Instance.FilterCommands(SearchText);
-            
+
             FilteredCommands.Clear();
-            foreach (var command in filtered.Take(100)) // Limit results for performance
+            foreach (var command in filtered) // Limit results for performance
             {
                 FilteredCommands.Add(command);
             }
@@ -218,9 +229,9 @@ namespace PE_CommandPalette.ViewModels
         /// </summary>
         private bool CanExecuteSelectedCommand()
         {
-            return SelectedCommand != null && 
-                   _executionService.IsCommandAvailable(SelectedCommand) && 
-                   !IsExecutingCommand;
+            return SelectedCommand != null
+                && _executionService.IsCommandAvailable(SelectedCommand)
+                && !IsExecutingCommand;
         }
 
         #endregion
@@ -273,7 +284,15 @@ namespace PE_CommandPalette.ViewModels
             {
                 SelectedCommand = null;
             }
+
+            // Raise event to scroll selected item into view
+            ScrollIntoViewRequested?.Invoke(this, EventArgs.Empty);
         }
+
+        /// <summary>
+        /// Event fired when the selected index changes, to scroll the selected item into view.
+        /// </summary>
+        public event EventHandler ScrollIntoViewRequested;
 
         #endregion
     }

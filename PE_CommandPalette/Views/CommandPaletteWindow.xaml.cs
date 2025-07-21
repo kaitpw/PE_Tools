@@ -1,11 +1,11 @@
 using System;
+using System.Globalization;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using PE_CommandPalette.ViewModels;
-using System.Globalization;
-using System.Windows.Data;
-using System.Threading.Tasks;
 
 namespace PE_CommandPalette.Views
 {
@@ -17,24 +17,20 @@ namespace PE_CommandPalette.Views
         private CommandPaletteViewModel _viewModel;
         private DispatcherTimer _searchTimer;
         private bool _isClosing = false;
-        private bool _isExecutingCommand = false;
 
-        public CommandPaletteWindow(UIApplication uiApplication)
+        public CommandPaletteWindow(UIApplication uiapp)
         {
             InitializeComponent();
-            
-            _viewModel = new CommandPaletteViewModel(uiApplication);
+
+            _viewModel = new CommandPaletteViewModel(uiapp);
             DataContext = _viewModel;
 
             // Subscribe to command execution completion event
             _viewModel.CommandExecutionCompleted += OnCommandExecutionCompleted;
 
             // Initialize search debounce timer
-            _searchTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(150)
-            };
-            _searchTimer.Tick += SearchTimer_Tick;
+            _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
+            _searchTimer.Tick += (s, e) => _searchTimer.Stop();
         }
 
         private void Window_Loaded(object sender, RoutedEventArgs e)
@@ -46,7 +42,8 @@ namespace PE_CommandPalette.Views
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (_isClosing) return; // Prevent handling if already closing
+            if (_isClosing)
+                return; // Prevent handling if already closing
 
             switch (e.Key)
             {
@@ -56,7 +53,7 @@ namespace PE_CommandPalette.Views
                     break;
 
                 case Key.Enter:
-                    HandleEnterKey();
+                    HandleChooseCommand();
                     e.Handled = true;
                     break;
 
@@ -95,64 +92,22 @@ namespace PE_CommandPalette.Views
             }
         }
 
-        private async void HandleEnterKey()
+        private async void HandleChooseCommand()
         {
-            if (_isExecutingCommand || _viewModel.IsExecutingCommand) return; // Prevent multiple executions
-
-            // Execute selected command
             if (_viewModel.ExecuteSelectedCommandCommand.CanExecute(null))
             {
-                _isExecutingCommand = true;
-                
-                try
-                {
-                    // Execute command asynchronously
-                    await _viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
-                    
-                    // Command execution completion will be handled by OnCommandExecutionCompleted
-                }
-                finally
-                {
-                    _isExecutingCommand = false;
-                }
+                await _viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
             }
         }
 
-        private void SearchTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        private void SearchTextBox_TextChanged(
+            object sender,
+            System.Windows.Controls.TextChangedEventArgs e
+        )
         {
             // Debounce search to improve performance
             _searchTimer.Stop();
             _searchTimer.Start();
-        }
-
-        private void SearchTimer_Tick(object sender, EventArgs e)
-        {
-            _searchTimer.Stop();
-            // The actual filtering is handled by the ViewModel through data binding
-            EnsureSelectedItemVisible();
-        }
-
-        private async void CommandListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-        {
-            if (_isExecutingCommand || _isClosing || _viewModel.IsExecutingCommand) return; // Prevent multiple executions
-
-            // Execute command on double-click
-            if (_viewModel.ExecuteSelectedCommandCommand.CanExecute(null))
-            {
-                _isExecutingCommand = true;
-                
-                try
-                {
-                    // Execute command asynchronously
-                    await _viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
-                    
-                    // Command execution completion will be handled by OnCommandExecutionCompleted
-                }
-                finally
-                {
-                    _isExecutingCommand = false;
-                }
-            }
         }
 
         private void EnsureSelectedItemVisible()
@@ -168,10 +123,11 @@ namespace PE_CommandPalette.Views
         /// </summary>
         private void CloseWindow()
         {
-            if (_isClosing) return; // Prevent multiple close attempts
-            
+            if (_isClosing)
+                return; // Prevent multiple close attempts
+
             _isClosing = true;
-            
+
             try
             {
                 Close();
@@ -185,7 +141,10 @@ namespace PE_CommandPalette.Views
         /// <summary>
         /// Handles command execution completion
         /// </summary>
-        private void OnCommandExecutionCompleted(object sender, CommandExecutionCompletedEventArgs e)
+        private void OnCommandExecutionCompleted(
+            object sender,
+            CommandExecutionCompletedEventArgs e
+        )
         {
             // Close window after command execution completes
             CloseWindow();
@@ -193,8 +152,8 @@ namespace PE_CommandPalette.Views
 
         protected override void OnDeactivated(EventArgs e)
         {
-            // Only close on deactivation if we're not already closing and not executing a command
-            if (!_isClosing && !_isExecutingCommand && !_viewModel.IsExecutingCommand)
+            // Attempt (does not work) to close window when it loses focus (like VS Code command palette)
+            if (!_isClosing)
             {
                 base.OnDeactivated(e);
                 CloseWindow();
@@ -205,27 +164,30 @@ namespace PE_CommandPalette.Views
         {
             // Mark as closing to prevent further operations
             _isClosing = true;
-            
+
             // Unsubscribe from events
             if (_viewModel != null)
             {
                 _viewModel.CommandExecutionCompleted -= OnCommandExecutionCompleted;
             }
-            
+
             // Stop the search timer
             _searchTimer?.Stop();
-            
+
             base.OnClosing(e);
         }
 
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
-            
+
             // Remove window from Alt+Tab
             var helper = new System.Windows.Interop.WindowInteropHelper(this);
-            SetWindowLong(helper.Handle, GWL_EXSTYLE, 
-                GetWindowLong(helper.Handle, GWL_EXSTYLE) | WS_EX_TOOLWINDOW);
+            SetWindowLong(
+                helper.Handle,
+                GWL_EXSTYLE,
+                GetWindowLong(helper.Handle, GWL_EXSTYLE) | WS_EX_TOOLWINDOW
+            );
         }
 
         #region Win32 API for hiding from Alt+Tab
@@ -240,6 +202,8 @@ namespace PE_CommandPalette.Views
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
         #endregion
+
+        private void HandleChooseCommand(object sender, MouseButtonEventArgs e) { }
     }
 
     #region Value Converters
@@ -249,20 +213,29 @@ namespace PE_CommandPalette.Views
     /// </summary>
     public class BooleanToVisibilityConverter : IValueConverter
     {
-        public static readonly BooleanToVisibilityConverter Instance = new BooleanToVisibilityConverter();
+        public static readonly BooleanToVisibilityConverter Instance =
+            new BooleanToVisibilityConverter();
 
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (value is bool boolValue)
             {
-                return boolValue ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+                return boolValue
+                    ? System.Windows.Visibility.Visible
+                    : System.Windows.Visibility.Collapsed;
             }
             return System.Windows.Visibility.Collapsed;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(
+            object value,
+            Type targetType,
+            object parameter,
+            CultureInfo culture
+        )
         {
-            return value is System.Windows.Visibility visibility && visibility == System.Windows.Visibility.Visible;
+            return value is System.Windows.Visibility visibility
+                && visibility == System.Windows.Visibility.Visible;
         }
     }
 
@@ -277,12 +250,19 @@ namespace PE_CommandPalette.Views
         {
             if (value is int intValue)
             {
-                return intValue > 0 ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+                return intValue > 0
+                    ? System.Windows.Visibility.Visible
+                    : System.Windows.Visibility.Collapsed;
             }
             return System.Windows.Visibility.Collapsed;
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        public object ConvertBack(
+            object value,
+            Type targetType,
+            object parameter,
+            CultureInfo culture
+        )
         {
             throw new NotImplementedException();
         }

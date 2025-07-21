@@ -10,7 +10,7 @@ namespace PE_CommandPalette.Services
     /// </summary>
     public class PostableCommandService
     {
-        private static readonly Lazy<PostableCommandService> _instance = 
+        private static readonly Lazy<PostableCommandService> _instance =
             new Lazy<PostableCommandService>(() => new PostableCommandService());
 
         private List<PostableCommandItem> _allCommands;
@@ -18,9 +18,7 @@ namespace PE_CommandPalette.Services
 
         public static PostableCommandService Instance => _instance.Value;
 
-        private PostableCommandService()
-        {
-        }
+        private PostableCommandService() { }
 
         /// <summary>
         /// Gets all PostableCommand items with metadata
@@ -29,7 +27,7 @@ namespace PE_CommandPalette.Services
         {
             if (_allCommands == null)
             {
-                lock (_lockObject)
+                lock (_lockObject) // for multi-thread safety
                 {
                     if (_allCommands == null)
                     {
@@ -48,9 +46,10 @@ namespace PE_CommandPalette.Services
         {
             if (string.IsNullOrWhiteSpace(searchText))
             {
-                return GetAllCommands().OrderByDescending(c => c.UsageCount)
-                                     .ThenByDescending(c => c.LastUsed)
-                                     .ToList();
+                return GetAllCommands()
+                    .OrderByDescending(c => c.UsageCount)
+                    .ThenByDescending(c => c.LastUsed)
+                    .ToList();
             }
 
             var filtered = new List<PostableCommandItem>();
@@ -66,10 +65,11 @@ namespace PE_CommandPalette.Services
                 }
             }
 
-            return filtered.OrderByDescending(c => c.SearchScore)
-                          .ThenByDescending(c => c.UsageCount)
-                          .ThenByDescending(c => c.LastUsed)
-                          .ToList();
+            return filtered
+                .OrderByDescending(c => c.SearchScore)
+                .ThenByDescending(c => c.UsageCount)
+                .ThenByDescending(c => c.LastUsed)
+                .ToList();
         }
 
         /// <summary>
@@ -90,8 +90,8 @@ namespace PE_CommandPalette.Services
 
             // Get all values from the PostableCommand enumeration
             var postableCommands = Enum.GetValues(typeof(PostableCommand))
-                                      .Cast<PostableCommand>()
-                                      .ToList();
+                .Cast<PostableCommand>()
+                .ToList();
 
             foreach (var command in postableCommands)
             {
@@ -99,10 +99,9 @@ namespace PE_CommandPalette.Services
                 {
                     Command = command,
                     Name = FormatCommandName(command.ToString()),
-                    Description = GetCommandDescription(command),
                     UsageCount = 0,
                     LastUsed = DateTime.MinValue,
-                    SearchScore = 0
+                    SearchScore = 0,
                 };
 
                 commands.Add(commandItem);
@@ -134,16 +133,6 @@ namespace PE_CommandPalette.Services
             }
 
             return result.ToString();
-        }
-
-        /// <summary>
-        /// Gets a description for the command (placeholder for now)
-        /// </summary>
-        private string GetCommandDescription(PostableCommand command)
-        {
-            // This could be expanded to include actual command descriptions
-            // For now, return a generic description
-            return $"Execute {FormatCommandName(command.ToString())} command";
         }
 
         /// <summary>

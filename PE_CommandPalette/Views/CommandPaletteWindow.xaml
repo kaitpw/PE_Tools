@@ -45,7 +45,7 @@
         <Style x:Key="CommandListItemStyle" TargetType="ListBoxItem">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#CCCCCC"/>
-            <Setter Property="Padding" Value="12,8"/>
+            <Setter Property="Padding" Value="12,10"/>
             <Setter Property="Margin" Value="0"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -97,49 +97,44 @@
                     <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}"/>
                     <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}"/>
                     <KeyBinding Key="Enter" Command="{Binding ExecuteSelectedCommandCommand}"/>
-                    <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}"/>
                 </TextBox.InputBindings>
             </TextBox>
 
             <!-- Command List -->
-            <ListBox x:Name="CommandListBox"
-                     Grid.Row="1"
-                     Style="{StaticResource CommandListBoxStyle}"
-                     ItemContainerStyle="{StaticResource CommandListItemStyle}"
-                     ItemsSource="{Binding FilteredCommands}"
-                     SelectedItem="{Binding SelectedCommand}"
-                     SelectedIndex="{Binding SelectedIndex}"
-                     MouseDoubleClick="CommandListBox_MouseDoubleClick">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            
-                            <StackPanel Grid.Column="0" Orientation="Vertical">
-                                <TextBlock Text="{Binding Name}" 
-                                           FontWeight="Medium" 
-                                           FontSize="14"/>
-                                <TextBlock Text="{Binding Description}" 
-                                           FontSize="12" 
-                                           Opacity="0.7" 
-                                           Margin="0,2,0,0"/>
-                            </StackPanel>
-                            
-                            <StackPanel Grid.Column="1" 
-                                        Orientation="Horizontal" 
-                                        VerticalAlignment="Center">
-                                <TextBlock Text="{Binding UsageCount}" 
-                                           FontSize="11" 
-                                           Opacity="0.5" 
-                                           Margin="8,0,0,0"
-                                           Visibility="{Binding UsageCount, Converter={x:Static local:VisibilityConverter.Instance}}"/>
-                            </StackPanel>
-                        </Grid>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
+            <ListBox x:Name="CommandListBox"  
+                    Grid.Row="1"  
+                    Style="{StaticResource CommandListBoxStyle}"  
+                    ItemContainerStyle="{StaticResource CommandListItemStyle}"  
+                    ItemsSource="{Binding FilteredCommands}"  
+                    SelectedItem="{Binding SelectedCommand}"  
+                    SelectedIndex="{Binding SelectedIndex}"  
+                    MouseDoubleClick="HandleChooseCommand">  
+               <ListBox.ItemTemplate>  
+                   <DataTemplate>  
+                       <Grid>  
+                           <Grid.ColumnDefinitions>  
+                               <ColumnDefinition Width="*"/>  
+                               <ColumnDefinition Width="Auto"/>  
+                           </Grid.ColumnDefinitions>  
+                             
+                           <StackPanel Grid.Column="0" Orientation="Vertical">  
+                               <TextBlock Text="{Binding Name}"   
+                                          FontWeight="Medium"   
+                                          FontSize="14"/>  
+                           </StackPanel>  
+                             
+                           <StackPanel Grid.Column="1"   
+                                       Orientation="Horizontal"   
+                                       VerticalAlignment="Center">  
+                               <TextBlock Text="{Binding UsageCount}"   
+                                          FontSize="11"   
+                                          Opacity="0.5"   
+                                          Margin="8,0,0,0"  
+                                          Visibility="{Binding UsageCount, Converter={x:Static local:VisibilityConverter.Instance}}"/>  
+                           </StackPanel>  
+                       </Grid>  
+                   </DataTemplate>  
+               </ListBox.ItemTemplate>  
             </ListBox>
 
             <!-- Loading Indicator -->

@@ -19,11 +19,6 @@ namespace PE_CommandPalette.Models
         public string Name { get; set; }
 
         /// <summary>
-        /// Description or tooltip for the command
-        /// </summary>
-        public string Description { get; set; }
-
-        /// <summary>
         /// Number of times this command has been used (for prioritization)
         /// </summary>
         public int UsageCount { get; set; }

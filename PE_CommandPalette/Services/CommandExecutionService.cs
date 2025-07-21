@@ -12,7 +12,8 @@ namespace PE_CommandPalette.Services
 
         public CommandExecutionService(UIApplication uiApplication)
         {
-            _uiApplication = uiApplication ?? throw new ArgumentNullException(nameof(uiApplication));
+            _uiApplication =
+                uiApplication ?? throw new ArgumentNullException(nameof(uiApplication));
         }
 
         /// <summary>
@@ -28,16 +29,18 @@ namespace PE_CommandPalette.Services
             try
             {
                 // Get the RevitCommandId for the PostableCommand
-                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
-                
+                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(
+                    commandItem.Command
+                );
+
                 if (commandId == null)
                 {
                     ShowError($"Command '{commandItem.Name}' is not available in this context.");
                     return false;
                 }
-
+                var canPost = _uiApplication.CanPostCommand(commandId);
                 // Check if the command can be executed
-                if (!_uiApplication.CanPostCommand(commandId))
+                if (!canPost)
                 {
                     ShowError($"Command '{commandItem.Name}' cannot be executed at this time.");
                     return false;
@@ -70,7 +73,9 @@ namespace PE_CommandPalette.Services
 
             try
             {
-                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
+                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(
+                    commandItem.Command
+                );
                 return commandId != null && _uiApplication.CanPostCommand(commandId);
             }
             catch
@@ -91,8 +96,10 @@ namespace PE_CommandPalette.Services
 
             try
             {
-                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
-                
+                RevitCommandId commandId = RevitCommandId.LookupPostableCommandId(
+                    commandItem.Command
+                );
+
                 if (commandId == null)
                     return "Command not available";
 
@@ -119,15 +126,19 @@ namespace PE_CommandPalette.Services
                 {
                     MainContent = message,
                     CommonButtons = TaskDialogCommonButtons.Ok,
-                    DefaultButton = TaskDialogResult.Ok
+                    DefaultButton = TaskDialogResult.Ok,
                 };
                 dialog.Show();
             }
             catch
             {
                 // Fallback to system message if TaskDialog fails
-                System.Windows.MessageBox.Show(message, "Command Palette Error", 
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Windows.MessageBox.Show(
+                    message,
+                    "Command Palette Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error
+                );
             }
         }
     }
