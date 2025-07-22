@@ -1,7 +1,7 @@
-<Window x:Class="PE_CommandPalette.Views.CommandPaletteWindow"
+<Window x:Class="PE_CommandPalette.V.CommandPaletteWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:PE_CommandPalette.Views"
+        xmlns:local="clr-namespace:PE_CommandPalette.V"
         Title="Command Palette"
         Width="600"
         Height="400"
@@ -96,7 +96,6 @@
                 <TextBox.InputBindings>
                     <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}"/>
                     <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}"/>
-                    <KeyBinding Key="Enter" Command="{Binding ExecuteSelectedCommandCommand}"/>
                 </TextBox.InputBindings>
             </TextBox>
 
@@ -107,9 +106,8 @@
                     ItemContainerStyle="{StaticResource CommandListItemStyle}"  
                     ItemsSource="{Binding FilteredCommands}"  
                     SelectedItem="{Binding SelectedCommand}"  
-                    SelectedIndex="{Binding SelectedIndex}"  
-                    MouseDoubleClick="HandleChooseCommand">  
-               <ListBox.ItemTemplate>  
+                    SelectedIndex="{Binding SelectedIndex}">
+                <ListBox.ItemTemplate>  
                    <DataTemplate>  
                        <Grid>  
                            <Grid.ColumnDefinitions>  

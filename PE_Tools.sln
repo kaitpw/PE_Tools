@@ -77,9 +77,9 @@ Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		PE_Init\PE_Init.projitems*{0694ab41-d4ea-4ecf-9525-26eed4e11d93}*SharedItemsImports = 13
 		PE_Lib\PE_Lib.projitems*{97984bfe-92f6-4c75-9cb9-7e7b71787a0c}*SharedItemsImports = 13
-		PE_CommandPalette\PE_CommandPalette.projitems*{f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d}*SharedItemsImports = 13
+		PE_CommandPalette\PE_CommandPalette.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Init\PE_Init.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Lib\PE_Lib.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
-		PE_CommandPalette\PE_CommandPalette.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
+		PE_CommandPalette\PE_CommandPalette.projitems*{f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

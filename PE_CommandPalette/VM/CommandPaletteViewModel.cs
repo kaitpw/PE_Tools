@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PE_CommandPalette.H;
@@ -17,15 +18,11 @@ namespace PE_CommandPalette.VM
     {
         private readonly CommandExecutionHelper _executionService;
 
-        /// <summary>
-        /// Event fired when a command execution completes
-        /// </summary>
-        public event EventHandler<CommandExecutionCompletedEventArgs> CommandExecutionCompleted;
-
-        public CommandPaletteViewModel(UIApplication UIApplication)
+        public CommandPaletteViewModel(UIApplication UIApplication, Dispatcher uiDispatcher)
         {
-            uiapp = UIApplication;
-            _executionService = new CommandExecutionHelper(uiapp);
+            _uiapp = UIApplication;
+            _uiDispatcher = uiDispatcher;
+            _executionService = new CommandExecutionHelper(_uiapp);
             FilteredCommands = new ObservableCollection<PostableCommandItem>();
 
             // Initialize commands asynchronously for better startup performance
@@ -38,7 +35,9 @@ namespace PE_CommandPalette.VM
         /// The UI application instance for executing commands
         /// </summary>
         [ObservableProperty]
-        private UIApplication uiapp;
+        private UIApplication _uiapp;
+
+        private readonly Dispatcher _uiDispatcher;
 
         /// <summary>
         /// Current search text
@@ -104,40 +103,7 @@ namespace PE_CommandPalette.VM
 
             IsExecutingCommand = true;
 
-            try
-            {
-                // Execute command on background thread to avoid blocking UI
-                bool success = await Task.Run(() =>
-                    _executionService.ExecuteCommand(SelectedCommand)
-                );
-
-                // Fire completion event
-                CommandExecutionCompleted?.Invoke(
-                    this,
-                    new CommandExecutionCompletedEventArgs
-                    {
-                        Command = SelectedCommand,
-                        Success = success,
-                    }
-                );
-            }
-            catch (Exception ex)
-            {
-                // Fire completion event with error
-                CommandExecutionCompleted?.Invoke(
-                    this,
-                    new CommandExecutionCompletedEventArgs
-                    {
-                        Command = SelectedCommand,
-                        Success = false,
-                        Error = ex,
-                    }
-                );
-            }
-            finally
-            {
-                IsExecutingCommand = false;
-            }
+            bool success = await Task.Run(() => _executionService.ExecuteCommand(SelectedCommand));
         }
 
         /// <summary>
@@ -188,7 +154,7 @@ namespace PE_CommandPalette.VM
                 var commands = PostableCommandHelper.Instance.GetAllCommands();
 
                 // Update UI on main thread
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                _uiDispatcher.Invoke(() =>
                 {
                     FilteredCommands.Clear();
                     foreach (var command in commands) // Show first 50 initially for performance
@@ -284,15 +250,7 @@ namespace PE_CommandPalette.VM
             {
                 SelectedCommand = null;
             }
-
-            // Raise event to scroll selected item into view
-            ScrollIntoViewRequested?.Invoke(this, EventArgs.Empty);
         }
-
-        /// <summary>
-        /// Event fired when the selected index changes, to scroll the selected item into view.
-        /// </summary>
-        public event EventHandler ScrollIntoViewRequested;
 
         #endregion
     }

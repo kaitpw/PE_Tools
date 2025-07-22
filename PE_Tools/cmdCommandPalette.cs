@@ -1,4 +1,6 @@
-using PE_CommandPalette.Views;
+using System.Windows.Threading;
+using PE_CommandPalette.V;
+using PE_CommandPalette.VM;
 
 namespace PE_Tools
 {
@@ -13,23 +15,33 @@ namespace PE_Tools
         {
             try
             {
-                // Get Revit application and document variables
                 UIApplication uiapp = commandData.Application;
                 UIDocument uidoc = uiapp.ActiveUIDocument;
                 Document doc = uidoc?.Document;
 
-                // Create and show the command palette window
-                var commandPalette = new CommandPaletteWindow(uiapp);
-                
-                // Show as modal dialog to ensure proper focus handling
-                var result = commandPalette.ShowDialog();
+                // 1. Create the View
+                CommandPaletteWindow paletteWindow = new CommandPaletteWindow();
+
+                // 2. Get the Dispatcher from the View, capturing the dispatcher here is crucial for multi-targeting purposes
+                Dispatcher windowDispatcher = paletteWindow.Dispatcher;
+
+                // 3. Create the ViewModel, passing dependencies
+                CommandPaletteViewModel viewModel = new CommandPaletteViewModel(
+                    commandData.Application,
+                    windowDispatcher
+                );
+
+                // 4. Set the DataContext directly (this is standard practice)
+                paletteWindow.DataContext = viewModel;
+
+                // 5. Show the View
+                paletteWindow.ShowDialog();
 
                 return Result.Succeeded;
             }
             catch (Exception ex)
             {
-                message = $"Error opening command palette: {ex.Message}";
-                return Result.Failed;
+                throw new InvalidOperationException($"Error opening command palette: {ex.Message}");
             }
         }
 

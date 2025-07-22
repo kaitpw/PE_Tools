@@ -87,10 +87,7 @@ namespace PE_CommandPalette.H
         private List<PostableCommandItem> LoadPostableCommands()
         {
             var commands = new List<PostableCommandItem>();
-            var shortcutsService = KeyboardShortcutsService.Instance;
-
-            // Test shortcuts loading for debugging
-            shortcutsService.TestShortcutsLoading();
+            var shortcutsService = KeyboardShortcutsHelper.Instance;
 
             // Get all values from the PostableCommand enumeration
             var postableCommands = Enum.GetValues(typeof(PostableCommand))

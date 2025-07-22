@@ -9,17 +9,17 @@
     <Import_RootNamespace>PE_CommandPalette</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Models\PostableCommandItem.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Services\PostableCommandService.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Services\CommandExecutionService.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Services\KeyboardShortcutsService.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)ViewModels\CommandPaletteViewModel.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Views\CommandPaletteWindow.xaml.cs">
+    <Compile Include="..\PE_CommandPalette\H\PostableCommandHelper.cs" />
+    <Compile Include="..\PE_CommandPalette\H\CommandExecutionHelper.cs" />
+    <Compile Include="..\PE_CommandPalette\H\KeyboardShortcutsHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)M\PostableCommandItem.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)VM\CommandPaletteViewModel.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)V\CommandPaletteWindow.xaml.cs">
       <DependentUpon>CommandPaletteWindow.xaml</DependentUpon>
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <Page Include="$(MSBuildThisFileDirectory)Views\CommandPaletteWindow.xaml">
+    <Page Include="$(MSBuildThisFileDirectory)V\CommandPaletteWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

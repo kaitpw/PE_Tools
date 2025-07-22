@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Autodesk.Revit.DB;
 using PE_CommandPalette.VM;
 
 namespace PE_CommandPalette.V
@@ -14,66 +15,72 @@ namespace PE_CommandPalette.V
     /// </summary>
     public partial class CommandPaletteWindow : Window
     {
-        private CommandPaletteViewModel _viewModel;
-        private DispatcherTimer _searchTimer;
-        private bool _isClosing = false;
-
-        public CommandPaletteWindow(UIApplication uiapp)
+        public CommandPaletteWindow()
         {
             InitializeComponent();
 
-            _viewModel = new CommandPaletteViewModel(uiapp);
-            DataContext = _viewModel;
-
-            // Subscribe to command execution completion event
-            _viewModel.CommandExecutionCompleted += OnCommandExecutionCompleted;
-
-            // Initialize search debounce timer
             _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(150) };
             _searchTimer.Tick += (s, e) => _searchTimer.Stop();
 
-            // Subscribe to selection changed to scroll selected item into view
-            this.Loaded += (s, e) =>
+            this.Loaded += OnLoad;
+        }
+
+        private void OnLoad(object sender, RoutedEventArgs e)
+        {
+            if (_viewModel == null)
+                throw new InvalidOperationException("CommandPalette view-model is null");
+
+            CommandListBox.SelectionChanged += (s, e) =>
             {
-                CommandListBox.SelectionChanged += CommandListBox_SelectionChanged;
+                if (_viewModel.SelectedCommand != null)
+                    CommandListBox.ScrollIntoView(_viewModel.SelectedCommand);
             };
         }
 
+        #region Properties
+
+        private bool _isClosing = false;
+        private DispatcherTimer _searchTimer;
+        private CommandPaletteViewModel _viewModel
+        {
+            get => DataContext as CommandPaletteViewModel;
+        }
+
+        #endregion
+
+
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            // Focus the search box when window loads
             SearchTextBox.Focus();
             SearchTextBox.SelectAll();
         }
 
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            if (_viewModel == null)
+                throw new InvalidOperationException("CommandPalette view-model is null");
+
             if (_isClosing)
-                return; // Prevent handling if already closing
+                return; // Prevent handling if already closing or no view model
 
             switch (e.Key)
             {
                 case Key.Escape:
-                    HandleEscapeKey();
+                    if (!string.IsNullOrEmpty(_viewModel.SearchText))
+                        _viewModel.ClearSearchCommand.Execute(null);
+
+                    if (string.IsNullOrEmpty(_viewModel.SearchText))
+                        CloseWindow();
+
                     e.Handled = true;
                     break;
 
                 case Key.Enter:
-                    HandleChooseCommand();
-                    e.Handled = true;
-                    break;
+                    CloseWindow();
 
-                case Key.Down:
-                    // Move selection down
-                    _viewModel.MoveSelectionDownCommand.Execute(null);
-                    EnsureSelectedItemVisible();
-                    e.Handled = true;
-                    break;
+                    if (_viewModel.ExecuteSelectedCommandCommand.CanExecute(null))
+                        _viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
 
-                case Key.Up:
-                    // Move selection up
-                    _viewModel.MoveSelectionUpCommand.Execute(null);
-                    EnsureSelectedItemVisible();
                     e.Handled = true;
                     break;
 
@@ -84,44 +91,13 @@ namespace PE_CommandPalette.V
             }
         }
 
-        private void HandleEscapeKey()
-        {
-            if (string.IsNullOrEmpty(_viewModel.SearchText))
-            {
-                // Close window if search is empty
-                CloseWindow();
-            }
-            else
-            {
-                // Clear search if there's text
-                _viewModel.ClearSearchCommand.Execute(null);
-            }
-        }
-
-        private async void HandleChooseCommand()
-        {
-            if (_viewModel.ExecuteSelectedCommandCommand.CanExecute(null))
-            {
-                await _viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
-            }
-        }
-
         private void SearchTextBox_TextChanged(
             object sender,
             System.Windows.Controls.TextChangedEventArgs e
         )
-        {
-            // Debounce search to improve performance
+        { // Debounce search to improve performance
             _searchTimer.Stop();
             _searchTimer.Start();
-        }
-
-        private void EnsureSelectedItemVisible()
-        {
-            if (_viewModel.SelectedCommand != null)
-            {
-                CommandListBox.ScrollIntoView(_viewModel.SelectedCommand);
-            }
         }
 
         /// <summary>
@@ -132,56 +108,22 @@ namespace PE_CommandPalette.V
             if (_isClosing)
                 return; // Prevent multiple close attempts
 
-            _isClosing = true;
-
             try
             {
+                _isClosing = true;
                 Close();
             }
-            catch (InvalidOperationException)
-            {
-                // Window is already closing, ignore the exception
-            }
-        }
-
-        /// <summary>
-        /// Handles command execution completion
-        /// </summary>
-        private void OnCommandExecutionCompleted(
-            object sender,
-            CommandExecutionCompletedEventArgs e
-        )
-        {
-            // Close window after command execution completes
-            CloseWindow();
-        }
-
-        protected override void OnDeactivated(EventArgs e)
-        {
-            // Attempt (does not work) to close window when it loses focus (like VS Code command palette)
-            if (!_isClosing)
-            {
-                base.OnDeactivated(e);
-                CloseWindow();
-            }
+            catch (InvalidOperationException) { } // Window is already closing, ignore the exception
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
         {
-            // Mark as closing to prevent further operations
             _isClosing = true;
-
-            // Unsubscribe from events
-            if (_viewModel != null)
-            {
-                _viewModel.CommandExecutionCompleted -= OnCommandExecutionCompleted;
-            }
-
-            // Stop the search timer
             _searchTimer?.Stop();
-
             base.OnClosing(e);
         }
+
+        #region Hiding from Alt+Tab
 
         protected override void OnSourceInitialized(EventArgs e)
         {
@@ -196,8 +138,6 @@ namespace PE_CommandPalette.V
             );
         }
 
-        #region Win32 API for hiding from Alt+Tab
-
         private const int GWL_EXSTYLE = -20;
         private const int WS_EX_TOOLWINDOW = 0x00000080;
 
@@ -208,23 +148,6 @@ namespace PE_CommandPalette.V
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
         #endregion
-
-        private void HandleChooseCommand(object sender, MouseButtonEventArgs e)
-        {
-            // Only activate on double-click of a list item
-            if (e.ClickCount == 2 && CommandListBox.SelectedItem != null)
-            {
-                HandleChooseCommand();
-            }
-        }
-
-        private void CommandListBox_SelectionChanged(
-            object sender,
-            System.Windows.Controls.SelectionChangedEventArgs e
-        )
-        {
-            EnsureSelectedItemVisible();
-        }
     }
 
     #region Value Converters

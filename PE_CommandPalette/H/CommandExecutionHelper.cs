@@ -35,28 +35,23 @@ namespace PE_CommandPalette.H
                     commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
 
                 if (commandId == null)
-                {
-                    ShowError($"Command '{commandItem.Name}' is not available in this context.");
-                    return false;
-                }
+                    throw new InvalidOperationException(
+                        $"Command '{commandItem.Name}' is not available in this context."
+                    );
 
-                // For custom commands, CanPostCommand may always return true or may not be reliable.
-                var canPost = _uiApplication.CanPostCommand(commandId);
-                if (!canPost)
-                {
-                    ShowError($"Command '{commandItem.Name}' cannot be executed at this time.");
-                    return false;
-                }
+                if (!_uiApplication.CanPostCommand(commandId))
+                    throw new InvalidOperationException(
+                        $"Command '{commandItem.Name}' cannot be executed at this time."
+                    );
 
                 _uiApplication.PostCommand(commandId);
-                PostableCommandService.Instance.UpdateCommandUsage(commandItem);
+                PostableCommandHelper.Instance.UpdateCommandUsage(commandItem);
 
                 return true;
             }
             catch (Exception ex)
             {
-                ShowError($"Error executing command '{commandItem.Name}': {ex.Message}");
-                return false;
+                throw ex;
             }
         }
 
@@ -125,20 +120,6 @@ namespace PE_CommandPalette.H
             {
                 return $"Error: {ex.Message}";
             }
-        }
-
-        /// <summary>
-        /// Shows an error message to the user
-        /// </summary>
-        private void ShowError(string message)
-        {
-            TaskDialog dialog = new TaskDialog("Command Palette Error")
-            {
-                MainContent = message,
-                CommonButtons = TaskDialogCommonButtons.Ok,
-                DefaultButton = TaskDialogResult.Ok,
-            };
-            dialog.Show();
         }
     }
 }
