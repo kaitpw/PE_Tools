@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace PE_CommandPalette.Models
+namespace PE_CommandPalette.M
 {
     /// <summary>
     /// Represents a PostableCommand item with additional metadata for the command palette

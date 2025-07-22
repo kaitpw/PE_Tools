@@ -1,24 +1,24 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using PE_CommandPalette.Models;
+using PE_CommandPalette.M;
 
-namespace PE_CommandPalette.Services
+namespace PE_CommandPalette.H
 {
     /// <summary>
     /// Service for managing PostableCommand enumeration values and metadata
     /// </summary>
-    public class PostableCommandService
+    public class PostableCommandHelper
     {
-        private static readonly Lazy<PostableCommandService> _instance =
-            new Lazy<PostableCommandService>(() => new PostableCommandService());
+        private static readonly Lazy<PostableCommandHelper> _instance =
+            new Lazy<PostableCommandHelper>(() => new PostableCommandHelper());
 
         private List<PostableCommandItem> _allCommands;
         private readonly object _lockObject = new object();
 
-        public static PostableCommandService Instance => _instance.Value;
+        public static PostableCommandHelper Instance => _instance.Value;
 
-        private PostableCommandService() { }
+        private PostableCommandHelper() { }
 
         /// <summary>
         /// Gets all PostableCommand items with metadata
@@ -124,10 +124,22 @@ namespace PE_CommandPalette.Services
             foreach (var kvp in allShortcuts)
             {
                 var shortcutInfo = kvp.Value;
-                if (shortcutInfo.CommandId != null && shortcutInfo.CommandId.StartsWith("CustomCtrl_%CustomCtrl_%", StringComparison.OrdinalIgnoreCase))
+                if (
+                    shortcutInfo.CommandId != null
+                    && shortcutInfo.CommandId.StartsWith(
+                        "CustomCtrl_%CustomCtrl_%",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
                 {
                     // Avoid duplicates if already added as a PostableCommand
-                    bool alreadyExists = commands.Any(c => string.Equals(c.CustomCommandId, shortcutInfo.CommandId, StringComparison.OrdinalIgnoreCase));
+                    bool alreadyExists = commands.Any(c =>
+                        string.Equals(
+                            c.CustomCommandId,
+                            shortcutInfo.CommandId,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    );
                     if (alreadyExists)
                         continue;
 

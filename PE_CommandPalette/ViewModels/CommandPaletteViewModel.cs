@@ -5,17 +5,17 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using PE_CommandPalette.Models;
-using PE_CommandPalette.Services;
+using PE_CommandPalette.H;
+using PE_CommandPalette.M;
 
-namespace PE_CommandPalette.ViewModels
+namespace PE_CommandPalette.VM
 {
     /// <summary>
     /// ViewModel for the Command Palette window
     /// </summary>
     public partial class CommandPaletteViewModel : ObservableObject
     {
-        private readonly CommandExecutionService _executionService;
+        private readonly CommandExecutionHelper _executionService;
 
         /// <summary>
         /// Event fired when a command execution completes
@@ -25,7 +25,7 @@ namespace PE_CommandPalette.ViewModels
         public CommandPaletteViewModel(UIApplication UIApplication)
         {
             uiapp = UIApplication;
-            _executionService = new CommandExecutionService(uiapp);
+            _executionService = new CommandExecutionHelper(uiapp);
             FilteredCommands = new ObservableCollection<PostableCommandItem>();
 
             // Initialize commands asynchronously for better startup performance
@@ -185,7 +185,7 @@ namespace PE_CommandPalette.ViewModels
             await Task.Run(() =>
             {
                 // Load commands on background thread
-                var commands = PostableCommandService.Instance.GetAllCommands();
+                var commands = PostableCommandHelper.Instance.GetAllCommands();
 
                 // Update UI on main thread
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -212,7 +212,7 @@ namespace PE_CommandPalette.ViewModels
         /// </summary>
         private void FilterCommands()
         {
-            var filtered = PostableCommandService.Instance.FilterCommands(SearchText);
+            var filtered = PostableCommandHelper.Instance.FilterCommands(SearchText);
 
             FilteredCommands.Clear();
             foreach (var command in filtered) // Limit results for performance

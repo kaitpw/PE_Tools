@@ -5,9 +5,9 @@ using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
-using PE_CommandPalette.ViewModels;
+using PE_CommandPalette.VM;
 
-namespace PE_CommandPalette.Views
+namespace PE_CommandPalette.V
 {
     /// <summary>
     /// Interaction logic for CommandPaletteWindow.xaml
@@ -218,7 +218,10 @@ namespace PE_CommandPalette.Views
             }
         }
 
-        private void CommandListBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        private void CommandListBox_SelectionChanged(
+            object sender,
+            System.Windows.Controls.SelectionChangedEventArgs e
+        )
         {
             EnsureSelectedItemVisible();
         }

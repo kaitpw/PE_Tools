@@ -6,11 +6,11 @@ namespace PE_CommandPalette.H
     /// <summary>
     /// Service for executing PostableCommand items in Revit
     /// </summary>
-    public class CommandExecutionService
+    public class CommandExecutionHelper
     {
         private readonly UIApplication _uiApplication;
 
-        public CommandExecutionService(UIApplication uiApplication)
+        public CommandExecutionHelper(UIApplication uiApplication)
         {
             _uiApplication =
                 uiApplication ?? throw new ArgumentNullException(nameof(uiApplication));

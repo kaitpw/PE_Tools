@@ -10,17 +10,17 @@ namespace PE_CommandPalette.H
     /// <summary>
     /// Service for parsing and managing Revit keyboard shortcuts from XML file
     /// </summary>
-    public class KeyboardShortcutsService
+    public class KeyboardShortcutsHelper
     {
-        private static readonly Lazy<KeyboardShortcutsService> _instance =
-            new Lazy<KeyboardShortcutsService>(() => new KeyboardShortcutsService());
+        private static readonly Lazy<KeyboardShortcutsHelper> _instance =
+            new Lazy<KeyboardShortcutsHelper>(() => new KeyboardShortcutsHelper());
 
         private Dictionary<string, ShortcutInfo> _shortcuts;
         private readonly object _lockObject = new object();
 
-        public static KeyboardShortcutsService Instance => _instance.Value;
+        public static KeyboardShortcutsHelper Instance => _instance.Value;
 
-        private KeyboardShortcutsService() { }
+        private KeyboardShortcutsHelper() { }
 
         /// <summary>
         /// Gets the keyboard shortcuts file path for the current Revit version
