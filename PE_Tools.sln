@@ -83,6 +83,7 @@ Global
 		PE_CommandPalette\PE_CommandPalette.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Init\PE_Init.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Lib\PE_Lib.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
+		PE_TapMaker\PE_TapMaker.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_CommandPalette\PE_CommandPalette.projitems*{f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

@@ -9,5 +9,17 @@
     <Import_RootNamespace>PE_TapMaker</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)H\TapMakerHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)M\TapSize.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)VM\TapMakerViewModel.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)V\TapMakerWindow.xaml.cs">
+      <DependentUpon>TapMakerWindow.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Page Include="$(MSBuildThisFileDirectory)V\TapMakerWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 </Project>
