@@ -2,13 +2,16 @@
 
 namespace PE_Lib;
 
-internal class Pickers {
+public class Pickers
+{
     public static Result<(Element element, Face elementFace, UV clickPosition)> FacePosition(
         UIApplication uiApplication,
         ISelectionFilter selectionFilter,
         string selectionPrompt
-    ) {
-        try {
+    )
+    {
+        try
+        {
             var uiDoc = uiApplication.ActiveUIDocument;
             var doc = uiDoc.Document;
             var reference = uiDoc.Selection.PickObject(
@@ -23,18 +26,20 @@ internal class Pickers {
                 return new InvalidOperationException("Selected reference is not a face");
 
             return (element, face, reference.UVPoint);
-        }
-        catch (Exception e) {
+        } catch (Exception e)
+        {
             return e;
         }
     }
-    
+
     public static Result<(Element element, Face elementFace)> Face(
         UIApplication uiApplication,
         ISelectionFilter selectionFilter,
         string selectionPrompt
-    ) {
-        try {
+    )
+    {
+        try
+        {
             var uiDoc = uiApplication.ActiveUIDocument;
             var doc = uiDoc.Document;
             var reference = uiDoc.Selection.PickObject(
@@ -49,7 +54,8 @@ internal class Pickers {
                 return new InvalidOperationException("Selected reference is not a face");
 
             return (element, face);
-        } catch (Exception e) {
+        } catch (Exception e)
+        {
             return e;
         }
     }

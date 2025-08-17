@@ -1,8 +1,8 @@
-﻿namespace PE_Mechanical;
+﻿using PE_Lib;
+
+namespace PE_Mechanical;
 internal class Ducts{
-    static SomeMethod() {
-        return;
-    }
+    
 
 }
 

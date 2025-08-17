@@ -17,6 +17,8 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PE_TapMaker", "PE_TapMaker\
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PE_Mechanical", "PE_Mechanical\PE_Mechanical.shproj", "{933AAF50-E022-4221-A80F-FCB92C48EF9C}"
 EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PE_MEP", "PE_MEP\PE_MEP.shproj", "{3DBF54AB-0936-44F2-85D4-0516B044A62E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug R23|Any CPU = Debug R23|Any CPU
@@ -80,12 +82,15 @@ Global
 	EndGlobalSection
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		PE_Init\PE_Init.projitems*{0694ab41-d4ea-4ecf-9525-26eed4e11d93}*SharedItemsImports = 13
+		PE_MEP\PE_MEP.projitems*{3dbf54ab-0936-44f2-85d4-0516b044a62e}*SharedItemsImports = 13
 		PE_TapMaker\PE_TapMaker.projitems*{7bde6d7d-b7d2-4798-a453-2822fb536b24}*SharedItemsImports = 13
 		PE_Mechanical\PE_Mechanical.projitems*{933aaf50-e022-4221-a80f-fcb92c48ef9c}*SharedItemsImports = 13
 		PE_Lib\PE_Lib.projitems*{97984bfe-92f6-4c75-9cb9-7e7b71787a0c}*SharedItemsImports = 13
 		PE_CommandPalette\PE_CommandPalette.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Init\PE_Init.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Lib\PE_Lib.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
+		PE_Mechanical\PE_Mechanical.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
+		PE_MEP\PE_MEP.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_TapMaker\PE_TapMaker.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_CommandPalette\PE_CommandPalette.projitems*{f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d}*SharedItemsImports = 13
 	EndGlobalSection

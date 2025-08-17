@@ -121,5 +121,7 @@
     <Import Project="..\PE_Init\PE_Init.projitems" Label="Shared"/>
     <Import Project="..\PE_Lib\PE_Lib.projitems" Label="Shared"/>
     <Import Project="..\PE_CommandPalette\PE_CommandPalette.projitems" Label="Shared"/>
+    <Import Project="..\PE_Mechanical\PE_Mechanical.projitems" Label="Shared"/>
+    <Import Project="..\PE_MEP\PE_MEP.projitems" Label="Shared"/>
     <Import Project="..\PE_TapMaker\PE_TapMaker.projitems" Label="Shared"/>
 </Project>

@@ -1,24 +1,11 @@
 ﻿using Autodesk.Revit.DB.Mechanical;
-
+using PE_Mechanical;
 namespace PE_Lib;
 
-internal class Filters {
-    /// <summary>
-    ///     Retrieves the associated Level of the active View in Revit.
-    /// </summary>
-    /// <param name="view">The View object for which to find the associated Level.</param>
-    /// <returns>The Level object associated with the view, or null if no level is associated or found.</returns>
-    public static Level LevelOfActiveView(View view) {
-        if (view == null)
-            return null;
+internal class Filters
+{
 
-        var doc = view.Document;
-        var levelId = view.GenLevel.Id;
 
-        if (levelId != ElementId.InvalidElementId && levelId != null)
-            return doc.GetElement(levelId) as Level;
-        return null;
-    }
 
     /// <summary>
     ///     Retrieves all elements of a specified type from the Revit document.
@@ -29,13 +16,12 @@ internal class Filters {
     ///     An IEnumerable of elements of the specified type that match the predicate. Returns an empty enumerable if none
     ///     are found.
     /// </returns>
-    public static IEnumerable<T> AllElementsOfType<T>(Document doc, Func<T, bool> filter = null)
-        where T : Element {
-        if (doc == null)
-            return [];
-
-        var collector = new FilteredElementCollector(doc);
-        var elements = collector.OfClass(typeof(T)).OfType<T>();
+    public static IEnumerable<T> AllElementsOfType<T>(
+        Document doc,
+        Func<T, bool> filter = null)
+        where T : Element
+    {
+        var elements = new FilteredElementCollector(doc).OfClass(typeof(T)).OfType<T>();
 
         if (filter != null)
             return elements.Where(filter);
@@ -48,13 +34,12 @@ internal class Filters {
     /// </summary>
     /// <typeparam name="T">The type of Element to retrieve. Must inherit from Autodesk.Revit.DB.Element.</typeparam>
     /// <returns>The first element of the specified type that matches the predicate, or null if none is found.</returns>
-    public static T FirstElementOfType<T>(Document doc, Func<T, bool> filter = null)
-        where T : Element {
-        if (doc == null)
-            return null;
-
-        var collector = new FilteredElementCollector(doc);
-        var elements = collector.OfClass(typeof(T)).OfType<T>();
+    public static T FirstElementOfType<T>(
+        Document doc,
+        Func<T, bool> filter = null)
+        where T : Element
+    {
+        var elements = new FilteredElementCollector(doc).OfClass(typeof(T)).OfType<T>();
 
         if (filter != null)
             return elements.Where(filter).FirstOrDefault();
@@ -69,16 +54,15 @@ internal class Filters {
     /// <param name="familyName">The name of the Family.</param>
     /// <param name="familySymbolName">The name of the Family Symbol (Type).</param>
     /// <returns>The matching FamilySymbol, or null if not found.</returns>
-    public static FamilySymbol GetByNameFamilySymbol(
+    public static FamilySymbol FamilySymbolByName(
         Document doc,
         string familyName,
         string familySymbolName
     ) =>
         FirstElementOfType<FamilySymbol>(
             doc,
-            fs =>
-                fs.FamilyName.Equals(familyName, StringComparison.OrdinalIgnoreCase)
-                && fs.Name.Equals(familySymbolName, StringComparison.OrdinalIgnoreCase)
+            fs => fs.FamilyName.Equals(familyName, StringComparison.OrdinalIgnoreCase)
+                  && fs.Name.Equals(familySymbolName, StringComparison.OrdinalIgnoreCase)
         );
 
     // --- Specialized Methods using the Generic Helpers ---
@@ -88,23 +72,51 @@ internal class Filters {
     ///     Performs case-insensitive comparison.
     /// </summary>
     /// <returns>The matching MEPSystemType, or null if not found.</returns>
-    public static MEPSystemType GetByNameMEPSystemType(Document doc, string name) =>
+    public static MEPSystemType MepSystemTypeByName(
+        Document doc,
+        string name
+    ) =>
         FirstElementOfType<MEPSystemType>(
             doc,
             mst => mst.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
         );
 
     /// <summary>
-    ///     Retrieves a DuctType by its Name.
-    ///     Performs case-insensitive comparison.
+    ///     Retrieves a DuctType by matching its shape, junction type, and elbow type.
+    ///     Performs case-insensitive comparison for elbow type names, for type none, no filter is applied.
     /// </summary>
+    /// <param name="doc">The current Revit document</param>
+    /// <param name="ductShape">The desired duct connector profile type</param>
+    /// <param name="junctionType">The preferred junction type for the duct</param>
+    /// <param name="elbowType">The type of elbow (Mitered, Radius, or Gored)</param>
     /// <returns>The matching DuctType, or null if not found.</returns>
-    public static DuctType GetByNameDuctType(Document doc, string name) =>
-        FirstElementOfType<DuctType>(
-            doc,
-            dt => dt.Name.Equals(name, StringComparison.OrdinalIgnoreCase)
-        );
+    /// <example>
+    ///     PE template DuctType examples (shape is in the parent family's name): <br></br> - Taps <br></br> - Tees <br></br> -
+    ///     Taps / Short Radius <br></br> - Radius Elbows /
+    ///     Taps <br></br> - Mitered Elbows w Vanes / Tees <br></br>
+    /// </example>
+    public static DuctType DuctType(
+        Document doc,
+        ConnectorProfileType ductShape,
+        JunctionType junctionType,
+        ElbowType elbowType = ElbowType.None
+    )
+    {
+        Func<string, bool> elbowFilter = elbowType switch
+        {
+            ElbowType.Mitered => elbowName => elbowName.IndexOf("Mitered", StringComparison.OrdinalIgnoreCase) >= 0,
+            ElbowType.Radius => elbowName => elbowName.IndexOf("Radius", StringComparison.OrdinalIgnoreCase) >= 0,
+            ElbowType.Gored => elbowName => elbowName.IndexOf("Gored", StringComparison.OrdinalIgnoreCase) >= 0,
+            _ => elbowName => true
+        };
 
+        return FirstElementOfType<DuctType>(
+            doc,
+            dt => dt.Shape == ductShape
+                  && dt.PreferredJunctionType == junctionType
+                  && elbowFilter(dt.Elbow.FamilyName)
+        );
+    }
     //public static PipingSystemType GetByNamePipingSystemType(Document doc, string name)
     //{
     //    return PipingSystemType.Hydronic
