@@ -1,13 +1,7 @@
-using System;
 using Nuke.Common;
 using Nuke.Common.CI.GitHubActions;
-using Nuke.Common.IO;
-using Nuke.Common.ProjectModel;
-using Nuke.Common.Utilities.Collections;
 using ricaun.Nuke;
 using ricaun.Nuke.Components;
-using ricaun.Nuke.Extensions;
-using ricaun.Nuke.Tools;
 
 // This allows generation of a GitHub Actions workflow file, however env vars needto be added manually
 // env:
@@ -28,8 +22,7 @@ using ricaun.Nuke.Tools;
 // Enable generation of env vars in the build yaml.
 // ImportSecrets = new[] { nameof(SignFile), nameof(SignPassword) }
 )]
-public class Build : NukeBuild, IPublishRevit
-{
+public class Build : NukeBuild, IPublishRevit {
     // Even though these are defined in ricaun.Nuke, Nuke expects them to be accessible for parameter injection)
     // [Secret]
     // [Parameter("Path or content of the signing file")]
@@ -43,8 +36,9 @@ public class Build : NukeBuild, IPublishRevit
     string IHazRevitPackageBuilder.VendorId => "Positive Energy"; // necessary
     string IHazRevitPackageBuilder.VendorDescription => "An ATX based MEP firm";
     string IHazInstallationFiles.InstallationFiles => "NukeFiles"; // directory with innstaller assets
+
     IssConfiguration IHazInstallationFiles.IssConfiguration =>
-        new IssConfiguration() { Title = "PE Tools" }; // not necessary, just changes name of installer
+        new() { Title = "PE Tools" }; // not necessary, just changes name of installer
 
     public static int Main() => Execute<Build>(x => x.From<IPublishRevit>().Build);
 }

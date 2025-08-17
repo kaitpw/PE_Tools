@@ -1,267 +1,209 @@
-using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PE_CommandPalette.H;
 using PE_CommandPalette.M;
+using System.Collections.ObjectModel;
+using System.Windows.Threading;
 
-namespace PE_CommandPalette.VM
-{
+namespace PE_CommandPalette.VM;
+
+/// <summary>
+///     ViewModel for the Command Palette window
+/// </summary>
+public partial class CommandPaletteViewModel : ObservableObject {
+    private readonly CommandExecutionHelper _executionService;
+
+    public CommandPaletteViewModel(UIApplication UIApplication, Dispatcher uiDispatcher) {
+        this._uiapp = UIApplication;
+        this._uiDispatcher = uiDispatcher;
+        this._executionService = new CommandExecutionHelper(this._uiapp);
+        this.FilteredCommands = new ObservableCollection<PostableCommandItem>();
+
+        // Initialize commands asynchronously for better startup performance
+        Task.Run(this.LoadCommandsAsync);
+    }
+
+    #region Properties
+
     /// <summary>
-    /// ViewModel for the Command Palette window
+    ///     The UI application instance for executing commands
     /// </summary>
-    public partial class CommandPaletteViewModel : ObservableObject
-    {
-        private readonly CommandExecutionHelper _executionService;
+    [ObservableProperty] private UIApplication _uiapp;
 
-        public CommandPaletteViewModel(UIApplication UIApplication, Dispatcher uiDispatcher)
-        {
-            _uiapp = UIApplication;
-            _uiDispatcher = uiDispatcher;
-            _executionService = new CommandExecutionHelper(_uiapp);
-            FilteredCommands = new ObservableCollection<PostableCommandItem>();
+    private readonly Dispatcher _uiDispatcher;
 
-            // Initialize commands asynchronously for better startup performance
-            Task.Run(LoadCommandsAsync);
+    /// <summary>
+    ///     Current search text
+    /// </summary>
+    [ObservableProperty] private string _searchText = string.Empty;
+
+    /// <summary>
+    ///     Currently selected command
+    /// </summary>
+    [ObservableProperty] private PostableCommandItem _selectedCommand;
+
+    /// <summary>
+    ///     Currently selected index in the filtered list
+    /// </summary>
+    [ObservableProperty] private int _selectedIndex = -1;
+
+    /// <summary>
+    ///     Whether the command list is currently loading
+    /// </summary>
+    [ObservableProperty] private bool _isLoading = true;
+
+    /// <summary>
+    ///     Whether a command is currently being executed
+    /// </summary>
+    [ObservableProperty] private bool _isExecutingCommand;
+
+    /// <summary>
+    ///     Filtered list of commands based on search text
+    /// </summary>
+    public ObservableCollection<PostableCommandItem> FilteredCommands { get; }
+
+    /// <summary>
+    ///     Status text for the currently selected command
+    /// </summary>
+    public string CommandStatus {
+        get {
+            if (this.SelectedCommand == null)
+                return "No command selected";
+
+            return this._executionService.GetCommandStatus(this.SelectedCommand);
         }
+    }
 
-        #region Properties
+    #endregion
 
-        /// <summary>
-        /// The UI application instance for executing commands
-        /// </summary>
-        [ObservableProperty]
-        private UIApplication _uiapp;
+    #region Commands
 
-        private readonly Dispatcher _uiDispatcher;
+    /// <summary>
+    ///     Executes the currently selected command
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanExecuteSelectedCommand))]
+    private async Task ExecuteSelectedCommandAsync() {
+        if (this.SelectedCommand == null)
+            return;
 
-        /// <summary>
-        /// Current search text
-        /// </summary>
-        [ObservableProperty]
-        private string _searchText = string.Empty;
+        this.IsExecutingCommand = true;
 
-        /// <summary>
-        /// Currently selected command
-        /// </summary>
-        [ObservableProperty]
-        private PostableCommandItem _selectedCommand;
+        var success = await Task.Run(() => this._executionService.ExecuteCommand(this.SelectedCommand));
+    }
 
-        /// <summary>
-        /// Currently selected index in the filtered list
-        /// </summary>
-        [ObservableProperty]
-        private int _selectedIndex = -1;
+    /// <summary>
+    ///     Moves selection up in the list
+    /// </summary>
+    [RelayCommand]
+    private void MoveSelectionUp() {
+        if (this.SelectedIndex > 0) this.SelectedIndex--;
+    }
 
-        /// <summary>
-        /// Whether the command list is currently loading
-        /// </summary>
-        [ObservableProperty]
-        private bool _isLoading = true;
+    /// <summary>
+    ///     Moves selection down in the list
+    /// </summary>
+    [RelayCommand]
+    private void MoveSelectionDown() {
+        if (this.SelectedIndex < this.FilteredCommands.Count - 1) this.SelectedIndex++;
+    }
 
-        /// <summary>
-        /// Whether a command is currently being executed
-        /// </summary>
-        [ObservableProperty]
-        private bool _isExecutingCommand = false;
+    /// <summary>
+    ///     Clears the search text
+    /// </summary>
+    [RelayCommand]
+    private void ClearSearch() => this.SearchText = string.Empty;
 
-        /// <summary>
-        /// Filtered list of commands based on search text
-        /// </summary>
-        public ObservableCollection<PostableCommandItem> FilteredCommands { get; }
+    #endregion
 
-        /// <summary>
-        /// Status text for the currently selected command
-        /// </summary>
-        public string CommandStatus
-        {
-            get
-            {
-                if (SelectedCommand == null)
-                    return "No command selected";
+    #region Methods
 
-                return _executionService.GetCommandStatus(SelectedCommand);
-            }
-        }
+    /// <summary>
+    ///     Loads commands asynchronously
+    /// </summary>
+    private async Task LoadCommandsAsync() =>
+        await Task.Run(() => {
+            // Load commands on background thread
+            var commands = PostableCommandHelper.Instance.GetAllCommands();
 
-        #endregion
+            // Update UI on main thread
+            this._uiDispatcher.Invoke(() => {
+                this.FilteredCommands.Clear();
+                foreach (var command in commands) // Show first 50 initially for performance
+                    this.FilteredCommands.Add(command);
 
-        #region Commands
+                // Select first item by default
+                if (this.FilteredCommands.Count > 0) this.SelectedIndex = 0;
 
-        /// <summary>
-        /// Executes the currently selected command
-        /// </summary>
-        [RelayCommand(CanExecute = nameof(CanExecuteSelectedCommand))]
-        private async Task ExecuteSelectedCommandAsync()
-        {
-            if (SelectedCommand == null)
-                return;
-
-            IsExecutingCommand = true;
-
-            bool success = await Task.Run(() => _executionService.ExecuteCommand(SelectedCommand));
-        }
-
-        /// <summary>
-        /// Moves selection up in the list
-        /// </summary>
-        [RelayCommand]
-        private void MoveSelectionUp()
-        {
-            if (SelectedIndex > 0)
-            {
-                SelectedIndex--;
-            }
-        }
-
-        /// <summary>
-        /// Moves selection down in the list
-        /// </summary>
-        [RelayCommand]
-        private void MoveSelectionDown()
-        {
-            if (SelectedIndex < FilteredCommands.Count - 1)
-            {
-                SelectedIndex++;
-            }
-        }
-
-        /// <summary>
-        /// Clears the search text
-        /// </summary>
-        [RelayCommand]
-        private void ClearSearch()
-        {
-            SearchText = string.Empty;
-        }
-
-        #endregion
-
-        #region Methods
-
-        /// <summary>
-        /// Loads commands asynchronously
-        /// </summary>
-        private async Task LoadCommandsAsync()
-        {
-            await Task.Run(() =>
-            {
-                // Load commands on background thread
-                var commands = PostableCommandHelper.Instance.GetAllCommands();
-
-                // Update UI on main thread
-                _uiDispatcher.Invoke(() =>
-                {
-                    FilteredCommands.Clear();
-                    foreach (var command in commands) // Show first 50 initially for performance
-                    {
-                        FilteredCommands.Add(command);
-                    }
-
-                    // Select first item by default
-                    if (FilteredCommands.Count > 0)
-                    {
-                        SelectedIndex = 0;
-                    }
-
-                    IsLoading = false;
-                });
+                this.IsLoading = false;
             });
-        }
+        });
 
-        /// <summary>
-        /// Filters commands based on current search text
-        /// </summary>
-        private void FilterCommands()
-        {
-            var filtered = PostableCommandHelper.Instance.FilterCommands(SearchText);
+    /// <summary>
+    ///     Filters commands based on current search text
+    /// </summary>
+    private void FilterCommands() {
+        var filtered = PostableCommandHelper.Instance.FilterCommands(this.SearchText);
 
-            FilteredCommands.Clear();
-            foreach (var command in filtered) // Limit results for performance
-            {
-                FilteredCommands.Add(command);
-            }
+        this.FilteredCommands.Clear();
+        foreach (var command in filtered) // Limit results for performance
+            this.FilteredCommands.Add(command);
 
-            // Reset selection to first item
-            SelectedIndex = FilteredCommands.Count > 0 ? 0 : -1;
-        }
-
-        /// <summary>
-        /// Checks if the selected command can be executed
-        /// </summary>
-        private bool CanExecuteSelectedCommand()
-        {
-            return SelectedCommand != null
-                && _executionService.IsCommandAvailable(SelectedCommand)
-                && !IsExecutingCommand;
-        }
-
-        #endregion
-
-        #region Property Change Handlers
-
-        /// <summary>
-        /// Handles changes to the SearchText property
-        /// </summary>
-        partial void OnSearchTextChanged(string value)
-        {
-            FilterCommands();
-        }
-
-        /// <summary>
-        /// Handles changes to the SelectedCommand property
-        /// </summary>
-        partial void OnSelectedCommandChanged(PostableCommandItem value)
-        {
-            // Clear previous selection
-            if (FilteredCommands.Any(cmd => cmd != value))
-            {
-                foreach (var cmd in FilteredCommands)
-                {
-                    cmd.IsSelected = false;
-                }
-            }
-
-            // Set new selection
-            if (value != null)
-            {
-                value.IsSelected = true;
-            }
-
-            // Notify that CommandStatus has changed
-            OnPropertyChanged(nameof(CommandStatus));
-        }
-
-        /// <summary>
-        /// Handles changes to the SelectedIndex property
-        /// </summary>
-        partial void OnSelectedIndexChanged(int value)
-        {
-            // Update selected command based on index
-            if (value >= 0 && value < FilteredCommands.Count)
-            {
-                SelectedCommand = FilteredCommands[value];
-            }
-            else
-            {
-                SelectedCommand = null;
-            }
-        }
-
-        #endregion
+        // Reset selection to first item
+        this.SelectedIndex = this.FilteredCommands.Count > 0 ? 0 : -1;
     }
 
     /// <summary>
-    /// Event arguments for command execution completion
+    ///     Checks if the selected command can be executed
     /// </summary>
-    public class CommandExecutionCompletedEventArgs : EventArgs
-    {
-        public PostableCommandItem Command { get; set; }
-        public bool Success { get; set; }
-        public Exception Error { get; set; }
+    private bool CanExecuteSelectedCommand() =>
+        this.SelectedCommand != null
+        && this._executionService.IsCommandAvailable(this.SelectedCommand)
+        && !this.IsExecutingCommand;
+
+    #endregion
+
+    #region Property Change Handlers
+
+    /// <summary>
+    ///     Handles changes to the SearchText property
+    /// </summary>
+    partial void OnSearchTextChanged(string value) => this.FilterCommands();
+
+    /// <summary>
+    ///     Handles changes to the SelectedCommand property
+    /// </summary>
+    partial void OnSelectedCommandChanged(PostableCommandItem value) {
+        // Clear previous selection
+        if (this.FilteredCommands.Any(cmd => cmd != value))
+            foreach (var cmd in this.FilteredCommands)
+                cmd.IsSelected = false;
+
+        // Set new selection
+        if (value != null) value.IsSelected = true;
+
+        // Notify that CommandStatus has changed
+        this.OnPropertyChanged(nameof(this.CommandStatus));
     }
+
+    /// <summary>
+    ///     Handles changes to the SelectedIndex property
+    /// </summary>
+    partial void OnSelectedIndexChanged(int value) {
+        // Update selected command based on index
+        if (value >= 0 && value < this.FilteredCommands.Count)
+            this.SelectedCommand = this.FilteredCommands[value];
+        else
+            this.SelectedCommand = null;
+    }
+
+    #endregion
+}
+
+/// <summary>
+///     Event arguments for command execution completion
+/// </summary>
+public class CommandExecutionCompletedEventArgs : EventArgs {
+    public PostableCommandItem Command { get; set; }
+    public bool Success { get; set; }
+    public Exception Error { get; set; }
 }
