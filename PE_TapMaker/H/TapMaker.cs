@@ -59,7 +59,7 @@ public static class TapMaker {
 
             var locationAdjusted = clickPosition;
             if (!Faces.IsPointInside(face, clickPosition, tapRadiusFeet)) {
-                locationAdjusted = Faces.AdjustPointToFaceBounds(face, clickPosition, tapRadiusFeet);
+                locationAdjusted = Faces.ConstrainUVPointWithMargin(face, clickPosition, tapRadiusFeet);
                 balloon.AddDebug(new StackFrame(),
                     $"Adjusted UV from ({clickPosition.U:F3}, {clickPosition.V:F3}) to ({locationAdjusted.U:F3}, {locationAdjusted.V:F3})"
                 );
@@ -94,7 +94,7 @@ public static class TapMaker {
                     normal,
                     tapSizeFeet,
                     tapDuctType,
-                     balloon
+                    balloon
                 );
 
                 if (tapError is ElementIntersectException) {
@@ -105,7 +105,7 @@ public static class TapMaker {
                         locationAdjusted,
                         tapSizeFeet,
                         tapDuctType,
-                         balloon
+                        balloon
                     );
                 }
 

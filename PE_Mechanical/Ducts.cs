@@ -44,7 +44,8 @@ internal class Ducts {
                 .ToList();
 
             if (existingElements.Any()) {
-                balloon?.AddDebug(new StackFrame(), $"Found {existingElements.Count} existing elements at tap location");
+                balloon?.AddDebug(new StackFrame(),
+                    $"Found {existingElements.Count} existing elements at tap location");
                 foreach (var elem in existingElements) {
                     balloon?.AddDebug(new StackFrame(),
                         $"Existing element - ID: {elem.Id}, Category: {elem.Category?.Name}, Class: {elem.GetType().Name}");

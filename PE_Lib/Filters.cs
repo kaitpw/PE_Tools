@@ -1,12 +1,9 @@
 ﻿using Autodesk.Revit.DB.Mechanical;
 using PE_Mechanical;
+
 namespace PE_Lib;
 
-internal class Filters
-{
-
-
-
+internal class Filters {
     /// <summary>
     ///     Retrieves all elements of a specified type from the Revit document.
     ///     This is a general method for finding multiple elements.
@@ -19,8 +16,7 @@ internal class Filters
     public static IEnumerable<T> AllElementsOfType<T>(
         Document doc,
         Func<T, bool> filter = null)
-        where T : Element
-    {
+        where T : Element {
         var elements = new FilteredElementCollector(doc).OfClass(typeof(T)).OfType<T>();
 
         if (filter != null)
@@ -37,8 +33,7 @@ internal class Filters
     public static T FirstElementOfType<T>(
         Document doc,
         Func<T, bool> filter = null)
-        where T : Element
-    {
+        where T : Element {
         var elements = new FilteredElementCollector(doc).OfClass(typeof(T)).OfType<T>();
 
         if (filter != null)
@@ -100,10 +95,8 @@ internal class Filters
         ConnectorProfileType ductShape,
         JunctionType junctionType,
         ElbowType elbowType = ElbowType.None
-    )
-    {
-        Func<string, bool> elbowFilter = elbowType switch
-        {
+    ) {
+        Func<string, bool> elbowFilter = elbowType switch {
             ElbowType.Mitered => elbowName => elbowName.IndexOf("Mitered", StringComparison.OrdinalIgnoreCase) >= 0,
             ElbowType.Radius => elbowName => elbowName.IndexOf("Radius", StringComparison.OrdinalIgnoreCase) >= 0,
             ElbowType.Gored => elbowName => elbowName.IndexOf("Gored", StringComparison.OrdinalIgnoreCase) >= 0,

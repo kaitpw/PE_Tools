@@ -174,9 +174,10 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// </summary>
     partial void OnSelectedCommandChanged(PostableCommandItem value) {
         // Clear previous selection
-        if (this.FilteredCommands.Any(cmd => cmd != value))
+        if (this.FilteredCommands.Any(cmd => cmd != value)) {
             foreach (var cmd in this.FilteredCommands)
                 cmd.IsSelected = false;
+        }
 
         // Set new selection
         if (value != null) value.IsSelected = true;

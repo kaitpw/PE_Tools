@@ -23,8 +23,10 @@ public class PostableCommandHelper {
     public List<PostableCommandItem> GetAllCommands() {
         if (this._allCommands == null) {
             lock (this._lockObject) // for multi-thread safety
+            {
                 if (this._allCommands == null)
                     this._allCommands = this.LoadPostableCommands();
+            }
         }
 
         return this._allCommands;

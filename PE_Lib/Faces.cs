@@ -46,25 +46,38 @@ public class Faces {
                p.DistanceTo(face.Evaluate(new UV(point.U, bb.Max.V))) >= marginFeet; // top
     }
 
-    public static UV AdjustPointToFaceBounds(Face face, UV point, double margin) {
+    public static UV ConstrainUVPointWithMargin(Face face, UV point, double margin) {
         var bb = face.GetBoundingBox();
         var (faceWidth, faceHeight) = GetFaceDimensionsInFeet(face);
         var tapDiameter = margin * 2;
 
-        // If face is smaller than or close to tap size, center the tap
-        if (faceWidth <= tapDiameter * 1.2 || faceHeight <= tapDiameter * 1.2) return GetCenter(face);
-
-        // For larger faces, try to keep the tap as close to click point while ensuring it fits
+        // Get the current position ratios (0-1 in UV space)
         var uRatio = (point.U - bb.Min.U) / (bb.Max.U - bb.Min.U);
         var vRatio = (point.V - bb.Min.V) / (bb.Max.V - bb.Min.V);
-        uRatio = Math.Max(margin / faceWidth, Math.Min(1 - (margin / faceWidth), uRatio));
-        vRatio = Math.Max(margin / faceHeight, Math.Min(1 - (margin / faceHeight), vRatio));
+
+        // If face is smaller than tap in width, center horizontally
+        if (faceWidth <= tapDiameter * 1.2)
+            uRatio = 0.5;
+        else
+            uRatio = Math.Max(margin / faceWidth, Math.Min(1 - (margin / faceWidth), uRatio));
+
+        // If face is smaller than tap in height, center vertically
+        if (faceHeight <= tapDiameter * 1.2)
+            vRatio = 0.5;
+        else
+            vRatio = Math.Max(margin / faceHeight, Math.Min(1 - (margin / faceHeight), vRatio));
 
         return new UV(
             bb.Min.U + (uRatio * (bb.Max.U - bb.Min.U)),
             bb.Min.V + (vRatio * (bb.Max.V - bb.Min.V))
         );
     }
+
+    public static Result<UV> ConstrainUVPointTODO(Face face, UV point) =>
+        new NotImplementedException("Not implemented");
+
+    public static Result<XYZ> ConstrainXYZPointTODO(XYZ point) =>
+        new NotImplementedException("Not implemented, more thought to be put to the args");
 
     ///<summary>Using a length and an angle, get a new point relative to a reference point</summary>
     public static UV GetPointAtAngle(UV referencePoint, double lengthFeet, double angleInDegrees) {

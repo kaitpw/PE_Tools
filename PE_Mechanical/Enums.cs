@@ -1,6 +1,6 @@
 namespace PE_Mechanical;
-public enum ElbowType
-{
+
+public enum ElbowType {
     Mitered,
     Radius,
     Gored,
