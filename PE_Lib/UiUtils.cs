@@ -25,8 +25,7 @@ internal class UiUtils {
             title = typeof(Utils).Assembly.GetName().Name;
         if (clickHandler == null)
             clickHandler = clickHandlerDefault;
-        if (clickHandler.Method.Equals(clickHandlerDefault))
-            clickDescription = "Click to copy";
+        clickDescription = "Click to copy";
 
         var ri = new ResultItem();
         ri.Title = text.Trim();
@@ -34,6 +33,15 @@ internal class UiUtils {
         ri.ResultClicked += (_, _) => clickHandler();
 
         ComponentManager.InfoCenterPaletteManager.ShowBalloon(ri);
+    }
+
+    public static void ShowDebugBalloon(string text,
+        string title = null,
+        Action clickHandler = null,
+        string clickDescription = null) {
+#if DEBUG
+        ShowBalloon(text, title, clickHandler, clickDescription);
+#endif
     }
 }
 
@@ -47,20 +55,22 @@ internal class BalloonCollector {
         this._title = title;
     }
 
-    /// <summary>Add a message to the message list</summary>
-    public void AddMessage(string message) {
-        if (!string.IsNullOrWhiteSpace(message)) this._messages.Add($"{message.Trim()}");
+    /// <summary>Add a normal message</summary>
+    public void Add(string title, string message) {
+        if (!string.IsNullOrWhiteSpace(message)) this._messages.Add($"{title}: {message.Trim()}");
     }
 
-    /// <summary>Add a formatted message with prefix </summary>
-    public void AddDebugMessage(string description, string message) {
+    /// <summary>Add a Debug message </summary>
+    public void AddDebug(StackFrame sf, string message) {
 #if DEBUG
-        if (!string.IsNullOrWhiteSpace(message)) this._messages.Add($"DEBUG ({description}): {message.Trim()}");
+        if (!string.IsNullOrWhiteSpace(message))
+            this._messages.Add($"DEBUG ({sf.GetMethod()?.Name}): {message.Trim()}");
 #endif
     }
 
-    /// <summary>Add an exception message</summary>
-    public void AddException(string context, Exception ex) => this._messages.Add($"ERROR ({context}): {ex.Message}");
+    /// <summary>Add an Exception message</summary>
+    public void AddException(StackFrame sf, Exception ex) =>
+        this._messages.Add($"ERROR ({sf.GetMethod()?.Name}): {ex.Message}");
 
     /// <summary>Clear all accumulated messages</summary>
     public void Clear() => this._messages.Clear();
@@ -69,7 +79,7 @@ internal class BalloonCollector {
     public void Show() {
         var combinedMessage = new StringBuilder();
         combinedMessage.AppendLine(new string('-', 20));
-        if (this._messages.Count == 0) this.AddMessage("No messages to display");
+        if (this._messages.Count == 0) this.Add("EMPTY", "No messages to display");
 
         foreach (var message in this._messages)
             combinedMessage.AppendLine("\u2588 " + message);
