@@ -57,32 +57,17 @@ public static class TapMaker {
             var tapSizeFeet = tapSizeInches / 12.0;
             var tapRadiusFeet = tapSizeInches / 2 / 12.0; // Convert to feet for Revit internal units
 
-            var locationAdjusted = clickPosition;
-            if (!Faces.IsPointInside(face, clickPosition, tapRadiusFeet)) {
-                locationAdjusted = Faces.ConstrainUVPointWithMargin(face, clickPosition, tapRadiusFeet);
-                balloon.AddDebug(new StackFrame(),
-                    $"Adjusted UV from ({clickPosition.U:F3}, {clickPosition.V:F3}) to ({locationAdjusted.U:F3}, {locationAdjusted.V:F3})"
-                );
-            }
-
-            // Use the adjusted position
+            var locationAdjusted = (!Faces.IsPointInside(face, clickPosition, tapRadiusFeet))
+                ? Faces.ConstrainUVPointWithMargin(face, clickPosition, tapRadiusFeet)
+                : clickPosition;
             var location = face.Evaluate(locationAdjusted);
-            balloon.AddDebug(new StackFrame(),
-                $"Click position UV: ({locationAdjusted.U:F3}, {locationAdjusted.V:F3}) -> XYZ: ({location.X:F2}, {location.Y:F2}, {location.Z:F2})"
-            );
-
-            // Get face normal at click position
             var normal = face.ComputeNormal(locationAdjusted);
-            balloon.AddDebug(new StackFrame(),
-                $"Face Normal: ({normal.X:F2}, {normal.Y:F2}, {normal.Z:F2})"
-            );
 
             var tapDuctType =
                 new[] { ConnectorProfileType.Round, ConnectorProfileType.Rectangular, ConnectorProfileType.Oval }
                     .Select(shape => Filters.DuctType(doc, shape, JunctionType.Tap))
                     .FirstOrDefault(result => result is not null);
             if (tapDuctType is null) throw new InvalidOperationException("DuctType is null, nothing was found");
-            balloon.AddDebug(new StackFrame(), $"Making {tapSizeInches:F1}\" {tapDuctType.Name}...");
 
             using (var trans = new Transaction(doc, "Create Tap")) {
                 _ = trans.Start();
@@ -111,6 +96,7 @@ public static class TapMaker {
 
                 if (tap is not null && tapError is null) {
                     _ = trans.Commit();
+                    balloon.Add(new StackFrame(), $"Created a {tapSizeInches}\" tap successfully.");
                     balloon?.Show();
                     return true;
                 }

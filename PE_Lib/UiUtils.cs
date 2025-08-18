@@ -56,8 +56,8 @@ internal class BalloonCollector {
     }
 
     /// <summary>Add a normal message</summary>
-    public void Add(string title, string message) {
-        if (!string.IsNullOrWhiteSpace(message)) this._messages.Add($"{title}: {message.Trim()}");
+    public void Add(StackFrame sf, string message) {
+        if (!string.IsNullOrWhiteSpace(message)) this._messages.Add($"{sf.GetMethod()?.Name}: {message.Trim()}");
     }
 
     /// <summary>Add a Debug message </summary>
@@ -79,7 +79,7 @@ internal class BalloonCollector {
     public void Show() {
         var combinedMessage = new StringBuilder();
         combinedMessage.AppendLine(new string('-', 20));
-        if (this._messages.Count == 0) this.Add("EMPTY", "No messages to display");
+        if (this._messages.Count == 0) this.Add(new StackFrame(), "No messages to display");
 
         foreach (var message in this._messages)
             combinedMessage.AppendLine("\u2588 " + message);
