@@ -8,23 +8,7 @@ using PE_Tools.Properties;
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
-public class cmdTapMaker : IExternalCommand {
-    internal static PushButtonData GetButtonData() {
-        return new ButtonDataClass(
-            "Tap Maker",
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
-            Resources.Green_32,
-            Resources.Green_16,
-            """
-            Add a (default) 6" tap to a clicked point on a duct face. Works in all views and on both round/rect ducts. \
-            Click-point adjustments will prevent overlaps (with other taps) and overhangs (over face edges). \
-            Size adjustments will size down a duct until it fits on a duct face.
-            
-            In the event an easy location or size adjustment is not found, no tap will be placed.
-            """
-        ).Data;
-    }
-
+public class CmdTapMaker : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -40,7 +24,7 @@ public class cmdTapMaker : IExternalCommand {
                 return Result.Failed;
             }
 
-            bool success = false;
+            var success = false;
 
             while (true) {
                 var (selection, selectionError) = Pickers.FacePosition(
@@ -71,6 +55,20 @@ public class cmdTapMaker : IExternalCommand {
         }
     }
 
+    internal static PushButtonData GetButtonData() =>
+        new ButtonDataClass(
+            "Tap Maker",
+            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
+            Resources.Green_32,
+            Resources.Green_16,
+            """
+            Add a (default) 6" tap to a clicked point on a duct face. Works in all views and on both round/rect ducts. \
+            Click-point adjustments will prevent overlaps (with other taps) and overhangs (over face edges). \
+            Size adjustments will size down a duct until it fits on a duct face.
+
+            In the event an easy location or size adjustment is not found, no tap will be placed.
+            """
+        ).Data;
 
 
     public static bool CreateTapOnFace(
@@ -80,7 +78,7 @@ public class cmdTapMaker : IExternalCommand {
         UV clickPosition,
         double tapSizeInches = 6.0
     ) {
-        var balloon = new BalloonCollector();
+        var balloon = new Balloon();
 
         try {
             var uidoc = uiApplication.ActiveUIDocument;
@@ -90,7 +88,7 @@ public class cmdTapMaker : IExternalCommand {
             var tapSizeFeet = tapSizeInches / 12.0;
             var tapRadiusFeet = tapSizeInches / 2 / 12.0; // Convert to feet for Revit internal units
 
-            var locationAdjusted = (!Faces.IsPointInside(face, clickPosition, tapRadiusFeet))
+            var locationAdjusted = !Faces.IsPointInside(face, clickPosition, tapRadiusFeet)
                 ? Faces.ConstrainUVPointWithMargin(face, clickPosition, tapRadiusFeet)
                 : clickPosition;
             var location = face.Evaluate(locationAdjusted);
@@ -129,7 +127,8 @@ public class cmdTapMaker : IExternalCommand {
 
                 if (tap is not null && tapError is null) {
                     _ = trans.Commit();
-                    balloon.Add(new StackFrame(), $"Created a {tapSizeInches}\" tap successfully.");
+                    balloon.Add(Balloon.LogLevel.Info, new StackFrame(),
+                        $"Created a {tapSizeInches}\" tap successfully.");
                     balloon?.Show();
                     return true;
                 }
@@ -139,7 +138,7 @@ public class cmdTapMaker : IExternalCommand {
                 return false;
             }
         } catch (Exception ex) {
-            balloon.AddException(new StackFrame(), ex);
+            balloon.Add(new StackFrame(), ex);
             balloon.Show();
             return false; // Don't throw, just return false so user can see debug info
         }
@@ -152,7 +151,7 @@ public class cmdTapMaker : IExternalCommand {
         UV adjustedPosition,
         double tapSizeFeet,
         DuctType ductType,
-        BalloonCollector balloon = null
+        Balloon balloon = null
     ) {
         FamilyInstance tap;
         Exception tapError;
@@ -179,7 +178,7 @@ public class cmdTapMaker : IExternalCommand {
                     balloon);
                 if (tap is null || tapError is not null) continue;
 
-                balloon?.AddDebug(new StackFrame(),
+                balloon?.Add(Balloon.LogLevel.Info, new StackFrame(),
                     $"Found working position at UV: ({altPosition.U:F3}, {altPosition.V:F3})"
                 );
                 return tap;

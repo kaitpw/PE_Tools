@@ -1,31 +1,35 @@
 using PE_Init;
+using PE_Lib;
 
 namespace PE_Tools;
 
 internal class App : IExternalApplication {
     public Result OnStartup(UIControlledApplication app) {
         // 1. Create ribbon tab
-        var tabName = "PE TOOLS";
+        const string tabName = "PE TOOLS";
         try {
             app.CreateRibbonTab(tabName);
         } catch (Exception) {
-            Debug.Print($"{tabName} already exists in the current Revit instance.");
+            UiUtils.ShowBalloon($"{tabName} already exists in the current Revit instance.");
         }
 
         // 2. Create ribbon panel
-        var panel = UiHelpers.CreateRibbonPanel(app, tabName, "Revit Tools 1");
+        const string ribbonPanelName1 = "Manage";
+        const string ribbonPanelName2 = "Tools";
+        var panelManage = UiHelpers.CreateRibbonPanel(app, tabName, ribbonPanelName1);
+        var panelTools = UiHelpers.CreateRibbonPanel(app, tabName, ribbonPanelName2);
 
         // 3. Create button data instances
-        var btnData1 = cmdUpdate.GetButtonData();
-        var btnData2 = cmdMep2040.GetButtonData();
-        var btnData3 = cmdCommandPalette.GetButtonData();
-        var btnData4 = cmdTapMaker.GetButtonData();
+        var cmdUpdate = CmdUpdate.GetButtonData();
+        var cmdMep2040 = CmdMep2040.GetButtonData();
+        var cmdCommandPalette = CmdCommandPalette.GetButtonData();
+        var cmdTapMaker = CmdTapMaker.GetButtonData();
 
         // 4. Add buttons to panel
-        var myButton1 = panel.AddItem(btnData1) as PushButton;
-        var myButton2 = panel.AddItem(btnData2) as PushButton;
-        var myButton3 = panel.AddItem(btnData3) as PushButton;
-        var myButton4 = panel.AddItem(btnData4) as PushButton;
+        _ = panelManage.AddItem(cmdUpdate) as PushButton;
+        _ = panelTools.AddItem(cmdMep2040) as PushButton;
+        _ = panelTools.AddItem(cmdCommandPalette) as PushButton;
+        _ = panelTools.AddItem(cmdTapMaker) as PushButton;
 
         return Result.Succeeded;
     }

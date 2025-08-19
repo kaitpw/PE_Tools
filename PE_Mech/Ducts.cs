@@ -16,16 +16,14 @@ internal class Ducts {
         XYZ direction,
         double tapSizeFeet,
         DuctType ductType,
-        BalloonCollector balloon = null
+        Balloon balloon = null
     ) {
         try {
             var (level, _) = MepCurve.GetReferenceLevel(trunkDuct);
             if (level is null) return new InvalidOperationException("ReferenceLevel is null, nothing was found");
-            balloon?.AddDebug(new StackFrame(), $"Using reference level: {level.Name}");
 
             var (systemType, _) = MepCurve.GetSystemType(trunkDuct);
             if (systemType is null) return new InvalidOperationException("SystemType is null, nothing was found");
-            balloon?.AddDebug(new StackFrame(), $"Using system type from main duct: {systemType.Name}");
 
             // Check for existing elements at the tap location first
             var boundingBox = new BoundingBoxXYZ();
@@ -60,11 +58,13 @@ internal class Ducts {
                 branchEnd
             );
             if (branchDuct is null) return new InvalidOperationException("Branch duct is null, creation was faulty");
-            balloon?.AddDebug(new StackFrame(), $"Created branch duct ID: {branchDuct.Id}");
+            balloon?.AddDebug(Balloon.LogLevel.Info, new StackFrame(),
+                $"Created branch duct on {level.Name} with DuctType: {ductType.Name}, SystemType: {systemType.Name}");
 
             // Set the duct diameter to the correct tap size
             var setDiamSuccess = branchDuct.get_Parameter(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM).Set(tapSizeFeet);
-            if (!setDiamSuccess) balloon?.Add(new StackFrame(), "Branch duct's diameter could not be set");
+            if (!setDiamSuccess)
+                balloon?.Add(Balloon.LogLevel.Warn, new StackFrame(), "Branch duct's diameter could not be set");
 
             // Get the connector from the branch duct closest to the main duct
             var (branchConns, _) = Connectors.GetClosestToPoint(branchDuct, location);
@@ -73,16 +73,13 @@ internal class Ducts {
             var branchConn = branchConns[0];
 
             var fitting = doc.Create.NewTakeoffFitting(branchConn, trunkDuct);
-            if (fitting is null) {
-                //_ = doc.Delete(branchDuct.Id); // TODO: figure out why a pipe still exists even if we delete the branchDuct here
-                return new InvalidOperationException("Failed to create takeoff fitting");
-            }
+            if (fitting is null) return new InvalidOperationException("Failed to create takeoff fitting");
 
             return fitting != null && !branchConn.IsConnected
                 ? new InvalidOperationException("Tap not properly connected to branch duct.")
                 : fitting;
         } catch (Exception ex) {
-            balloon?.AddException(new StackFrame(), ex);
+            balloon?.AddDebug(new StackFrame(), ex);
             return ex;
         }
     }

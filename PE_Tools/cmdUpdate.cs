@@ -6,17 +6,7 @@ using ricaun.Revit.Github;
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
-public class cmdUpdate : IExternalCommand {
-    internal static PushButtonData GetButtonData() {
-        return new ButtonDataClass(
-            "Update",
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
-            Resources.Blue_32,
-            Resources.Blue_16,
-            "Click this button to update PE Tools to the latest release. You will need to restart Revit"
-        ).Data;
-    }
-
+public class CmdUpdate : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -31,12 +21,21 @@ public class cmdUpdate : IExternalCommand {
         var request = new GithubRequestService("kaitpw", "PE_Tools");
         Task.Run(async () => {
             var result = await request.Initialize(text => {
-                Console.WriteLine(text);
-            }
+                    Console.WriteLine(text);
+                }
             );
             UiUtils.ShowBalloon($"Download: {result}");
         });
 
         return Result.Succeeded;
     }
+
+    internal static PushButtonData GetButtonData() =>
+        new ButtonDataClass(
+            "Update",
+            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
+            Resources.Blue_32,
+            Resources.Blue_16,
+            "Click this button to update PE Tools to the latest release. You will need to restart Revit"
+        ).Data;
 }
