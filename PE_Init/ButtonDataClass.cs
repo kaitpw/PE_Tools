@@ -5,13 +5,13 @@ namespace PE_Init;
 internal class ButtonDataClass {
     public ButtonDataClass(
         string name,
-        string text,
         string className,
         byte[] largeImage,
         byte[] smallImage,
         string toolTip
     ) {
-        this.Data = new PushButtonData(name, text, GetAssemblyName(), className);
+        var internalName = "PeCmdBtn" + name.Replace(" ", "").Replace(".", "");
+        this.Data = new PushButtonData(internalName, name, GetAssemblyName(), className);
         this.Data.ToolTip = toolTip;
 
         this.Data.LargeImage = ConvertToImageSource(largeImage);
@@ -24,7 +24,6 @@ internal class ButtonDataClass {
 
     public ButtonDataClass(
         string name,
-        string text,
         string className,
         byte[] largeImage,
         byte[] smallImage,
@@ -32,7 +31,8 @@ internal class ButtonDataClass {
         byte[] smallImageDark,
         string toolTip
     ) {
-        this.Data = new PushButtonData(name, text, GetAssemblyName(), className);
+        var internalName = "PeCmdBtn" + name.Replace(" ", "").Replace(".", "");
+        this.Data = new PushButtonData(internalName, name, GetAssemblyName(), className);
         this.Data.ToolTip = toolTip;
 
         // add check for light vs dark mode

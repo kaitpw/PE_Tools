@@ -9,6 +9,22 @@ namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
 public class cmdTapMaker : IExternalCommand {
+    internal static PushButtonData GetButtonData() {
+        return new ButtonDataClass(
+            "Tap Maker",
+            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
+            Resources.Green_32,
+            Resources.Green_16,
+            """
+            Add a (default) 6" tap to a clicked point on a duct face. Works in all views and on both round/rect ducts. \
+            Click-point adjustments will prevent overlaps (with other taps) and overhangs (over face edges). \
+            Size adjustments will size down a duct until it fits on a duct face.
+            
+            In the event an easy location or size adjustment is not found, no tap will be placed.
+            """
+        ).Data;
+    }
+
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -55,21 +71,7 @@ public class cmdTapMaker : IExternalCommand {
         }
     }
 
-    internal static PushButtonData GetButtonData() {
-        var buttonInternalName = "CmdBtnTapMaker";
-        var buttonTitle = "Tap Maker";
 
-        var myButtonData = new ButtonDataClass(
-            buttonInternalName,
-            buttonTitle,
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
-            Resources.Green_32,
-            Resources.Green_16,
-            "Add 6\" taps to duct faces. Click on any duct face to place a tap at that exact location."
-        );
-
-        return myButtonData.Data;
-    }
 
     public static bool CreateTapOnFace(
         UIApplication uiApplication,

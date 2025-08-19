@@ -7,6 +7,16 @@ namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
 public class cmdUpdate : IExternalCommand {
+    internal static PushButtonData GetButtonData() {
+        return new ButtonDataClass(
+            "Update",
+            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
+            Resources.Blue_32,
+            Resources.Blue_16,
+            "Click this button to update PE Tools to the latest release. You will need to restart Revit"
+        ).Data;
+    }
+
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -21,28 +31,12 @@ public class cmdUpdate : IExternalCommand {
         var request = new GithubRequestService("kaitpw", "PE_Tools");
         Task.Run(async () => {
             var result = await request.Initialize(text => {
-                    Console.WriteLine(text);
-                }
+                Console.WriteLine(text);
+            }
             );
             UiUtils.ShowBalloon($"Download: {result}");
         });
 
         return Result.Succeeded;
-    }
-
-    internal static PushButtonData GetButtonData() {
-        var buttonInternalName = "CmdBtnUpdate";
-        var buttonTitle = "Update";
-
-        var myButtonData = new ButtonDataClass(
-            buttonInternalName,
-            buttonTitle,
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
-            Resources.Blue_32,
-            Resources.Blue_16,
-            "Click this button to update PE Tools to the latest release."
-        );
-
-        return myButtonData.Data;
     }
 }

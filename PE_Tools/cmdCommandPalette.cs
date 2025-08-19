@@ -7,6 +7,16 @@ namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
 public class cmdCommandPalette : IExternalCommand {
+    internal static PushButtonData GetButtonData() {
+        return new ButtonDataClass(
+            "Command Palette",
+            MethodBase.GetCurrentMethod()?.DeclaringType?.FullName,
+            Resources.Yellow_32,
+            Resources.Yellow_16,
+            "Open the command palette to search and execute Revit commands quickly. Use Ctrl+K for quick access."
+        ).Data;
+    }
+
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -39,21 +49,5 @@ public class cmdCommandPalette : IExternalCommand {
         } catch (Exception ex) {
             throw new InvalidOperationException($"Error opening command palette: {ex.Message}");
         }
-    }
-
-    internal static PushButtonData GetButtonData() {
-        const string buttonInternalName = "CmdBtnCommandPalette";
-        const string buttonTitle = "Command Palette";
-
-        var myButtonData = new ButtonDataClass(
-            buttonInternalName,
-            buttonTitle,
-            MethodBase.GetCurrentMethod()?.DeclaringType?.FullName,
-            Resources.Yellow_32,
-            Resources.Yellow_16,
-            "Open the command palette to search and execute Revit commands quickly. Use Ctrl+K for quick access."
-        );
-
-        return myButtonData.Data;
     }
 }

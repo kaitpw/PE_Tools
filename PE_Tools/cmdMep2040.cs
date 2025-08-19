@@ -7,6 +7,17 @@ namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
 public class cmdMep2040 : IExternalCommand {
+
+    internal static PushButtonData GetButtonData() {
+        return new ButtonDataClass(
+            "MEP 2040",
+            MethodBase.GetCurrentMethod()?.DeclaringType?.FullName,
+            Resources.Green_32,
+            Resources.Green_16,
+            "Click to analyze MEP sustainability metrics (pipe length, refrigerant volume, equipment count)."
+        ).Data;
+    }
+
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -40,21 +51,5 @@ public class cmdMep2040 : IExternalCommand {
         UiUtils.ShowBalloon(sb.ToString(), "Sustainability Metrics");
 
         return Result.Succeeded;
-    }
-
-    internal static PushButtonData GetButtonData() {
-        var buttonInternalName = "CmdBtnMep2040";
-        var buttonTitle = "MEP 2040";
-
-        var myButtonData = new ButtonDataClass(
-            buttonInternalName,
-            buttonTitle,
-            MethodBase.GetCurrentMethod()?.DeclaringType?.FullName,
-            Resources.Green_32,
-            Resources.Green_16,
-            "Click to analyze MEP sustainability metrics (pipe length, refrigerant volume, equipment count)."
-        );
-
-        return myButtonData.Data;
     }
 }
