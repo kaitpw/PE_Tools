@@ -58,13 +58,13 @@ internal class Ducts {
                 branchEnd
             );
             if (branchDuct is null) return new InvalidOperationException("Branch duct is null, creation was faulty");
-            balloon?.AddDebug(Balloon.LogLevel.Info, new StackFrame(),
+            balloon?.AddDebug(Balloon.LogLevel.INFO, new StackFrame(),
                 $"Created branch duct on {level.Name} with DuctType: {ductType.Name}, SystemType: {systemType.Name}");
 
             // Set the duct diameter to the correct tap size
             var setDiamSuccess = branchDuct.get_Parameter(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM).Set(tapSizeFeet);
             if (!setDiamSuccess)
-                balloon?.Add(Balloon.LogLevel.Warn, new StackFrame(), "Branch duct's diameter could not be set");
+                balloon?.Add(Balloon.LogLevel.WARN, new StackFrame(), "Branch duct's diameter could not be set");
 
             // Get the connector from the branch duct closest to the main duct
             var (branchConns, _) = Connectors.GetClosestToPoint(branchDuct, location);
@@ -75,11 +75,10 @@ internal class Ducts {
             var fitting = doc.Create.NewTakeoffFitting(branchConn, trunkDuct);
             if (fitting is null) return new InvalidOperationException("Failed to create takeoff fitting");
 
-            return fitting != null && !branchConn.IsConnected
+            return !branchConn.IsConnected
                 ? new InvalidOperationException("Tap not properly connected to branch duct.")
                 : fitting;
         } catch (Exception ex) {
-            balloon?.AddDebug(new StackFrame(), ex);
             return ex;
         }
     }

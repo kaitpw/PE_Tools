@@ -58,7 +58,7 @@ public class CmdTapMaker : IExternalCommand {
     internal static PushButtonData GetButtonData() =>
         new ButtonDataClass(
             "Tap Maker",
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
+            MethodBase.GetCurrentMethod()?.DeclaringType?.FullName,
             Resources.Green_32,
             Resources.Green_16,
             """
@@ -71,7 +71,7 @@ public class CmdTapMaker : IExternalCommand {
         ).Data;
 
 
-    public static bool CreateTapOnFace(
+    private static bool CreateTapOnFace(
         UIApplication uiApplication,
         Element trunkDuct,
         Face face,
@@ -91,7 +91,6 @@ public class CmdTapMaker : IExternalCommand {
             var locationAdjusted = !Faces.IsPointInside(face, clickPosition, tapRadiusFeet)
                 ? Faces.ConstrainUVPointWithMargin(face, clickPosition, tapRadiusFeet)
                 : clickPosition;
-            var location = face.Evaluate(locationAdjusted);
             var normal = face.ComputeNormal(locationAdjusted);
 
             var tapDuctType =
@@ -100,43 +99,31 @@ public class CmdTapMaker : IExternalCommand {
                     .FirstOrDefault(result => result is not null);
             if (tapDuctType is null) throw new InvalidOperationException("DuctType is null, nothing was found");
 
-            using (var trans = new Transaction(doc, "Create Tap")) {
-                _ = trans.Start();
+            using var trans = new Transaction(doc, "Make Tap On Face");
+            _ = trans.Start();
 
-                var (tap, tapError) = Ducts.MakeTakeoffWithBranch(
-                    doc,
-                    trunkDuct as MEPCurve,
-                    location,
-                    normal,
-                    tapSizeFeet,
-                    tapDuctType,
-                    balloon
-                );
+            var (tap, tapError) = TapPlacer(
+                doc,
+                face,
+                trunkDuct,
+                locationAdjusted,
+                tapSizeFeet,
+                tapDuctType,
+                balloon
+            );
 
-                if (tapError is ElementIntersectException) {
-                    (tap, tapError) = TapPlacer(
-                        doc,
-                        face,
-                        trunkDuct,
-                        locationAdjusted,
-                        tapSizeFeet,
-                        tapDuctType,
-                        balloon
-                    );
-                }
-
-                if (tap is not null && tapError is null) {
-                    _ = trans.Commit();
-                    balloon.Add(Balloon.LogLevel.Info, new StackFrame(),
-                        $"Created a {tapSizeInches}\" tap successfully.");
-                    balloon?.Show();
-                    return true;
-                }
-
+            if (tapError is not null) {
                 _ = trans.RollBack();
+                balloon.Add(new StackFrame(), tapError);
                 balloon.Show();
                 return false;
             }
+
+            _ = trans.Commit();
+            balloon.Add(Balloon.LogLevel.INFO, new StackFrame(),
+                $"Created a {tapSizeInches}\" tap successfully (tap ID: {tap.Id}).");
+            balloon?.Show();
+            return true;
         } catch (Exception ex) {
             balloon.Add(new StackFrame(), ex);
             balloon.Show();
@@ -148,27 +135,25 @@ public class CmdTapMaker : IExternalCommand {
         Document doc,
         Face face,
         Element trunkDuct,
-        UV adjustedPosition,
+        UV locationAdjusted,
         double tapSizeFeet,
         DuctType ductType,
         Balloon balloon = null
     ) {
-        FamilyInstance tap;
-        Exception tapError;
-
         // Get all radial points at 45 degree increments in order of center-proximity
-        var altPositions = Enumerable.Range(1, 9)
+        var positions = Enumerable.Range(1, 9)
             .Select(i =>
-                Faces.GetPointAtAngle(adjustedPosition, tapSizeFeet / 2, i * 45.0))
-            .ToList()
-            .OrderBy(p => (p - Faces.GetCenter(face)).GetLength()); // Order by distance from center
+                Faces.GetPointAtAngle(locationAdjusted, tapSizeFeet / 2, i * 45.0))
+            .OrderBy(p => (p - Faces.GetCenter(face)).GetLength()) // Order by distance from center
+            .Prepend(locationAdjusted)
+            .ToList();
 
         try {
-            foreach (var altPosition in altPositions) {
-                if (!Faces.IsPointInside(face, altPosition, tapSizeFeet / 2)) continue;
-                var altPoint = face.Evaluate(altPosition);
-                var altNormal = face.ComputeNormal(altPosition);
-                (tap, tapError) = Ducts.MakeTakeoffWithBranch(
+            foreach (var pos in positions) {
+                if (!Faces.IsPointInside(face, pos, tapSizeFeet / 2)) continue;
+                var altPoint = face.Evaluate(pos);
+                var altNormal = face.ComputeNormal(pos);
+                var (tap, tapError) = Ducts.MakeTakeoffWithBranch(
                     doc,
                     trunkDuct as MEPCurve,
                     altPoint,
@@ -177,14 +162,10 @@ public class CmdTapMaker : IExternalCommand {
                     ductType,
                     balloon);
                 if (tap is null || tapError is not null) continue;
-
-                balloon?.Add(Balloon.LogLevel.Info, new StackFrame(),
-                    $"Found working position at UV: ({altPosition.U:F3}, {altPosition.V:F3})"
-                );
                 return tap;
             }
 
-            return new InvalidOperationException("No fallback tap could be placed");
+            return new InvalidOperationException("No easy tap placement was found");
         } catch (Exception ex) {
             return ex;
         }

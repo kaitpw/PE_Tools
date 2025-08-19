@@ -5,9 +5,14 @@ namespace PE_Lib;
 /// <summary>Message collector for accumulating messages, then showing all at once</summary>
 internal class Balloon(string title = null) {
     public enum LogLevel {
-        Info,
-        Warn,
-        Error
+        // ReSharper disable once InconsistentNaming
+        INFO,
+
+        // ReSharper disable once InconsistentNaming
+        WARN,
+
+        // ReSharper disable once InconsistentNaming
+        ERR
     }
 
     private const string FmtNormal = "{0}: {1}";
@@ -33,8 +38,8 @@ internal class Balloon(string title = null) {
     public void Add(StackFrame sf, Exception ex, bool trace = false) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         this._messages.Add(trace
-            ? string.Format(FmtErrorTrace, LogLevel.Error, method, ex.Message, ex.StackTrace)
-            : string.Format(FmtMethod, LogLevel.Error, method, ex.Message));
+            ? string.Format(FmtErrorTrace, LogLevel.ERR, method, ex.Message, ex.StackTrace)
+            : string.Format(FmtMethod, LogLevel.ERR, method, ex.Message));
     }
 
     /// <summary>Add a DEBUG build message</summary>
@@ -51,7 +56,7 @@ internal class Balloon(string title = null) {
     public void AddDebug(StackFrame sf, Exception ex, bool trace = false) {
 #if DEBUG
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
-        var prefix = "DEBUG " + LogLevel.Error;
+        var prefix = "DEBUG " + LogLevel.ERR;
         this._messages.Add(trace
             ? string.Format(FmtErrorTrace, prefix, method, ex.Message, ex.StackTrace)
             : string.Format(FmtMethod, prefix, method, ex.Message));
@@ -66,7 +71,7 @@ internal class Balloon(string title = null) {
     public void Show() {
         var combinedMessage = new StringBuilder();
         combinedMessage.AppendLine(new string('-', 20));
-        if (this._messages.Count == 0) this.Add(LogLevel.Warn, "No messages to display");
+        if (this._messages.Count == 0) this.Add(LogLevel.WARN, "No messages to display");
 
         foreach (var message in this._messages)
             combinedMessage.AppendLine("\u2588 " + message);
