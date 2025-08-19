@@ -100,7 +100,8 @@ public class CmdMep2040 : IExternalCommand {
             var familyName = fi.Symbol?.Family?.Name ?? "<No Family>";
             var typeName = fi.Symbol?.Name ?? "<No Type>";
             var key = $"{familyName} : {typeName}";
-            equipmentCounts.TryAdd(key, 0);
+            if (!equipmentCounts.ContainsKey(key))
+                equipmentCounts[key] = 0;
             equipmentCounts[key]++;
         }
 
