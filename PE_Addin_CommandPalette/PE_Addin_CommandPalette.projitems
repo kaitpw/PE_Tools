@@ -6,12 +6,12 @@
         <SharedGUID>f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d</SharedGUID>
     </PropertyGroup>
     <PropertyGroup Label="Configuration">
-        <Import_RootNamespace>PE_CommandPalette</Import_RootNamespace>
+        <Import_RootNamespace>PE_Addin_CommandPalette</Import_RootNamespace>
     </PropertyGroup>
     <ItemGroup>
-        <Compile Include="..\PE_CommandPalette\H\PostableCommandHelper.cs"/>
-        <Compile Include="..\PE_CommandPalette\H\CommandExecutionHelper.cs"/>
-        <Compile Include="..\PE_CommandPalette\H\KeyboardShortcutsHelper.cs"/>
+        <Compile Include="..\PE_Addin_CommandPalette\H\PostableCommandHelper.cs"/>
+        <Compile Include="..\PE_Addin_CommandPalette\H\CommandExecutionHelper.cs"/>
+        <Compile Include="..\PE_Addin_CommandPalette\H\KeyboardShortcutsHelper.cs"/>
         <Compile Include="$(MSBuildThisFileDirectory)M\PostableCommandItem.cs"/>
         <Compile Include="$(MSBuildThisFileDirectory)VM\CommandPaletteViewModel.cs"/>
         <Compile Include="$(MSBuildThisFileDirectory)V\CommandPaletteWindow.xaml.cs">

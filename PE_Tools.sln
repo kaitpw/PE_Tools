@@ -9,7 +9,7 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PE_Init", "PE_Init\PE_Init.
 EndProject
 Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PE_Lib", "PE_Lib\PE_Lib.shproj", "{97984BFE-92F6-4C75-9CB9-7E7B71787A0C}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PE_CommandPalette", "PE_CommandPalette\PE_CommandPalette.shproj", "{F8A3C2D1-5B4E-4F7A-9C8D-1E2F3A4B5C6D}"
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PE_Addin_CommandPalette", "PE_Addin_CommandPalette\PE_Addin_CommandPalette.shproj", "{F8A3C2D1-5B4E-4F7A-9C8D-1E2F3A4B5C6D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nuke", "build\Nuke.csproj", "{63C0D6E6-184D-46AD-890D-FD405298DC39}"
 EndProject
@@ -86,12 +86,12 @@ Global
 		PE_TapMaker\PE_TapMaker.projitems*{7bde6d7d-b7d2-4798-a453-2822fb536b24}*SharedItemsImports = 13
 		PE_Mech\PE_Mech.projitems*{933aaf50-e022-4221-a80f-fcb92c48ef9c}*SharedItemsImports = 13
 		PE_Lib\PE_Lib.projitems*{97984bfe-92f6-4c75-9cb9-7e7b71787a0c}*SharedItemsImports = 13
-		PE_CommandPalette\PE_CommandPalette.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
+		PE_Addin_CommandPalette\PE_Addin_CommandPalette.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Init\PE_Init.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Lib\PE_Lib.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_Mech\PE_Mech.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_MEP\PE_MEP.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
 		PE_TapMaker\PE_TapMaker.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
-		PE_CommandPalette\PE_CommandPalette.projitems*{f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d}*SharedItemsImports = 13
+		PE_Addin_CommandPalette\PE_Addin_CommandPalette.projitems*{f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

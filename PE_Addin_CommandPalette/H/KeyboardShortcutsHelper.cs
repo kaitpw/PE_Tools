@@ -2,7 +2,7 @@ using PE_Lib;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
-namespace PE_CommandPalette.H;
+namespace PE_Addin_CommandPalette.H;
 
 /// <summary>
 ///     Service for parsing and managing Revit keyboard shortcuts from XML file

@@ -1,5 +1,5 @@
-using PE_CommandPalette.V;
-using PE_CommandPalette.VM;
+using PE_Addin_CommandPalette.V;
+using PE_Addin_CommandPalette.VM;
 using PE_Init;
 using PE_Tools.Properties;
 

@@ -1,6 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 
-namespace PE_CommandPalette.M;
+namespace PE_Addin_CommandPalette.M;
 
 /// <summary>
 ///     Represents a PostableCommand item with additional metadata for the command palette

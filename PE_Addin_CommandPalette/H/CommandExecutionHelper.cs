@@ -1,6 +1,6 @@
-using PE_CommandPalette.M;
+using PE_Addin_CommandPalette.M;
 
-namespace PE_CommandPalette.H;
+namespace PE_Addin_CommandPalette.H;
 
 /// <summary>
 ///     Service for executing PostableCommand items in Revit
