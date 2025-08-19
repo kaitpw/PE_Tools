@@ -1,4 +1,4 @@
-namespace PE_Mechanical;
+namespace PE_Mech;
 
 public enum ElbowType {
     Mitered,

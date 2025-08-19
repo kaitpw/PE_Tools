@@ -2,7 +2,7 @@
 using PE_Lib;
 using PE_MEP;
 
-namespace PE_Mechanical;
+namespace PE_Mech;
 
 internal class Ducts {
     /// <summary>

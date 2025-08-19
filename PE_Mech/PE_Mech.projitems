@@ -6,7 +6,7 @@
         <SharedGUID>933aaf50-e022-4221-a80f-fcb92c48ef9c</SharedGUID>
     </PropertyGroup>
     <PropertyGroup Label="Configuration">
-        <Import_RootNamespace>PE_Mechanical</Import_RootNamespace>
+        <Import_RootNamespace>PE_Mech</Import_RootNamespace>
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="$(MSBuildThisFileDirectory)Ducts.cs"/>
