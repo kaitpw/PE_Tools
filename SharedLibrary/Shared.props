@@ -1,0 +1,6 @@
+<Project>
+  <ItemGroup>
+    <!-- IMPORTANT: Include all .cs files under SharedLibrary/ recursively -->
+    <Compile Include="$(MSBuildThisFileDirectory)\**\*.cs" />
+  </ItemGroup>
+</Project>

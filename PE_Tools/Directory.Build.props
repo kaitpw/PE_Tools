@@ -1,0 +1,4 @@
+<Project>
+    <!-- IMPORTANT: Include all .cs files under SharedLibrary/ recursively -->
+    <Import Project="$(MSBuildThisFileDirectory)\..\SharedLibrary\Shared.props" />
+</Project>
