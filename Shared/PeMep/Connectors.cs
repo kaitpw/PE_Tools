@@ -1,4 +1,4 @@
-namespace PE_MEP;
+namespace PeMep;
 
 public class Connectors {
     /// <summary>Get all connectors on an element, ordered from closest to farthest from the specified location</summary>

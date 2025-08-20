@@ -19,11 +19,11 @@ PE_Tools/
 │   ├── V/
 │   ├── VM/
 │   ├── README.md 
-├── PE_Init/                 <-- infrastructure for initializing addins
+├── PeRevitInit/                 <-- infrastructure for initializing addins
 │   ├── ButtonDataClass.cs
 │   ├── CommandAvailability.cs
 │   ├── UiHelpers.cs
-├── PE_Lib/                  <-- Library of reusable methods, actual business logic
+├── PeLib/                  <-- Library of reusable methods, actual business logic
 │   ├── Filters.cs
 │   ├── UiUtils.cs
 │   ├── Utils.cs

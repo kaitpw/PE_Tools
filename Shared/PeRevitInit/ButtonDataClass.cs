@@ -1,6 +1,6 @@
 ﻿using System.Windows.Media.Imaging;
 
-namespace PE_Init;
+namespace PeRevitInit;
 
 internal class ButtonDataClass {
     public ButtonDataClass(

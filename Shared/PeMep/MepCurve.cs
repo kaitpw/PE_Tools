@@ -1,4 +1,4 @@
-namespace PE_MEP;
+namespace PeMep;
 
 public class MepCurve {
     /// <summary>

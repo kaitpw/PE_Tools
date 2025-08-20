@@ -2,7 +2,7 @@
 using Autodesk.Windows;
 using System.Windows;
 
-namespace PE_Lib;
+namespace PeLib;
 
 internal class UiUtils {
     /// <summary>Shows a balloon tip with custom click</summary>

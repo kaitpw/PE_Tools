@@ -108,9 +108,5 @@
     <ItemGroup>
         <Folder Include="NukeFiles\"/>
     </ItemGroup>
-    <Import Project="..\PE_Init\PE_Init.projitems" Label="Shared"/>
-    <Import Project="..\PE_Lib\PE_Lib.projitems" Label="Shared"/>
     <Import Project="..\PE_Addin_CommandPalette\PE_Addin_CommandPalette.projitems" Label="Shared"/>
-    <Import Project="..\PE_Mech\PE_Mech.projitems" Label="Shared"/>
-    <Import Project="..\PE_MEP\PE_MEP.projitems" Label="Shared"/>
 </Project>

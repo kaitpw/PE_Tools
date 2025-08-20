@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace PE_Lib;
+namespace PeLib;
 
 /// <summary>Message collector for accumulating messages, then showing all at once</summary>
 internal class Balloon(string title = null) {

@@ -1,4 +1,4 @@
-namespace PE_Lib;
+namespace PeLib;
 
 public class Faces {
     public static UV GetCenter(Face face) {

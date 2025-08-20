@@ -1,6 +1,6 @@
 ﻿using Autodesk.Revit.UI.Selection;
 
-namespace PE_Lib;
+namespace PeLib;
 
 public class Pickers {
     public static Result<(Element element, Face elementFace, UV clickPosition)> FacePosition(
