@@ -115,7 +115,7 @@ public class PostableCommandHelper {
                 // Avoid duplicates if already added as a PostableCommand
                 var alreadyExists = commands.Any(c =>
                     string.Equals(
-                        c.CustomCommandId,
+                        c.ExternalCommandId,
                         shortcutInfo.CommandId,
                         StringComparison.OrdinalIgnoreCase
                     )
@@ -125,7 +125,7 @@ public class PostableCommandHelper {
 
                 var commandItem = new PostableCommandItem {
                     Command = default, // Not a built-in PostableCommand
-                    CustomCommandId = shortcutInfo.CommandId,
+                    ExternalCommandId = shortcutInfo.CommandId,
                     Name = shortcutInfo.CommandName ?? shortcutInfo.CommandId,
                     UsageCount = 0,
                     LastUsed = DateTime.MinValue,

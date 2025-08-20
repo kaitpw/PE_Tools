@@ -16,6 +16,10 @@ namespace PE_Addin_CommandPalette.V;
 ///     Interaction logic for CommandPaletteWindow.xaml
 /// </summary>
 public partial class CommandPaletteWindow : Window {
+    private bool _isClosing;
+    private readonly DispatcherTimer _searchTimer;
+    private CommandPaletteViewModel _viewModel => this.DataContext as CommandPaletteViewModel;
+
     public CommandPaletteWindow() {
         this.InitializeComponent();
 
@@ -34,7 +38,6 @@ public partial class CommandPaletteWindow : Window {
                 this.CommandListBox.ScrollIntoView(this._viewModel.SelectedCommand);
         };
     }
-
 
     private void Window_Loaded(object sender, RoutedEventArgs e) {
         this.SearchTextBox.Focus();
@@ -101,23 +104,13 @@ public partial class CommandPaletteWindow : Window {
         base.OnClosing(e);
     }
 
-    #region Properties
-
-    private bool _isClosing;
-    private readonly DispatcherTimer _searchTimer;
-
-    private CommandPaletteViewModel _viewModel => this.DataContext as CommandPaletteViewModel;
-
-    #endregion
-
     #region Hiding from Alt+Tab
 
     protected override void OnSourceInitialized(EventArgs e) {
         base.OnSourceInitialized(e);
-
         // Remove window from Alt+Tab
         var helper = new WindowInteropHelper(this);
-        SetWindowLong(
+        _ = SetWindowLong(
             helper.Handle,
             GWL_EXSTYLE,
             GetWindowLong(helper.Handle, GWL_EXSTYLE) | WS_EX_TOOLWINDOW
@@ -126,10 +119,8 @@ public partial class CommandPaletteWindow : Window {
 
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
-
     [DllImport("user32.dll")]
     private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
@@ -139,52 +130,27 @@ public partial class CommandPaletteWindow : Window {
 #region Value Converters
 
 /// <summary>
-///     Converter for boolean to visibility
-/// </summary>
-public class BooleanToVisibilityConverter : IValueConverter {
-    public static readonly BooleanToVisibilityConverter Instance = new();
-
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-        if (value is bool boolValue) {
-            return boolValue
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
-
-        return Visibility.Collapsed;
-    }
-
-    public object ConvertBack(
-        object value,
-        Type targetType,
-        object parameter,
-        CultureInfo culture
-    ) =>
-        value is Visibility visibility
-        && visibility == Visibility.Visible;
-}
-
-/// <summary>
 ///     Converter for showing usage count only when > 0, or strings when not empty
 /// </summary>
 public class VisibilityConverter : IValueConverter {
     public static readonly VisibilityConverter Instance = new();
 
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
-        if (value is int intValue) {
-            return intValue > 0
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value switch {
+            bool boolValue => boolValue
                 ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
+                : Visibility.Collapsed,
 
-        if (value is string stringValue) {
-            return !string.IsNullOrWhiteSpace(stringValue)
+            int intValue => intValue > 0
                 ? Visibility.Visible
-                : Visibility.Collapsed;
-        }
+                : Visibility.Collapsed,
 
-        return Visibility.Collapsed;
-    }
+            string stringValue => !string.IsNullOrWhiteSpace(stringValue)
+                ? Visibility.Visible
+                : Visibility.Collapsed,
+
+            _ => Visibility.Collapsed
+        };
 
     public object ConvertBack(
         object value,

@@ -16,11 +16,11 @@ public partial class CommandPaletteViewModel : ObservableObject {
     public CommandPaletteViewModel(UIApplication UIApplication, Dispatcher uiDispatcher) {
         this._uiapp = UIApplication;
         this._uiDispatcher = uiDispatcher;
-        this._executionService = new CommandExecutionHelper(this._uiapp);
+        this._executionService = new CommandExecutionHelper();
         this.FilteredCommands = new ObservableCollection<PostableCommandItem>();
 
         // Initialize commands asynchronously for better startup performance
-        Task.Run(this.LoadCommandsAsync);
+        _ = Task.Run(this.LoadCommandsAsync);
     }
 
     #region Properties
@@ -65,14 +65,10 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// <summary>
     ///     Status text for the currently selected command
     /// </summary>
-    public string CommandStatus {
-        get {
-            if (this.SelectedCommand == null)
-                return "No command selected";
-
-            return this._executionService.GetCommandStatus(this.SelectedCommand);
-        }
-    }
+    public string CommandStatus =>
+        this.SelectedCommand == null
+        ? "No command selected"
+        : this._executionService.GetCommandStatus(this._uiapp, this.SelectedCommand);
 
     #endregion
 
@@ -88,7 +84,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
 
         this.IsExecutingCommand = true;
 
-        var success = await Task.Run(() => this._executionService.ExecuteCommand(this.SelectedCommand));
+        var success = await Task.Run(() => this._executionService.ExecuteCommand(this._uiapp, this.SelectedCommand));
     }
 
     /// <summary>
@@ -157,7 +153,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// </summary>
     private bool CanExecuteSelectedCommand() =>
         this.SelectedCommand != null
-        && this._executionService.IsCommandAvailable(this.SelectedCommand)
+        && this._executionService.IsCommandAvailable(this._uiapp, this.SelectedCommand)
         && !this.IsExecutingCommand;
 
     #endregion

@@ -6,41 +6,38 @@ namespace PE_Addin_CommandPalette.H;
 ///     Service for executing PostableCommand items in Revit
 /// </summary>
 public class CommandExecutionHelper {
-    private readonly UIApplication _uiApplication;
 
-    public CommandExecutionHelper(UIApplication uiApplication) =>
-        this._uiApplication =
-            uiApplication ?? throw new ArgumentNullException(nameof(uiApplication));
+    private RevitCommandId GetCommandId(PostableCommandItem commandItem) =>
+        commandItem == null
+            ? throw new ArgumentNullException(nameof(commandItem))
+            : !string.IsNullOrEmpty(commandItem.ExternalCommandId)
+                ? RevitCommandId.LookupCommandId(commandItem.ExternalCommandId)
+                : RevitCommandId.LookupPostableCommandId(commandItem.Command);
+
+    private bool GetPseudoAvailability(UIApplication uiapp, PostableCommandItem commandItem) {
+        var commandId = this.GetCommandId(commandItem);
+        var pseudoAvailability = uiapp.CanPostCommand(commandId)
+            || !string.IsNullOrEmpty(commandItem.ExternalCommandId);// For external commands, CanPostCommand may not be meaningful, so just check commandId.
+        return commandId is not null && pseudoAvailability;
+    }
 
     /// <summary>
     ///     Executes the specified PostableCommand
     /// </summary>
     /// <param name="commandItem">The command item to execute</param>
     /// <returns>True if execution was successful, false otherwise</returns>
-    public bool ExecuteCommand(PostableCommandItem commandItem) {
-        if (commandItem == null)
-            return false;
-
+    public bool ExecuteCommand(UIApplication uiapp, PostableCommandItem commandItem) {
         try {
-            RevitCommandId commandId = null;
-            if (!string.IsNullOrEmpty(commandItem.CustomCommandId))
-                commandId = RevitCommandId.LookupCommandId(commandItem.CustomCommandId);
-            else
-                commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
+            var commandId = this.GetCommandId(commandItem);
+            if (commandId is null) throw new InvalidOperationException($"Command '{commandItem.Name}' is not available in this context.");
 
-            if (commandId == null) {
-                throw new InvalidOperationException(
-                    $"Command '{commandItem.Name}' is not available in this context."
-                );
-            }
-
-            if (!this._uiApplication.CanPostCommand(commandId)) {
+            if (!this.GetPseudoAvailability(uiapp, commandItem)) {
                 throw new InvalidOperationException(
                     $"Command '{commandItem.Name}' cannot be executed at this time."
                 );
             }
 
-            this._uiApplication.PostCommand(commandId);
+            uiapp.PostCommand(commandId);
             PostableCommandHelper.Instance.UpdateCommandUsage(commandItem);
 
             return true;
@@ -54,24 +51,11 @@ public class CommandExecutionHelper {
     /// </summary>
     /// <param name="commandItem">The command item to check</param>
     /// <returns>True if the command is available, false otherwise</returns>
-    public bool IsCommandAvailable(PostableCommandItem commandItem) {
-        if (commandItem == null)
-            return false;
-
+    public bool IsCommandAvailable(UIApplication uiapp, PostableCommandItem commandItem) {
         try {
-            RevitCommandId commandId = null;
-            if (!string.IsNullOrEmpty(commandItem.CustomCommandId))
-                commandId = RevitCommandId.LookupCommandId(commandItem.CustomCommandId);
-            else
-                commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
-
-            // For custom commands, CanPostCommand may not be meaningful, so just check commandId.
-            return commandId != null
-                   && (
-                       string.IsNullOrEmpty(commandItem.CustomCommandId)
-                           ? this._uiApplication.CanPostCommand(commandId)
-                           : true
-                   );
+            var commandId = this.GetCommandId(commandItem);
+            var pseudoAvailability = this.GetPseudoAvailability(uiapp, commandItem);
+            return commandId is not null && pseudoAvailability;
         } catch {
             return false;
         }
@@ -82,29 +66,17 @@ public class CommandExecutionHelper {
     /// </summary>
     /// <param name="commandItem">The command item to check</param>
     /// <returns>Status text describing command availability</returns>
-    public string GetCommandStatus(PostableCommandItem commandItem) {
-        if (commandItem == null)
-            return "Invalid command";
-
+    public string GetCommandStatus(UIApplication uiapp, PostableCommandItem commandItem) { // TODO: this may be useless
         try {
-            RevitCommandId commandId = null;
-            if (!string.IsNullOrEmpty(commandItem.CustomCommandId))
-                commandId = RevitCommandId.LookupCommandId(commandItem.CustomCommandId);
-            else
-                commandId = RevitCommandId.LookupPostableCommandId(commandItem.Command);
-
-            if (commandId == null)
-                return "Command not available";
-
-            if (!string.IsNullOrEmpty(commandItem.CustomCommandId))
-                return "Ready"; // For custom commands, assume always ready
-
-            if (!this._uiApplication.CanPostCommand(commandId))
-                return "Command disabled";
-
-            return "Ready";
-        } catch (Exception ex) {
-            return $"Error: {ex.Message}";
+            var commandId = this.GetCommandId(commandItem);
+            var pseudoAvailability = this.GetPseudoAvailability(uiapp, commandItem);
+            return commandId is null
+                ? "Command not available"
+                : pseudoAvailability
+                    ? "Command is available"
+                    : "Command is disabled";
+        } catch {
+            return "Command availability unknown";
         }
     }
 }

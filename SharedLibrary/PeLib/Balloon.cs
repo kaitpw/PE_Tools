@@ -70,11 +70,11 @@ internal class Balloon(string title = null) {
     /// <summary>Show accumulated messages in a copyable balloon</summary>
     public void Show() {
         var combinedMessage = new StringBuilder();
-        combinedMessage.AppendLine(new string('-', 20));
+        _ = combinedMessage.AppendLine(new string('-', 20));
         if (this._messages.Count == 0) this.Add(LogLevel.WARN, "No messages to display");
 
         foreach (var message in this._messages)
-            combinedMessage.AppendLine("\u2588 " + message);
+            _ = combinedMessage.AppendLine("\u2588 " + message);
 
         UiUtils.ShowBalloon(combinedMessage.ToString(), title);
         this.Clear();

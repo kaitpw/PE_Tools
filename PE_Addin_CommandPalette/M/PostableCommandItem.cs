@@ -49,7 +49,7 @@ public partial class PostableCommandItem : ObservableObject {
     /// <summary>
     ///     For addin commands, stores the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
     /// </summary>
-    public string CustomCommandId { get; set; }
+    public string ExternalCommandId { get; set; }
 
     /// <summary>
     ///     Gets the primary shortcut as a display string

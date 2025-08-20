@@ -33,7 +33,7 @@ public class CmdCommandPalette : IExternalCommand {
             paletteWindow.DataContext = viewModel;
 
             // 5. Show the View
-            paletteWindow.ShowDialog();
+            paletteWindow.Show();
 
             return Result.Succeeded;
         } catch (Exception ex) {
