@@ -24,8 +24,6 @@ public class CmdTapMaker : IExternalCommand {
                 return Result.Failed;
             }
 
-            var success = false;
-
             while (true) {
                 var (selection, selectionError) = Pickers.FacePosition(
                     uiapp,
@@ -39,7 +37,7 @@ public class CmdTapMaker : IExternalCommand {
                 if (selection.element is not null
                     && selection.elementFace is not null
                     && selection.clickPosition is not null) {
-                    success = CreateTapOnFace(
+                    _ = CreateTapOnFace(
                         uiapp,
                         selection.element,
                         selection.elementFace,
@@ -48,7 +46,7 @@ public class CmdTapMaker : IExternalCommand {
                 }
             }
 
-            return success ? Result.Succeeded : Result.Cancelled;
+            return Result.Succeeded;
         } catch (Exception ex) {
             message = $"Error placing tap: {ex.Message}";
             return Result.Failed;
