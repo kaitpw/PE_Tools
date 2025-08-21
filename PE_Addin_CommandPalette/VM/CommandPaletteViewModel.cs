@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PE_Addin_CommandPalette.H;
 using PE_Addin_CommandPalette.M;
+using PeLib;
 using System.Collections.ObjectModel;
 using System.Windows.Threading;
 
@@ -11,12 +12,12 @@ namespace PE_Addin_CommandPalette.VM;
 ///     ViewModel for the Command Palette window
 /// </summary>
 public partial class CommandPaletteViewModel : ObservableObject {
-    private readonly CommandExecutionHelper _executionService;
+    private readonly Command _executionService;
 
     public CommandPaletteViewModel(UIApplication UIApplication, Dispatcher uiDispatcher) {
         this._uiapp = UIApplication;
         this._uiDispatcher = uiDispatcher;
-        this._executionService = new CommandExecutionHelper();
+        this._executionService = new Command();
         this.FilteredCommands = new ObservableCollection<PostableCommandItem>();
 
         // Initialize commands asynchronously for better startup performance
@@ -68,7 +69,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
     public string CommandStatus =>
         this.SelectedCommand == null
         ? "No command selected"
-        : this._executionService.GetCommandStatus(this.Uiapp, this.SelectedCommand.Command);
+        : this._executionService.GetStatus(this.Uiapp, this.SelectedCommand.Command);
 
     #endregion
 
@@ -84,7 +85,11 @@ public partial class CommandPaletteViewModel : ObservableObject {
 
         this.IsExecutingCommand = true;
 
-        var success = await Task.Run(() => this._executionService.ExecuteCommand(this.Uiapp, this.SelectedCommand.Command));
+        (bool success, Exception error) = await Task.Run(() =>
+            this._executionService.Execute(this.Uiapp, this.SelectedCommand.Command));
+        if (error is not null) throw error; // TODO: come back to the error handling here
+        if (success) PostableCommandHelper.Instance.UpdateCommandUsage(this.SelectedCommand.Command);
+
     }
 
     /// <summary>
@@ -153,7 +158,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// </summary>
     private bool CanExecuteSelectedCommand() =>
         this.SelectedCommand != null
-        && this._executionService.IsCommandAvailable(this.Uiapp, this.SelectedCommand.Command)
+        && this._executionService.IsAvailable(this.Uiapp, this.SelectedCommand.Command)
         && !this.IsExecutingCommand;
 
     #endregion

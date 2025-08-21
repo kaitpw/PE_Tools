@@ -1,6 +1,6 @@
 using PE_Addin_CommandPalette.M;
 using System.Text;
-
+using PeLib;
 namespace PE_Addin_CommandPalette.H;
 
 /// <summary>
@@ -152,11 +152,11 @@ public class PostableCommandHelper {
             return commandName;
 
         var result = new StringBuilder();
-        result.Append(commandName[0]);
+        _ = result.Append(commandName[0]);
 
         for (var i = 1; i < commandName.Length; i++) {
-            if (char.IsUpper(commandName[i]) && !char.IsUpper(commandName[i - 1])) result.Append(' ');
-            result.Append(commandName[i]);
+            if (char.IsUpper(commandName[i]) && !char.IsUpper(commandName[i - 1])) _ = result.Append(' ');
+            _ = result.Append(commandName[i]);
         }
 
         return result.ToString();

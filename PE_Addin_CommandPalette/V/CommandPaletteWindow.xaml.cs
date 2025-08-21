@@ -64,7 +64,7 @@ public partial class CommandPaletteWindow : Window {
             this.CloseWindow();
 
             if (this._viewModel.ExecuteSelectedCommandCommand.CanExecute(null))
-                this._viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
+                _ = this._viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
 
             e.Handled = true;
             break;

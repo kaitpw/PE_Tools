@@ -1,5 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using PE_Addin_CommandPalette.H;
+using PeLib;
 
 namespace PE_Addin_CommandPalette.M;
 
