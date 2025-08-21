@@ -113,18 +113,18 @@ public class CmdTapMaker : IExternalCommand {
             if (tapError is not null) {
                 _ = trans.RollBack();
                 balloon.Add(new StackFrame(), tapError);
-                balloon.ShowMulti();
+                balloon.Show();
                 return false;
             }
 
             _ = trans.Commit();
             balloon.Add(Balloon.LogLevel.INFO, new StackFrame(),
                 $"Created a {tapSizeInches}\" tap successfully (tap ID: {tap.Id}).");
-            balloon?.ShowMulti();
+            balloon?.Show();
             return true;
         } catch (Exception ex) {
             balloon.Add(new StackFrame(), ex);
-            balloon.ShowMulti();
+            balloon.Show();
             return false; // Don't throw, just return false so user can see debug info
         }
     }

@@ -25,7 +25,7 @@ public class KeyboardShortcutsHelper {
     private string GetShortcutsFilePath() {
         var revitVersion = Utils.GetRevitVersion();
         if (revitVersion == null) {
-            Balloon.ShowSingle("Revit version not found");
+            new Balloon().Add(Balloon.LogLevel.WARN, "Revit version not found");
             return string.Empty;
         }
 

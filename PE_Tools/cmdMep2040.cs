@@ -29,7 +29,7 @@ public class CmdMep2040 : IExternalCommand {
             _ = sb.AppendLine($"  {kvp.Key}: {kvp.Value}");
         balloon.Add(Balloon.LogLevel.INFO, "MEP Equipment Counts:\n" + sb);
 
-        balloon.ShowMulti("MEP 2040 Sustainability Stats");
+        balloon.Show("MEP 2040 Sustainability Stats");
 
         return Result.Succeeded;
     }

@@ -25,12 +25,14 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// <summary> Current search text </summary>
     [ObservableProperty] private string _searchText = string.Empty;
 
+#nullable enable
     /// <summary> Currently selected command </summary>
-    [ObservableProperty] private PostableCommandItem _selectedCommand;
+    [ObservableProperty] private PostableCommandItem? _selectedCommand;
+#nullable disable
 
     /// <summary> Currently selected index in the filtered list </summary>
     [ObservableProperty] private int _selectedIndex = -1;
-    
+
     /// <summary> The UI application instance for executing commands </summary>
     [ObservableProperty] private UIApplication _uiapp;
 
@@ -45,15 +47,18 @@ public partial class CommandPaletteViewModel : ObservableObject {
     }
 
     /// <summary> Filtered list of commands based on search text </summary>
-    private ObservableCollection<PostableCommandItem> FilteredCommands { get; }
+    public ObservableCollection<PostableCommandItem> FilteredCommands { get; }
 
     /// <summary> Status text for the currently selected command </summary>
     public string CommandStatus =>
-        this._executionService.GetStatus(this.Uiapp, this.SelectedCommand.Command);
+        this.SelectedCommand == null
+            ? "No command selected"
+            : this._executionService.GetStatus(this.Uiapp, this.SelectedCommand.Command);
 
 
     [RelayCommand(CanExecute = nameof(CanExecuteSelectedCommand))]
     private async Task ExecuteSelectedCommandAsync() {
+        if (this.SelectedCommand == null) return;
         this.IsExecutingCommand = true;
 
         var (success, error) = await Task.Run(() =>
@@ -117,7 +122,8 @@ public partial class CommandPaletteViewModel : ObservableObject {
     ///     Checks if the selected command can be executed
     /// </summary>
     private bool CanExecuteSelectedCommand() =>
-        this._executionService.IsAvailable(this.Uiapp, this.SelectedCommand.Command)
+        this.SelectedCommand != null
+        && this._executionService.IsAvailable(this.Uiapp, this.SelectedCommand.Command)
         && !this.IsExecutingCommand;
 
     #endregion
