@@ -27,6 +27,7 @@ public partial class CommandPaletteWindow : Window {
         this._searchTimer.Tick += (s, e) => this._searchTimer.Stop();
 
         this.Loaded += this.OnLoad;
+        this.Deactivated += this.OnWindowDeactivated;
     }
 
     private void OnLoad(object sender, RoutedEventArgs e) {
@@ -37,6 +38,14 @@ public partial class CommandPaletteWindow : Window {
             if (this._viewModel.SelectedCommand != null)
                 this.CommandListBox.ScrollIntoView(this._viewModel.SelectedCommand);
         };
+
+    }
+
+    /// <summary> Enable click-outside-to-close functionality </summary>
+    private void OnWindowDeactivated(object sender, EventArgs e) {
+        if (!this.IsActive && !this._isClosing && !this.IsMouseOver) {
+            this.CloseWindow();
+        }
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e) {
