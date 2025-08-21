@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using PE_Addin_CommandPalette.H;
 
 namespace PE_Addin_CommandPalette.M;
 
@@ -12,9 +13,11 @@ public partial class PostableCommandItem : ObservableObject {
     [ObservableProperty] private bool _isSelected;
 
     /// <summary>
-    ///     The actual PostableCommand enum value
+    ///     For internal commands, the actual PostableCommand enum value
+    ///     For external (addin) commands, the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
+
     /// </summary>
-    public PostableCommand Command { get; set; }
+    public CommandRef Command { get; set; }
 
     /// <summary>
     ///     Display name of the command
@@ -49,7 +52,7 @@ public partial class PostableCommandItem : ObservableObject {
     /// <summary>
     ///     For addin commands, stores the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
     /// </summary>
-    public string ExternalCommandId { get; set; }
+    public bool isExternalCommand => this.Command.Value is not PostableCommand;
 
     /// <summary>
     ///     Gets the primary shortcut as a display string

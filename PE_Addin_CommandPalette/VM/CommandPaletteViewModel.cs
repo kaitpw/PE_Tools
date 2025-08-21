@@ -68,7 +68,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
     public string CommandStatus =>
         this.SelectedCommand == null
         ? "No command selected"
-        : this._executionService.GetCommandStatus(this._uiapp, this.SelectedCommand);
+        : this._executionService.GetCommandStatus(this.Uiapp, this.SelectedCommand.Command);
 
     #endregion
 
@@ -84,7 +84,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
 
         this.IsExecutingCommand = true;
 
-        var success = await Task.Run(() => this._executionService.ExecuteCommand(this._uiapp, this.SelectedCommand));
+        var success = await Task.Run(() => this._executionService.ExecuteCommand(this.Uiapp, this.SelectedCommand.Command));
     }
 
     /// <summary>
@@ -153,7 +153,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// </summary>
     private bool CanExecuteSelectedCommand() =>
         this.SelectedCommand != null
-        && this._executionService.IsCommandAvailable(this._uiapp, this.SelectedCommand)
+        && this._executionService.IsCommandAvailable(this.Uiapp, this.SelectedCommand.Command)
         && !this.IsExecutingCommand;
 
     #endregion

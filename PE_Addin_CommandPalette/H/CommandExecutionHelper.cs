@@ -1,82 +1,85 @@
-using PE_Addin_CommandPalette.M;
+using PeLib;
 
 namespace PE_Addin_CommandPalette.H;
 
 /// <summary>
-///     Service for executing PostableCommand items in Revit
+/// Immutable reference to either an internal PostableCommand or an external command id.
+/// </summary>
+public readonly record struct CommandRef {
+    private readonly PostableCommand? _internal;
+    private readonly string _external;
+    private CommandRef(PostableCommand i) => _internal = i;
+    private CommandRef(string e) => _external = e;
+
+    public static implicit operator CommandRef(PostableCommand i) => new(i);
+    public static implicit operator CommandRef(string e) => new(e);
+
+    public object Value => _internal.HasValue ? _internal.Value : _external;
+
+    public Result<RevitCommandId> GetCommandId() {
+        RevitCommandId id;
+        if (_internal.HasValue) {
+            id = RevitCommandId.LookupPostableCommandId(_internal.Value);
+            return id is not null ? id : new InvalidOperationException($"CommandId is null for internal command ({_internal})");
+        }
+        if (string.IsNullOrEmpty(_external)) return new ArgumentNullException(nameof(_external));
+        id = RevitCommandId.LookupCommandId(_external);
+        return id is not null ? id : new InvalidOperationException($"CommandId is null for external command ({_external})");
+    }
+    
+    /// <summary>
+    /// Returns the RevitCommandId for this reference if the command is postable. Else it returns null
+    /// TODO: Implement more robust/nuanced postability checking. Need to figure this out!!!!!
+    /// </summary>
+    public Result<RevitCommandId> GetAvailableCommandId(UIApplication uiApp) {
+        var (id, idErr) = this.GetCommandId();
+        return idErr is not null
+            ? idErr
+            : uiApp.CanPostCommand(id)
+                ? id
+                : null;
+    }
+}
+
+/// <summary>
+/// Service for executing PostableCommand items in Revit
 /// </summary>
 public class CommandExecutionHelper {
 
-    private RevitCommandId GetCommandId(PostableCommandItem commandItem) =>
-        commandItem == null
-            ? throw new ArgumentNullException(nameof(commandItem))
-            : !string.IsNullOrEmpty(commandItem.ExternalCommandId)
-                ? RevitCommandId.LookupCommandId(commandItem.ExternalCommandId)
-                : RevitCommandId.LookupPostableCommandId(commandItem.Command);
-
-    private bool GetPseudoAvailability(UIApplication uiapp, PostableCommandItem commandItem) {
-        var commandId = this.GetCommandId(commandItem);
-        var pseudoAvailability = uiapp.CanPostCommand(commandId)
-            || !string.IsNullOrEmpty(commandItem.ExternalCommandId);// For external commands, CanPostCommand may not be meaningful, so just check commandId.
-        return commandId is not null && pseudoAvailability;
-    }
-
     /// <summary>
-    ///     Executes the specified PostableCommand
+    /// Executes the specified command.
     /// </summary>
-    /// <param name="commandItem">The command item to execute</param>
-    /// <returns>True if execution was successful, false otherwise</returns>
-    public bool ExecuteCommand(UIApplication uiapp, PostableCommandItem commandItem) {
+    public Result<bool> ExecuteCommand(UIApplication uiApp, CommandRef command) {
+        var (validId, validIdErr) = command.GetAvailableCommandId(uiApp);
+        if (validIdErr is not null) return validIdErr;
+        if (validId is null) return new InvalidOperationException($"Command cannot be executed at this time ({command})");
         try {
-            var commandId = this.GetCommandId(commandItem);
-            if (commandId is null) throw new InvalidOperationException($"Command '{commandItem.Name}' is not available in this context.");
-
-            if (!this.GetPseudoAvailability(uiapp, commandItem)) {
-                throw new InvalidOperationException(
-                    $"Command '{commandItem.Name}' cannot be executed at this time."
-                );
-            }
-
-            uiapp.PostCommand(commandId);
-            PostableCommandHelper.Instance.UpdateCommandUsage(commandItem);
-
+            uiApp.PostCommand(validId);
+            PostableCommandHelper.Instance.UpdateCommandUsage(command);
             return true;
         } catch (Exception ex) {
-            throw ex;
+            return new InvalidOperationException($"Command failed to execute ({command})", ex);
         }
     }
 
     /// <summary>
-    ///     Checks if a command is available for execution
+    /// Checks if a command is available for execution.
     /// </summary>
-    /// <param name="commandItem">The command item to check</param>
-    /// <returns>True if the command is available, false otherwise</returns>
-    public bool IsCommandAvailable(UIApplication uiapp, PostableCommandItem commandItem) {
-        try {
-            var commandId = this.GetCommandId(commandItem);
-            var pseudoAvailability = this.GetPseudoAvailability(uiapp, commandItem);
-            return commandId is not null && pseudoAvailability;
-        } catch {
-            return false;
-        }
+    public bool IsCommandAvailable(UIApplication uiApp, CommandRef command) {
+        var (validId, validIdErr) = command.GetAvailableCommandId(uiApp);
+        if (validIdErr is not null) UiUtils.ShowDebugBalloon(validIdErr.Message);
+        return validId is not null && validIdErr is null;
     }
-
     /// <summary>
-    ///     Gets the availability status text for a command
+    /// Returns a human-readable availability status.
     /// </summary>
-    /// <param name="commandItem">The command item to check</param>
-    /// <returns>Status text describing command availability</returns>
-    public string GetCommandStatus(UIApplication uiapp, PostableCommandItem commandItem) { // TODO: this may be useless
-        try {
-            var commandId = this.GetCommandId(commandItem);
-            var pseudoAvailability = this.GetPseudoAvailability(uiapp, commandItem);
-            return commandId is null
-                ? "Command not available"
-                : pseudoAvailability
-                    ? "Command is available"
-                    : "Command is disabled";
-        } catch {
-            return "Command availability unknown";
-        }
+    public string GetCommandStatus(UIApplication uiApp, CommandRef command) {
+        var (validId, validIdErr) = command.GetAvailableCommandId(uiApp);
+        if (validIdErr is not null) UiUtils.ShowDebugBalloon(validIdErr.Message);
+        return validIdErr is not null
+            ? "Availability Unknown"
+            : validId is not null
+                ? "Available"
+                : "Unavailable";
     }
 }

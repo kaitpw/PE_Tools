@@ -64,9 +64,12 @@ public class PostableCommandHelper {
     /// <summary>
     ///     Updates usage statistics for a command
     /// </summary>
-    public void UpdateCommandUsage(PostableCommandItem command) {
-        command.UsageCount++;
-        command.LastUsed = DateTime.Now;
+    public void UpdateCommandUsage(CommandRef commandRef) {
+        var commandItem = this.GetAllCommands().FirstOrDefault(c => c.Command == commandRef);
+        if (commandItem is not null) {
+            commandItem.UsageCount++;
+            commandItem.LastUsed = DateTime.Now;
+        }
     }
 
     /// <summary>
@@ -115,7 +118,7 @@ public class PostableCommandHelper {
                 // Avoid duplicates if already added as a PostableCommand
                 var alreadyExists = commands.Any(c =>
                     string.Equals(
-                        c.ExternalCommandId,
+                        c.Command.Value as string,
                         shortcutInfo.CommandId,
                         StringComparison.OrdinalIgnoreCase
                     )
@@ -124,8 +127,7 @@ public class PostableCommandHelper {
                     continue;
 
                 var commandItem = new PostableCommandItem {
-                    Command = default, // Not a built-in PostableCommand
-                    ExternalCommandId = shortcutInfo.CommandId,
+                    Command = shortcutInfo.CommandId,
                     Name = shortcutInfo.CommandName ?? shortcutInfo.CommandId,
                     UsageCount = 0,
                     LastUsed = DateTime.MinValue,
