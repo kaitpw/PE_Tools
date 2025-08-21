@@ -1,4 +1,5 @@
 using PeRevitUI;
+using System.Net;
 
 namespace PeLib;
 
@@ -49,7 +50,7 @@ public readonly record struct CommandRef {
 /// <summary> Service for executing PostableCommand items in Revit </summary>
 public class Commands {
     /// <summary> Executes the specified command. </summary>
-    public Result<bool> Execute(UIApplication uiApp, CommandRef command) {
+    public static Result<bool> Execute(UIApplication uiApp, CommandRef command) {
         var (validId, validIdErr) = command.GetPostableCommandId(uiApp);
         if (validIdErr is not null) return validIdErr;
         if (validId is null)
@@ -63,14 +64,14 @@ public class Commands {
     }
 
     /// <summary> Checks if a command is available for execution. </summary>
-    public bool IsAvailable(UIApplication uiApp, CommandRef command) {
+    public static bool IsAvailable(UIApplication uiApp, CommandRef command) {
         var (validId, validIdErr) = command.GetPostableCommandId(uiApp);
         if (validIdErr is not null) new Balloon().AddDebug(new StackFrame(), validIdErr, true).Show();
         return validId is not null && validIdErr is null;
     }
 
     /// <summary> Returns a human-readable availability status. </summary>
-    public string GetStatus(UIApplication uiApp, CommandRef command) {
+    public static string GetStatus(UIApplication uiApp, CommandRef command) {
         var (validId, validIdErr) = command.GetPostableCommandId(uiApp);
         if (validIdErr is not null) new Balloon().AddDebug(new StackFrame(), validIdErr, true).Show();
         return validIdErr is not null

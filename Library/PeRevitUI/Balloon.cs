@@ -16,7 +16,11 @@ internal class Balloon {
         WARN,
 
         // ReSharper disable once InconsistentNaming
-        ERR
+        ERR,
+        // ReSharper disable once InconsistentNaming
+        TODO,
+        // ReSharper disable once InconsistentNaming
+        TEST
     }
 
     private const string FmtNormal = "{0}: {1}";
