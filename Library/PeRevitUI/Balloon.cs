@@ -158,10 +158,12 @@ internal class Balloon() {
     public static void ShowSingleDebug(
         string text,
         string title = null
-    ) =>
+    )
+    {
 #if DEBUG
         ShowSingle(text, title);
 #endif
+    }
 
     /// <summary>Show single-message balloon with a click-to-copy handler. Only visible in a DEBUG builds</summary>
     /// <param name="clickHandler">Custom action to perform on click</param>
@@ -173,10 +175,12 @@ internal class Balloon() {
         string clickDescription,
         string text,
         string title = null
-    ) =>
+    )
+    {
 #if DEBUG
         ShowSingle(clickHandler, clickDescription, text, title);
 #endif
+    }
 
 }
 
