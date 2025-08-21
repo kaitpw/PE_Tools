@@ -1,0 +1,21 @@
+<Project>
+  <ItemGroup>
+    <!-- IMPORTANT: Include all .cs files under PE_Addin_CommandPalette recursively -->
+    <Compile Include="$(MSBuildThisFileDirectory)\**\*.cs" />
+    
+    <!-- WPF: Include XAML files as Page items for proper compilation -->
+    <Page Include="$(MSBuildThisFileDirectory)\**\*.xaml" 
+          SubType="Designer" 
+          Generator="MSBuild:Compile" />
+    
+    <!-- WPF: Exclude XAML code-behind files from Page compilation -->
+    <Compile Update="$(MSBuildThisFileDirectory)\**\*.xaml.cs" 
+              DependentUpon="%(Filename)" 
+              SubType="Code" />
+  </ItemGroup>
+  
+  <!-- Ensure WPF is enabled for projects that use this shared content -->
+  <PropertyGroup>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+</Project>

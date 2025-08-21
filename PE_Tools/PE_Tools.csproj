@@ -108,5 +108,4 @@
     <ItemGroup>
         <Folder Include="NukeFiles\"/>
     </ItemGroup>
-    <Import Project="..\PE_Addin_CommandPalette\PE_Addin_CommandPalette.projitems" Label="Shared"/>
 </Project>

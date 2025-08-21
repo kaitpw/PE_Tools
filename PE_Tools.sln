@@ -5,8 +5,6 @@ VisualStudioVersion = 17.13.36105.23
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PE_Tools", "PE_Tools\PE_Tools.csproj", "{ADFFD630-BE22-480E-ABDC-4EE2FBC5151E}"
 EndProject
-Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "PE_Addin_CommandPalette", "PE_Addin_CommandPalette\PE_Addin_CommandPalette.shproj", "{F8A3C2D1-5B4E-4F7A-9C8D-1E2F3A4B5C6D}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Nuke", "build\Nuke.csproj", "{63C0D6E6-184D-46AD-890D-FD405298DC39}"
 EndProject
 Global
@@ -69,9 +67,5 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {824BE9E9-2FC4-49CA-ACDC-025CCE6BAB99}
-	EndGlobalSection
-	GlobalSection(SharedMSBuildProjectFiles) = preSolution
-		PE_Addin_CommandPalette\PE_Addin_CommandPalette.projitems*{adffd630-be22-480e-abdc-4ee2fbc5151e}*SharedItemsImports = 5
-		PE_Addin_CommandPalette\PE_Addin_CommandPalette.projitems*{f8a3c2d1-5b4e-4f7a-9c8d-1e2f3a4b5c6d}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

@@ -109,7 +109,7 @@ public class KeyboardShortcutsHelper {
     /// </summary>
     private List<string> ParseShortcuts(string shortcutsAttr) =>
         string.IsNullOrEmpty(shortcutsAttr)
-            ? []
+            ? new List<string>()
             : shortcutsAttr.Split('#').Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
 
     /// <summary>
@@ -117,11 +117,12 @@ public class KeyboardShortcutsHelper {
     /// </summary>
     private List<string> ParsePaths(string pathsAttr) =>
         string.IsNullOrEmpty(pathsAttr)
-            ? []
-            : [.. pathsAttr
+            ? new List<string>()
+            : pathsAttr
                 .Split(';')
                 .Where(s => !string.IsNullOrWhiteSpace(s))
-                .Select(s => this.DecodeHtmlEntities(s.Trim()))];
+                .Select(s => this.DecodeHtmlEntities(s.Trim()))
+                .ToList();
 
     /// <summary>
     ///     Decodes common HTML entities in the XML and ensures single-line output
@@ -151,7 +152,7 @@ public class KeyboardShortcutsHelper {
             return string.Empty;
 
         var allPaths = string.Join("; ", paths);
-        return allPaths.Length <= maxLength ? allPaths : allPaths[..(maxLength - 3)] + "...";
+        return allPaths.Length <= maxLength ? allPaths : allPaths.Substring(0, maxLength - 3) + "...";
     }
 }
 
