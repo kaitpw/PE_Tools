@@ -40,6 +40,7 @@
             <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
             <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
             <Setter Property="ScrollViewer.CanContentScroll" Value="True" />
+            <Setter Property="Cursor" Value="Hand" />
         </Style>
 
         <Style x:Key="CommandListItemStyle" TargetType="ListBoxItem">
@@ -49,7 +50,6 @@
             <Setter Property="Margin" Value="0" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="#094771" />
