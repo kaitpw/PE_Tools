@@ -1,6 +1,6 @@
 <Project>
     <!-- IMPORTANT: Include all .cs files under SharedLibrary/ recursively -->
-    <Import Project="$(MSBuildThisFileDirectory)\..\SharedLibrary\Shared.props" />
-    <Import Project="$(MSBuildThisFileDirectory)\..\PE_Addin_CommandPalette\Shared.props" />
+    <Import Project="$(MSBuildThisFileDirectory)\..\Library\Shared.props" />
+    <Import Project="$(MSBuildThisFileDirectory)\..\LibraryAddins\Shared.props" />
 
 </Project>

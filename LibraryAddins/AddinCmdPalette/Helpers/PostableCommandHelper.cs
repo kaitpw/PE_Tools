@@ -1,7 +1,7 @@
-using PE_Addin_CommandPalette.M;
+using AddinCmdPalette.Models;
 using System.Text;
 using PeLib;
-namespace PE_Addin_CommandPalette.H;
+namespace AddinCmdPalette.Helpers;
 
 /// <summary>
 ///     Service for managing PostableCommand enumeration values and metadata

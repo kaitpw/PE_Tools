@@ -1,5 +1,5 @@
-using PE_Addin_CommandPalette.VM;
-using PE_Addin_CommandPalette.M;
+using AddinCmdPalette.ViewModels;
+using AddinCmdPalette.Models;
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -11,7 +11,7 @@ using System.Windows.Interop;
 using System.Windows.Threading;
 using Visibility = System.Windows.Visibility;
 
-namespace PE_Addin_CommandPalette.V;
+namespace AddinCmdPalette.Views;
 
 /// <summary>
 ///     Interaction logic for CommandPaletteWindow.xaml

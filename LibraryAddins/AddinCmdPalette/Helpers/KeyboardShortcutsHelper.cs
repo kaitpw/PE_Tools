@@ -4,7 +4,7 @@ using System.Xml.Linq;
 using PeRevitUI;
 
 
-namespace PE_Addin_CommandPalette.H;
+namespace AddinCmdPalette.Helpers;
 
 /// <summary>
 ///     Service for parsing and managing Revit keyboard shortcuts from XML file

@@ -1,5 +1,5 @@
-using PE_Addin_CommandPalette.V;
-using PE_Addin_CommandPalette.VM;
+using AddinCmdPalette.Views;
+using AddinCmdPalette.ViewModels;
 using PeRevitUI;
 using PE_Tools.Properties;
 

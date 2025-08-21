@@ -1,12 +1,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using PE_Addin_CommandPalette.H;
-using PE_Addin_CommandPalette.M;
+using AddinCmdPalette.Helpers;
+using AddinCmdPalette.Models;
 using PeLib;
 using System.Collections.ObjectModel;
 using System.Windows.Threading;
 
-namespace PE_Addin_CommandPalette.VM;
+namespace AddinCmdPalette.ViewModels;
 
 /// <summary>
 ///     ViewModel for the Command Palette window
