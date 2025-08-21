@@ -2,7 +2,7 @@
 
 namespace PeRevitUI;
 
-internal class ButtonDataClass: IExternalCommandAvailability {
+internal class ButtonDataClass : IExternalCommandAvailability {
     public ButtonDataClass(
         string name,
         string className,
@@ -48,6 +48,17 @@ internal class ButtonDataClass: IExternalCommandAvailability {
 
     public PushButtonData Data { get; set; }
 
+    public bool IsCommandAvailable(
+        UIApplication applicationData,
+        CategorySet selectedCategories
+    ) {
+        var result = false;
+        var activeDoc = applicationData.ActiveUIDocument;
+        if (activeDoc != null && activeDoc.Document != null) result = true;
+
+        return result;
+    }
+
     public static Assembly GetAssembly() => Assembly.GetExecutingAssembly();
 
     public static string GetAssemblyName() => GetAssembly().Location;
@@ -63,17 +74,6 @@ internal class ButtonDataClass: IExternalCommandAvailability {
 
             return bmi;
         }
-    }
-
-    public bool IsCommandAvailable(
-        UIApplication applicationData,
-        CategorySet selectedCategories
-    ) {
-        var result = false;
-        var activeDoc = applicationData.ActiveUIDocument;
-        if (activeDoc != null && activeDoc.Document != null) result = true;
-
-        return result;
     }
 }
 

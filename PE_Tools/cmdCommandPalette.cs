@@ -1,7 +1,7 @@
-using AddinCmdPalette.Views;
 using AddinCmdPalette.ViewModels;
-using PeRevitUI;
+using AddinCmdPalette.Views;
 using PE_Tools.Properties;
+using PeRevitUI;
 
 namespace PE_Tools;
 

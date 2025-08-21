@@ -1,8 +1,7 @@
+using PeRevitUI;
 using PeRevitUtils;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using PeRevitUI;
-
 
 namespace AddinCmdPalette.Helpers;
 

@@ -1,5 +1,4 @@
 using AddinCmdPalette.ViewModels;
-using AddinCmdPalette.Models;
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -17,9 +16,8 @@ namespace AddinCmdPalette.Views;
 ///     Interaction logic for CommandPaletteWindow.xaml
 /// </summary>
 public partial class CommandPaletteWindow : Window {
-    private bool _isClosing;
     private readonly DispatcherTimer _searchTimer;
-    private CommandPaletteViewModel _viewModel => this.DataContext as CommandPaletteViewModel;
+    private bool _isClosing;
 
     public CommandPaletteWindow() {
         this.InitializeComponent();
@@ -28,38 +26,33 @@ public partial class CommandPaletteWindow : Window {
         this._searchTimer.Tick += (s, e) => this._searchTimer.Stop();
 
         this.Loaded += this.OnLoad;
-        this.Deactivated += this.OnWindowUnfocus;
-        this.LostFocus += this.OnWindowUnfocus;
+        this.Deactivated += (_, _) => {
+            if (!this.IsActive && !this._isClosing && !this.IsMouseOver) this.CloseWindow();
+        };
+        this.LostFocus += (_, _) => {
+            if (!this.IsActive && !this._isClosing) this.CloseWindow();
+        };
     }
 
-    private void OnLoad(object sender, RoutedEventArgs e) {
-        if (this._viewModel == null)
+    private CommandPaletteViewModel ViewModel => this.DataContext as CommandPaletteViewModel;
+
+    private void OnLoad(object sender, RoutedEventArgs eventArgs) {
+        if (this.ViewModel == null)
             throw new InvalidOperationException("CommandPalette view-model is null");
 
-        this.CommandListBox.SelectionChanged += (s, e) => {
-            if (this._viewModel.SelectedCommand != null)
-                this.CommandListBox.ScrollIntoView(this._viewModel.SelectedCommand);
+        this.CommandListBox.MouseLeftButtonUp += (_, _) => {
+            if (this.ViewModel?.SelectedCommand != null &&
+                this.ViewModel.ExecuteSelectedCommandCommand.CanExecute(null)) {
+                this.CloseWindow();
+                this.ViewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
+            }
         };
-
-        // Enable single-click-to-run functionality
-        this.CommandListBox.MouseLeftButtonUp += this.OnCommandListBoxMouseLeftButtonUp;
+        this.CommandListBox.SelectionChanged += (_, _) => {
+            if (this.ViewModel.SelectedCommand != null)
+                this.CommandListBox.ScrollIntoView(this.ViewModel.SelectedCommand);
+        };
     }
 
-    /// <summary> Enable click-outside-to-close functionality </summary>
-    private void OnWindowUnfocus(object sender, EventArgs e) {
-        if (!this.IsActive && !this._isClosing && !this.IsMouseOver) {
-            this.CloseWindow();
-        }
-    }
-
-    /// <summary> Enable single-click-to-run on command list items </summary>
-    private void OnCommandListBoxMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
-        if (this._viewModel?.SelectedCommand != null && 
-            this._viewModel.ExecuteSelectedCommandCommand.CanExecute(null)) {
-            this.CloseWindow();
-            _ = this._viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
-        }
-    }
 
     private void Window_Loaded(object sender, RoutedEventArgs e) {
         this.SearchTextBox.Focus();
@@ -67,54 +60,38 @@ public partial class CommandPaletteWindow : Window {
     }
 
     private void Window_KeyDown(object sender, KeyEventArgs e) {
-        if (this._viewModel == null)
-            throw new InvalidOperationException("CommandPalette view-model is null");
-
-        if (this._isClosing)
-            return; // Prevent handling if already closing or no view model
+        // Prevent key handling if window already closing or no view model
+        if (this.ViewModel == null) throw new InvalidOperationException("CommandPalette view-model is null");
+        if (this._isClosing) return;
 
         switch (e.Key) {
         case Key.Escape:
-            if (!string.IsNullOrEmpty(this._viewModel.SearchText)) this._viewModel.ClearSearchCommand.Execute(null);
-
-            if (string.IsNullOrEmpty(this._viewModel.SearchText)) this.CloseWindow();
-
+            this.CloseWindow();
             e.Handled = true;
             break;
 
         case Key.Enter:
             this.CloseWindow();
-
-            if (this._viewModel.ExecuteSelectedCommandCommand.CanExecute(null))
-                _ = this._viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
-
+            if (this.ViewModel.ExecuteSelectedCommandCommand.CanExecute(null))
+                _ = this.ViewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
             e.Handled = true;
             break;
 
-        case Key.Tab:
-            // Prevent tab from changing focus
+        case Key.Tab: // Prevent tab from changing focus
             e.Handled = true;
             break;
         }
     }
 
-    private void SearchTextBox_TextChanged(
-        object sender,
-        TextChangedEventArgs e
-    ) {
-        // Debounce search to improve performance
-        this._searchTimer.Stop();
+    private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e) {
+        this._searchTimer.Stop(); // Debounce search to improve performance
         this._searchTimer.Start();
     }
 
-    /// <summary>
-    ///     Unified method to close the window with proper state management
-    /// </summary>
-    private void CloseWindow() {
-        if (this._isClosing)
-            return; // Prevent multiple close attempts
 
+    private void CloseWindow() {
         try {
+            if (this._isClosing) return; // Prevent multiple close attempts
             this._isClosing = true;
             this.Close();
         } catch (InvalidOperationException) { } // Window is already closing, ignore the exception
@@ -141,19 +118,17 @@ public partial class CommandPaletteWindow : Window {
 
     private const int GWL_EXSTYLE = -20;
     private const int WS_EX_TOOLWINDOW = 0x00000080;
+
     [DllImport("user32.dll")]
     private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
     #endregion
 }
 
-#region Value Converters
-
-/// <summary>
-///     Converter for showing usage count only when > 0, or strings when not empty
-/// </summary>
+/// <summary> Coerce value to a display state </summary>
 public class VisibilityConverter : IValueConverter {
     public static readonly VisibilityConverter Instance = new();
 
@@ -162,25 +137,15 @@ public class VisibilityConverter : IValueConverter {
             bool boolValue => boolValue
                 ? Visibility.Visible
                 : Visibility.Collapsed,
-
             int intValue => intValue > 0
                 ? Visibility.Visible
                 : Visibility.Collapsed,
-
             string stringValue => !string.IsNullOrWhiteSpace(stringValue)
                 ? Visibility.Visible
                 : Visibility.Collapsed,
-
             _ => Visibility.Collapsed
         };
 
-    public object ConvertBack(
-        object value,
-        Type targetType,
-        object parameter,
-        CultureInfo culture
-    ) =>
+    public object ConvertBack(object _, Type __, object ___, CultureInfo ____) =>
         throw new NotImplementedException();
 }
-
-#endregion

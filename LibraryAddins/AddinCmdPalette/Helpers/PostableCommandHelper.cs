@@ -1,6 +1,7 @@
 using AddinCmdPalette.Models;
-using System.Text;
 using PeLib;
+using System.Text;
+
 namespace AddinCmdPalette.Helpers;
 
 /// <summary>

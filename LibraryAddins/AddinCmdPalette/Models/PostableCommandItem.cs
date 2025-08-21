@@ -15,7 +15,6 @@ public partial class PostableCommandItem : ObservableObject {
     /// <summary>
     ///     For internal commands, the actual PostableCommand enum value
     ///     For external (addin) commands, the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
-
     /// </summary>
     public CommandRef Command { get; set; }
 

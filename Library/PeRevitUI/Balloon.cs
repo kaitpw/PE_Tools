@@ -1,13 +1,13 @@
 ﻿using Autodesk.Internal.InfoCenter;
 using Autodesk.Windows;
+using PeRevitUtils;
 using System.Text;
 using System.Windows;
-using PeRevitUtils;
 
 namespace PeRevitUI;
 
 /// <summary>Message collector for accumulating messages, then showing all at once</summary>
-internal class Balloon() {
+internal class Balloon {
     public enum LogLevel {
         // ReSharper disable once InconsistentNaming
         INFO,
@@ -141,14 +141,12 @@ internal class Balloon() {
             title = typeof(Utils).Assembly.GetName().Name;
 #pragma warning disable CA1416 // Validate platform compatibility
         var ri = new ResultItem {
-            Title = text.Trim(),
-            Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
+            Title = text.Trim(), Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
         };
         ri.ResultClicked += (_, _) => clickHandler();
 
         ComponentManager.InfoCenterPaletteManager.ShowBalloon(ri);
 #pragma warning restore CA1416 // Validate platform compatibility
-
     }
 
 
@@ -158,8 +156,7 @@ internal class Balloon() {
     public static void ShowSingleDebug(
         string text,
         string title = null
-    )
-    {
+    ) {
 #if DEBUG
         ShowSingle(text, title);
 #endif
@@ -175,13 +172,9 @@ internal class Balloon() {
         string clickDescription,
         string text,
         string title = null
-    )
-    {
+    ) {
 #if DEBUG
         ShowSingle(clickHandler, clickDescription, text, title);
 #endif
     }
-
 }
-
-

@@ -1,7 +1,7 @@
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 using AddinCmdPalette.Helpers;
 using AddinCmdPalette.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using PeLib;
 using System.Collections.ObjectModel;
 using System.Windows.Threading;
@@ -14,8 +14,28 @@ namespace AddinCmdPalette.ViewModels;
 public partial class CommandPaletteViewModel : ObservableObject {
     private readonly Commands _executionService;
 
-    public CommandPaletteViewModel(UIApplication UIApplication, Dispatcher uiDispatcher) {
-        this._uiapp = UIApplication;
+    private readonly Dispatcher _uiDispatcher;
+
+    /// <summary> Whether a command is currently being executed </summary>
+    [ObservableProperty] private bool _isExecutingCommand;
+
+    /// <summary> Whether the command list is currently loading </summary>
+    [ObservableProperty] private bool _isLoading = true;
+
+    /// <summary> Current search text </summary>
+    [ObservableProperty] private string _searchText = string.Empty;
+
+    /// <summary> Currently selected command </summary>
+    [ObservableProperty] private PostableCommandItem _selectedCommand;
+
+    /// <summary> Currently selected index in the filtered list </summary>
+    [ObservableProperty] private int _selectedIndex = -1;
+    
+    /// <summary> The UI application instance for executing commands </summary>
+    [ObservableProperty] private UIApplication _uiapp;
+
+    public CommandPaletteViewModel(UIApplication uiApp, Dispatcher uiDispatcher) {
+        this._uiapp = uiApp;
         this._uiDispatcher = uiDispatcher;
         this._executionService = new Commands();
         this.FilteredCommands = new ObservableCollection<PostableCommandItem>();
@@ -24,97 +44,37 @@ public partial class CommandPaletteViewModel : ObservableObject {
         _ = Task.Run(this.LoadCommandsAsync);
     }
 
-    #region Properties
+    /// <summary> Filtered list of commands based on search text </summary>
+    private ObservableCollection<PostableCommandItem> FilteredCommands { get; }
 
-    /// <summary>
-    ///     The UI application instance for executing commands
-    /// </summary>
-    [ObservableProperty] private UIApplication _uiapp;
-
-    private readonly Dispatcher _uiDispatcher;
-
-    /// <summary>
-    ///     Current search text
-    /// </summary>
-    [ObservableProperty] private string _searchText = string.Empty;
-
-    /// <summary>
-    ///     Currently selected command
-    /// </summary>
-    [ObservableProperty] private PostableCommandItem _selectedCommand;
-
-    /// <summary>
-    ///     Currently selected index in the filtered list
-    /// </summary>
-    [ObservableProperty] private int _selectedIndex = -1;
-
-    /// <summary>
-    ///     Whether the command list is currently loading
-    /// </summary>
-    [ObservableProperty] private bool _isLoading = true;
-
-    /// <summary>
-    ///     Whether a command is currently being executed
-    /// </summary>
-    [ObservableProperty] private bool _isExecutingCommand;
-
-    /// <summary>
-    ///     Filtered list of commands based on search text
-    /// </summary>
-    public ObservableCollection<PostableCommandItem> FilteredCommands { get; }
-
-    /// <summary>
-    ///     Status text for the currently selected command
-    /// </summary>
+    /// <summary> Status text for the currently selected command </summary>
     public string CommandStatus =>
-        this.SelectedCommand == null
-        ? "No command selected"
-        : this._executionService.GetStatus(this.Uiapp, this.SelectedCommand.Command);
+        this._executionService.GetStatus(this.Uiapp, this.SelectedCommand.Command);
 
-    #endregion
 
-    #region Commands
-
-    /// <summary>
-    ///     Executes the currently selected command
-    /// </summary>
     [RelayCommand(CanExecute = nameof(CanExecuteSelectedCommand))]
     private async Task ExecuteSelectedCommandAsync() {
-        if (this.SelectedCommand == null)
-            return;
-
         this.IsExecutingCommand = true;
 
-        (bool success, Exception error) = await Task.Run(() =>
+        var (success, error) = await Task.Run(() =>
             this._executionService.Execute(this.Uiapp, this.SelectedCommand.Command));
         if (error is not null) throw error; // TODO: come back to the error handling here
         if (success) PostableCommandHelper.Instance.UpdateCommandUsage(this.SelectedCommand.Command);
-
     }
 
-    /// <summary>
-    ///     Moves selection up in the list
-    /// </summary>
     [RelayCommand]
     private void MoveSelectionUp() {
         if (this.SelectedIndex > 0) this.SelectedIndex--;
     }
 
-    /// <summary>
-    ///     Moves selection down in the list
-    /// </summary>
     [RelayCommand]
     private void MoveSelectionDown() {
         if (this.SelectedIndex < this.FilteredCommands.Count - 1) this.SelectedIndex++;
     }
 
-    /// <summary>
-    ///     Clears the search text
-    /// </summary>
     [RelayCommand]
     private void ClearSearch() => this.SearchText = string.Empty;
 
-    #endregion
 
     #region Methods
 
@@ -157,22 +117,15 @@ public partial class CommandPaletteViewModel : ObservableObject {
     ///     Checks if the selected command can be executed
     /// </summary>
     private bool CanExecuteSelectedCommand() =>
-        this.SelectedCommand != null
-        && this._executionService.IsAvailable(this.Uiapp, this.SelectedCommand.Command)
+        this._executionService.IsAvailable(this.Uiapp, this.SelectedCommand.Command)
         && !this.IsExecutingCommand;
 
     #endregion
 
     #region Property Change Handlers
 
-    /// <summary>
-    ///     Handles changes to the SearchText property
-    /// </summary>
     partial void OnSearchTextChanged(string value) => this.FilterCommands();
 
-    /// <summary>
-    ///     Handles changes to the SelectedCommand property
-    /// </summary>
     partial void OnSelectedCommandChanged(PostableCommandItem value) {
         // Clear previous selection
         if (this.FilteredCommands.Any(cmd => cmd != value)) {
@@ -187,9 +140,6 @@ public partial class CommandPaletteViewModel : ObservableObject {
         this.OnPropertyChanged(nameof(this.CommandStatus));
     }
 
-    /// <summary>
-    ///     Handles changes to the SelectedIndex property
-    /// </summary>
     partial void OnSelectedIndexChanged(int value) {
         // Update selected command based on index
         if (value >= 0 && value < this.FilteredCommands.Count)
@@ -199,13 +149,4 @@ public partial class CommandPaletteViewModel : ObservableObject {
     }
 
     #endregion
-}
-
-/// <summary>
-///     Event arguments for command execution completion
-/// </summary>
-public class CommandExecutionCompletedEventArgs : EventArgs {
-    public PostableCommandItem Command { get; set; }
-    public bool Success { get; set; }
-    public Exception Error { get; set; }
 }
