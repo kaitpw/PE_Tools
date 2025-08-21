@@ -105,7 +105,7 @@ public class PostableCommandHelper {
             commands.Add(commandItem);
         }
 
-        // Add addin commands (CustomCtrl_*) from shortcuts
+        // Add addin commands (CustomCtrl_*) from shortcuts - defer this to improve initial load
         var allShortcuts = shortcutsService.GetShortcuts();
         foreach (var kvp in allShortcuts) {
             var shortcutInfo = kvp.Value;

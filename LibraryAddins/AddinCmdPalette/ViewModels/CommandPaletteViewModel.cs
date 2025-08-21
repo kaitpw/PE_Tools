@@ -4,7 +4,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PeLib;
 using System.Collections.ObjectModel;
-using System.Windows.Threading;
 
 namespace AddinCmdPalette.ViewModels;
 
@@ -14,13 +13,8 @@ namespace AddinCmdPalette.ViewModels;
 public partial class CommandPaletteViewModel : ObservableObject {
     private readonly Commands _executionService;
 
-    private readonly Dispatcher _uiDispatcher;
-
     /// <summary> Whether a command is currently being executed </summary>
     [ObservableProperty] private bool _isExecutingCommand;
-
-    /// <summary> Whether the command list is currently loading </summary>
-    [ObservableProperty] private bool _isLoading = true;
 
     /// <summary> Current search text </summary>
     [ObservableProperty] private string _searchText = string.Empty;
@@ -36,14 +30,19 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// <summary> The UI application instance for executing commands </summary>
     [ObservableProperty] private UIApplication _uiapp;
 
-    public CommandPaletteViewModel(UIApplication uiApp, Dispatcher uiDispatcher) {
+    public CommandPaletteViewModel(UIApplication uiApp) {
         this._uiapp = uiApp;
-        this._uiDispatcher = uiDispatcher;
         this._executionService = new Commands();
         this.FilteredCommands = new ObservableCollection<PostableCommandItem>();
 
-        // Initialize commands asynchronously for better startup performance
-        _ = Task.Run(this.LoadCommandsAsync);
+        // Load commands synchronously for immediate display
+        var commands = PostableCommandHelper.Instance.GetAllCommands();
+        foreach (var command in commands)
+            this.FilteredCommands.Add(command);
+
+        // Select first item by default
+        if (this.FilteredCommands.Count > 0) 
+            this.SelectedIndex = 0;
     }
 
     /// <summary> Filtered list of commands based on search text </summary>
@@ -84,35 +83,22 @@ public partial class CommandPaletteViewModel : ObservableObject {
     #region Methods
 
     /// <summary>
-    ///     Loads commands asynchronously
-    /// </summary>
-    private async Task LoadCommandsAsync() =>
-        await Task.Run(() => {
-            // Load commands on background thread
-            var commands = PostableCommandHelper.Instance.GetAllCommands();
-
-            // Update UI on main thread
-            this._uiDispatcher.Invoke(() => {
-                this.FilteredCommands.Clear();
-                foreach (var command in commands) // Show first 50 initially for performance
-                    this.FilteredCommands.Add(command);
-
-                // Select first item by default
-                if (this.FilteredCommands.Count > 0) this.SelectedIndex = 0;
-
-                this.IsLoading = false;
-            });
-        });
-
-    /// <summary>
     ///     Filters commands based on current search text
     /// </summary>
     private void FilterCommands() {
-        var filtered = PostableCommandHelper.Instance.FilterCommands(this.SearchText);
-
-        this.FilteredCommands.Clear();
-        foreach (var command in filtered) // Limit results for performance
-            this.FilteredCommands.Add(command);
+        if (string.IsNullOrWhiteSpace(this.SearchText)) {
+            // Show all commands when no search text
+            var allCommands = PostableCommandHelper.Instance.GetAllCommands();
+            this.FilteredCommands.Clear();
+            foreach (var command in allCommands)
+                this.FilteredCommands.Add(command);
+        } else {
+            // Filter commands based on search
+            var filtered = PostableCommandHelper.Instance.FilterCommands(this.SearchText);
+            this.FilteredCommands.Clear();
+            foreach (var command in filtered)
+                this.FilteredCommands.Add(command);
+        }
 
         // Reset selection to first item
         this.SelectedIndex = this.FilteredCommands.Count > 0 ? 0 : -1;

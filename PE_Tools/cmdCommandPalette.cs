@@ -20,19 +20,13 @@ public class CmdCommandPalette : IExternalCommand {
             // 1. Create the View
             var paletteWindow = new CommandPaletteWindow();
 
-            // 2. Get the Dispatcher from the View, capturing the dispatcher here is crucial for multi-targeting purposes
-            var windowDispatcher = paletteWindow.Dispatcher;
+            // 2. Create the ViewModel, passing dependencies
+            var viewModel = new CommandPaletteViewModel(commandData.Application);
 
-            // 3. Create the ViewModel, passing dependencies
-            var viewModel = new CommandPaletteViewModel(
-                commandData.Application,
-                windowDispatcher
-            );
-
-            // 4. Set the DataContext directly (this is standard practice)
+            // 3. Set the DataContext directly (this is standard practice)
             paletteWindow.DataContext = viewModel;
 
-            // 5. Show the View
+            // 4. Show the View
             paletteWindow.Show();
 
             return Result.Succeeded;

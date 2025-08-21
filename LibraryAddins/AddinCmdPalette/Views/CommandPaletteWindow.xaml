@@ -152,16 +152,6 @@
                 </ListBox.ItemTemplate>
             </ListBox>
 
-            <!-- Loading Indicator -->
-            <Grid Grid.Row="1"
-                  Visibility="{Binding IsLoading, Converter={x:Static local:VisibilityConverter.Instance}}">
-                <TextBlock Text="Loading commands..."
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Foreground="#CCCCCC"
-                           FontSize="14" />
-            </Grid>
-
             <!-- Status Bar -->
             <Border Grid.Row="2" Style="{StaticResource StatusBarStyle}">
                 <Grid Margin="12,6">
