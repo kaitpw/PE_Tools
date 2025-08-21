@@ -22,12 +22,12 @@ public class CmdMep2040 : IExternalCommand {
         var refrigerantVolume = TotalPipeVolume(doc, "RL - Refrigerant Liquid");
         var equipmentCounts = CountMepEquipmentByType(doc);
 
-        balloon.Add(Balloon.LogLevel.INFO, $"Total Pipe Length: {metalPipeLength:F2} ft");
-        balloon.Add(Balloon.LogLevel.INFO, $"Total RL Volume: {refrigerantVolume:F2} ft³");
+        balloon.Add(Balloon.Log.INFO, $"Total Pipe Length: {metalPipeLength:F2} ft");
+        balloon.Add(Balloon.Log.INFO, $"Total RL Volume: {refrigerantVolume:F2} ft³");
         var sb = new StringBuilder();
         foreach (var kvp in equipmentCounts)
             _ = sb.AppendLine($"  {kvp.Key}: {kvp.Value}");
-        balloon.Add(Balloon.LogLevel.INFO, "MEP Equipment Counts:\n" + sb);
+        balloon.Add(Balloon.Log.INFO, "MEP Equipment Counts:\n" + sb);
 
         balloon.Show("MEP 2040 Sustainability Stats");
 

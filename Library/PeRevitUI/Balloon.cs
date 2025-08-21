@@ -8,7 +8,7 @@ namespace PeRevitUI;
 
 /// <summary>Message collector for accumulating messages, then showing all at once</summary>
 internal class Balloon {
-    public enum LogLevel {
+    public enum Log {
         // ReSharper disable once InconsistentNaming
         INFO,
 
@@ -29,17 +29,17 @@ internal class Balloon {
     public void Clear() => this._messages.Clear();
 
     /// <summary>Add a normal message (with a Log Level)</summary>
-    public Balloon Add(LogLevel logLevel, string message) {
+    public Balloon Add(Log log, string message) {
         if (!string.IsNullOrWhiteSpace(message))
-            this._messages.Add(string.Format(FmtNormal, logLevel, message.Trim()));
+            this._messages.Add(string.Format(FmtNormal, log, message.Trim()));
         return this;
     }
 
     /// <summary>Add a normal message (with the method's name)</summary>
-    public Balloon Add(LogLevel logLevel, StackFrame sf, string message) {
+    public Balloon Add(Log log, StackFrame sf, string message) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         if (!string.IsNullOrWhiteSpace(message))
-            this._messages.Add(string.Format(FmtMethod, logLevel, method, message.Trim()));
+            this._messages.Add(string.Format(FmtMethod, log, method, message.Trim()));
         return this;
     }
 
@@ -47,16 +47,16 @@ internal class Balloon {
     public Balloon Add(StackFrame sf, Exception ex, bool trace = false) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         this._messages.Add(trace
-            ? string.Format(FmtErrorTrace, LogLevel.ERR, method, ex.Message, ex.StackTrace)
-            : string.Format(FmtMethod, LogLevel.ERR, method, ex.Message));
+            ? string.Format(FmtErrorTrace, Log.ERR, method, ex.Message, ex.StackTrace)
+            : string.Format(FmtMethod, Log.ERR, method, ex.Message));
         return this;
     }
 
     /// <summary>Add a DEBUG build message</summary>
-    public Balloon AddDebug(LogLevel logLevel, StackFrame sf, string message) {
+    public Balloon AddDebug(Log log, StackFrame sf, string message) {
 #if DEBUG
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
-        var prefix = "DEBUG " + logLevel;
+        var prefix = "DEBUG " + log;
         if (!string.IsNullOrWhiteSpace(message))
             this._messages.Add(string.Format(FmtMethod, prefix, method, message.Trim()));
 #endif
@@ -67,7 +67,7 @@ internal class Balloon {
     public Balloon AddDebug(StackFrame sf, Exception ex, bool trace = false) {
 #if DEBUG
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
-        var prefix = "DEBUG " + LogLevel.ERR;
+        var prefix = "DEBUG " + Log.ERR;
         this._messages.Add(trace
             ? string.Format(FmtErrorTrace, prefix, method, ex.Message, ex.StackTrace)
             : string.Format(FmtMethod, prefix, method, ex.Message));
@@ -82,12 +82,13 @@ internal class Balloon {
     ) {
         var combinedMessage = new StringBuilder();
         _ = combinedMessage.AppendLine(new string('-', 20));
-        if (this._messages.Count == 0) _ = this.Add(LogLevel.WARN, "No messages to display");
+        if (this._messages.Count == 0) _ = this.Add(Log.WARN, "No messages to display");
 
         foreach (var message in this._messages)
             _ = combinedMessage.AppendLine("\u2588 " + message);
 
-        ShowSingle(() => Clipboard.SetText(combinedMessage.ToString().Trim()), "Click to copy",combinedMessage.ToString(), title);
+        ShowSingle(() => Clipboard.SetText(combinedMessage.ToString().Trim()), "Click to copy",
+            combinedMessage.ToString(), title);
         this.Clear();
     }
 
@@ -101,8 +102,8 @@ internal class Balloon {
         string title = null
     ) {
         var combinedMessage = new StringBuilder();
-        _ = combinedMessage.AppendLine(new string('-', 20));
-        if (this._messages.Count == 0) _ = this.Add(LogLevel.WARN, "No messages to display");
+        _ = combinedMessage.AppendLine(new string('-', 35));
+        if (this._messages.Count == 0) _ = this.Add(Log.WARN, "No messages to display");
 
         foreach (var message in this._messages)
             _ = combinedMessage.AppendLine("\u2588 " + message);

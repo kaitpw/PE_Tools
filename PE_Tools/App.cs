@@ -9,7 +9,9 @@ internal class App : IExternalApplication {
         try {
             app.CreateRibbonTab(tabName);
         } catch (Exception) {
-            new Balloon().Add(Balloon.LogLevel.INFO, $"{tabName} already exists in the current Revit instance.");
+            new Balloon()
+                .Add(Balloon.Log.INFO, $"{tabName} already exists in the current Revit instance.")
+                .Show();
         }
 
         // 2. Create ribbon panel

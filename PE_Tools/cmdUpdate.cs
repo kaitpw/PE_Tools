@@ -19,14 +19,14 @@ public class CmdUpdate : IExternalCommand {
         // Fetch the latest Github release
         var request = new GithubRequestService("kaitpw", "PE_Tools");
         var result = RunRequest(request);
-            
-            new Balloon()
-                .Add(Balloon.LogLevel.INFO, $"Download: {result}")
-                .Show(() => { }, "None"
-                    // TODO: Figure out how to get the request to rerun
-                    // RunRequest(request),
-                    // "Click to Retry Download"
-                    );
+
+        new Balloon()
+            .Add(Balloon.Log.INFO, $"Download: {result}")
+            .Show(() => { }, "None"
+                // TODO: Figure out how to get the request to rerun
+                // RunRequest(request),
+                // "Click to Retry Download"
+            );
 
         return Result.Succeeded;
     }
@@ -39,7 +39,7 @@ public class CmdUpdate : IExternalCommand {
             Resources.Blue_16,
             "Click this button to update PE Tools to the latest release. You will need to restart Revit"
         ).Data;
-    
-    public static Task<bool> RunRequest( GithubRequestService request) =>
+
+    public static Task<bool> RunRequest(GithubRequestService request) =>
         Task.Run(() => request.Initialize(Console.WriteLine));
 }

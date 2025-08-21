@@ -2,6 +2,7 @@ using PeRevitUI;
 using PeRevitUtils;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using System.Windows;
 
 namespace AddinCmdPalette.Helpers;
 
@@ -22,23 +23,24 @@ public class KeyboardShortcutsHelper {
     /// <summary>
     ///     Gets the keyboard shortcuts file path for the current Revit version
     /// </summary>
-    private string GetShortcutsFilePath() {
+    private Result<string> GetShortcutsFilePath() {
         var revitVersion = Utils.GetRevitVersion();
         if (revitVersion == null) {
-            new Balloon().Add(Balloon.LogLevel.WARN, "Revit version not found");
+            new Balloon()
+                .Add(Balloon.Log.WARN, "Revit version not found")
+                .Show();
             return string.Empty;
         }
 
-        var appDataPath = Environment.GetFolderPath(
-            Environment.SpecialFolder.ApplicationData
-        );
-        return Path.Combine(
-            appDataPath,
-            "Autodesk",
-            "Revit",
-            $"Autodesk Revit {revitVersion}",
-            "KeyboardShortcuts.xml"
-        );
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var version = $"Autodesk Revit {revitVersion}";
+        var fullPath = Path.Combine(appData, "Autodesk", "Revit", version, "KeyboardShortcuts.xml");
+        if (!File.Exists(fullPath)) return new InvalidOperationException("Keyboard shortcuts file not found");
+        new Balloon()
+            .Add(Balloon.Log.INFO, $"Loading Keyboard shortcuts file\n {fullPath}")
+            .Show(() => Clipboard.SetText(fullPath), "Click to copy path");
+        return fullPath;
+
     }
 
     /// <summary>
@@ -68,11 +70,10 @@ public class KeyboardShortcutsHelper {
     /// </summary>
     private Dictionary<string, ShortcutInfo> LoadShortcutsFromXml() {
         var shortcuts = new Dictionary<string, ShortcutInfo>(StringComparer.OrdinalIgnoreCase);
-        var filePath = this.GetShortcutsFilePath();
+        var (filePath, pathErr) = this.GetShortcutsFilePath();
+        if (pathErr is not null) return shortcuts; // Return empty dictionary if file doesn't exist
 
         try {
-            if (!File.Exists(filePath)) return shortcuts; // Return empty dictionary if file doesn't exist
-
             var doc = XDocument.Load(filePath);
             var shortcutItems = doc.Descendants("ShortcutItem");
 
