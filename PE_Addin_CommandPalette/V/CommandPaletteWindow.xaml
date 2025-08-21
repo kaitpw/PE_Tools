@@ -49,6 +49,7 @@
             <Setter Property="Margin" Value="0" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Cursor" Value="Hand" />
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
                     <Setter Property="Background" Value="#094771" />
@@ -182,7 +183,7 @@
                                    FontSize="11"
                                    VerticalAlignment="Center"
                                    Margin="0,0,12,0" />
-                        <TextBlock Text="↑↓ Navigate • Enter Execute • Esc Close"
+                        <TextBlock Text="↑↓ Navigate • Click/Enter Execute • Esc Close"
                                    Foreground="#666666"
                                    FontSize="11"
                                    VerticalAlignment="Center" />

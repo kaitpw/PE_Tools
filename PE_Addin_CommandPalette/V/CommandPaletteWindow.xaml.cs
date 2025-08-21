@@ -1,4 +1,5 @@
 using PE_Addin_CommandPalette.VM;
+using PE_Addin_CommandPalette.M;
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -39,12 +40,23 @@ public partial class CommandPaletteWindow : Window {
                 this.CommandListBox.ScrollIntoView(this._viewModel.SelectedCommand);
         };
 
+        // Enable single-click-to-run functionality
+        this.CommandListBox.MouseLeftButtonUp += this.OnCommandListBoxMouseLeftButtonUp;
     }
 
     /// <summary> Enable click-outside-to-close functionality </summary>
     private void OnWindowDeactivated(object sender, EventArgs e) {
         if (!this.IsActive && !this._isClosing && !this.IsMouseOver) {
             this.CloseWindow();
+        }
+    }
+
+    /// <summary> Enable single-click-to-run on command list items </summary>
+    private void OnCommandListBoxMouseLeftButtonUp(object sender, MouseButtonEventArgs e) {
+        if (this._viewModel?.SelectedCommand != null && 
+            this._viewModel.ExecuteSelectedCommandCommand.CanExecute(null)) {
+            this.CloseWindow();
+            _ = this._viewModel.ExecuteSelectedCommandCommand.ExecuteAsync(null);
         }
     }
 
