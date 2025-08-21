@@ -1,7 +1,7 @@
 ﻿using Autodesk.Revit.DB.Plumbing;
-using PeRevitInit;
-using PeLib;
 using PE_Tools.Properties;
+using PeLib;
+using PeRevitUI;
 using System.Text;
 
 namespace PE_Tools;
@@ -17,7 +17,7 @@ public class CmdMep2040 : IExternalCommand {
         var uidoc = uiapp.ActiveUIDocument;
         var doc = uidoc.Document;
 
-        var balloon = new Balloon("MEP 2040 Sustainability Stats");
+        var balloon = new Balloon();
         var metalPipeLength = TotalPipeLength(doc);
         var refrigerantVolume = TotalPipeVolume(doc, "RL - Refrigerant Liquid");
         var equipmentCounts = CountMepEquipmentByType(doc);
@@ -26,10 +26,10 @@ public class CmdMep2040 : IExternalCommand {
         balloon.Add(Balloon.LogLevel.INFO, $"Total RL Volume: {refrigerantVolume:F2} ft³");
         var sb = new StringBuilder();
         foreach (var kvp in equipmentCounts)
-            sb.AppendLine($"  {kvp.Key}: {kvp.Value}");
+            _ = sb.AppendLine($"  {kvp.Key}: {kvp.Value}");
         balloon.Add(Balloon.LogLevel.INFO, "MEP Equipment Counts:\n" + sb);
 
-        balloon.Show();
+        balloon.ShowMulti("MEP 2040 Sustainability Stats");
 
         return Result.Succeeded;
     }

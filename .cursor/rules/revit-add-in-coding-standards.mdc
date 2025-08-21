@@ -19,7 +19,7 @@ PE_Tools/
 │   ├── V/
 │   ├── VM/
 │   ├── README.md 
-├── PeRevitInit/                 <-- infrastructure for initializing addins
+├── PeRevitUI/                 <-- infrastructure for initializing addins
 │   ├── ButtonDataClass.cs
 │   ├── CommandAvailability.cs
 │   ├── UiHelpers.cs

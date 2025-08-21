@@ -12,12 +12,12 @@ namespace PE_Addin_CommandPalette.VM;
 ///     ViewModel for the Command Palette window
 /// </summary>
 public partial class CommandPaletteViewModel : ObservableObject {
-    private readonly Command _executionService;
+    private readonly Commands _executionService;
 
     public CommandPaletteViewModel(UIApplication UIApplication, Dispatcher uiDispatcher) {
         this._uiapp = UIApplication;
         this._uiDispatcher = uiDispatcher;
-        this._executionService = new Command();
+        this._executionService = new Commands();
         this.FilteredCommands = new ObservableCollection<PostableCommandItem>();
 
         // Initialize commands asynchronously for better startup performance

@@ -1,6 +1,6 @@
 using PE_Addin_CommandPalette.V;
 using PE_Addin_CommandPalette.VM;
-using PeRevitInit;
+using PeRevitUI;
 using PE_Tools.Properties;
 
 namespace PE_Tools;

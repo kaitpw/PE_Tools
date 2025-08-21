@@ -1,4 +1,4 @@
-﻿namespace PeRevitInit;
+﻿namespace PeRevitUtils;
 
 internal class CommandAvailability : IExternalCommandAvailability {
     public bool IsCommandAvailable(

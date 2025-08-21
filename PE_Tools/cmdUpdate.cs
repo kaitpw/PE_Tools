@@ -1,4 +1,4 @@
-﻿using PeRevitInit;
+﻿using PeRevitUI;
 using PeLib;
 using PE_Tools.Properties;
 using ricaun.Revit.Github;
@@ -24,7 +24,7 @@ public class CmdUpdate : IExternalCommand {
                     Console.WriteLine(text);
                 }
             );
-            UiUtils.ShowBalloon($"Download: {result}");
+            Balloon.ShowSingle($"Download: {result}");
         });
 
         return Result.Succeeded;

@@ -1,9 +1,9 @@
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI.Selection;
-using PeRevitInit;
+using PE_Tools.Properties;
 using PeLib;
 using PeMech;
-using PE_Tools.Properties;
+using PeRevitUI;
 
 namespace PE_Tools;
 
@@ -113,18 +113,18 @@ public class CmdTapMaker : IExternalCommand {
             if (tapError is not null) {
                 _ = trans.RollBack();
                 balloon.Add(new StackFrame(), tapError);
-                balloon.Show();
+                balloon.ShowMulti();
                 return false;
             }
 
             _ = trans.Commit();
             balloon.Add(Balloon.LogLevel.INFO, new StackFrame(),
                 $"Created a {tapSizeInches}\" tap successfully (tap ID: {tap.Id}).");
-            balloon?.Show();
+            balloon?.ShowMulti();
             return true;
         } catch (Exception ex) {
             balloon.Add(new StackFrame(), ex);
-            balloon.Show();
+            balloon.ShowMulti();
             return false; // Don't throw, just return false so user can see debug info
         }
     }

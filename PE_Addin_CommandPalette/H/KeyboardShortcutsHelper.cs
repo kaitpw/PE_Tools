@@ -1,6 +1,8 @@
-using PeLib;
+using PeRevitUtils;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using PeRevitUI;
+
 
 namespace PE_Addin_CommandPalette.H;
 
@@ -24,7 +26,7 @@ public class KeyboardShortcutsHelper {
     private string GetShortcutsFilePath() {
         var revitVersion = Utils.GetRevitVersion();
         if (revitVersion == null) {
-            UiUtils.ShowBalloon("Revit version not found");
+            Balloon.ShowSingle("Revit version not found");
             return string.Empty;
         }
 

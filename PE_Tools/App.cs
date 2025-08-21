@@ -1,4 +1,4 @@
-using PeRevitInit;
+using PeRevitUI;
 using PeLib;
 
 namespace PE_Tools;
@@ -10,7 +10,7 @@ internal class App : IExternalApplication {
         try {
             app.CreateRibbonTab(tabName);
         } catch (Exception) {
-            UiUtils.ShowBalloon($"{tabName} already exists in the current Revit instance.");
+            Balloon.ShowSingle($"{tabName} already exists in the current Revit instance.");
         }
 
         // 2. Create ribbon panel

@@ -1,4 +1,4 @@
-﻿namespace PeRevitInit;
+﻿namespace PeRevitUI;
 
 internal class UiHelpers {
     internal static void CreateTab(UIControlledApplication app, string name) {

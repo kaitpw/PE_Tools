@@ -1,3 +1,5 @@
+using PeRevitUI;
+
 namespace PeLib;
 
 /// <summary>
@@ -24,7 +26,7 @@ public readonly record struct CommandRef {
         id = RevitCommandId.LookupCommandId(_external);
         return id is not null ? id : new InvalidOperationException($"CommandId is null for external command ({_external})");
     }
-    
+
     /// <summary>
     /// Returns the RevitCommandId for this reference if the command is postable. Else it returns null
     /// TODO: Implement more robust/nuanced postability checking. Need to figure this out!!!!!
@@ -42,7 +44,7 @@ public readonly record struct CommandRef {
 /// <summary>
 /// Service for executing PostableCommand items in Revit
 /// </summary>
-public class Command {
+public class Commands {
 
     /// <summary>
     /// Executes the specified command.
@@ -64,7 +66,7 @@ public class Command {
     /// </summary>
     public bool IsAvailable(UIApplication uiApp, CommandRef command) {
         var (validId, validIdErr) = command.GetPostableCommandId(uiApp);
-        if (validIdErr is not null) UiUtils.ShowDebugBalloon(validIdErr.Message);
+        if (validIdErr is not null) Balloon.ShowSingleDebug(validIdErr.Message);
         return validId is not null && validIdErr is null;
     }
     /// <summary>
@@ -72,7 +74,7 @@ public class Command {
     /// </summary>
     public string GetStatus(UIApplication uiApp, CommandRef command) {
         var (validId, validIdErr) = command.GetPostableCommandId(uiApp);
-        if (validIdErr is not null) UiUtils.ShowDebugBalloon(validIdErr.Message);
+        if (validIdErr is not null) Balloon.ShowSingleDebug(validIdErr.Message);
         return validIdErr is not null
             ? "Availability Unknown"
             : validId is not null
