@@ -2,7 +2,7 @@
 
 namespace PeRevitUI;
 
-internal class ButtonDataClass {
+internal class ButtonDataClass: IExternalCommandAvailability {
     public ButtonDataClass(
         string name,
         string className,
@@ -16,10 +16,6 @@ internal class ButtonDataClass {
 
         this.Data.LargeImage = ConvertToImageSource(largeImage);
         this.Data.Image = ConvertToImageSource(smallImage);
-
-        // set command availability
-        var nameSpace = this.GetType().Namespace;
-        this.Data.AvailabilityClassName = $"{nameSpace}.CommandAvailability";
     }
 
     public ButtonDataClass(
@@ -80,3 +76,16 @@ internal class ButtonDataClass {
         return result;
     }
 }
+
+// internal class CommandAvailability : IExternalCommandAvailability {
+//     public bool IsCommandAvailable(
+//         UIApplication applicationData,
+//         CategorySet selectedCategories
+//     ) {
+//         var result = false;
+//         var activeDoc = applicationData.ActiveUIDocument;
+//         if (activeDoc != null && activeDoc.Document != null) result = true;
+
+//         return result;
+//     }
+// }
