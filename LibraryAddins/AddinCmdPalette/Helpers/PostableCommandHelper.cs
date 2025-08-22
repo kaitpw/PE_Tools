@@ -86,19 +86,25 @@ public class PostableCommandHelper {
         var ribbonCommands = PeRevitUI.Ribbon.GetAllCommands();
 
         foreach (var command in ribbonCommands) {
-            // Try to get shortcut info from XML
-            var shortcutInfo = shortcutsService.GetShortcutInfo(command.Id);
-
             var commandItem = new PostableCommandItem {
                 Command = command.Id,
-                Name = shortcutInfo?.CommandName ?? this.FormatCommandName(command.ToString()),
                 UsageCount = 0,
                 LastUsed = DateTime.MinValue,
                 SearchScore = 0,
-                Shortcuts = shortcutInfo?.Shortcuts ?? new List<string>(),
-                Paths = shortcutInfo?.Paths ?? new List<string>()
             };
-
+            // Try to get shortcut info from XML
+            var (shortcutInfo, infoErr) = shortcutsService.GetShortcutInfo(command.Id);
+            if (shortcutInfo is null) continue;
+            if (infoErr is not null) {
+                commandItem.Name = this.FormatCommandName(command.Name);
+                commandItem.Paths = new List<string> { $"{command.Tab} > {command.Panel}" }; // TOTO: probablyRevise this logic
+                continue;
+            }
+            if (shortcutInfo is not null) {
+                commandItem.Name = shortcutInfo.CommandName;
+                commandItem.Shortcuts = shortcutInfo.Shortcuts;
+                commandItem.Paths = shortcutInfo.Paths;
+            }
             commands.Add(commandItem);
         }
 

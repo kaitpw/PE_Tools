@@ -60,9 +60,11 @@ public class KeyboardShortcutsHelper {
     /// <summary>
     ///     Gets shortcut information for a specific command ID
     /// </summary>
-    public ShortcutInfo GetShortcutInfo(string commandId) {
+    public Result<ShortcutInfo> GetShortcutInfo(string commandId) {
         var shortcuts = this.GetShortcuts();
-        return shortcuts.TryGetValue(commandId, out var shortcutInfo) ? shortcutInfo : null;
+        return shortcuts.TryGetValue(commandId, out var shortcutInfo)
+            ? shortcutInfo 
+            : new InvalidOperationException($"Shortcut not found for command ID: {commandId}");
     }
 
     /// <summary>
