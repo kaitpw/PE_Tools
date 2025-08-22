@@ -13,9 +13,8 @@ public class Ribbon {
         foreach (var tab in tabs) {
             if (!tab.IsVisible || !tab.IsEnabled) continue;
             tabList.Add(new DiscoveredTab {
+                Id = tab.Id,
                 Name = tab.Title,
-                InternalId = tab.Id,
-                InContext = tab.IsVisible && tab.IsEnabled,
                 Panels = tab.Panels,
                 DockedPanels = tab.DockedPanelsView,
                 RibbonControl = tab.RibbonControl
@@ -33,9 +32,8 @@ public class Ribbon {
                 panelList.Add(new DiscoveredPanel {
                     Tab = panel.Tab,
                     Cookie = panel.Cookie,
-                    InContext = panel.IsVisible && panel.IsEnabled,
-                    RibbonControl = panel.RibbonControl,
                     Source = panel.Source,
+                    RibbonControl = panel.RibbonControl,
                 });
             }
         }
@@ -73,16 +71,15 @@ public class Ribbon {
     /// </summary>
     private static DiscoveredCommand ProcessRibbonItem(dynamic item, DiscoveredPanel panel, List<DiscoveredCommand> commandList) {
         var command = new DiscoveredCommand {
-            Tab = panel.Tab.Title,
-            Panel = panel.Cookie,
-            ItemType = item.GetType().Name,
             Id = item.Id?.ToString() ?? "",
             Name = item.Name?.ToString() ?? "",
             Text = item.Text?.ToString() ?? "",
             ToolTip = item.ToolTip,
             Description = item.Description?.ToString() ?? "",
             ToolTipResolver = item.ToolTipResolver,
-            InContext = item.IsVisible && item.IsEnabled,
+            Tab = panel.Tab.Title,
+            Panel = panel.Cookie,
+            ItemType = item.GetType().Name,
         };
 
         // Recursively process child items for container types
@@ -122,9 +119,7 @@ public class DiscoveredTab {
     /// <summary> Name, what you see in UI. RibbonTab.Title, DefaultTitle, AutomationName are always same</summary>
     public string Name { get; set; }
     /// <summary> Internal ID, not sure what it's used for</summary>
-    public string InternalId { get; set; }
-    /// <summary> Good proxy for whether the tab is currently in context and commands can be called</summary>
-    public bool InContext { get; set; }
+    public string Id { get; set; }
     /// <summary> Panels contained within the tab</summary>
     public Autodesk.Windows.RibbonPanelCollection Panels { get; set; }
     /// <summary> TBD: Not sure what this is, but possibly useful</summary>
@@ -138,8 +133,6 @@ public class DiscoveredTab {
         public Autodesk.Windows.RibbonTab Tab { get; set; }
         /// <summary> Internal ID, not sure what it's used for and has a strange format</summary>
         public string Cookie { get; set; }
-        /// <summary> Good proxy for whether the tab is currently in context and commands can be called</summary>
-        public bool InContext { get; set; }
         /// <summary> Can access Panel items via RibbonPanelSource.Items</summary>
         public Autodesk.Windows.RibbonPanelSource Source { get; set; }
         /// <summary> TBD: Not sure what this is, but possibly useful</summary>
@@ -175,24 +168,6 @@ public class DiscoveredCommand {
     public string Panel { get; set; }
     /// <summary> Type of the item, e.g. RibbonButton, RibbonToggleButton, etc. </summary>
     public string ItemType { get; set; }
-    /// <summary> Whether the command is currently in context and can be executed</summary>
-    public bool InContext { get; set; }
-    /// <summary> Whether this is an external addin command</summary>
-}
-
-/// <summary>
-/// Stores the results of testing command execution for a ribbon item.
-/// </summary>
-public class CommandExecutionResult {
-    public string Id { get; set; }
-    public string Text { get; set; }
-    public string ItemType { get; set; }
-    public string Tab { get; set; }
-    public string Panel { get; set; }
-    public bool RevitCommandIdFound { get; set; }
-    public bool CanPostCommand { get; set; }
-    public RevitCommandId CommandId { get; set; }
-    public string Error { get; set; }
 }
 
 

@@ -1,6 +1,8 @@
 using AddinCmdPalette.Models;
 using PeLib;
+using PeRevitUI;
 using System.Text;
+using System.Windows.Controls.Ribbon;
 
 namespace AddinCmdPalette.Helpers;
 
@@ -81,19 +83,14 @@ public class PostableCommandHelper {
         var shortcutsService = KeyboardShortcutsHelper.Instance;
 
         // Get all values from the PostableCommand enumeration
-        var postableCommands = Enum.GetValues(typeof(PostableCommand))
-            .Cast<PostableCommand>()
-            .ToList();
+        var ribbonCommands = PeRevitUI.Ribbon.GetAllCommands();
 
-        foreach (var command in postableCommands) {
-            // Get the command ID name for lookup
-            var commandIdName = RevitCommandId.LookupPostableCommandId(command).Name;
-
+        foreach (var command in ribbonCommands) {
             // Try to get shortcut info from XML
-            var shortcutInfo = shortcutsService.GetShortcutInfo(commandIdName);
+            var shortcutInfo = shortcutsService.GetShortcutInfo(command.Id);
 
             var commandItem = new PostableCommandItem {
-                Command = command,
+                Command = command.Id,
                 Name = shortcutInfo?.CommandName ?? this.FormatCommandName(command.ToString()),
                 UsageCount = 0,
                 LastUsed = DateTime.MinValue,
@@ -103,41 +100,6 @@ public class PostableCommandHelper {
             };
 
             commands.Add(commandItem);
-        }
-
-        // Add addin commands (CustomCtrl_*) from shortcuts - defer this to improve initial load
-        var allShortcuts = shortcutsService.GetShortcuts();
-        foreach (var kvp in allShortcuts) {
-            var shortcutInfo = kvp.Value;
-            if (
-                shortcutInfo.CommandId != null
-                && shortcutInfo.CommandId.StartsWith(
-                    "CustomCtrl_%CustomCtrl_%",
-                    StringComparison.OrdinalIgnoreCase
-                )
-            ) {
-                // Avoid duplicates if already added as a PostableCommand
-                var alreadyExists = commands.Any(c =>
-                    string.Equals(
-                        c.Command.Value as string,
-                        shortcutInfo.CommandId,
-                        StringComparison.OrdinalIgnoreCase
-                    )
-                );
-                if (alreadyExists)
-                    continue;
-
-                var commandItem = new PostableCommandItem {
-                    Command = shortcutInfo.CommandId,
-                    Name = shortcutInfo.CommandName ?? shortcutInfo.CommandId,
-                    UsageCount = 0,
-                    LastUsed = DateTime.MinValue,
-                    SearchScore = 0,
-                    Shortcuts = shortcutInfo.Shortcuts ?? new List<string>(),
-                    Paths = shortcutInfo.Paths ?? new List<string>()
-                };
-                commands.Add(commandItem);
-            }
         }
 
         return commands.OrderBy(c => c.Name).ToList();
