@@ -1,4 +1,3 @@
-namespace PeLib;
 
 /// <summary>
 ///     Exception thrown when an element has intersections with other elements
