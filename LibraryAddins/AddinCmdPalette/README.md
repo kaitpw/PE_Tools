@@ -1,40 +1,62 @@
 # PE Command Palette
 
-A modern command palette for Autodesk Revit that provides quick access to all PostableCommand enumeration values with search and keyboard navigation.
+A modern command palette for Autodesk Revit that provides quick access to all
+PostableCommand enumeration values with search and keyboard navigation.
+
+## TODO:
+
+- exclude false CanPostCommand() commands from paletteentirely
+- implement tooltip for each list item.
+- implement KeyboardShortcuts.xmlchange detection.
+- implement persistent search preference saving to local file system
+- implement better search algorithm and reranking, and similiarlygive greater
+  preference to recently run commands
 
 ## Features
 
 - **Fast Search**: Fuzzy search through all available Revit commands
 - **Keyboard Navigation**: Use arrow keys to navigate and Enter to execute
-- **Modern UI**: Dark theme with smooth animations and modern styling
 - **Keyboard Shortcuts**: Displays Revit keyboard shortcuts for each command
 - **Menu Paths**: Shows where each command can be found in the Revit UI
 - **Usage Tracking**: Tracks command usage for better prioritization
-- **Performance Optimized**: Virtualized list for smooth scrolling with large command sets
+- **Performance Optimized**: Virtualized list for smooth scrolling with large
+  command sets
 
 ## Architecture
 
-The command palette is built using the MVVM pattern with the following components:
+The command palette is built using the MVVM pattern with the following
+components:
 
 - **Models/PostableCommandItem.cs**: Data model for command items with metadata
-- **Services/PostableCommandService.cs**: Singleton service for managing PostableCommand enumeration
-- **Services/CommandExecutionService.cs**: Service for executing commands in Revit
-- **Services/KeyboardShortcutsService.cs**: Service for parsing Revit keyboard shortcuts XML
-- **ViewModels/CommandPaletteViewModel.cs**: Main view model with search and navigation logic
+- **Services/PostableCommandService.cs**: Singleton service for managing
+  PostableCommand enumeration
+- **Services/CommandExecutionService.cs**: Service for executing commands in
+  Revit
+- **Services/KeyboardShortcutsService.cs**: Service for parsing Revit keyboard
+  shortcuts XML
+- **ViewModels/CommandPaletteViewModel.cs**: Main view model with search and
+  navigation logic
 - **Views/CommandPaletteWindow.xaml**: Modern WPF UI with dark theme
 
 ## Keyboard Shortcuts Integration
 
-The command palette automatically loads and displays keyboard shortcuts from Revit's KeyboardShortcuts.xml file:
+The command palette automatically loads and displays keyboard shortcuts from
+Revit's KeyboardShortcuts.xml file:
 
-- **Automatic Detection**: Detects the current Revit version and loads the appropriate shortcuts file
-- **HTML Entity Decoding**: Properly handles XML entities like `&gt;` and `&amp;`
-- **Command Name Override**: Uses official command names from the XML file when available
+- **Automatic Detection**: Detects the current Revit version and loads the
+  appropriate shortcuts file
+- **HTML Entity Decoding**: Properly handles XML entities like `&gt;` and
+  `&amp;`
+- **Command Name Override**: Uses official command names from the XML file when
+  available
 - **Shortcut Display**: Shows primary keyboard shortcuts in a highlighted badge
-- **Path Information**: Displays truncated menu paths with full paths available on hover
+- **Path Information**: Displays truncated menu paths with full paths available
+  on hover
 
 ### File Location
+
 The keyboard shortcuts file is located at:
+
 ```
 C:\Users\[username]\AppData\Roaming\Autodesk\Revit\Autodesk Revit [version]\KeyboardShortcuts.xml
 ```
@@ -49,7 +71,8 @@ C:\Users\[username]\AppData\Roaming\Autodesk\Revit\Autodesk Revit [version]\Keyb
 
 ## Search Features
 
-- **Fuzzy Matching**: Finds commands even with partial or misspelled search terms
+- **Fuzzy Matching**: Finds commands even with partial or misspelled search
+  terms
 - **Priority Scoring**: Commands are ranked by:
   - Search relevance score
   - Usage frequency
@@ -81,6 +104,7 @@ C:\Users\[username]\AppData\Roaming\Autodesk\Revit\Autodesk Revit [version]\Keyb
 ## Development
 
 The project uses the MVVM pattern with:
+
 - **ObservableObject**: For property change notifications
 - **RelayCommand**: For command binding
 - **Dependency Injection**: For service management
