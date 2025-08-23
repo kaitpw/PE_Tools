@@ -17,16 +17,9 @@ public class CmdCommandPalette : IExternalCommand {
             var uidoc = uiapp.ActiveUIDocument;
             var doc = uidoc.Document;
 
-            // 1. Create the View
             var paletteWindow = new CommandPaletteWindow();
-
-            // 2. Create the ViewModel, passing dependencies
             var viewModel = new CommandPaletteViewModel(commandData.Application);
-
-            // 3. Set the DataContext directly (this is standard practice)
             paletteWindow.DataContext = viewModel;
-
-            // 4. Show the View
             paletteWindow.Show();
 
             return Result.Succeeded;

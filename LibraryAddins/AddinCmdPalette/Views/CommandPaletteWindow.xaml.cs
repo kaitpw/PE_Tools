@@ -30,15 +30,14 @@ public partial class CommandPaletteWindow : Window {
             if (!this.IsActive && !this._isClosing && !this.IsMouseOver) this.CloseWindow();
         };
         this.LostFocus += (_, _) => {
-            if (!this.IsActive && !this._isClosing) this.CloseWindow();
+            if (!this._isClosing) this.CloseWindow();
         };
     }
 
     private CommandPaletteViewModel ViewModel => this.DataContext as CommandPaletteViewModel;
 
     private void OnLoad(object sender, RoutedEventArgs eventArgs) {
-        if (this.ViewModel == null)
-            throw new InvalidOperationException("CommandPalette view-model is null");
+        if (this.ViewModel == null) throw new InvalidOperationException("CommandPalette view-model is null");
 
         this.CommandListBox.MouseLeftButtonUp += (_, _) => {
             if (this.ViewModel?.SelectedCommand != null &&
