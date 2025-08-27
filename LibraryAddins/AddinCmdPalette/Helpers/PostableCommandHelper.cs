@@ -66,11 +66,24 @@ public class PostableCommandHelper {
     }
 
     /// <summary>
+    ///     Refreshes the commands and shortcuts, clearing cached data
+    /// </summary>
+    public void RefreshCommands() {
+        this._allCommands = null;
+        // This will force a reload of both commands and shortcuts on next GetAllCommands() call
+    }
+
+    /// <summary>
     ///     Loads all PostableCommand enum values and creates metadata
     /// </summary>
     private List<PostableCommandItem> LoadPostableCommands() {
         var commands = new List<PostableCommandItem>();
         var shortcutsService = KeyboardShortcutsHelper.Instance;
+
+        // Check if shortcuts are current, if not, clear the cache to force reload
+        if (!shortcutsService.IsShortcutsCurrent()) {
+            shortcutsService.ClearCache();
+        }
 
         // Get all values from the PostableCommand enumeration
         var ribbonCommands = PeRevitUI.Ribbon.GetAllCommands();

@@ -1,8 +1,9 @@
 using PeRevitUI;
 using PeRevitUtils;
+using PeUtils;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 using System.Windows;
+using System.Xml.Linq;
 
 namespace AddinCmdPalette.Helpers;
 
@@ -12,11 +13,34 @@ namespace AddinCmdPalette.Helpers;
 public class KeyboardShortcutsHelper {
     private static readonly Lazy<KeyboardShortcutsHelper> _instance = new(() => new KeyboardShortcutsHelper());
 
+    private string _lastFileHash;
+
     private Dictionary<string, ShortcutInfo> _shortcuts;
 
     private KeyboardShortcutsHelper() { }
 
     public static KeyboardShortcutsHelper Instance => _instance.Value;
+
+    /// <summary> Checks if the keyboard shortcuts file has changed </summary>
+    public bool IsShortcutsCurrent() {
+        var (filePath, pathErr) = this.GetShortcutsFilePath();
+        if (pathErr is not null) return false;
+
+        // If we haven't loaded shortcuts yet, consider it not current
+        if (string.IsNullOrEmpty(this._lastFileHash)) return false;
+        
+        var currentFileText = File.ReadAllText(filePath);
+        var currentHash = Files.ComputeFileHashFromText(currentFileText);
+        return this._lastFileHash == currentHash;
+    }
+
+    /// <summary>
+    ///     Clears the cached shortcuts to force reloading
+    /// </summary>
+    public void ClearCache() {
+        this._shortcuts = null;
+        this._lastFileHash = null;
+    }
 
     /// <summary>
     ///     Gets the keyboard shortcuts file path for the current Revit version
@@ -34,20 +58,14 @@ public class KeyboardShortcutsHelper {
         var version = $"Autodesk Revit {revitVersion}";
         var fullPath = Path.Combine(appData, "Autodesk", "Revit", version, "KeyboardShortcuts.xml");
         if (!File.Exists(fullPath)) return new InvalidOperationException("Keyboard shortcuts file not found");
-        new Balloon()
-            .Add(Balloon.Log.INFO, $"Loading Keyboard shortcuts file\n {fullPath}")
-            .Show(() => Clipboard.SetText(fullPath), "Click to copy path");
         return fullPath;
-
     }
 
     /// <summary>
-    ///     Loads and parses the keyboard shortcuts XML file
+    ///     Loads and parses the keyboard shortcuts XML file if not already loaded
     /// </summary>
     public Dictionary<string, ShortcutInfo> GetShortcuts() {
-        if (this._shortcuts == null) {
-            this._shortcuts = this.LoadShortcutsFromXml();
-        }
+        if (this._shortcuts == null) this._shortcuts = this.LoadShortcutsFromXml();
 
         return this._shortcuts;
     }
@@ -58,7 +76,7 @@ public class KeyboardShortcutsHelper {
     public Result<ShortcutInfo> GetShortcutInfo(string commandId) {
         var shortcuts = this.GetShortcuts();
         return shortcuts.TryGetValue(commandId, out var shortcutInfo)
-            ? shortcutInfo 
+            ? shortcutInfo
             : new InvalidOperationException($"Shortcut not found for command ID: {commandId}");
     }
 
@@ -68,6 +86,9 @@ public class KeyboardShortcutsHelper {
     private Dictionary<string, ShortcutInfo> LoadShortcutsFromXml() {
         var shortcuts = new Dictionary<string, ShortcutInfo>(StringComparer.OrdinalIgnoreCase);
         var (filePath, pathErr) = this.GetShortcutsFilePath();
+        new Balloon()
+            .Add(Balloon.Log.INFO, $"Loading Keyboard shortcuts file\n {filePath}")
+            .Show(() => Clipboard.SetText(filePath), "Click to copy path");
         if (pathErr is not null) return shortcuts; // Return empty dictionary if file doesn't exist
 
         try {
@@ -91,6 +112,8 @@ public class KeyboardShortcutsHelper {
                     shortcuts[commandId] = shortcutInfo;
                 }
             }
+
+            this._lastFileHash = Files.ComputeFileHashFromText(File.ReadAllText(filePath));
         } catch (Exception ex) {
             // Log error but don't crash - return empty dictionary
             Debug.WriteLine(
