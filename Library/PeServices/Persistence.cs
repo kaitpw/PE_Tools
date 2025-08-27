@@ -13,37 +13,32 @@ internal class Persistence {
     private static string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
         Assembly.GetExecutingAssembly().GetName().Name);
 
-    /// <summary>
-    ///     Saves the value to the persistence file
-    /// </summary>
-    public static void Save(string key, object value) {
-    }
 
-    // all methods should make a file if it doesn't exist
-    public static bool SettingsUpdate(Addins addin, settingsSchema, TODO) {
-        // Assume settings files are always JSON called settings.json in the root of the addin folder 
-        // (not in a separate settings folder, unlike state and output folders)
-        // so itd be Documents/[assembly name]/settings.json
+    // // all methods should make a file if it doesn't exist
+    // public static bool SettingsUpdate(Addins addin, settingsSchema, TODO) {
+    //     // Assume settings files are always JSON called settings.json in the root of the addin folder 
+    //     // (not in a separate settings folder, unlike state and output folders)
+    //     // so itd be Documents/[assembly name]/settings.json
 
-        // the settings json schema should always follow this:
-        // {
-        //     "profiles": [
-        //         "profile-whatever" :
-        //         {
-        //             "key": "value",
-        //             any amount of nesting
-        //         },
-        //         "profile-whatever" :
-        //         {
-        //             "key": "value"
-        //         },
-        //     ]
-        // }
-    }
+    //     // the settings json schema should always follow this:
+    //     // {
+    //     //     "profiles": [
+    //     //         "profile-whatever" :
+    //     //         {
+    //     //             "key": "value",
+    //     //             any amount of nesting
+    //     //         },
+    //     //         "profile-whatever" :
+    //     //         {
+    //     //             "key": "value"
+    //     //         },
+    //     //     ]
+    //     // }
+    // }
 
-    public static bool SettingsLoad(Addins addin, settingsSchema, TODO) { }
+    // public static bool SettingsLoad(Addins addin, settingsSchema, TODO) { }
 
-    public static bool SettingsSave(Addins addin, settingsSchema, TODO) { }
+    // public static bool SettingsSave(Addins addin, settingsSchema, TODO) { }
 
     public static bool StateSave(Addins addin, TODO) {
         // Documents/[assembly name]/state/[any file type]
@@ -59,9 +54,14 @@ internal class Persistence {
 
     public static bool StateLoad(Addins addin, TODO) { }
 
-    public static bool OutputSave(Addins addin, TODO) {
-        // Documents/[assembly name]/output/[any file type, but probably json or md]
-    }
+    // public static bool OutputSave(Addins addin, TODO) {
+    //     // Documents/[assembly name]/output/[any file type, but probably json or md]
+    // }
 
-    public static bool OutputLoad(Addins addin, TODO) { }
+    // public static bool OutputLoad(Addins addin, TODO) { }
 }
+
+// NOTES:
+// - just do the state methods for now to get a feel for it, and only make it for json for now
+// - use JsonSchema.Net and JsonSchema.Net.generation to generate the schemas
+// - make a base settings schema at some point
