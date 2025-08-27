@@ -28,12 +28,16 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// <summary> The UI application instance for executing commands </summary>
     [ObservableProperty] private UIApplication _uiapp;
 
+    /// <summary> Helper for managing postable commands </summary>
+    private readonly PostableCommandHelper _commandHelper;
+
     public CommandPaletteViewModel(UIApplication uiApp) {
         this._uiapp = uiApp;
+        this._commandHelper = new PostableCommandHelper();
         this.FilteredCommands = new ObservableCollection<PostableCommandItem>();
 
         // Load commands synchronously for immediate display
-        var commands = PostableCommandHelper.Instance.GetAllCommands();
+        var commands = this._commandHelper.GetAllCommands();
         foreach (var command in commands)
             this.FilteredCommands.Add(command);
 
@@ -60,7 +64,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
         var (success, error) = await Task.Run(() =>
             Commands.Execute(this.Uiapp, this.SelectedCommand.Command));
         if (error is not null) throw error; // TODO: come back to the error handling here
-        if (success) PostableCommandHelper.Instance.UpdateCommandUsage(this.SelectedCommand.Command);
+        if (success) this._commandHelper.UpdateCommandUsage(this.SelectedCommand.Command);
     }
 
     [RelayCommand]
@@ -85,13 +89,13 @@ public partial class CommandPaletteViewModel : ObservableObject {
     private void FilterCommands() {
         if (string.IsNullOrWhiteSpace(this.SearchText)) {
             // Show all commands when no search text
-            var allCommands = PostableCommandHelper.Instance.GetAllCommands();
+            var allCommands = this._commandHelper.GetAllCommands();
             this.FilteredCommands.Clear();
             foreach (var command in allCommands)
                 this.FilteredCommands.Add(command);
         } else {
             // Filter commands based on search
-            var filtered = PostableCommandHelper.Instance.FilterCommands(this.SearchText);
+            var filtered = this._commandHelper.FilterCommands(this.SearchText);
             this.FilteredCommands.Clear();
             foreach (var command in filtered)
                 this.FilteredCommands.Add(command);

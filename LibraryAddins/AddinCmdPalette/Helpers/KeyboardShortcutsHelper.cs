@@ -12,8 +12,6 @@ namespace AddinCmdPalette.Helpers;
 public class KeyboardShortcutsHelper {
     private static readonly Lazy<KeyboardShortcutsHelper> _instance = new(() => new KeyboardShortcutsHelper());
 
-    private readonly object _lockObject = new();
-
     private Dictionary<string, ShortcutInfo> _shortcuts;
 
     private KeyboardShortcutsHelper() { }
@@ -48,10 +46,7 @@ public class KeyboardShortcutsHelper {
     /// </summary>
     public Dictionary<string, ShortcutInfo> GetShortcuts() {
         if (this._shortcuts == null) {
-            lock (this._lockObject) {
-                if (this._shortcuts == null)
-                    this._shortcuts = this.LoadShortcutsFromXml();
-            }
+            this._shortcuts = this.LoadShortcutsFromXml();
         }
 
         return this._shortcuts;
