@@ -3,6 +3,7 @@ using AddinCmdPalette.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PeLib;
+using PeServices;
 using System.Collections.ObjectModel;
 
 namespace AddinCmdPalette.ViewModels;
@@ -31,9 +32,9 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// <summary> Helper for managing postable commands </summary>
     private readonly PostableCommandHelper _commandHelper;
 
-    public CommandPaletteViewModel(UIApplication uiApp) {
+    public CommandPaletteViewModel(UIApplication uiApp, Persistence persistence) {
         this._uiapp = uiApp;
-        this._commandHelper = new PostableCommandHelper();
+        this._commandHelper = new PostableCommandHelper(persistence);
         this.FilteredCommands = new ObservableCollection<PostableCommandItem>();
 
         // Load commands synchronously for immediate display

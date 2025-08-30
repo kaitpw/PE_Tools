@@ -1,6 +1,7 @@
 using AddinCmdPalette.Models;
 using PeLib;
 using PeRevitUI;
+using PeServices;
 using System.Text;
 using System.Windows.Controls.Ribbon;
 
@@ -11,8 +12,11 @@ namespace AddinCmdPalette.Helpers;
 /// </summary>
 public class PostableCommandHelper {
     private List<PostableCommandItem> _allCommands;
+    private readonly Persistence _persistence;
 
-    public PostableCommandHelper() { }
+    public PostableCommandHelper(Persistence persistence) {
+        _persistence = persistence;
+    }
 
     /// <summary>
     ///     Gets all PostableCommand items with metadata
@@ -62,16 +66,16 @@ public class PostableCommandHelper {
         if (commandItem is not null) {
             commandItem.UsageCount++;
             commandItem.LastUsed = DateTime.Now;
+            
+            // Save the updated usage count to persistence
+            _persistence.UpdateCommandScore(commandRef, commandItem.UsageCount);
         }
     }
 
     /// <summary>
     ///     Refreshes the commands and shortcuts, clearing cached data
     /// </summary>
-    public void RefreshCommands() {
-        this._allCommands = null;
-        // This will force a reload of both commands and shortcuts on next GetAllCommands() call
-    }
+    public void RefreshCommands() => this._allCommands = null;// This will force a reload of both commands and shortcuts on next GetAllCommands() call
 
     /// <summary>
     ///     Loads all PostableCommand enum values and creates metadata
@@ -91,7 +95,7 @@ public class PostableCommandHelper {
         foreach (var command in ribbonCommands) {
             var commandItem = new PostableCommandItem {
                 Command = command.Id,
-                UsageCount = 0,
+                UsageCount = _persistence.GetCommandScore(command.Id), // Load from persistence
                 LastUsed = DateTime.MinValue,
                 SearchScore = 0,
             };

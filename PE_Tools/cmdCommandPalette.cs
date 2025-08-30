@@ -2,6 +2,8 @@ using AddinCmdPalette.ViewModels;
 using AddinCmdPalette.Views;
 using PE_Tools.Properties;
 using PeRevitUI;
+using PeServices;
+using System.Reflection;
 
 namespace PE_Tools;
 
@@ -17,8 +19,11 @@ public class CmdCommandPalette : IExternalCommand {
             var uidoc = uiapp.ActiveUIDocument;
             var doc = uidoc.Document;
 
+            // Create persistence service for the command palette
+            var persistence = new Persistence("CommandPalette");
+
             var paletteWindow = new CommandPaletteWindow();
-            var viewModel = new CommandPaletteViewModel(commandData.Application);
+            var viewModel = new CommandPaletteViewModel(commandData.Application, persistence);
             paletteWindow.DataContext = viewModel;
             paletteWindow.Show();
 
