@@ -40,19 +40,20 @@ internal class Persistence {
 
     // public static bool SettingsSave(Addins addin, settingsSchema, TODO) { }
 
-    public static bool StateSave(Addins addin, TODO) {
-        // Documents/[assembly name]/state/[any file type]
-    }
+    // TODO: Implement these methods with proper types
+    // public static bool StateSave(Addins addin, object data) {
+    //     // Documents/[assembly name]/state/[any file type]
+    // }
 
-    public static bool StateSave(Addins addin, stateSchema, TODO) {
-        // Documents/[assembly name]/state/[json]
-    }
+    // public static bool StateSave(Addins addin, object stateSchema, object data) {
+    //     // Documents/[assembly name]/state/[json]
+    // }
 
-    public static bool StateUpdate(Addins addin, stateSchema, TODO) {
-        // Documents/[assembly name]/state/[json]
-    }
+    // public static bool StateUpdate(Addins addin, object stateSchema, object data) {
+    //     // Documents/[assembly name]/state/[json]
+    // }
 
-    public static bool StateLoad(Addins addin, TODO) { }
+    // public static bool StateLoad(Addins addin, object data) { }
 
     // public static bool OutputSave(Addins addin, TODO) {
     //     // Documents/[assembly name]/output/[any file type, but probably json or md]
