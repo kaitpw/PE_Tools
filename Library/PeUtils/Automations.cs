@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Forms;
 using Autodesk.Windows;
 
 namespace PeUtils;
@@ -13,6 +14,8 @@ public static class Automations
 {
     [DllImport("user32.dll", CharSet = CharSet.Auto, CallingConvention = CallingConvention.StdCall)]
     public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
+    [DllImport("user32.dll")]
+    private static extern bool SetCursorPos(int x, int y);
     private const uint MOUSEEVENTF_LEFTDOWN = 0x02;
     private const uint MOUSEEVENTF_LEFTUP = 0x04;
 
@@ -96,7 +99,8 @@ public static class Automations
         {
             var clickablePoint = new System.Windows.Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
             Debug.WriteLine($"Simulating mouse click on list item '{itemName}' at {clickablePoint.X},{clickablePoint.Y}.");
-            System.Windows.Forms.Cursor.Position = new System.Drawing.Point((int)clickablePoint.X, (int)clickablePoint.Y);
+            // this used to be System.Windows.Forms.Cursor.Position = new System.Drawing.Point((int)clickablePoint.X, (int)clickablePoint.Y);
+            _ = SetCursorPos((int)clickablePoint.X, (int)clickablePoint.Y);
             mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, (uint)clickablePoint.X, (uint)clickablePoint.Y, 0, 0);
             return true;
         }
@@ -119,7 +123,8 @@ public static class Automations
         {
             var clickablePoint = new System.Windows.Point(rect.Left + rect.Width / 2, rect.Top + rect.Height / 2);
             Debug.WriteLine($"Simulating mouse click on list item with AutomationId: '{automationId}' at {clickablePoint.X},{clickablePoint.Y}.");
-            System.Windows.Forms.Cursor.Position = new System.Drawing.Point((int)clickablePoint.X, (int)clickablePoint.Y);
+            // this used to be System.Windows.Forms.Cursor.Position = new System.Drawing.Point((int)clickablePoint.X, (int)clickablePoint.Y);
+            _ = SetCursorPos((int)clickablePoint.X, (int)clickablePoint.Y);
             mouse_event(MOUSEEVENTF_LEFTDOWN | MOUSEEVENTF_LEFTUP, (uint)clickablePoint.X, (uint)clickablePoint.Y, 0, 0);
             return true;
         }

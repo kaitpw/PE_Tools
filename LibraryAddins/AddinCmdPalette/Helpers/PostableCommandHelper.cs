@@ -8,15 +8,22 @@ using System.Windows.Controls.Ribbon;
 namespace AddinCmdPalette.Helpers;
 
 /// <summary>
+/// Record representing command usage data for storage
+/// </summary>
+public record CommandUsageData {
+    public string CommandId { get; init; } = string.Empty;
+    public int Score { get; init; }
+    public DateTime LastUsed { get; init; }
+}
+
+/// <summary>
 ///     Service for managing PostableCommand enumeration values and metadata
 /// </summary>
 public class PostableCommandHelper {
     private List<PostableCommandItem> _allCommands;
-    private readonly Persistence _persistence;
+    private readonly Storage _storage;
 
-    public PostableCommandHelper(Persistence persistence) {
-        _persistence = persistence;
-    }
+    public PostableCommandHelper(Storage storage) => _storage = storage;
 
     /// <summary>
     ///     Gets all PostableCommand items with metadata
@@ -64,11 +71,14 @@ public class PostableCommandHelper {
     public void UpdateCommandUsage(CommandRef commandRef) {
         var commandItem = this.GetAllCommands().FirstOrDefault(c => c.Command == commandRef);
         if (commandItem is not null) {
-            commandItem.UsageCount++;
-            commandItem.LastUsed = DateTime.Now;
-            
-            // Save the updated usage count to persistence
-            _persistence.UpdateCommandScore(commandRef, commandItem.UsageCount);
+            // Save the updated usage count to storage using the record
+            var commandId = commandRef.Value.ToString() ?? string.Empty;
+            var usageData = new CommandUsageData {
+                CommandId = commandId,
+                Score = commandItem.UsageCount,
+                LastUsed = commandItem.LastUsed
+            };
+            _storage.State<CommandUsageData>().WriteCsvRow(commandId, usageData);
         }
     }
 
@@ -93,10 +103,13 @@ public class PostableCommandHelper {
         var ribbonCommands = PeRevitUI.Ribbon.GetAllCommands();
 
         foreach (var command in ribbonCommands) {
+            var commandId = command.Id;
+            var usageData = _storage.State<CommandUsageData>().ReadCsvRow(commandId); 
+            
             var commandItem = new PostableCommandItem {
                 Command = command.Id,
-                UsageCount = _persistence.GetCommandScore(command.Id), // Load from persistence
-                LastUsed = DateTime.MinValue,
+                UsageCount = usageData?.Score ?? 0,
+                LastUsed = usageData?.LastUsed ?? DateTime.MinValue,
                 SearchScore = 0,
             };
             // Try to get shortcut info from XML
@@ -145,21 +158,23 @@ public class PostableCommandHelper {
         if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(search))
             return 0;
 
+        var baseScore = 0; 
+
         // Exact match gets highest score
         if (text == search)
-            return 100;
+            _ = baseScore + 100;
 
         // Starts with search gets high score
         if (text.StartsWith(search))
-            return 90;
+            _ = baseScore + 70;
 
         // Contains search gets medium score
         if (text.Contains(search))
-            return 70;
+            _ = baseScore + 90;
 
         // Fuzzy matching for partial matches
         var fuzzyScore = this.CalculateFuzzyScore(text, search);
-        return fuzzyScore > 0.5 ? fuzzyScore * 50 : 0;
+        return fuzzyScore > 0.7 ? baseScore + (fuzzyScore * 50) : 0;
     }
 
     /// <summary>

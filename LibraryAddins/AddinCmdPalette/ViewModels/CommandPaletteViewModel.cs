@@ -32,7 +32,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// <summary> Helper for managing postable commands </summary>
     private readonly PostableCommandHelper _commandHelper;
 
-    public CommandPaletteViewModel(UIApplication uiApp, Persistence persistence) {
+    public CommandPaletteViewModel(UIApplication uiApp, Storage persistence) {
         this._uiapp = uiApp;
         this._commandHelper = new PostableCommandHelper(persistence);
         this.FilteredCommands = new ObservableCollection<PostableCommandItem>();

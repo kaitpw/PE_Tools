@@ -97,6 +97,52 @@ This is up to your discretion, but I think that schemas should probably be passe
 
 For state that is a CSV format, I'd also like to utilize a similar philosophy of type safety and one source of truth. the csv should basically be usable like a dictionary.
 
+## Expected API
+
+```cs
+// Settings Methods, should only
+Persistence.Settings<SettingsSchema>().ReadSettings() // typed output
+Persistence.Settings<ProfilesSchema>().ReadProfiles() // typed output
+Persistence.Settings<SettingsSchema>().WriteSettings() 
+Persistence.Settings<ProfilesSchema>().WriteProfiles()
+Persistence.Settings<SettingsSchema>("nondefaultsettings.json").ReadSettings() // typed output
+Persistence.Settings<ProfilesSchema>("nondefaultsettings.json").ReadProfiles() // typed output
+Persistence.Settings<SettingsSchema>("nondefaultsettings.json").WriteSettings() 
+Persistence.Settings<ProfilesSchema>("nondefaultsettings.json").WriteProfiles()
+Persistence.Settings().Import()
+```
+
+```cs
+// State Methods
+Persistence.State<DictionaryWithRecord>().ReadCsvRow()
+Persistence.State<DictionaryWithRecord>().WriteCsvRow()
+Persistence.State<DictionaryWithRecord>().ImportCsv()
+Persistence.State<DictionaryWithRecord>("nondefaultstate.json").ReadCsvRow()
+Persistence.State<DictionaryWithRecord>("nondefaultstate.json").WriteCsvRow()
+Persistence.State<DictionaryWithRecord>("nondefaultstate.json").ImportCsv()
+// json state methods
+Persistence.State<StateSchema>().ReadJson()
+Persistence.State<StateSchema>().WriteJson()
+Persistence.State<StateSchema>().ImportJson()
+```
+
+```cs
+// Temp Methods
+Persistence.Temp().ReadCsv()
+Persistence.Temp().WriteCsv()
+Persistence.Temp().ReadJson()
+Persistence.Temp().WriteJson()
+```
+
+```cs 
+// Output Methods, only write
+Persistence.Output().WriteCsv()
+Persistence.Output().WriteJson()
+Persistence.Output().WriteMd()
+```
+
+
+
 # Command Palette Integration
 
 Our first test will be integrating this with the command palette to allow for reranking that persists both between revit sessions and within the same revit session. This does not work anymore because I *purposefully* made the PostableCommandHelper not a singleton anymore. Do not revert this change, I want state to be controlled by our new service.
