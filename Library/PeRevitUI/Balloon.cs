@@ -1,6 +1,5 @@
 ﻿using Autodesk.Internal.InfoCenter;
 using Autodesk.Windows;
-using PeRevitUtils;
 using System.Text;
 using System.Windows;
 
@@ -17,8 +16,10 @@ internal class Balloon {
 
         // ReSharper disable once InconsistentNaming
         ERR,
+
         // ReSharper disable once InconsistentNaming
         TODO,
+
         // ReSharper disable once InconsistentNaming
         TEST
     }

@@ -3,7 +3,6 @@ using AddinCmdPalette.Views;
 using PE_Tools.Properties;
 using PeRevitUI;
 using PeServices;
-using System.Reflection;
 
 namespace PE_Tools;
 

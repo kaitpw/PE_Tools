@@ -1,4 +1,3 @@
-
 /// <summary>
 ///     Exception thrown when an element has intersections with other elements
 ///     that prevent an operation from completing successfully.

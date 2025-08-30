@@ -10,7 +10,7 @@
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    
+
         <!-- Default to 2025 for "Debug"/"Release" configs, and also for broader LSP support (e.g. Cursor) -->
         <!-- NOTE: update as Positive Energy migrated to newer Revit Versions -->
         <RevitVersion>2025</RevitVersion>
@@ -74,13 +74,13 @@
     <ItemGroup>
         <PackageReference Include="ricaun.Revit.Github" Version="0.4.1"/>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2"/>
-        <Reference Include="System.Windows.Forms" />
+        <Reference Include="System.Windows.Forms"/>
         <PackageReference Include="System.Drawing.Common" Version="8.0.3" IncludeAssets="build; compile" PrivateAssets="All"/>
         <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" PrivateAssets="All"/>
     </ItemGroup>
     <!-- Allow for `dynamic` keyword in C# for net48 -->
     <ItemGroup Condition="$(TargetFramework.StartsWith('net48'))">
-        <Reference Include="Microsoft.CSharp" />
+        <Reference Include="Microsoft.CSharp"/>
     </ItemGroup>
     <PropertyGroup>
         <PostBuildEvent>

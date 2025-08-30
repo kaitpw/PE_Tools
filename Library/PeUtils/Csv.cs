@@ -1,54 +1,51 @@
 namespace PeUtils;
 
 public class Csv {
-    
     // Generic CSV methods for type safety
     /// <summary>
-    /// Reads CSV data from the default state file with type safety
+    ///     Reads CSV data from the default state file with type safety
     /// </summary>
     public static Dictionary<string, T> ReadCsv<T>(string filePath) where T : class, new() {
         try {
             if (!File.Exists(filePath)) return new Dictionary<string, T>();
-            
+
             var lines = File.ReadAllLines(filePath);
             if (lines.Length < 2) return new Dictionary<string, T>();
-            
+
             var headers = lines[0].Split(',');
             var state = new Dictionary<string, T>();
-            
-            for (int i = 1; i < lines.Length; i++) {
+
+            for (var i = 1; i < lines.Length; i++) {
                 var values = lines[i].Split(',');
                 if (values.Length == 0 || string.IsNullOrEmpty(values[0])) continue;
-                
+
                 var key = values[0];
                 var row = new T();
-                
+
                 // Use reflection to set properties based on CSV headers
-                for (int j = 1; j < headers.Length && j < values.Length; j++) {
+                for (var j = 1; j < headers.Length && j < values.Length; j++) {
                     var header = headers[j];
                     var value = values[j];
-                    
+
                     var property = typeof(T).GetProperty(header);
                     if (property != null && property.CanWrite) {
                         // Try to convert the string value to the property type
                         var convertedValue = ConvertValue(value, property.PropertyType);
-                        if (convertedValue != null) {
-                            property.SetValue(row, convertedValue);
-                        }
+                        if (convertedValue != null) property.SetValue(row, convertedValue);
                     }
                 }
-                
+
                 state[key] = row;
             }
-            
+
             return state;
         } catch {
             return new Dictionary<string, T>();
         }
     }
 
-        /// <summary>
-    /// Gets a specific row from the CSV state file with type safety
+    /// <summary>
+    ///     Gets a specific row from the CSV state file with type safety
     /// </summary>
     public static T? ReadCsvRow<T>(string filePath, string key) where T : class, new() {
         var state = ReadCsv<T>(filePath);
@@ -56,7 +53,7 @@ public class Csv {
     }
 
     /// <summary>
-    /// Writes CSV data to the default state file with type safety
+    ///     Writes CSV data to the default state file with type safety
     /// </summary>
     public static void WriteCsv<T>(string filePath, Dictionary<string, T> state) where T : class {
         try {
@@ -64,19 +61,19 @@ public class Csv {
                 File.WriteAllText(filePath, string.Empty);
                 return;
             }
-            
+
             // Get all properties from the type
             var properties = typeof(T).GetProperties()
                 .Where(p => p.CanRead)
                 .ToList();
-            
+
             var lines = new List<string>();
-            
+
             // Add header
             var headers = new List<string> { "Key" };
             headers.AddRange(properties.Select(p => p.Name));
             lines.Add(string.Join(",", headers));
-            
+
             // Add data rows
             foreach (var kvp in state) {
                 var values = new List<string> { kvp.Key };
@@ -84,9 +81,10 @@ public class Csv {
                     var value = property.GetValue(kvp.Value);
                     values.Add(value?.ToString() ?? string.Empty);
                 }
+
                 lines.Add(string.Join(",", values));
             }
-            
+
             File.WriteAllLines(filePath, lines);
         } catch {
             // TODO: Add proper error handling
@@ -94,7 +92,7 @@ public class Csv {
     }
 
     /// <summary>
-    /// Updates a specific row in the CSV state file with type safety
+    ///     Updates a specific row in the CSV state file with type safety
     /// </summary>
     public static void WriteCsvRow<T>(string filePath, string key, T rowData) where T : class, new() {
         var state = ReadCsv<T>(filePath);
@@ -103,13 +101,12 @@ public class Csv {
     }
 
 
-
     /// <summary>
-    /// Converts a string value to the target type for CSV parsing
+    ///     Converts a string value to the target type for CSV parsing
     /// </summary>
     private static object? ConvertValue(string value, Type targetType) {
         if (string.IsNullOrEmpty(value)) return null;
-        
+
         try {
             if (targetType == typeof(string)) return value;
             if (targetType == typeof(int)) return int.Parse(value);
@@ -119,18 +116,16 @@ public class Csv {
             if (targetType == typeof(bool)) return bool.Parse(value);
             if (targetType == typeof(DateTime)) return DateTime.Parse(value);
             if (targetType == typeof(Guid)) return Guid.Parse(value);
-            
+
             // For enums, try to parse
             if (targetType.IsEnum) return Enum.Parse(targetType, value);
-            
+
             // For nullable types, handle them
             if (targetType.IsGenericType && targetType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
                 var underlyingType = Nullable.GetUnderlyingType(targetType);
-                if (underlyingType != null) {
-                    return ConvertValue(value, underlyingType);
-                }
+                if (underlyingType != null) return ConvertValue(value, underlyingType);
             }
-            
+
             return null;
         } catch {
             return null;

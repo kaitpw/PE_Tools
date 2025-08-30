@@ -28,7 +28,7 @@ public class KeyboardShortcutsHelper {
 
         // If we haven't loaded shortcuts yet, consider it not current
         if (string.IsNullOrEmpty(this._lastFileHash)) return false;
-        
+
         var currentFileText = File.ReadAllText(filePath);
         var currentHash = Files.ComputeFileHashFromText(currentFileText);
         return this._lastFileHash == currentHash;

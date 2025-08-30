@@ -3,12 +3,11 @@ using PeLib;
 using PeRevitUI;
 using PeServices;
 using System.Text;
-using System.Windows.Controls.Ribbon;
 
 namespace AddinCmdPalette.Helpers;
 
 /// <summary>
-/// Record representing command usage data for storage
+///     Record representing command usage data for storage
 /// </summary>
 public record CommandUsageData {
     public string CommandId { get; init; } = string.Empty;
@@ -20,18 +19,16 @@ public record CommandUsageData {
 ///     Service for managing PostableCommand enumeration values and metadata
 /// </summary>
 public class PostableCommandHelper {
-    private List<PostableCommandItem> _allCommands;
     private readonly Storage _storage;
+    private List<PostableCommandItem> _allCommands;
 
-    public PostableCommandHelper(Storage storage) => _storage = storage;
+    public PostableCommandHelper(Storage storage) => this._storage = storage;
 
     /// <summary>
     ///     Gets all PostableCommand items with metadata
     /// </summary>
     public List<PostableCommandItem> GetAllCommands() {
-        if (this._allCommands == null) {
-            this._allCommands = this.LoadPostableCommands();
-        }
+        if (this._allCommands == null) this._allCommands = this.LoadPostableCommands();
 
         return this._allCommands;
     }
@@ -74,18 +71,18 @@ public class PostableCommandHelper {
             // Save the updated usage count to storage using the record
             var commandId = commandRef.Value.ToString() ?? string.Empty;
             var usageData = new CommandUsageData {
-                CommandId = commandId,
-                Score = commandItem.UsageCount,
-                LastUsed = commandItem.LastUsed
+                CommandId = commandId, Score = commandItem.UsageCount, LastUsed = commandItem.LastUsed
             };
-            _storage.State<CommandUsageData>().WriteCsvRow(commandId, usageData);
+            this._storage.State<CommandUsageData>().WriteCsvRow(commandId, usageData);
         }
     }
 
     /// <summary>
     ///     Refreshes the commands and shortcuts, clearing cached data
     /// </summary>
-    public void RefreshCommands() => this._allCommands = null;// This will force a reload of both commands and shortcuts on next GetAllCommands() call
+    public void RefreshCommands() =>
+        this._allCommands =
+            null; // This will force a reload of both commands and shortcuts on next GetAllCommands() call
 
     /// <summary>
     ///     Loads all PostableCommand enum values and creates metadata
@@ -95,36 +92,37 @@ public class PostableCommandHelper {
         var shortcutsService = KeyboardShortcutsHelper.Instance;
 
         // Check if shortcuts are current, if not, clear the cache to force reload
-        if (!shortcutsService.IsShortcutsCurrent()) {
-            shortcutsService.ClearCache();
-        }
+        if (!shortcutsService.IsShortcutsCurrent()) shortcutsService.ClearCache();
 
         // Get all values from the PostableCommand enumeration
-        var ribbonCommands = PeRevitUI.Ribbon.GetAllCommands();
+        var ribbonCommands = Ribbon.GetAllCommands();
 
         foreach (var command in ribbonCommands) {
             var commandId = command.Id;
-            var usageData = _storage.State<CommandUsageData>().ReadCsvRow(commandId); 
-            
+            var usageData = this._storage.State<CommandUsageData>().ReadCsvRow(commandId);
+
             var commandItem = new PostableCommandItem {
                 Command = command.Id,
                 UsageCount = usageData?.Score ?? 0,
                 LastUsed = usageData?.LastUsed ?? DateTime.MinValue,
-                SearchScore = 0,
+                SearchScore = 0
             };
             // Try to get shortcut info from XML
             var (shortcutInfo, infoErr) = shortcutsService.GetShortcutInfo(command.Id);
             if (shortcutInfo is null) continue;
             if (infoErr is not null) {
                 commandItem.Name = this.FormatCommandName(command.Name);
-                commandItem.Paths = new List<string> { $"{command.Tab} > {command.Panel}" }; // TOTO: probablyRevise this logic
+                commandItem.Paths =
+                    new List<string> { $"{command.Tab} > {command.Panel}" }; // TOTO: probablyRevise this logic
                 continue;
             }
+
             if (shortcutInfo is not null) {
                 commandItem.Name = shortcutInfo.CommandName;
                 commandItem.Shortcuts = shortcutInfo.Shortcuts;
                 commandItem.Paths = shortcutInfo.Paths;
             }
+
             commands.Add(commandItem);
         }
 
@@ -158,7 +156,7 @@ public class PostableCommandHelper {
         if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(search))
             return 0;
 
-        var baseScore = 0; 
+        var baseScore = 0;
 
         // Exact match gets highest score
         if (text == search)

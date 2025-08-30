@@ -12,6 +12,9 @@ namespace AddinCmdPalette.ViewModels;
 ///     ViewModel for the Command Palette window
 /// </summary>
 public partial class CommandPaletteViewModel : ObservableObject {
+    /// <summary> Helper for managing postable commands </summary>
+    private readonly PostableCommandHelper _commandHelper;
+
     /// <summary> Whether a command is currently being executed </summary>
     [ObservableProperty] private bool _isExecutingCommand;
 
@@ -29,9 +32,6 @@ public partial class CommandPaletteViewModel : ObservableObject {
     /// <summary> The UI application instance for executing commands </summary>
     [ObservableProperty] private UIApplication _uiapp;
 
-    /// <summary> Helper for managing postable commands </summary>
-    private readonly PostableCommandHelper _commandHelper;
-
     public CommandPaletteViewModel(UIApplication uiApp, Storage persistence) {
         this._uiapp = uiApp;
         this._commandHelper = new PostableCommandHelper(persistence);
@@ -43,7 +43,7 @@ public partial class CommandPaletteViewModel : ObservableObject {
             this.FilteredCommands.Add(command);
 
         // Select first item by default
-        if (this.FilteredCommands.Count > 0) 
+        if (this.FilteredCommands.Count > 0)
             this.SelectedIndex = 0;
     }
 
