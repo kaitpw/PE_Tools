@@ -7,7 +7,7 @@ using PeServices;
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdCommandPalette : IExternalCommand {
+public partial class CmdCommandPalette : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,

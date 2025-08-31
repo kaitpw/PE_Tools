@@ -1,6 +1,6 @@
 # Hardcoded variables for direct command-line use
 $APPDATA = $env:APPDATA
-$REVIT_VERSIONS = 2023..2026
+$REVIT_VERSIONS = 2023..2027
 $PROJECT_NAME = "PE_Tools"
 
 foreach ($REVIT_VERSION in $REVIT_VERSIONS) {
