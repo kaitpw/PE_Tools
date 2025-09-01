@@ -94,9 +94,8 @@ public class CmdTapMaker : IExternalCommand {
             var tapDuctType =
                 new[] { ConnectorProfileType.Round, ConnectorProfileType.Rectangular, ConnectorProfileType.Oval }
                     .Select(shape => Filters.DuctType(doc, shape, JunctionType.Tap))
-                    .FirstOrDefault(result => result is not null);
-            if (tapDuctType is null) throw new InvalidOperationException("DuctType is null, nothing was found");
-
+                    .FirstOrDefault(result => result is not null) 
+                    ?? throw new InvalidOperationException("DuctType is null, nothing was found");
             using var trans = new Transaction(doc, "Make Tap On Face");
             _ = trans.Start();
 
@@ -194,10 +193,12 @@ public class CmdTapMaker : IExternalCommand {
 public class DuctFaceSelectionFilter : ISelectionFilter {
     public bool AllowElement(Element elem) {
         // Only allow ducts
-#if REVIT2025 || REVIT2026
-        return elem.Category?.Id.Value == (int)BuiltInCategory.OST_DuctCurves;
-#else
+#if REVIT2023
         return elem.Category?.Id.IntegerValue == (int)BuiltInCategory.OST_DuctCurves;
+#else
+#pragma warning disable IDE0022 // Use expression body for method
+        return elem.Category?.Id.Value == (int)BuiltInCategory.OST_DuctCurves;
+#pragma warning restore IDE0022 // Use expression body for method
 #endif
     }
 
