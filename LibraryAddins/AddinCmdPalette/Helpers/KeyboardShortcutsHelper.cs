@@ -1,6 +1,6 @@
 using PeRevitUI;
 using PeRevitUtils;
-using PeUtils;
+using PeUtils.Files;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Xml.Linq;
@@ -30,7 +30,7 @@ public class KeyboardShortcutsHelper {
         if (string.IsNullOrEmpty(this._lastFileHash)) return false;
 
         var currentFileText = File.ReadAllText(filePath);
-        var currentHash = Files.ComputeFileHashFromText(currentFileText);
+        var currentHash = FileUtils.ComputeFileHashFromText(currentFileText);
         return this._lastFileHash == currentHash;
     }
 
@@ -113,7 +113,7 @@ public class KeyboardShortcutsHelper {
                 }
             }
 
-            this._lastFileHash = Files.ComputeFileHashFromText(File.ReadAllText(filePath));
+            this._lastFileHash = FileUtils.ComputeFileHashFromText(File.ReadAllText(filePath));
         } catch (Exception ex) {
             // Log error but don't crash - return empty dictionary
             Debug.WriteLine(

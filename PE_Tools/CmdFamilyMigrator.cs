@@ -1,5 +1,7 @@
+using Json.Schema.Generation;
 using Nice3point.Revit.Extensions;
 using PE_Tools.Properties;
+using PeLib;
 using PeRevitUI;
 using PeServices;
 
@@ -15,6 +17,21 @@ namespace PE_Tools;
 //     - delete parameters with no value
 //     - maybe delete certain reference lines
 
+// public record ParamAdditionResults {
+//     public string Name
+// }
+
+public class FamilyMigratorSettings : SettingsManager<FamilyMigratorSettings>.IBaseSettings {
+    [Description("When adding parameters to families, overwrite existing parameter values if they already exist")]
+    public bool OverrideExistingValues { get; set; } = true;
+
+    [Description("Remove parameters that have no values during family cleanup operations")]
+    public bool DeleteEmptyParameters { get; set; } = true; // unused right now
+
+    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
+    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
+}
+
 [Transaction(TransactionMode.Manual)]
 public class CmdFamilyMigrator : IExternalCommand {
     public Result Execute(
@@ -26,6 +43,7 @@ public class CmdFamilyMigrator : IExternalCommand {
         var uidoc = uiapp.ActiveUIDocument;
         var doc = uidoc.Document;
         var storage = new Storage("FamilyMigrator");
+        var settings = storage.Settings<FamilyMigratorSettings>().Json().Read();
 
         // Get the first editable family in the project
         var families = new FilteredElementCollector(doc)
@@ -53,11 +71,13 @@ public class CmdFamilyMigrator : IExternalCommand {
         };
 
         var balloon = new Balloon();
+        var allParameterData = new Dictionary<string, FamilyParameterInfo>();
+
         foreach (var family in families) {
             _ = balloon.Add(Balloon.Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
-            var (fam, famErr) = MigrateProjectFamily(doc, family,
-                fm => AddParameters(fm, parameters, true), // !!!!!!!!!!!!!!!!!!!!!!!!
-                fm => CleanParameters(fm, ParametersOrder.Ascending, false)
+            var (fam, famErr) = Families.EditAndLoad(doc, family,
+                fm => AddParameters(fm, parameters, settings.OverrideExistingValues),
+                fm => CleanParameters(fm, ParametersOrder.Ascending, settings.DeleteEmptyParameters)
             );
             if (famErr is not null) {
                 _ = balloon.Add(Balloon.Log.ERR, famErr.Message);
@@ -66,17 +86,16 @@ public class CmdFamilyMigrator : IExternalCommand {
 
             // Query parameters based on whether they're instance or type parameters
             foreach (var param in parameters) {
-                var foundParam = VerifyNewParameter(doc, fam, param);
-
-                if (foundParam != null) {
-                    _ = balloon.AddDebug(Balloon.Log.TEST, new StackFrame(),
-                        $"New param post-load ({(param.IsInstance ? "Instance" : "Type")}): {foundParam.Definition.Name}: {foundParam.AsString()}"); // this should now work
-                } else {
-                    _ = balloon.AddDebug(Balloon.Log.ERR, new StackFrame(),
-                        $"Failed to find parameter '{param.Name}' after load");
-                }
+                VerifyNewParameter(doc, fam, param);
+                allParameterData[param.Name] = param;
             }
         }
+
+        // Save all parameter data to CSV at once
+        var csv = storage.Output<FamilyParameterInfo>().Csv();
+        csv.WriteAll(allParameterData);
+        if (settings.OpenOutputFilesOnCommandFinish)
+            csv.OpenInDefaultApp();
 
         balloon.Show();
         return Result.Succeeded;
@@ -90,27 +109,6 @@ public class CmdFamilyMigrator : IExternalCommand {
             Resources.Yellow_16,
             "Open the family migrator to migrate a project family in-place."
         ).Data;
-
-    private static Result<Family> MigrateProjectFamily(Document doc,
-        Family family,
-        params Action<FamilyManager>[] callbacks) {
-        var famDoc = doc.EditFamily(family);
-        if (!famDoc.IsFamilyDocument) return new ArgumentException("Document is not a family document.");
-        if (famDoc.FamilyManager is null)
-            return new InvalidOperationException("Family documents FamilyManager is null.");
-
-        using var transFamily = new Transaction(famDoc, "Edit Family Document");
-        _ = transFamily.Start();
-        foreach (var callback in callbacks) callback(famDoc.FamilyManager);
-        _ = transFamily.Commit();
-
-
-        var fam = famDoc.LoadFamily(doc, new FamilyOption());
-        if (fam is null) return new InvalidOperationException("Failed to load family after edit.");
-        var closed = famDoc.Close(false);
-        if (!closed) return new InvalidOperationException("Failed to close family document after load error.");
-        return fam;
-    }
 
 
     private static void AddParameters(
@@ -146,9 +144,9 @@ public class CmdFamilyMigrator : IExternalCommand {
                         }
                     }
 
-                    p.Result = param;
+                    p.EditResult = param;
                 } catch (Exception ex) {
-                    p.Result = ex;
+                    p.EditResult = ex;
                 }
             }
         }
@@ -161,9 +159,6 @@ public class CmdFamilyMigrator : IExternalCommand {
     ///     - delete unused reference lines
     ///     - delete linear dimensions (maybe?)
     /// </summary>
-    /// <param name="fm"></param>
-    /// <param name="order"></param>
-    /// <param name="deleteEmpty"></param>
     private static void CleanParameters(FamilyManager fm, ParametersOrder order, bool deleteEmpty) {
         fm.SortParameters(order);
         var parametersToDelete = fm.GetParameters() // to do, figure out filters before deleting anything
@@ -172,34 +167,25 @@ public class CmdFamilyMigrator : IExternalCommand {
             .ToList();
     }
 
-    private static Parameter VerifyNewParameter(Document doc, Family fam, FamilyParameterInfo param) {
-        Parameter foundParam = null;
-
+    private static void VerifyNewParameter(Document doc, Family fam, FamilyParameterInfo param) {
         if (param.IsInstance) {
-            // For instance parameters, we need to find a family instance
-            // Get the first family instance of this family
-            // make this work without placing a family instance in the document
+            // TODO: make this work without placing a family instance in the document
             var familyInstances = new FilteredElementCollector(doc)
                 .OfClass(typeof(FamilyInstance))
                 .Cast<FamilyInstance>()
                 .Where(fi => fi.Symbol.Family.Id == fam.Id)
                 .ToList();
 
-            if (familyInstances.Any()) foundParam = familyInstances.First().FindParameter(param.Name);
+            // TODO: make this check for the default instance value, not the instance value of a particular instance
+            if (familyInstances.Any()) param.VerifiedResult = familyInstances.First().FindParameter(param.Name) != null;
         } else {
-            // Type parameters are queried on the family symbols
             var familySymbols = fam.GetFamilySymbolIds();
-
-            if (familySymbols.Any()) {
-                // Try all symbols to find the parameter
-                foreach (var symbolId in familySymbols) {
-                    var symbol = doc.GetElement(symbolId) as FamilySymbol;
-                    if (symbol != null) foundParam = symbol.FindParameter(param.Name);
-                }
+            if (!familySymbols.Any()) param.VerifiedResult = false;
+            foreach (var symbolId in familySymbols) {
+                if (doc.GetElement(symbolId) is FamilySymbol symbol)
+                    param.VerifiedResult = symbol.FindParameter(param.Name)?.AsString() == param.Value.ToString();
             }
         }
-
-        return foundParam;
     }
 }
 
@@ -211,7 +197,9 @@ public record FamilyParameterInfo {
     public object Value { get; init; }
 
     /// <summary> The result of the parameter creation. The created parameter if successful, or the exception if not. </summary>
-    public Result<FamilyParameter> Result { get; set; }
+    public Result<FamilyParameter> EditResult { get; set; }
+
+    public bool VerifiedResult { get; set; }
 }
 
 public record SharedParameterInfo(
@@ -219,22 +207,3 @@ public record SharedParameterInfo(
     ForgeTypeId groupTypeId,
     bool isInstance
 );
-
-internal class FamilyOption : IFamilyLoadOptions {
-    public bool OnFamilyFound(
-        bool familyInUse,
-        out bool overwriteParameterValues) {
-        overwriteParameterValues = true;
-        return true;
-    }
-
-    public bool OnSharedFamilyFound(
-        Family sharedFamily,
-        bool familyInUse,
-        out FamilySource source,
-        out bool overwriteParameterValues) {
-        source = FamilySource.Project;
-        overwriteParameterValues = true;
-        return true;
-    }
-}

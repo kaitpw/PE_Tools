@@ -43,7 +43,7 @@ internal class Ducts {
 
             if (existingElements.Any()) {
                 var existingIds = existingElements.Select(e => e.Id).ToArray();
-                return new ElementIntersectException(existingIds[0], existingIds);
+                return new ElementIntersectException(null, existingIds);
             }
 
             // If no intersections, proceed with creating the tap
@@ -58,13 +58,13 @@ internal class Ducts {
                 branchEnd
             );
             if (branchDuct is null) return new InvalidOperationException("Branch duct is null, creation was faulty");
-            balloon?.AddDebug(Balloon.Log.INFO, new StackFrame(),
+            _ = balloon?.AddDebug(Balloon.Log.INFO, new StackFrame(),
                 $"Created branch duct on {level.Name} with DuctType: {ductType.Name}, SystemType: {systemType.Name}");
 
             // Set the duct diameter to the correct tap size
             var setDiamSuccess = branchDuct.get_Parameter(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM).Set(tapSizeFeet);
             if (!setDiamSuccess)
-                balloon?.Add(Balloon.Log.WARN, new StackFrame(), "Branch duct's diameter could not be set");
+                _ = balloon?.Add(Balloon.Log.WARN, new StackFrame(), "Branch duct's diameter could not be set");
 
             // Get the connector from the branch duct closest to the main duct
             var (branchConns, _) = Connectors.GetClosestToPoint(branchDuct, location);

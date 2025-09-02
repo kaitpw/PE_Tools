@@ -70,10 +70,12 @@
         <EmbeddedResource Include="Resources\Yellow_32.png"/>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="JsonSchema.Net" Version="7.4.0"/>
+        <PackageReference Include="JsonSchema.Net.Generation" Version="5.1.0"/>
         <PackageReference Include="ricaun.Revit.Github" Version="0.4.1"/>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2"/>
         <Reference Include="System.Windows.Forms"/>
-        <PackageReference Include="Polyfill" Version="4.0.0" />
+        <PackageReference Include="Polyfill" Version="4.0.0"/>
         <PackageReference Include="System.Drawing.Common" Version="8.0.3" IncludeAssets="build; compile" PrivateAssets="All"/>
         <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*"/>
         <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" PrivateAssets="All"/>

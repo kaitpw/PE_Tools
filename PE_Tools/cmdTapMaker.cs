@@ -94,8 +94,8 @@ public class CmdTapMaker : IExternalCommand {
             var tapDuctType =
                 new[] { ConnectorProfileType.Round, ConnectorProfileType.Rectangular, ConnectorProfileType.Oval }
                     .Select(shape => Filters.DuctType(doc, shape, JunctionType.Tap))
-                    .FirstOrDefault(result => result is not null) 
-                    ?? throw new InvalidOperationException("DuctType is null, nothing was found");
+                    .FirstOrDefault(result => result is not null)
+                ?? throw new InvalidOperationException("DuctType is null, nothing was found");
             using var trans = new Transaction(doc, "Make Tap On Face");
             _ = trans.Start();
 

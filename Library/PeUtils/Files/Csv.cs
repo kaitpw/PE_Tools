@@ -1,15 +1,24 @@
-namespace PeUtils;
+using PeRevitUI;
 
-public class Csv {
+namespace PeUtils.Files;
+
+public class Csv<T> where T : class, new() {
+    public readonly string FilePath;
+
+    public Csv(string filePath) {
+        FileUtils.ValidateFileNameAndExtension(filePath, "csv");
+        this.FilePath = filePath;
+    }
+
     // Generic CSV methods for type safety
     /// <summary>
     ///     Reads CSV data from the default state file with type safety
     /// </summary>
-    public static Dictionary<string, T> ReadCsv<T>(string filePath) where T : class, new() {
+    public Dictionary<string, T> ReadAll() {
         try {
-            if (!File.Exists(filePath)) return new Dictionary<string, T>();
+            if (!File.Exists(this.FilePath)) return new Dictionary<string, T>();
 
-            var lines = File.ReadAllLines(filePath);
+            var lines = File.ReadAllLines(this.FilePath);
             if (lines.Length < 2) return new Dictionary<string, T>();
 
             var headers = lines[0].Split(',');
@@ -40,25 +49,19 @@ public class Csv {
 
             return state;
         } catch {
+            // TODO: Maybe return Result type instead
+            new Balloon().Add(Balloon.Log.ERR, $"Failed to read from CSV file: {this.FilePath}").Show();
             return new Dictionary<string, T>();
         }
     }
 
     /// <summary>
-    ///     Gets a specific row from the CSV state file with type safety
-    /// </summary>
-    public static T? ReadCsvRow<T>(string filePath, string key) where T : class, new() {
-        var state = ReadCsv<T>(filePath);
-        return state.TryGetValue(key, out var row) ? row : null;
-    }
-
-    /// <summary>
     ///     Writes CSV data to the default state file with type safety
     /// </summary>
-    public static void WriteCsv<T>(string filePath, Dictionary<string, T> state) where T : class {
+    public void WriteAll(Dictionary<string, T> data) {
         try {
-            if (state.Count == 0) {
-                File.WriteAllText(filePath, string.Empty);
+            if (data.Count == 0) {
+                File.WriteAllText(this.FilePath, string.Empty);
                 return;
             }
 
@@ -75,7 +78,7 @@ public class Csv {
             lines.Add(string.Join(",", headers));
 
             // Add data rows
-            foreach (var kvp in state) {
+            foreach (var kvp in data) {
                 var values = new List<string> { kvp.Key };
                 foreach (var property in properties) {
                     var value = property.GetValue(kvp.Value);
@@ -85,21 +88,40 @@ public class Csv {
                 lines.Add(string.Join(",", values));
             }
 
-            File.WriteAllLines(filePath, lines);
+            File.WriteAllLines(this.FilePath, lines);
         } catch {
-            // TODO: Add proper error handling
+            // TODO: Maybe return Result type instead
+            new Balloon().Add(Balloon.Log.ERR, $"Failed to write to CSV file: {this.FilePath}").Show();
         }
     }
 
     /// <summary>
+    ///     Gets a specific row from the CSV state file with type safety
+    /// </summary>
+    public T? ReadRow(string key) => this.ReadAll().GetValueOrDefault(key);
+
+    /// <summary>
     ///     Updates a specific row in the CSV state file with type safety
     /// </summary>
-    public static void WriteCsvRow<T>(string filePath, string key, T rowData) where T : class, new() {
-        var state = ReadCsv<T>(filePath);
+    public void WriteRow(string key, T rowData) {
+        var state = this.ReadAll();
         state[key] = rowData;
-        WriteCsv(filePath, state);
+        this.WriteAll(state);
     }
 
+    /// <summary>
+    ///     Opens the CSV file in the default application for .csv files
+    /// </summary>
+    public void OpenInDefaultApp() {
+        try {
+            if (File.Exists(this.FilePath)) {
+                var processStartInfo = new ProcessStartInfo { FileName = this.FilePath, UseShellExecute = true };
+                _ = Process.Start(processStartInfo);
+            }
+        } catch {
+            // TODO: Add proper error handling
+        }
+    }
 
     /// <summary>
     ///     Converts a string value to the target type for CSV parsing

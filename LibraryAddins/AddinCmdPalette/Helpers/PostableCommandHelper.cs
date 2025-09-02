@@ -19,10 +19,10 @@ public record CommandUsageData {
 ///     Service for managing PostableCommand enumeration values and metadata
 /// </summary>
 public class PostableCommandHelper {
-    private readonly Storage _storage;
+    private readonly StateManager<CommandUsageData> _state;
     private List<PostableCommandItem> _allCommands;
 
-    public PostableCommandHelper(Storage storage) => this._storage = storage;
+    public PostableCommandHelper(Storage storage) => this._state = storage.State<CommandUsageData>();
 
     /// <summary>
     ///     Gets all PostableCommand items with metadata
@@ -69,11 +69,12 @@ public class PostableCommandHelper {
         var commandItem = this.GetAllCommands().FirstOrDefault(c => c.Command == commandRef);
         if (commandItem is not null) {
             // Save the updated usage count to storage using the record
-            var commandId = commandRef.Value.ToString() ?? string.Empty;
             var usageData = new CommandUsageData {
-                CommandId = commandId, Score = commandItem.UsageCount, LastUsed = commandItem.LastUsed
+                CommandId = commandRef.Value.ToString() ?? string.Empty,
+                Score = commandItem.UsageCount + 1,
+                LastUsed = DateTime.Now
             };
-            this._storage.State<CommandUsageData>().WriteCsvRow(commandId, usageData);
+            this._state.Csv().WriteRow(usageData.CommandId, usageData);
         }
     }
 
@@ -99,7 +100,7 @@ public class PostableCommandHelper {
 
         foreach (var command in ribbonCommands) {
             var commandId = command.Id;
-            var usageData = this._storage.State<CommandUsageData>().ReadCsvRow(commandId);
+            var usageData = this._state.Csv().ReadRow(commandId);
 
             var commandItem = new PostableCommandItem {
                 Command = command.Id,
@@ -126,7 +127,7 @@ public class PostableCommandHelper {
             commands.Add(commandItem);
         }
 
-        return commands.OrderBy(c => c.Name).ToList();
+        return commands.OrderByDescending(c => c.LastUsed).ThenBy(c => c.Name).ToList();
     }
 
     /// <summary>
@@ -157,20 +158,9 @@ public class PostableCommandHelper {
             return 0;
 
         var baseScore = 0;
-
-        // Exact match gets highest score
-        if (text == search)
-            _ = baseScore + 100;
-
-        // Starts with search gets high score
-        if (text.StartsWith(search))
-            _ = baseScore + 70;
-
-        // Contains search gets medium score
-        if (text.Contains(search))
-            _ = baseScore + 90;
-
-        // Fuzzy matching for partial matches
+        if (text == search) baseScore += 100;
+        if (text.StartsWith(search)) baseScore += 70;
+        if (text.Contains(search)) baseScore += 90;
         var fuzzyScore = this.CalculateFuzzyScore(text, search);
         return fuzzyScore > 0.7 ? baseScore + (fuzzyScore * 50) : 0;
     }
