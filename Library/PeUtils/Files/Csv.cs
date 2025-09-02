@@ -14,7 +14,7 @@ public class Csv<T> where T : class, new() {
     /// <summary>
     ///     Reads CSV data from the default state file with type safety
     /// </summary>
-    public Dictionary<string, T> ReadAll() {
+    public Dictionary<string, T> Read() {
         try {
             if (!File.Exists(this.FilePath)) return new Dictionary<string, T>();
 
@@ -58,7 +58,7 @@ public class Csv<T> where T : class, new() {
     /// <summary>
     ///     Writes CSV data to the default state file with type safety
     /// </summary>
-    public void WriteAll(Dictionary<string, T> data) {
+    public void Write(Dictionary<string, T> data) {
         try {
             if (data.Count == 0) {
                 File.WriteAllText(this.FilePath, string.Empty);
@@ -98,29 +98,15 @@ public class Csv<T> where T : class, new() {
     /// <summary>
     ///     Gets a specific row from the CSV state file with type safety
     /// </summary>
-    public T? ReadRow(string key) => this.ReadAll().GetValueOrDefault(key);
+    public T? ReadRow(string key) => this.Read().GetValueOrDefault(key);
 
     /// <summary>
     ///     Updates a specific row in the CSV state file with type safety
     /// </summary>
     public void WriteRow(string key, T rowData) {
-        var state = this.ReadAll();
+        var state = this.Read();
         state[key] = rowData;
-        this.WriteAll(state);
-    }
-
-    /// <summary>
-    ///     Opens the CSV file in the default application for .csv files
-    /// </summary>
-    public void OpenInDefaultApp() {
-        try {
-            if (File.Exists(this.FilePath)) {
-                var processStartInfo = new ProcessStartInfo { FileName = this.FilePath, UseShellExecute = true };
-                _ = Process.Start(processStartInfo);
-            }
-        } catch {
-            // TODO: Add proper error handling
-        }
+        this.Write(state);
     }
 
     /// <summary>

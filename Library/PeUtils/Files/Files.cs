@@ -1,3 +1,4 @@
+using PeRevitUI;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -46,5 +47,19 @@ public static class FileUtils {
         }
 
         Console.WriteLine($"Validation successful for '{filePath}'. Expected extension: '{expectedExt}'.");
+    }
+
+    /// <summary>
+    ///     Opens the file in the default application for the file type
+    /// </summary>
+    public static void OpenInDefaultApp(string filePath) {
+        try {
+            if (File.Exists(filePath)) {
+                var processStartInfo = new ProcessStartInfo { FileName = filePath, UseShellExecute = true };
+                _ = Process.Start(processStartInfo);
+            }
+        } catch {
+            new Balloon().Add(Balloon.Log.ERR, $"Failed to open file: {filePath}").Show();
+        }
     }
 }

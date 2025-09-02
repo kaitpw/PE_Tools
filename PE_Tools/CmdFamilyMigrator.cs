@@ -4,6 +4,7 @@ using PE_Tools.Properties;
 using PeLib;
 using PeRevitUI;
 using PeServices;
+using PeUtils.Files;
 
 namespace PE_Tools;
 
@@ -22,13 +23,17 @@ namespace PE_Tools;
 // }
 
 public class FamilyMigratorSettings : SettingsManager<FamilyMigratorSettings>.IBaseSettings {
-    [Description("When adding parameters to families, overwrite existing parameter values if they already exist")]
+    [Description(
+        "Overwrite a family's existing parameter value/s if they already exist. This WILL NOT override existing family instances' values.")]
+    [Required]
     public bool OverrideExistingValues { get; set; } = true;
 
     [Description("Remove parameters that have no values during family cleanup operations")]
+    [Required]
     public bool DeleteEmptyParameters { get; set; } = true; // unused right now
 
     [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
+    [Required]
     public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
 }
 
@@ -43,7 +48,6 @@ public class CmdFamilyMigrator : IExternalCommand {
         var uidoc = uiapp.ActiveUIDocument;
         var doc = uidoc.Document;
         var storage = new Storage("FamilyMigrator");
-        var settings = storage.Settings<FamilyMigratorSettings>().Json().Read();
 
         // Get the first editable family in the project
         var families = new FilteredElementCollector(doc)
@@ -72,33 +76,39 @@ public class CmdFamilyMigrator : IExternalCommand {
 
         var balloon = new Balloon();
         var allParameterData = new Dictionary<string, FamilyParameterInfo>();
+        try {
+            var settings = storage.Settings<FamilyMigratorSettings>().Json().Read();
 
-        foreach (var family in families) {
-            _ = balloon.Add(Balloon.Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
-            var (fam, famErr) = Families.EditAndLoad(doc, family,
-                fm => AddParameters(fm, parameters, settings.OverrideExistingValues),
-                fm => CleanParameters(fm, ParametersOrder.Ascending, settings.DeleteEmptyParameters)
-            );
-            if (famErr is not null) {
-                _ = balloon.Add(Balloon.Log.ERR, famErr.Message);
-                return Result.Failed;
+            foreach (var family in families) {
+                _ = balloon.Add(Balloon.Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
+                var (fam, famErr) = Families.EditAndLoad(doc, family,
+                    fm => AddParameters(fm, parameters, settings.OverrideExistingValues),
+                    fm => CleanParameters(fm, ParametersOrder.Ascending, settings.DeleteEmptyParameters)
+                );
+                if (famErr is not null) {
+                    _ = balloon.Add(Balloon.Log.ERR, famErr.Message);
+                    return Result.Failed;
+                }
+
+                // Query parameters based on whether they're instance or type parameters
+                foreach (var param in parameters) {
+                    VerifyNewParameter(doc, fam, param);
+                    allParameterData[param.Name] = param;
+                }
             }
 
-            // Query parameters based on whether they're instance or type parameters
-            foreach (var param in parameters) {
-                VerifyNewParameter(doc, fam, param);
-                allParameterData[param.Name] = param;
-            }
+            // Save all parameter data to CSV at once
+            var csv = storage.Output<FamilyParameterInfo>().Csv();
+            csv.Write(allParameterData);
+            if (settings.OpenOutputFilesOnCommandFinish)
+                FileUtils.OpenInDefaultApp(csv.FilePath);
+
+            balloon.Show();
+            return Result.Succeeded;
+        } catch (Exception ex) {
+            _ = TaskDialog.Show("Error", ex.Message);
+            return Result.Cancelled;
         }
-
-        // Save all parameter data to CSV at once
-        var csv = storage.Output<FamilyParameterInfo>().Csv();
-        csv.WriteAll(allParameterData);
-        if (settings.OpenOutputFilesOnCommandFinish)
-            csv.OpenInDefaultApp();
-
-        balloon.Show();
-        return Result.Succeeded;
     }
 
     internal static PushButtonData GetButtonData() =>
