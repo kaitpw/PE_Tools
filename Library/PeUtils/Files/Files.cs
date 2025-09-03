@@ -45,8 +45,6 @@ public static class FileUtils {
             throw new ArgumentException($"File must have a '{expectedExt}' extension. Found '{fileExt}'.",
                 nameof(filePath));
         }
-
-        Console.WriteLine($"Validation successful for '{filePath}'. Expected extension: '{expectedExt}'.");
     }
 
     /// <summary>
