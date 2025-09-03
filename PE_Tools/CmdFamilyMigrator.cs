@@ -57,6 +57,7 @@ public class CmdFamilyMigrator : IExternalCommand {
             .Where(f => f.Name.Contains("Price JS-1_Slot")) // TODO: remove this filter, it's just for testing
             .ToList();
 
+        // TODO: remove this after testing family parameter additions
         var parameters = new[] {
             new FamilyParameterInfo {
                 Name = "TEST5_Instance",
@@ -74,6 +75,7 @@ public class CmdFamilyMigrator : IExternalCommand {
             }
         };
 
+
         var balloon = new Balloon();
         var allParameterData = new Dictionary<string, FamilyParameterInfo>();
         try {
@@ -90,10 +92,8 @@ public class CmdFamilyMigrator : IExternalCommand {
                     return Result.Failed;
                 }
 
-                // Query parameters based on whether they're instance or type parameters
-                foreach (var param in parameters) {
-                    VerifyNewParameter(doc, fam, param);
-                    allParameterData[param.Name] = param;
+                foreach (var p in parameters) {
+                    allParameterData[p.Name] = p;
                 }
             }
 
@@ -126,9 +126,7 @@ public class CmdFamilyMigrator : IExternalCommand {
         FamilyParameterInfo[] parameters,
         bool overrideExistingValue
     ) {
-        bool NoExistingParam(FamilyParameterInfo p) {
-            return fm.get_Parameter(p.Name) == null;
-        }
+        bool NoExistingParam(FamilyParameterInfo p) => fm.get_Parameter(p.Name) == null;
 
         parameters = parameters
             .Where(p => NoExistingParam(p) || overrideExistingValue)
@@ -153,10 +151,11 @@ public class CmdFamilyMigrator : IExternalCommand {
                             break;
                         }
                     }
-
-                    p.EditResult = param;
+                    p.AddParamResult = fm.get_Parameter(p.Name) != p.Value
+                        ? new Exception($"Parameter {p.Name} was not set to {p.Value}")
+                        : param;
                 } catch (Exception ex) {
-                    p.EditResult = ex;
+                    p.AddParamResult = ex;
                 }
             }
         }
@@ -176,27 +175,6 @@ public class CmdFamilyMigrator : IExternalCommand {
             .Where(p => p.IsReadOnly)
             .ToList();
     }
-
-    private static void VerifyNewParameter(Document doc, Family fam, FamilyParameterInfo param) {
-        if (param.IsInstance) {
-            // TODO: make this work without placing a family instance in the document
-            var familyInstances = new FilteredElementCollector(doc)
-                .OfClass(typeof(FamilyInstance))
-                .Cast<FamilyInstance>()
-                .Where(fi => fi.Symbol.Family.Id == fam.Id)
-                .ToList();
-
-            // TODO: make this check for the default instance value, not the instance value of a particular instance
-            if (familyInstances.Any()) param.VerifiedResult = familyInstances.First().FindParameter(param.Name) != null;
-        } else {
-            var familySymbols = fam.GetFamilySymbolIds();
-            if (!familySymbols.Any()) param.VerifiedResult = false;
-            foreach (var symbolId in familySymbols) {
-                if (doc.GetElement(symbolId) is FamilySymbol symbol)
-                    param.VerifiedResult = symbol.FindParameter(param.Name)?.AsString() == param.Value.ToString();
-            }
-        }
-    }
 }
 
 public record FamilyParameterInfo {
@@ -207,9 +185,7 @@ public record FamilyParameterInfo {
     public object Value { get; init; }
 
     /// <summary> The result of the parameter creation. The created parameter if successful, or the exception if not. </summary>
-    public Result<FamilyParameter> EditResult { get; set; }
-
-    public bool VerifiedResult { get; set; }
+    public Result<FamilyParameter> AddParamResult { get; set; }
 }
 
 public record SharedParameterInfo(
