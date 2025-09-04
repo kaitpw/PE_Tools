@@ -1,6 +1,4 @@
-using Newtonsoft.Json;
 using PeRevitUI;
-using System.Net.Http;
 
 namespace PeServices;
 
@@ -30,34 +28,8 @@ public class ApsAuth {
             _ = stopWaitHandle.WaitOne();
             return token;
         } catch (Exception ex) {
-            new Balloon().AddDebug(Balloon.Log.ERR, new StackFrame(), "Access Probably Denied").Show();
+            new Balloon().AddDebug(Balloon.Log.ERR, new StackFrame(), $"Access denied because:\n {ex.Message}").Show();
             return ex;
         }
-    }
-
-
-    public async Task<string> Get2LeggedForgeToken(string clientId, string clientSecret) {
-        var client = new HttpClient { BaseAddress = new Uri("https://developer.api.autodesk.com") };
-        var request = new HttpRequestMessage(HttpMethod.Post, "/authentication/v1/authenticate");
-        var credentials = new Dictionary<string, string> {
-            { "client_id", clientId },
-            { "client_secret", clientSecret },
-            { "grant_type", "client_credentials" },
-            { "scope", "code:all data:create data:write data:read bucket:create bucket:delete" }
-        };
-
-        var content = new FormUrlEncodedContent(credentials);
-        request.Content = content;
-        var response = await client.SendAsync(request);
-        _ = response.EnsureSuccessStatusCode();
-        var rep = JsonConvert.DeserializeObject<ITokenModel>(await response.Content.ReadAsStringAsync());
-        return rep.access_token;
-    }
-
-
-    public interface ITokenModel {
-        string access_token { get; set; }
-        string token_type { get; set; }
-        int expires_in { get; set; }
     }
 }
