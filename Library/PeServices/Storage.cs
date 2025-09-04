@@ -1,3 +1,4 @@
+using Json.Schema.Generation;
 using PeUtils.Files;
 
 namespace PeServices;
@@ -17,8 +18,7 @@ public class Storage(string addinName) {
     ///     Data here should be updated but never completely overwritten (unless via an import).
     ///     The default file path is `{addinName}/settings/settings.json`
     /// </remarks>
-    public SettingsManager<T> Settings<T>() where T : class, SettingsManager<T>.IBaseSettings, new() =>
-        new(this._basePath);
+    public SettingsManager Settings() => new(this._basePath);
 
     /// <summary>
     ///     Manager for the `state\` storage dir. Handles granular read/write to CSV and JSON.
@@ -29,7 +29,7 @@ public class Storage(string addinName) {
     ///     Data here is meant to be frequently granularly updated but never overwritten (unless via an import).
     ///     The default file path is `{addinName}/state/state.json`
     /// </remarks>
-    public StateManager<T> State<T>() where T : class, new() => new(this._basePath);
+    public StateManager State() => new(this._basePath);
 
     /// TODO: figure out how to support any file type while still keeping csv and json type-safety.
     /// <summary>
@@ -41,7 +41,7 @@ public class Storage(string addinName) {
     ///     Data here should be written once to and then opened by the user.
     ///     There is NO DEFAULT FILE PATH for output files.
     /// </remarks>
-    public OutputManager<T> Output<T>() where T : class, new() => new(this._basePath);
+    public OutputManager Output() => new(this._basePath);
 
     // /// TODO: figure out how to support any file type while still keeping csv and json type-safety.
     // /// <summary>
@@ -59,7 +59,7 @@ public class Storage(string addinName) {
     // public TempManager<T> Temp<T>() where T : class, new() => new(this._basePath);
 }
 
-public class SettingsManager<T> where T : class, SettingsManager<T>.IBaseSettings, new() {
+public class SettingsManager {
     private readonly string _thisPath;
 
     public SettingsManager(string basePath) {
@@ -67,18 +67,25 @@ public class SettingsManager<T> where T : class, SettingsManager<T>.IBaseSetting
         _ = Directory.CreateDirectory(this._thisPath);
     }
 
-    public JsonReader<T> Json() => new(new Json<T>(Path.Combine(this._thisPath, "settings.json")));
-    public JsonReader<T> Json(string filename) => new(new Json<T>(Path.Combine(this._thisPath, filename)));
-    public CsvReader<T> Csv() => new(new Csv<T>(Path.Combine(this._thisPath, "settings.csv")));
-    public CsvReader<T> Csv(string filename) => new(new Csv<T>(Path.Combine(this._thisPath, filename)));
+    public JsonReader<T> Json<T>() where T : class, new() =>
+        new(new Json<T>(Path.Combine(this._thisPath, "settings.json")));
+
+    public JsonReader<T> Json<T>(string filename) where T : class, new() =>
+        new(new Json<T>(Path.Combine(this._thisPath, filename)));
 
     /// <summary> Base interface for all settings classes. Provides global settings properties.</summary>
-    public interface IBaseSettings {
-        bool OpenOutputFilesOnCommandFinish { get; set; }
+    public abstract class BaseSettings {
+        [Description(
+            "Current profile to use for the command. This determines which profile is used in the next launch of a command.")]
+        public string CurrentProfile { get; set; } = "";
+
+        [Description(
+            "Profiles for the command. The profile that a command uses is determined by the `CurrentProfile` property.")]
+        public List<object> Profiles { get; set; } = [];
     }
 }
 
-public class StateManager<T> where T : class, new() {
+public class StateManager {
     private readonly string _thisPath;
 
     public StateManager(string basePath) {
@@ -86,13 +93,20 @@ public class StateManager<T> where T : class, new() {
         _ = Directory.CreateDirectory(this._thisPath);
     }
 
-    public JsonReadWriter<T> Json() => new(new Json<T>(Path.Combine(this._thisPath, "state.json")));
-    public JsonReadWriter<T> Json(string filename) => new(new Json<T>(Path.Combine(this._thisPath, filename)));
-    public CsvReadWriter<T> Csv() => new(new Csv<T>(Path.Combine(this._thisPath, "state.csv")));
-    public CsvReadWriter<T> Csv(string filename) => new(new Csv<T>(Path.Combine(this._thisPath, filename)));
+    public JsonReadWriter<T> Json<T>() where T : class, new() =>
+        new(new Json<T>(Path.Combine(this._thisPath, "state.json")));
+
+    public JsonReadWriter<T> Json<T>(string filename) where T : class, new() =>
+        new(new Json<T>(Path.Combine(this._thisPath, filename)));
+
+    public CsvReadWriter<T> Csv<T>() where T : class, new() =>
+        new(new Csv<T>(Path.Combine(this._thisPath, "state.csv")));
+
+    public CsvReadWriter<T> Csv<T>(string filename) where T : class, new() =>
+        new(new Csv<T>(Path.Combine(this._thisPath, filename)));
 }
 
-public class OutputManager<T> where T : class, new() {
+public class OutputManager {
     private readonly string _thisPath;
 
     public OutputManager(string basePath) {
@@ -100,57 +114,52 @@ public class OutputManager<T> where T : class, new() {
         _ = Directory.CreateDirectory(this._thisPath);
     }
 
-    public JsonWriter<T> Json() =>
+    public JsonWriter<T> Json<T>() where T : class, new() =>
         new(new Json<T>(Path.Combine(this._thisPath, $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json")));
 
-    public JsonWriter<T> Json(string filename) => new(new Json<T>(Path.Combine(this._thisPath, filename)));
+    public JsonWriter<T> Json<T>(string filename) where T : class, new() =>
+        new(new Json<T>(Path.Combine(this._thisPath, filename)));
 
-    public CsvWriter<T> Csv() =>
+    public CsvWriter<T> Csv<T>() where T : class, new() =>
         new(new Csv<T>(Path.Combine(this._thisPath, $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.csv")));
 
-    public CsvWriter<T> Csv(string filename) => new(new Csv<T>(Path.Combine(this._thisPath, filename)));
+    public CsvWriter<T> Csv<T>(string filename) where T : class, new() =>
+        new(new Csv<T>(Path.Combine(this._thisPath, filename)));
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 // Restricted interfaces for different operation types
 
 public class JsonReader<T>(Json<T> json) where T : class, new() {
-    private readonly Json<T> _json = json;
-    public string FilePath => this._json.FilePath;
-    public T Read() => this._json.Read();
+    public string FilePath => json.FilePath;
+    public T Read() => json.Read();
 }
 
 public class JsonWriter<T>(Json<T> json) where T : class, new() {
-    private readonly Json<T> _json = json;
-    public string FilePath => this._json.FilePath;
-    public void Write(T data) => this._json.Write(data);
+    public string FilePath => json.FilePath;
+    public void Write(T data) => json.Write(data);
 }
 
-// Wrapper classes that implement the restricted interfaces
 public class JsonReadWriter<T>(Json<T> json) where T : class, new() {
-    private readonly Json<T> _json = json;
-    public string FilePath => this._json.FilePath;
-    public T Read() => this._json.Read();
-    public void Write(T data) => this._json.Write(data);
+    public string FilePath => json.FilePath;
+    public T Read() => json.Read();
+    public void Write(T data) => json.Write(data);
 }
 
 public class CsvReader<T>(Csv<T> csv) where T : class, new() {
-    private readonly Csv<T> _csv = csv;
-    public string FilePath => this._csv.FilePath;
-    public Dictionary<string, T> Read() => this._csv.Read();
+    public string FilePath => csv.FilePath;
+    public Dictionary<string, T> Read() => csv.Read();
 }
 
 public class CsvWriter<T>(Csv<T> csv) where T : class, new() {
-    private readonly Csv<T> _csv = csv;
-    public string FilePath => this._csv.FilePath;
-    public void Write(Dictionary<string, T> data) => this._csv.Write(data);
+    public string FilePath => csv.FilePath;
+    public void Write(Dictionary<string, T> data) => csv.Write(data);
 }
 
 public class CsvReadWriter<T>(Csv<T> csv) where T : class, new() {
-    private readonly Csv<T> _csv = csv;
-    public string FilePath => this._csv.FilePath;
-    public Dictionary<string, T> Read() => this._csv.Read();
-    public void Write(Dictionary<string, T> data) => this._csv.Write(data);
-    public T? ReadRow(string key) => this._csv.ReadRow(key);
-    public void WriteRow(string key, T rowData) => this._csv.WriteRow(key, rowData);
+    public string FilePath => csv.FilePath;
+    public Dictionary<string, T> Read() => csv.Read();
+    public void Write(Dictionary<string, T> data) => csv.Write(data);
+    public T? ReadRow(string key) => csv.ReadRow(key);
+    public void WriteRow(string key, T rowData) => csv.WriteRow(key, rowData);
 }

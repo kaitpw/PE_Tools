@@ -23,11 +23,8 @@ public class ElementIntersectException : Exception {
 
 public class JsonValidationException : Exception {
     public JsonValidationException(string message) : base(message) { }
-    public JsonValidationException(string message, Exception innerException) : base(message, innerException) { }
 
-    /// <summary>
-    ///     Creates a JsonValidationException with formatted validation errors
-    /// </summary>
+    /// <summary>Creates a JsonValidationException with a formatted list of validation errors</summary>
     /// <param name="validationErrors">List of validation error messages</param>
     public JsonValidationException(IEnumerable<string> validationErrors)
         : base(FormatValidationErrors(validationErrors)) {
@@ -38,4 +35,21 @@ public class JsonValidationException : Exception {
         return $"JSON validation failed with {errorList.Count} error{(errorList.Count != 1 ? "s" : "")}:\n" +
                string.Join("\n", errorList.Select((error, index) => $"  {index + 1}. {error}"));
     }
+}
+
+public class CrashProgramException : Exception {
+    private static readonly string _prefix = "The program was intentionally crashed because";
+    public CrashProgramException(string message) : base(_prefix + FormatMessage(message)) { }
+
+    public CrashProgramException(Exception exception) : base(_prefix + " an unrecoverable error occurred:" +
+                                                             FormatError(exception)) {
+    }
+
+    private static string FormatMessage(string message) =>
+        message.Trim().Length > 0
+            ? " " + char.ToLower(message[0]) + message[1..]
+            : " " + message.Trim();
+
+    private static string FormatError(Exception exception) =>
+        $"\n\n{exception.Message}\n{exception.StackTrace}";
 }

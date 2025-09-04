@@ -18,11 +18,9 @@ public record CommandUsageData {
 /// <summary>
 ///     Service for managing PostableCommand enumeration values and metadata
 /// </summary>
-public class PostableCommandHelper {
-    private readonly StateManager<CommandUsageData> _state;
+public class PostableCommandHelper(Storage storage) {
+    private readonly CsvReadWriter<CommandUsageData> _state = storage.State().Csv<CommandUsageData>();
     private List<PostableCommandItem> _allCommands;
-
-    public PostableCommandHelper(Storage storage) => this._state = storage.State<CommandUsageData>();
 
     /// <summary>
     ///     Gets all PostableCommand items with metadata
@@ -74,7 +72,7 @@ public class PostableCommandHelper {
                 Score = commandItem.UsageCount + 1,
                 LastUsed = DateTime.Now
             };
-            this._state.Csv().WriteRow(usageData.CommandId, usageData);
+            this._state.WriteRow(usageData.CommandId, usageData);
         }
     }
 
@@ -100,7 +98,7 @@ public class PostableCommandHelper {
 
         foreach (var command in ribbonCommands) {
             var commandId = command.Id;
-            var usageData = this._state.Csv().ReadRow(commandId);
+            var usageData = this._state.ReadRow(commandId);
 
             var commandItem = new PostableCommandItem {
                 Command = command.Id,

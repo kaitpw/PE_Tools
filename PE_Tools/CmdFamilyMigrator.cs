@@ -1,5 +1,4 @@
 using Json.Schema.Generation;
-using Nice3point.Revit.Extensions;
 using PE_Tools.Properties;
 using PeLib;
 using PeRevitUI;
@@ -22,9 +21,9 @@ namespace PE_Tools;
 //     public string Name
 // }
 
-public class FamilyMigratorSettings : SettingsManager<FamilyMigratorSettings>.IBaseSettings {
+public class FamilyMigratorSettings : SettingsManager.BaseSettings {
     [Description(
-        "Overwrite a family's existing parameter value/s if they already exist. This WILL NOT override existing family instances' values.")]
+        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
     [Required]
     public bool OverrideExistingValues { get; set; } = true;
 
@@ -79,7 +78,7 @@ public class CmdFamilyMigrator : IExternalCommand {
         var balloon = new Balloon();
         var allParameterData = new Dictionary<string, FamilyParameterInfo>();
         try {
-            var settings = storage.Settings<FamilyMigratorSettings>().Json().Read();
+            var settings = storage.Settings().Json<FamilyMigratorSettings>().Read();
 
             foreach (var family in families) {
                 _ = balloon.Add(Balloon.Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
@@ -92,13 +91,11 @@ public class CmdFamilyMigrator : IExternalCommand {
                     return Result.Failed;
                 }
 
-                foreach (var p in parameters) {
-                    allParameterData[p.Name] = p;
-                }
+                foreach (var p in parameters) allParameterData[p.Name] = p;
             }
 
             // Save all parameter data to CSV at once
-            var csv = storage.Output<FamilyParameterInfo>().Csv();
+            var csv = storage.Output().Csv<FamilyParameterInfo>();
             csv.Write(allParameterData);
             if (settings.OpenOutputFilesOnCommandFinish)
                 FileUtils.OpenInDefaultApp(csv.FilePath);
@@ -126,7 +123,9 @@ public class CmdFamilyMigrator : IExternalCommand {
         FamilyParameterInfo[] parameters,
         bool overrideExistingValue
     ) {
-        bool NoExistingParam(FamilyParameterInfo p) => fm.get_Parameter(p.Name) == null;
+        bool NoExistingParam(FamilyParameterInfo p) {
+            return fm.get_Parameter(p.Name) == null;
+        }
 
         parameters = parameters
             .Where(p => NoExistingParam(p) || overrideExistingValue)
@@ -151,6 +150,7 @@ public class CmdFamilyMigrator : IExternalCommand {
                             break;
                         }
                     }
+
                     p.AddParamResult = fm.get_Parameter(p.Name) != p.Value
                         ? new Exception($"Parameter {p.Name} was not set to {p.Value}")
                         : param;
