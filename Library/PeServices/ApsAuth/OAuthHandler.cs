@@ -1,5 +1,6 @@
 using Autodesk.Authentication;
 using Autodesk.Authentication.Model;
+using Nice3point.Revit.Extensions;
 using PeRevitUI;
 using System.Net;
 using System.Net.Sockets;
@@ -62,7 +63,10 @@ internal class OAuthHandler {
             var client = await TcpListener.AcceptTcpClientAsync();
             var request = ReadString(client);
             var code = ExtractCodeFromRequest(request);
-            await WriteSuccessStringAsync(client);
+            if (code.IsNullOrEmpty())
+                await WriteSuccessStringAsync(client, CallbackPages.ErrorPage);
+            else
+                await WriteSuccessStringAsync(client, CallbackPages.SuccessPage);
             client.Dispose();
 
             // Now request the final access_token
@@ -94,29 +98,7 @@ internal class OAuthHandler {
         return Encoding.UTF8.GetString(inStream.ToArray());
     }
 
-    private static Task WriteSuccessStringAsync(TcpClient client) => Task.Run(() => {
-        const string str = """
-                           <html>
-                             <head>
-                               <title>Login Status</title>
-                               <style>
-                                 body {
-                                   font-family: Arial, Helvetica, sans-serif;
-                                   display: flex;
-                                   flex-direction: column;
-                                   justify-content: center;
-                                   align-items: center;
-                                   min-height: 100vh; /* Ensures the body takes at least the full viewport height */
-                                   margin: 0; /* Remove default body margin */
-                                 }
-                               </style>
-                             </head>
-                             <body>
-                               <h2>Login Success</h2>
-                               <p>You can now close this window!</p>
-                             </body>
-                           </html>
-                           """;
+    private static Task WriteSuccessStringAsync(TcpClient client, string str) => Task.Run(() => {
         using var writer = new StreamWriter(client.GetStream(), new UTF8Encoding(false));
         writer.Write("HTTP/1.0 200 OK");
         writer.Write(Environment.NewLine);
@@ -142,9 +124,57 @@ internal class OAuthHandler {
         var query = urlPart[(queryStart + 1)..];
         var parameters = query.Split('&');
         return (from param in parameters
-            select param.Split('=')
+                select param.Split('=')
             into kv
-            where kv.Length == 2 && kv[0] == "code"
-            select kv[1]).FirstOrDefault();
+                where kv.Length == 2 && kv[0] == "code"
+                select kv[1]).FirstOrDefault();
     }
+}
+
+internal static class CallbackPages {
+    public static string SuccessPage = """
+                           <html>
+                             <head>
+                               <title>Login Status</title>
+                               <style>
+                                 body {
+                                   font-family: Arial, Helvetica, sans-serif;
+                                   display: flex;
+                                   flex-direction: column;
+                                   justify-content: center;
+                                   align-items: center;
+                                   min-height: 100vh; /* Ensures the body takes at least the full viewport height */
+                                   margin: 0; /* Remove default body margin */
+                                 }
+                               </style>
+                             </head>
+                             <body>
+                               <h2>Login Success</h2>
+                               <p>You can now close this window!</p>
+                             </body>
+                           </html>
+                           """;
+
+    public static string ErrorPage = """
+                           <html>
+                             <head>
+                               <title>Login Status</title>
+                               <style>
+                                 body {
+                                   font-family: Arial, Helvetica, sans-serif;
+                                   display: flex;
+                                   flex-direction: column;
+                                   justify-content: center;
+                                   align-items: center;
+                                   min-height: 100vh; /* Ensures the body takes at least the full viewport height */
+                                   margin: 0; /* Remove default body margin */
+                                 }
+                               </style>
+                             </head>
+                             <body>
+                               <h2>Login Failed</h2>
+                               <p>Please try again.</p>
+                             </body>
+                           </html>
+                           """;
 }
