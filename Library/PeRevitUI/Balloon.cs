@@ -86,7 +86,6 @@ internal class Balloon {
         string title = null
     ) {
         var combinedMessage = new StringBuilder();
-        _ = combinedMessage.AppendLine(new string('-', 20));
         if (this._messages.Count == 0) _ = this.Add(Log.WARN, "No messages to display");
 
         foreach (var message in this._messages)

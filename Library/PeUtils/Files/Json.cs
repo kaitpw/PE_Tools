@@ -65,7 +65,7 @@ public class Json<T> where T : class, new() {
             var defaultSettings = new T();
             this.Write(defaultSettings);
             throw new CrashProgramException(
-                $"{this.FilePath} did not exist. A default file was created, please review it and try again.");
+                $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
         }
     }
 

@@ -48,7 +48,7 @@ internal class OAuthHandler {
             // Wait for the callback on background thread to prevent UI freeze
             _ = Task.Run(() => _3leggedAsyncWaitForCode(cb));
         } catch (Exception ex) {
-            new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error starting TcpListener: {ex.Message}");
+            new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error starting TcpListener: {ex.Message}").Show();
             cb?.Invoke(null);
         }
     }
@@ -74,7 +74,7 @@ internal class OAuthHandler {
             } else
                 callback.Invoke(null);
         } catch (Exception ex) {
-            new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error accepting request: {ex.Message}");
+            new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error accepting request: {ex.Message}").Show();
             callback.Invoke(null);
         } finally {
             TcpListener?.Stop();

@@ -14,12 +14,12 @@ public class CmdApsAuth : IExternalCommand {
         try {
             var storage = new Storage("ApsAuth");
             var settings = storage.Settings().Json<ApsAuthSettings>().Read();
-            var (token, tokenError) = ApsAuth.Login(settings.ClientId, settings.ClientSecret);
+            var (token, tokenError) = ApsAuth.Login(settings.ApsClientId, settings.ApsClientSecret);
             if (tokenError is not null) throw tokenError;
             new Balloon().Add(Balloon.Log.INFO, token).Show();
             return Result.Succeeded;
         } catch (Exception ex) {
-            _ = TaskDialog.Show("ERROR with APS Authentication", ex.Message);
+            new Balloon().Add(Balloon.Log.ERR, ex.Message).Show();
             return Result.Failed;
         }
     }
@@ -38,10 +38,10 @@ public class ApsAuthSettings : SettingsManager.BaseSettings {
     [Description(
         "The client id of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
     [Required]
-    public string ClientId { get; set; } = "";
+    public string ApsClientId { get; set; } = "";
 
     [Description(
         "The client secret of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
     [Required]
-    public string ClientSecret { get; set; } = "";
+    public string ApsClientSecret { get; set; } = "";
 }
