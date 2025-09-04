@@ -14,8 +14,9 @@ public class CmdApsAuth : IExternalCommand {
         try {
             var storage = new Storage("ApsAuth");
             var settings = storage.Settings().Json<ApsAuthSettings>().Read();
-            var (token, tokenError) = ApsAuth.Login(settings.ApsClientId, settings.ApsClientSecret);
-            if (tokenError is not null) throw tokenError;
+            var (auth, authError) = ApsAuth.Login(settings.ApsClientId, settings.ApsClientSecret);
+            if (authError is not null) throw authError;
+            var token = auth.GetToken();
             new Balloon().Add(Balloon.Log.INFO, token).Show();
             return Result.Succeeded;
         } catch (Exception ex) {
