@@ -41,29 +41,6 @@ internal static class OAuthHandler {
         _Async3LegOAuth(GenerateOAuthUrl(oAuthData), GetToken, callback);
     }
 
-    /// <summary>
-    ///     Generate a URL page that asks for permissions for the specified Scopes, and call our default web browser
-    /// </summary>
-    private class CallbackHandler : IExternalEventHandler {
-        private readonly CallbackDelegate _cb;
-        private readonly ThreeLeggedToken _bearer;
-        private readonly Exception _error;
-
-        public CallbackHandler(CallbackDelegate cb, ThreeLeggedToken bearer = null, Exception error = null) {
-            _cb = cb;
-            _bearer = bearer;
-            _error = error;
-        }
-
-        public void Execute(UIApplication app) {
-            if (_error != null)
-                new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {_error.Message}").Show();
-            _cb?.Invoke(_bearer);
-        }
-
-        public string GetName() => "APS OAuth Callback";
-    }
-
     private static void _Async3LegOAuth(string oAuthUrl, Get3LegTokenDelegate getToken, CallbackDelegate cb) {
         try {
             TcpListener.Stop(); // Ensure any previous listener is stopped
@@ -74,16 +51,16 @@ internal static class OAuthHandler {
                     var client = await TcpListener.AcceptTcpClientAsync();
                     var request = ReadString(client);
                     var code = ExtractCodeFromRequest(request);
-                    
-                    await WriteSuccessStringAsync(client, code.IsNullOrEmpty() ? CallbackPages.ErrorPage : CallbackPages.SuccessPage);
+
+                    await WriteSuccessStringAsync(client,
+                        code.IsNullOrEmpty() ? CallbackPages.ErrorPage : CallbackPages.SuccessPage);
                     client.Dispose();
-                    
+
                     if (!string.IsNullOrEmpty(code)) {
                         var bearer = await getToken(code);
                         cb?.Invoke(bearer);
-                    } else {
+                    } else
                         cb?.Invoke(null);
-                    }
                 } catch (Exception ex) {
                     new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {ex.Message}").Show();
                     cb?.Invoke(null);
@@ -177,6 +154,30 @@ internal static class OAuthHandler {
         code = Regex.Replace(code, "\\/", "_");
         code = Regex.Replace(code, "=+$", "");
         return code;
+    }
+
+    /// <summary>
+    ///     Generate a URL page that asks for permissions for the specified Scopes, and call our default web browser
+    /// </summary>
+    private class CallbackHandler : IExternalEventHandler {
+        private readonly ThreeLeggedToken _bearer;
+        private readonly CallbackDelegate _cb;
+        private readonly Exception _error;
+
+        public CallbackHandler(CallbackDelegate cb, ThreeLeggedToken bearer = null, Exception error = null) {
+            this._cb = cb;
+            this._bearer = bearer;
+            this._error = error;
+        }
+
+        public void Execute(UIApplication app) {
+            if (this._error != null)
+                new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {this._error.Message}")
+                    .Show();
+            this._cb?.Invoke(this._bearer);
+        }
+
+        public string GetName() => "APS OAuth Callback";
     }
 
     private delegate Task<ThreeLeggedToken> Get3LegTokenDelegate(string code);

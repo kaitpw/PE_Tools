@@ -50,15 +50,13 @@ public class ApsAuth {
 
         OAuthHandler.Invoke3LeggedOAuth(clientId, clientSecret, bearer => {
             try {
-                if (bearer == null) 
+                if (bearer == null)
                     tcs.SetResult(new Exception("Authentication was denied or failed. Please try again."));
                 else if (bearer.ExpiresIn == null)
                     tcs.SetResult(new Exception("Token expiration time not provided"));
                 else {
                     var expiresAt = DateTime.UtcNow.AddSeconds(bearer.ExpiresIn.Value);
-                    lock (CacheLock) {
-                        TokenCache[clientId] = (bearer.AccessToken, expiresAt);
-                    }
+                    lock (CacheLock) TokenCache[clientId] = (bearer.AccessToken, expiresAt);
                     tcs.SetResult(bearer.AccessToken);
                 }
             } catch (Exception ex) {

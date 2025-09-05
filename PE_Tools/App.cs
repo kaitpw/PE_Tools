@@ -1,3 +1,4 @@
+using AddinCmdApsAuth;
 using PeRevitUI;
 
 namespace PE_Tools;
@@ -25,8 +26,8 @@ internal class App : IExternalApplication {
         // 3. Create button data instances
         var cmdUpdate = CmdUpdate.GetButtonData();
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
-        var cmdApsAuthNormal = AddinCmdApsAuth.CmdApsAuthNormal.GetButtonData();
-        var cmdApsAuthPKCE = AddinCmdApsAuth.CmdApsAuthPKCE.GetButtonData();
+        var cmdApsAuthNormal = CmdApsAuthNormal.GetButtonData();
+        var cmdApsAuthPKCE = CmdApsAuthPKCE.GetButtonData();
 #endif
         var cmdMep2040 = CmdMep2040.GetButtonData();
         var cmdCommandPalette = CmdCommandPalette.GetButtonData();
