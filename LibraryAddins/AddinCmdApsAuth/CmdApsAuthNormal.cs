@@ -3,20 +3,20 @@ using PE_Tools.Properties;
 using PeRevitUI;
 using PeServices;
 
-namespace PE_Tools;
+namespace AddinCmdApsAuth;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdApsAuthPKCE : IExternalCommand {
+public class CmdApsAuthNormal : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
         ElementSet elements) {
         try {
-            var storage = new Storage("ApsAuthPKCE");
-            var settings = storage.Settings().Json<ApsAuthSettingsPKCE>().Read();
-            // Make sure that we're testing PKCE flow
-            if (!string.IsNullOrEmpty(settings.ApsClientSecret))
-                throw new Exception("Take out Client secret. This addin is for testing PKCE, not normal flow.");
+            var storage = new Storage("ApsAuthNormal");
+            var settings = storage.Settings().Json<ApsAuthSettingsNormal>().Read();
+            // Make sure that we're testing normal flow
+            if (string.IsNullOrEmpty(settings.ApsClientSecret))
+                throw new Exception("Add Client secret. This addin is for testing normal flow, not PKCE flow.");
             var auth = new ApsAuth(settings);
             var (token, tokenErr) = auth.GetToken();
             if (tokenErr is not null) throw tokenErr;
@@ -30,7 +30,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
 
     internal static PushButtonData GetButtonData() =>
         new ButtonDataClass(
-            "APS Auth (PKCE)",
+            "APS Auth (Normal)",
             MethodBase.GetCurrentMethod().DeclaringType?.FullName,
             Resources.Blue_32,
             Resources.Blue_16,
@@ -40,7 +40,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
 
 #nullable enable
 
-public class ApsAuthSettingsPKCE : SettingsManager.BaseSettings, IApsTokenProvider {
+public class ApsAuthSettingsNormal : SettingsManager.BaseSettings, IApsTokenProvider {
     [Description(
         "The client id of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
     [Required]
@@ -51,5 +51,5 @@ public class ApsAuthSettingsPKCE : SettingsManager.BaseSettings, IApsTokenProvid
     public string ApsClientSecret { get; set; } = "";
 
     string IApsTokenProvider.GetClientId() => this.ApsClientId;
-    string? IApsTokenProvider.GetClientSecret() => null; // PKCE flow doesn't use client secret
+    string? IApsTokenProvider.GetClientSecret() => this.ApsClientSecret;
 }

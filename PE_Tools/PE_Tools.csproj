@@ -70,22 +70,30 @@
         <EmbeddedResource Include="Resources\Yellow_32.png"/>
     </ItemGroup>
     <ItemGroup>
+        <PackageReference Include="System.Text.Json" Version="9.0.0" />
         <Reference Include="System.Windows.Forms"/>
-        <PackageReference Include="Autodesk.Authentication" Version="2.0.0"/>
-        <!-- <PackageReference Include="Autodesk.DataManagement" Version="2.1.2"/> -->
         <PackageReference Include="JsonSchema.Net" Version="7.4.0"/>
         <PackageReference Include="JsonSchema.Net.Generation" Version="5.1.0"/>
         <PackageReference Include="ricaun.Revit.Github" Version="0.4.1"/>
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2"/>
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
         <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*"/>
         <PackageReference Include="Polyfill" Version="4.0.0"/>
         <PackageReference Include="System.Drawing.Common" Version="8.0.3" IncludeAssets="build; compile" PrivateAssets="All"/>
         <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" PrivateAssets="All"/>
     </ItemGroup>
-    <!-- Allow for `dynamic` keyword in C# for net48 -->
+
+    <!-- Packages for .NET Framework 4.8 (Revit 2023/2024) -->
     <ItemGroup Condition="$(TargetFramework.StartsWith('net48'))">
+        <!-- Allow for `dynamic` keyword in C# for net48 -->
         <Reference Include="Microsoft.CSharp"/>
     </ItemGroup>
+
+    <!-- Packages for .NET 8.0 (Revit 2025/2026) -->
+    <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
+        <PackageReference Include="Autodesk.Authentication" Version="2.0.1" />
+        <PackageReference Include="Autodesk.DataManagement" Version="2.1.2"/>
+    </ItemGroup>
+
     <PropertyGroup>
         <PostBuildEvent>
             powershell.exe -ExecutionPolicy Bypass -File "$(MSBuildProjectDirectory)\PostBuildActions.ps1" -Configuration "$(Configuration)" -RevitVersion "$(RevitVersion)" -MSBuildProjectDirectory "$(MSBuildProjectDirectory)" -AppData "$(AppData)"
