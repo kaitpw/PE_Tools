@@ -5,12 +5,13 @@ using System.Net.Http.Headers;
 namespace PeServices;
 
 public class ParametersService {
+    const string BaseUrl = "https://developer.api.autodesk.com/";
     public async Task<IEnumerable<dynamic>> GetHubs(string token) {
         var hubs = new List<Tuple<string, string>>();
         var client = new HttpClient();
         //Filter by extension type. hubs:autodesk.bim360:Account (BIM 360 Docs accounts)
         var request = new HttpRequestMessage(HttpMethod.Get,
-            "https://developer.api.autodesk.com/project/v1/hubs?filter[extension.type]=hubs:autodesk.bim360:Account");
+            $"{BaseUrl}project/v1/hubs?filter[extension.type]=hubs:autodesk.bim360:Account");
         request.Headers.Add("Authorization", "Bearer " + token);
         var response = await client.SendAsync(request);
         if (response.IsSuccessStatusCode) {
@@ -27,7 +28,7 @@ public class ParametersService {
         var accounts = new List<Tuple<string, string>>();
         var client = new HttpClient();
         var request = new HttpRequestMessage(HttpMethod.Get,
-            "https://developer.api.autodesk.com/project/v1/hubs?filter[name]-contains=" + hubname);
+            $"{BaseUrl}project/v1/hubs?filter[name]-contains=" + hubname);
         request.Headers.Add("Authorization", "Bearer " + token);
         var response = await client.SendAsync(request);
         if (response.IsSuccessStatusCode) {
@@ -43,7 +44,7 @@ public class ParametersService {
     public async Task<IEnumerable<dynamic>> GetGroups(string hubId, string token) {
         var groups = new List<dynamic>();
         var accountId = hubId.Replace("b.", "");
-        var client = new HttpClient { BaseAddress = new Uri("https://developer.api.autodesk.com/") };
+        var client = new HttpClient { BaseAddress = new Uri($"{BaseUrl}") };
         client.DefaultRequestHeaders.Accept.Clear();
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -63,7 +64,7 @@ public class ParametersService {
         var accountId = hubId.Replace("b.", "");
         var gpId = groupId.Replace("b.", "").Replace("-", "");
 
-        var client = new HttpClient { BaseAddress = new Uri("https://developer.api.autodesk.com/") };
+        var client = new HttpClient { BaseAddress = new Uri($"{BaseUrl}") };
         client.DefaultRequestHeaders.Accept.Clear();
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -91,7 +92,7 @@ public class ParametersService {
         try {
             var client = new HttpClient();
             var request = new HttpRequestMessage(HttpMethod.Get,
-                "https://developer.api.autodesk.com/parameters/v1/accounts/" + accId + "/groups/" + gpId +
+                $"{BaseUrl}parameters/v1/accounts/" + accId + "/groups/" + gpId +
                 "/collections/" + colId + "/parameters");
             request.Headers.Add("Authorization", "Bearer " + token);
             var response = await client.SendAsync(request);
@@ -128,8 +129,8 @@ public class ParametersService {
             }
 
             return parameters;
-        } catch (Exception ex) {
-            throw ex;
+        } catch (Exception) {
+            throw;
         }
     }
 
@@ -150,7 +151,7 @@ public class ParametersService {
 
         var client = new HttpClient();
         var request = new HttpRequestMessage(HttpMethod.Post,
-            "https://developer.api.autodesk.com/parameters/v1/accounts/" + accId + "/groups/" + gpId + "/collections/" +
+            $"{BaseUrl}parameters/v1/accounts/" + accId + "/groups/" + gpId + "/collections/" +
             colId + "/parameters");
 
         request.Headers.Add("Authorization", "Bearer " + token);

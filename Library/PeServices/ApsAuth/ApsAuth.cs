@@ -1,21 +1,8 @@
 #nullable enable
 
+using Json.Schema.Generation;
+
 namespace PeServices;
-
-/// <summary>
-///     Interface for providing APS authentication credentials
-/// </summary>
-public interface IApsTokenProvider {
-    /// <summary>
-    ///     Gets the client ID for APS authentication
-    /// </summary>
-    string GetClientId();
-
-    /// <summary>
-    ///     Gets the client secret for APS authentication if available
-    /// </summary>
-    string? GetClientSecret();
-}
 
 /// <summary>
 ///     Autodesk Platform Services Authentication Handler.
@@ -70,4 +57,42 @@ public class ApsAuth {
             throw ex.InnerException ?? ex;
         }
     }
+}
+
+/// <summary>
+///     Interface for providing APS authentication credentials
+/// </summary>
+public interface IApsTokenProvider {
+    string GetClientId();
+    string? GetClientSecret();
+}
+
+/// <summary>
+///     Settings for PKCE OAuth flow
+/// </summary>
+public class ApsAuthSettingsPKCE : SettingsManager.BaseSettings, IApsTokenProvider {
+    [Description(
+        "The client id of the Autodesk Platform Services app. If none exists yet, make a 'Desktop App' at https://aps.autodesk.com/hubs/@personal/applications/")]
+    [Required]
+    public string ApsClientId { get; set; } = "";
+
+    string IApsTokenProvider.GetClientId() => this.ApsClientId;
+    string? IApsTokenProvider.GetClientSecret() => null; // PKCE flow doesn't use client secret
+}
+
+/// <summary>
+///     Settings for normal OAuth flow
+/// </summary>
+public class ApsAuthSettingsNormal : SettingsManager.BaseSettings, IApsTokenProvider {
+    [Description(
+        "The client id of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
+    [Required]
+    public string ApsClientId { get; set; } = "";
+
+    [Description(
+        "The client secret of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
+    public string ApsClientSecret { get; set; } = "";
+
+    string IApsTokenProvider.GetClientId() => this.ApsClientId;
+    string? IApsTokenProvider.GetClientSecret() => this.ApsClientSecret;
 }
