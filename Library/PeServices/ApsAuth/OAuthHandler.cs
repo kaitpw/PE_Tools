@@ -4,50 +4,50 @@ using Nice3point.Revit.Extensions;
 using PeRevitUI;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PeServices;
 
 /// <summary>
 ///     Defines the <see cref="OAuthHandler" />
 /// </summary>
-internal class OAuthHandler {
+/// <remarks>
+///     Uses a TCP listener rather than HTTP in order to sidestep need for admin privileges. Furthermore
+/// </remarks>
+internal static class OAuthHandler {
     /// <summary> A delegate to hold the callback function for when 3-legged OAuth completes </summary>
-    public delegate void OAuthCallbackDelegate(ThreeLeggedToken? bearer);
+    public delegate void CallbackDelegate(ThreeLeggedToken bearer);
 
     private const int Port = 8080;
-
-    private static string? _clientId;
-    private static string? _clientSecret;
     private static readonly string ForgeCallback = $"http://localhost:{Port}/api/aps/callback/oauth";
-
-    public static readonly AuthenticationClient AuthenticationClient = new();
-
-    /// <summary> TCP listener for the OAuth callback to the local machine. Avoid admin privileges required by http listeners</summary>
+    private static readonly AuthenticationClient AuthenticationClient = new();
     private static readonly TcpListener TcpListener = new(IPAddress.Loopback, Port);
+    private static readonly RandomNumberGenerator Rng = RandomNumberGenerator.Create();
 
     private static readonly List<Scopes> OAuthClientScopes = [
         Scopes.AccountRead, Scopes.DataCreate, Scopes.DataWrite, Scopes.DataRead, Scopes.BucketRead
     ];
 
-    public OAuthHandler(string clientId, string clientSecret) {
-        _clientId = clientId;
-        _clientSecret = clientSecret;
-    }
+    public static void Invoke3LeggedOAuth(string clientId, string clientSecret, CallbackDelegate callback) {
+        var oAuthData = new OAuthData(clientId, clientSecret, GenerateRandomString());
 
-    public static void Invoke3LeggedOAuth(OAuthCallbackDelegate callback) => _3leggedAsync(callback);
+        async Task<ThreeLeggedToken> GetToken(string code) {
+            return await Get3LeggedToken(oAuthData, code);
+        }
+
+        _Async3LegOAuth(GenerateOAuthUrl(oAuthData), GetToken, callback);
+    }
 
     /// <summary>
     ///     Generate a URL page that asks for permissions for the specified Scopes, and call our default web browser
     /// </summary>
-    private static void _3leggedAsync(OAuthCallbackDelegate cb) {
+    private static void _Async3LegOAuth(string oAuthUrl, Get3LegTokenDelegate getToken, CallbackDelegate cb) {
         try {
             TcpListener.Start();
-            var oauthUrl = AuthenticationClient.Authorize(_clientId, ResponseType.Code, ForgeCallback,
-                OAuthClientScopes);
-            _ = Process.Start(new ProcessStartInfo(oauthUrl) { UseShellExecute = true });
-            // Wait for the callback on background thread to prevent UI freeze
-            _ = Task.Run(() => _3leggedAsyncWaitForCode(cb));
+            _ = Process.Start(new ProcessStartInfo(oAuthUrl) { UseShellExecute = true });
+            _ = Task.Run(() => _AsyncWaitFor3LegOAuth(getToken, cb));
         } catch (Exception ex) {
             new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error starting TcpListener: {ex.Message}").Show();
             cb?.Invoke(null);
@@ -58,7 +58,7 @@ internal class OAuthHandler {
     /// <summary>
     ///     The _3leggedAsyncWaitForCode.
     /// </summary>
-    private static async void _3leggedAsyncWaitForCode(OAuthCallbackDelegate callback) {
+    private static async void _AsyncWaitFor3LegOAuth(Get3LegTokenDelegate getToken, CallbackDelegate callback) {
         try {
             var client = await TcpListener.AcceptTcpClientAsync();
             var request = ReadString(client);
@@ -71,9 +71,7 @@ internal class OAuthHandler {
 
             // Now request the final access_token
             if (!string.IsNullOrEmpty(code)) {
-                var bearer =
-                    await AuthenticationClient.GetThreeLeggedTokenAsync(_clientId, code, ForgeCallback,
-                        _clientSecret);
+                var bearer = await getToken(code);
                 callback.Invoke(bearer);
             } else
                 callback.Invoke(null);
@@ -84,6 +82,25 @@ internal class OAuthHandler {
             TcpListener?.Stop();
         }
     }
+
+    private static string GenerateOAuthUrl(OAuthData d) =>
+        d.IsNormalFlow()
+            ? AuthenticationClient.Authorize(d.ClientId, ResponseType.Code, ForgeCallback, OAuthClientScopes)
+            : d.IsPkceFlow()
+                ? AuthenticationClient.Authorize(d.ClientId, ResponseType.Code, ForgeCallback, OAuthClientScopes,
+                    codeChallenge: GenerateCodeChallenge(d.CodeVerifier), codeChallengeMethod: "S256",
+                    nonce: GenerateRandomString())
+                : null;
+
+    private static async Task<ThreeLeggedToken> Get3LeggedToken(OAuthData d, string code) =>
+        d.IsNormalFlow()
+            ? await AuthenticationClient.GetThreeLeggedTokenAsync(d.ClientId, code, ForgeCallback,
+                d.ClientSecret)
+            : d.IsPkceFlow()
+                ? await AuthenticationClient.GetThreeLeggedTokenAsync(d.ClientId, code, ForgeCallback,
+                    codeVerifier: d.CodeVerifier)
+                : null;
+
 
     private static string ReadString(TcpClient client) {
         var readBuffer = new byte[client.ReceiveBufferSize];
@@ -124,57 +141,107 @@ internal class OAuthHandler {
         var query = urlPart[(queryStart + 1)..];
         var parameters = query.Split('&');
         return (from param in parameters
-                select param.Split('=')
+            select param.Split('=')
             into kv
-                where kv.Length == 2 && kv[0] == "code"
-                select kv[1]).FirstOrDefault();
+            where kv.Length == 2 && kv[0] == "code"
+            select kv[1]).FirstOrDefault();
     }
+
+
+    private static string GenerateRandomString() {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+        var bytes = new byte[128];
+        Rng.GetBytes(bytes);
+        return new string(bytes.Select(b => chars[b % chars.Length]).ToArray());
+    }
+
+    private static string GenerateCodeChallenge(string codeVerifier) {
+        var sha256 = SHA256.Create();
+        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(codeVerifier));
+        var b64Hash = Convert.ToBase64String(hash);
+        var code = Regex.Replace(b64Hash, "\\+", "-");
+        code = Regex.Replace(code, "\\/", "_");
+        code = Regex.Replace(code, "=+$", "");
+        return code;
+    }
+
+    private delegate Task<ThreeLeggedToken> Get3LegTokenDelegate(string code);
+}
+
+internal class OAuthData {
+    public readonly string ClientId;
+    public readonly string ClientSecret;
+    public readonly string CodeVerifier;
+
+    public OAuthData(string clientId, string clientSecret, string codeVerifier) {
+        var hasClientSecret = !string.IsNullOrEmpty(clientSecret);
+        var hasCodeVerifier = !string.IsNullOrEmpty(codeVerifier);
+
+        if (string.IsNullOrEmpty(clientId)) throw new Exception("ClientId is not set.");
+        this.ClientId = clientId;
+
+        if (hasClientSecret && !hasCodeVerifier) {
+            this.ClientSecret = clientSecret;
+            this.CodeVerifier = null;
+        } else if (!hasClientSecret && hasCodeVerifier) {
+            this.ClientSecret = null;
+            this.CodeVerifier = codeVerifier;
+        } else {
+            var emptyValue = string.Empty;
+            if (!hasClientSecret) emptyValue = "ClientSecret";
+            if (!hasCodeVerifier) emptyValue = "CodeVerifier";
+            throw new Exception($"{emptyValue} is not set.");
+        }
+    }
+
+    public bool IsNormalFlow() => this.ClientSecret != null && this.CodeVerifier == null;
+    public bool IsPkceFlow() => this.ClientSecret == null && this.CodeVerifier != null;
 }
 
 internal static class CallbackPages {
-    public static string SuccessPage = """
-                           <html>
-                             <head>
-                               <title>Login Status</title>
-                               <style>
-                                 body {
-                                   font-family: Arial, Helvetica, sans-serif;
-                                   display: flex;
-                                   flex-direction: column;
-                                   justify-content: center;
-                                   align-items: center;
-                                   min-height: 100vh; /* Ensures the body takes at least the full viewport height */
-                                   margin: 0; /* Remove default body margin */
-                                 }
-                               </style>
-                             </head>
-                             <body>
-                               <h2>Login Success</h2>
-                               <p>You can now close this window!</p>
-                             </body>
-                           </html>
-                           """;
+    public const string SuccessPage = """
+                                      <html>
+                                        <head>
+                                          <title>Login Status</title>
+                                          <style>
+                                            body {
+                                              font-family: Arial, Helvetica, sans-serif;
+                                              display: flex;
+                                              flex-direction: column;
+                                              justify-content: center;
+                                              align-items: center;
+                                              min-height: 100vh; /* Ensures the body takes at least the full viewport height */
+                                              margin: 0; /* Remove default body margin */
+                                            }
+                                          </style>
+                                        </head>
+                                        <body>
+                                          <h2>Login Success</h2>
+                                          <p>You can now close this window!</p>
+                                        </body>
+                                      </html>
+                                      """;
 
-    public static string ErrorPage = """
-                           <html>
-                             <head>
-                               <title>Login Status</title>
-                               <style>
-                                 body {
-                                   font-family: Arial, Helvetica, sans-serif;
-                                   display: flex;
-                                   flex-direction: column;
-                                   justify-content: center;
-                                   align-items: center;
-                                   min-height: 100vh; /* Ensures the body takes at least the full viewport height */
-                                   margin: 0; /* Remove default body margin */
-                                 }
-                               </style>
-                             </head>
-                             <body>
-                               <h2>Login Failed</h2>
-                               <p>Please try again.</p>
-                             </body>
-                           </html>
-                           """;
+    public const string ErrorPage = """
+                                    <html>
+                                      <head>
+                                        <title>Login Status</title>
+                                        <style>
+                                          body {
+                                            font-family: Arial, Helvetica, sans-serif;
+                                            display: flex;
+                                            flex-direction: column;
+                                            justify-content: center;
+                                            align-items: center;
+                                            min-height: 100vh; /* Ensures the body takes at least the full viewport height */
+                                            margin: 0; /* Remove default body margin */
+                                          }
+                                        </style>
+                                      </head>
+                                      <body>
+                                        <h2>Login Failed</h2>
+                                        <p>Please try again.</p>
+                                      </body>
+                                    </html>
+                                    """;
 }

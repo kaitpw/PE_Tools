@@ -18,38 +18,24 @@ public class ApsAuth {
     private static string? _accessToken;
 
     private static DateTime _expiresAt;
-    private static string _clientId;
-    private static string _clientSecret;
 
-    private ApsAuth(string clientId, string clientSecret) =>
-        _ = new OAuthHandler(clientId, clientSecret);
+    public static Result<string> Login(string clientId, string clientSecret) {
+        if (string.IsNullOrEmpty(clientId))
+            return new Exception("ClientId is not set");
 
-    public static Result<ApsAuth> Login(string clientId, string clientSecret) {
-        try {
-            var token = string.Empty;
-            if (string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
-                return new Exception("ClientId or ClientSecret is not set");
-            if (clientId != _clientId || clientSecret != _clientSecret) {
-                _accessToken = null;
-                _clientId = clientId;
-                _clientSecret = clientSecret;
-            }
+        if (_accessToken == null || DateTime.UtcNow >= _expiresAt)
+            RefreshToken(clientId, clientSecret);
 
-            var auth = new ApsAuth(clientId, clientSecret);
-            _ = auth.GetToken();
-            return auth;
-        } catch (Exception ex) {
-            return ex;
-        }
+        return _accessToken;
     }
 
-    private void RefreshToken() {
+    private static void RefreshToken(string clientId, string clientSecret) {
         Exception asyncException = null;
         var stopWaitHandle = new AutoResetEvent(false);
 
         // Invoke3LeggedOAuth, and therefor its callback, run on a background thread.
         // Thus, the stopWaitHandle (for main-thread blocking) and exception capture are necessary 
-        OAuthHandler.Invoke3LeggedOAuth(bearer => {
+        OAuthHandler.Invoke3LeggedOAuth(clientId, clientSecret, bearer => {
             try {
                 if (bearer == null) throw new Exception("Authentication was denied or failed. Please try again.");
                 _accessToken = bearer.AccessToken;
@@ -66,11 +52,5 @@ public class ApsAuth {
         // Now we're back on the main thread, we can safely throw
         if (asyncException != null)
             throw asyncException;
-    }
-
-    public string GetToken() {
-        if (_accessToken == null || DateTime.UtcNow >= _expiresAt)
-            this.RefreshToken();
-        return _accessToken!;
     }
 }
