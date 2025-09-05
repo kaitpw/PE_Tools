@@ -14,7 +14,7 @@ public class CmdApsAuth : IExternalCommand {
         try {
             var storage = new Storage("ApsAuth");
             var settings = storage.Settings().Json<ApsAuthSettings>().Read();
-            var (token, tokenErr) = ApsAuth.Login(settings.ApsClientId, settings.ApsClientSecret);
+            var (token, tokenErr) = ApsAuth.GetToken(settings.ApsClientId, settings.ApsClientSecret);
             if (tokenErr is not null) throw tokenErr;
             new Balloon().Add(Balloon.Log.INFO, token).Show();
             return Result.Succeeded;
@@ -26,11 +26,11 @@ public class CmdApsAuth : IExternalCommand {
 
     internal static PushButtonData GetButtonData() =>
         new ButtonDataClass(
-            "APS Auth",
+            "Test APS Auth",
             MethodBase.GetCurrentMethod().DeclaringType?.FullName,
             Resources.Blue_32,
             Resources.Blue_16,
-            "Click this button to get an access token from Autodesk Platform Services"
+            "Click this button to get an access token from Autodesk Platform Services. This is primarily for testing purposes, but running it will not hurt anything."
         ).Data;
 }
 
@@ -42,6 +42,5 @@ public class ApsAuthSettings : SettingsManager.BaseSettings {
 
     [Description(
         "The client secret of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
-    [Required]
     public string ApsClientSecret { get; set; } = "";
 }

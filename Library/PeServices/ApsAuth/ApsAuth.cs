@@ -19,7 +19,7 @@ public class ApsAuth {
 
     private static DateTime _expiresAt;
 
-    public static Result<string> Login(string clientId, string clientSecret) {
+    public static Result<string> GetToken(string clientId, string clientSecret) {
         if (string.IsNullOrEmpty(clientId))
             return new Exception("ClientId is not set");
 
