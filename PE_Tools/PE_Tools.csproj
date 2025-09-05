@@ -70,7 +70,9 @@
         <EmbeddedResource Include="Resources\Yellow_32.png"/>
     </ItemGroup>
     <ItemGroup>
-        <Reference Include="System.Windows.Forms"/>
+        <!-- <PackageReference Include="System.Text.Json" Version="9.0.0" /> -->
+        <!-- <PackageReference Include="Adsk.Platform.DataManagement" Version="0.1.16"/> -->
+        <PackageReference Include="System.Windows.Forms"/>
         <PackageReference Include="JsonSchema.Net" Version="7.4.0"/>
         <PackageReference Include="JsonSchema.Net.Generation" Version="5.1.0"/>
         <PackageReference Include="ricaun.Revit.Github" Version="0.4.1"/>
@@ -89,10 +91,7 @@
 
     <!-- Packages for .NET 8.0 (Revit 2025/2026) -->
     <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
-        <PackageReference Include="Autodesk.Authentication" Version="2.0.1" />
-        <!-- <PackageReference Include="Autodesk.Forge" Version="1.9.9" /> -->
-
-        <PackageReference Include="Autodesk.DataManagement" Version="2.1.2" />
+        <PackageReference Include="Autodesk.Authentication" Version="2.0.0"/>
     </ItemGroup>
 
     <PropertyGroup>
