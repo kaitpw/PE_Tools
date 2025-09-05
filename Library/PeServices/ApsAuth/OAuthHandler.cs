@@ -31,7 +31,8 @@ internal static class OAuthHandler {
     ];
 
     public static void Invoke3LeggedOAuth(string clientId, string clientSecret, CallbackDelegate callback) {
-        var oAuthData = new OAuthData(clientId, clientSecret, GenerateRandomString());
+        var oAuthData = new OAuthData(clientId, clientSecret,
+            string.IsNullOrEmpty(clientSecret) ? GenerateRandomString() : null);
 
         async Task<ThreeLeggedToken> GetToken(string code) {
             return await Get3LeggedToken(oAuthData, code);
@@ -43,43 +44,56 @@ internal static class OAuthHandler {
     /// <summary>
     ///     Generate a URL page that asks for permissions for the specified Scopes, and call our default web browser
     /// </summary>
+    private class CallbackHandler : IExternalEventHandler {
+        private readonly CallbackDelegate _cb;
+        private readonly ThreeLeggedToken _bearer;
+        private readonly Exception _error;
+
+        public CallbackHandler(CallbackDelegate cb, ThreeLeggedToken bearer = null, Exception error = null) {
+            _cb = cb;
+            _bearer = bearer;
+            _error = error;
+        }
+
+        public void Execute(UIApplication app) {
+            if (_error != null)
+                new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {_error.Message}").Show();
+            _cb?.Invoke(_bearer);
+        }
+
+        public string GetName() => "APS OAuth Callback";
+    }
+
     private static void _Async3LegOAuth(string oAuthUrl, Get3LegTokenDelegate getToken, CallbackDelegate cb) {
         try {
+            TcpListener.Stop(); // Ensure any previous listener is stopped
             TcpListener.Start();
             _ = Process.Start(new ProcessStartInfo(oAuthUrl) { UseShellExecute = true });
-            _ = Task.Run(() => _AsyncWaitFor3LegOAuth(getToken, cb));
+            _ = Task.Run(async () => {
+                try {
+                    var client = await TcpListener.AcceptTcpClientAsync();
+                    var request = ReadString(client);
+                    var code = ExtractCodeFromRequest(request);
+                    
+                    await WriteSuccessStringAsync(client, code.IsNullOrEmpty() ? CallbackPages.ErrorPage : CallbackPages.SuccessPage);
+                    client.Dispose();
+                    
+                    if (!string.IsNullOrEmpty(code)) {
+                        var bearer = await getToken(code);
+                        cb?.Invoke(bearer);
+                    } else {
+                        cb?.Invoke(null);
+                    }
+                } catch (Exception ex) {
+                    new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {ex.Message}").Show();
+                    cb?.Invoke(null);
+                } finally {
+                    TcpListener?.Stop();
+                }
+            });
         } catch (Exception ex) {
             new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error starting TcpListener: {ex.Message}").Show();
             cb?.Invoke(null);
-        }
-    }
-
-
-    /// <summary>
-    ///     The _3leggedAsyncWaitForCode.
-    /// </summary>
-    private static async void _AsyncWaitFor3LegOAuth(Get3LegTokenDelegate getToken, CallbackDelegate callback) {
-        try {
-            var client = await TcpListener.AcceptTcpClientAsync();
-            var request = ReadString(client);
-            var code = ExtractCodeFromRequest(request);
-            if (code.IsNullOrEmpty())
-                await WriteSuccessStringAsync(client, CallbackPages.ErrorPage);
-            else
-                await WriteSuccessStringAsync(client, CallbackPages.SuccessPage);
-            client.Dispose();
-
-            // Now request the final access_token
-            if (!string.IsNullOrEmpty(code)) {
-                var bearer = await getToken(code);
-                callback.Invoke(bearer);
-            } else
-                callback.Invoke(null);
-        } catch (Exception ex) {
-            new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error accepting request: {ex.Message}").Show();
-            callback.Invoke(null);
-        } finally {
-            TcpListener?.Stop();
         }
     }
 

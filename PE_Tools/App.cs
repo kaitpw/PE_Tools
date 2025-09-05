@@ -24,7 +24,8 @@ internal class App : IExternalApplication {
 
         // 3. Create button data instances
         var cmdUpdate = CmdUpdate.GetButtonData();
-        var cmdApsAuth = CmdApsAuth.GetButtonData();
+        var cmdApsAuthNormal = CmdApsAuthNormal.GetButtonData();
+        var cmdApsAuthPKCE = CmdApsAuthPKCE.GetButtonData();
         var cmdMep2040 = CmdMep2040.GetButtonData();
         var cmdCommandPalette = CmdCommandPalette.GetButtonData();
         var cmdTapMaker = CmdTapMaker.GetButtonData();
@@ -32,7 +33,8 @@ internal class App : IExternalApplication {
 
         // 4. Add buttons to panel
         _ = panelManage.AddItem(cmdUpdate) as PushButton;
-        _ = panelManage.AddItem(cmdApsAuth) as PushButton;
+        _ = panelManage.AddItem(cmdApsAuthNormal) as PushButton;
+        _ = panelManage.AddItem(cmdApsAuthPKCE) as PushButton;
         _ = panelTools.AddItem(cmdMep2040) as PushButton;
         _ = panelTools.AddItem(cmdCommandPalette) as PushButton;
         _ = panelTools.AddItem(cmdTapMaker) as PushButton;

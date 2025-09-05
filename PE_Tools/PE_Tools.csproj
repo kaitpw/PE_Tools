@@ -72,6 +72,7 @@
     <ItemGroup>
         <Reference Include="System.Windows.Forms"/>
         <PackageReference Include="Autodesk.Authentication" Version="2.0.0"/>
+        <!-- <PackageReference Include="Autodesk.DataManagement" Version="2.1.2"/> -->
         <PackageReference Include="JsonSchema.Net" Version="7.4.0"/>
         <PackageReference Include="JsonSchema.Net.Generation" Version="5.1.0"/>
         <PackageReference Include="ricaun.Revit.Github" Version="0.4.1"/>

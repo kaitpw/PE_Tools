@@ -1,56 +1,75 @@
+#nullable enable
+
 namespace PeServices;
+
+/// <summary>
+///     Interface for providing APS authentication credentials
+/// </summary>
+public interface IApsTokenProvider {
+    /// <summary>
+    ///     Gets the client ID for APS authentication
+    /// </summary>
+    string GetClientId();
+
+    /// <summary>
+    ///     Gets the client secret for APS authentication if available
+    /// </summary>
+    string? GetClientSecret();
+}
 
 /// <summary>
 ///     Autodesk Platform Services Authentication Handler.
 /// </summary>
-/// <remarks>
-///     <c>GetToken()</c> returns the token for the last <c>ApsAuth.Login()</c> that was called.
-/// </remarks>
-/// <remarks>
-///     TODO: In the far future, get this to be instance-based to handle multiple clientId and clientSecrets
-///     TODO: Test if the check for changed client id/secret actually causes reinvocation of auth flow
-/// </remarks>
 public class ApsAuth {
+    private static readonly Dictionary<string, (string Token, DateTime ExpiresAt)> TokenCache = new();
+    private static readonly object CacheLock = new();
+    private readonly object _lock = new();
+    private readonly IApsTokenProvider _tokenProvider;
+
     /// <summary>
-    ///     NOTE: if this is not static, and Login() is called in an addin file (e.g. CmdApsAuth), the state will not be
-    ///     persisted because calling login will make a new ApsAuth instance internally which resets _accessToken
+    ///     Creates a new instance of ApsAuth using the provided token provider
     /// </summary>
-    private static string? _accessToken;
+    /// <param name="tokenProvider">Provider for APS authentication credentials</param>
+    public ApsAuth(IApsTokenProvider tokenProvider) => this._tokenProvider = tokenProvider;
 
-    private static DateTime _expiresAt;
-
-    public static Result<string> GetToken(string clientId, string clientSecret) {
+    /// <summary>
+    ///     Gets a valid access token, refreshing if necessary
+    /// </summary>
+    public Result<string> GetToken() {
+        var clientId = this._tokenProvider.GetClientId();
         if (string.IsNullOrEmpty(clientId))
             return new Exception("ClientId is not set");
 
-        if (_accessToken == null || DateTime.UtcNow >= _expiresAt)
-            RefreshToken(clientId, clientSecret);
+        lock (CacheLock) {
+            if (TokenCache.TryGetValue(clientId, out var cached) && DateTime.UtcNow < cached.ExpiresAt)
+                return cached.Token;
+        }
 
-        return _accessToken;
-    }
+        var clientSecret = this._tokenProvider.GetClientSecret();
+        var tcs = new TaskCompletionSource<Result<string>>();
 
-    private static void RefreshToken(string clientId, string clientSecret) {
-        Exception asyncException = null;
-        var stopWaitHandle = new AutoResetEvent(false);
-
-        // Invoke3LeggedOAuth, and therefor its callback, run on a background thread.
-        // Thus, the stopWaitHandle (for main-thread blocking) and exception capture are necessary 
         OAuthHandler.Invoke3LeggedOAuth(clientId, clientSecret, bearer => {
             try {
-                if (bearer == null) throw new Exception("Authentication was denied or failed. Please try again.");
-                _accessToken = bearer.AccessToken;
-                _expiresAt = DateTime.UtcNow.AddSeconds(double.Parse(bearer.ExpiresIn.ToString()));
+                if (bearer == null) 
+                    tcs.SetResult(new Exception("Authentication was denied or failed. Please try again."));
+                else if (bearer.ExpiresIn == null)
+                    tcs.SetResult(new Exception("Token expiration time not provided"));
+                else {
+                    var expiresAt = DateTime.UtcNow.AddSeconds(bearer.ExpiresIn.Value);
+                    lock (CacheLock) {
+                        TokenCache[clientId] = (bearer.AccessToken, expiresAt);
+                    }
+                    tcs.SetResult(bearer.AccessToken);
+                }
             } catch (Exception ex) {
-                asyncException = ex;
-            } finally {
-                _ = stopWaitHandle.Set();
+                tcs.SetResult(new Exception(ex.Message));
             }
         });
 
-        _ = stopWaitHandle.WaitOne(); // Block main thread until async call finishes
-
-        // Now we're back on the main thread, we can safely throw
-        if (asyncException != null)
-            throw asyncException;
+        try {
+            return tcs.Task.Result;
+        } catch (AggregateException ex) {
+            throw ex.InnerException ?? ex;
+        }
     }
 }

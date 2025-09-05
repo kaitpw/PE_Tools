@@ -6,15 +6,19 @@ using PeServices;
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdApsAuth : IExternalCommand {
+public class CmdApsAuthNormal : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
         ElementSet elements) {
         try {
-            var storage = new Storage("ApsAuth");
-            var settings = storage.Settings().Json<ApsAuthSettings>().Read();
-            var (token, tokenErr) = ApsAuth.GetToken(settings.ApsClientId, settings.ApsClientSecret);
+            var storage = new Storage("ApsAuthNormal");
+            var settings = storage.Settings().Json<ApsAuthSettingsNormal>().Read();
+            // Make sure that we're testing normal flow
+            if (string.IsNullOrEmpty(settings.ApsClientSecret))
+                throw new Exception("Add Client secret. This addin is for testing normal flow, not PKCE flow.");
+            var auth = new ApsAuth(settings);
+            var (token, tokenErr) = auth.GetToken();
             if (tokenErr is not null) throw tokenErr;
             new Balloon().Add(Balloon.Log.INFO, token).Show();
             return Result.Succeeded;
@@ -26,7 +30,7 @@ public class CmdApsAuth : IExternalCommand {
 
     internal static PushButtonData GetButtonData() =>
         new ButtonDataClass(
-            "Test APS Auth",
+            "APS Auth (Normal)",
             MethodBase.GetCurrentMethod().DeclaringType?.FullName,
             Resources.Blue_32,
             Resources.Blue_16,
@@ -34,7 +38,9 @@ public class CmdApsAuth : IExternalCommand {
         ).Data;
 }
 
-public class ApsAuthSettings : SettingsManager.BaseSettings {
+#nullable enable
+
+public class ApsAuthSettingsNormal : SettingsManager.BaseSettings, IApsTokenProvider {
     [Description(
         "The client id of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
     [Required]
@@ -43,4 +49,7 @@ public class ApsAuthSettings : SettingsManager.BaseSettings {
     [Description(
         "The client secret of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
     public string ApsClientSecret { get; set; } = "";
+
+    string IApsTokenProvider.GetClientId() => this.ApsClientId;
+    string? IApsTokenProvider.GetClientSecret() => this.ApsClientSecret;
 }
