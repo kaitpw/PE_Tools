@@ -36,6 +36,6 @@ public class CmdApsAuthNormal : IExternalCommand {
 }
 
 public class ApsAuthNormal : SettingsManager.BaseSettings, OAuth.IApsTokenProvider {
-    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
-    public string GetClientSecret() => null;
+    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsWebClientId1;
+    public string GetClientSecret() => Storage.GlobalSettings().Json().Read().ApsWebClientSecret1;
 }
