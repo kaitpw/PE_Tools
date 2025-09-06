@@ -72,6 +72,7 @@
     <ItemGroup>
         <!-- <PackageReference Include="System.Text.Json" Version="9.0.0" /> -->
         <!-- <PackageReference Include="Adsk.Platform.DataManagement" Version="0.1.16"/> -->
+        <PackageReference Include="Revit.Async" Version="2.1.1" />
         <PackageReference Include="System.Windows.Forms"/>
         <PackageReference Include="JsonSchema.Net" Version="7.4.0"/>
         <PackageReference Include="JsonSchema.Net.Generation" Version="5.1.0"/>

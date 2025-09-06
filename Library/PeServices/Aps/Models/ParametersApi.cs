@@ -5,62 +5,62 @@ namespace PeServices.Aps.Models;
 
 public class ParametersApi {
     public class Groups {
-        [UsedImplicitly] public object Pagination { get; }
-        [UsedImplicitly] public List<GroupResults> Results { get; }
+        [UsedImplicitly] public object Pagination { get; init;}
+        [UsedImplicitly] public List<GroupResults> Results { get; init;}
 
         public class GroupResults {
-            [UsedImplicitly] public string Id { get; }
-            [UsedImplicitly] public string Title { get; }
-            [UsedImplicitly] public string Description { get; }
-            [UsedImplicitly] public string CreatedBy { get; } // make date?
-            [UsedImplicitly] public string CreatedAt { get; } // make date?
-            [UsedImplicitly] public string UpdatedBy { get; }
-            [UsedImplicitly] public string UpdatedAt { get; } // make date?
+            [UsedImplicitly] public string Id { get; init;}
+            [UsedImplicitly] public string Title { get; init;}
+            [UsedImplicitly] public string Description { get; init;}
+            [UsedImplicitly] public string CreatedBy { get; init;} // make date?
+            [UsedImplicitly] public string CreatedAt { get; init;} // make date?
+            [UsedImplicitly] public string UpdatedBy { get; init;}
+            [UsedImplicitly] public string UpdatedAt { get; init;} // make date?
         }
     }
 
     public class Collections {
-        [UsedImplicitly] public object Pagination { get; }
+        [UsedImplicitly] public object Pagination { get; init;}
 
-        [UsedImplicitly] public List<CollectionResults> Results { get; }
+        [UsedImplicitly] public List<CollectionResults> Results { get; init;}
 
         public class CollectionResults {
-            [UsedImplicitly] public string Id { get; }
-            [UsedImplicitly] public string Title { get; }
-            [UsedImplicitly] public string Description { get; }
-            [UsedImplicitly] public FieldId Group { get; }
-            [UsedImplicitly] public FieldId Account { get; }
-            [UsedImplicitly] public bool IsArchived { get; }
-            [UsedImplicitly] public string CreatedBy { get; }
-            [UsedImplicitly] public string CreatedAt { get; }
-            [UsedImplicitly] public string UpdatedBy { get; }
-            [UsedImplicitly] public string UpdatedAt { get; }
+            [UsedImplicitly] public string Id { get; init;}
+            [UsedImplicitly] public string Title { get; init;}
+            [UsedImplicitly] public string Description { get; init;}
+            [UsedImplicitly] public FieldId Group { get; init;}
+            [UsedImplicitly] public FieldId Account { get; init;}
+            [UsedImplicitly] public bool IsArchived { get; init;}
+            [UsedImplicitly] public string CreatedBy { get; init;}
+            [UsedImplicitly] public string CreatedAt { get; init;}
+            [UsedImplicitly] public string UpdatedBy { get; init;}
+            [UsedImplicitly] public string UpdatedAt { get; init;}
 
             public class FieldId {
-                [UsedImplicitly] public string Id { get; }
+                [UsedImplicitly] public string Id { get; init;}
             }
         }
     }
     
     public class Parameters {
-    [UsedImplicitly] public List<ParametersResult> Results { get; }
+    [UsedImplicitly] public List<ParametersResult> Results { get; init;}
     
     public class ParametersResult {
-        [UsedImplicitly] public string Id { get; }
-        [UsedImplicitly] public string Name { get; }
-        [UsedImplicitly] public string Description { get; }
-        [UsedImplicitly] public string SpecId { get; }
-        [UsedImplicitly] public string ValueTypeId { get; }
-        [UsedImplicitly] public bool ReadOnly { get; }
-        [UsedImplicitly] private List<RawMetadataValue> RawMetadata { get; }
-        [UsedImplicitly] public string CreatedBy { get; }
-        [UsedImplicitly] public string CreatedAt { get; }
+        [UsedImplicitly] public string Id { get; init;}
+        [UsedImplicitly] public string Name { get; init;}
+        [UsedImplicitly] public string Description { get; init;}
+        [UsedImplicitly] public string SpecId { get; init;}
+        [UsedImplicitly] public string ValueTypeId { get; init;}
+        [UsedImplicitly] public bool ReadOnly { get; init;}
+        [UsedImplicitly] private List<RawMetadataValue> RawMetadata { get; init;}
+        [UsedImplicitly] public string CreatedBy { get; init;}
+        [UsedImplicitly] public string CreatedAt { get; init;}
 
         public ParametersResultMetadata Metadata => new(this.RawMetadata);
 
         public class RawMetadataValue {
-            [UsedImplicitly] public string Id { get; }
-            [UsedImplicitly] public object Value { get; }
+            [UsedImplicitly] public string Id { get; init;}
+            [UsedImplicitly] public object Value { get; init;}
         }
 
         public class ParametersResultMetadata {
@@ -86,16 +86,16 @@ public class ParametersApi {
                 }
             }
 
-            public bool IsHidden { get; }
-            public bool IsArchived { get; }
-            public string InstanceTypeAssociation { get; }
-            public List<Binding> Categories { get; }
-            public List<string> LabelIds { get; }
-            public Binding Group { get; }
+            public bool IsHidden { get; init;}
+            public bool IsArchived { get; init;}
+            public string InstanceTypeAssociation { get; init;}
+            public List<Binding> Categories { get; init;}
+            public List<string> LabelIds { get; init;}
+            public Binding Group { get; init;}
 
             public class Binding {
-                [UsedImplicitly] public string BindingId { get; }
-                [UsedImplicitly] public string Id { get; }
+                [UsedImplicitly] public string BindingId { get; init;}
+                [UsedImplicitly] public string Id { get; init;}
             }
         }
     }
