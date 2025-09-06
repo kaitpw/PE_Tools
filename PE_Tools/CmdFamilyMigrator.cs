@@ -2,7 +2,8 @@ using Json.Schema.Generation;
 using PE_Tools.Properties;
 using PeLib;
 using PeRevitUI;
-using PeServices;
+using PeServices.Aps.Models;
+using PeServices.Storage;
 using PeUtils.Files;
 
 namespace PE_Tools;
@@ -21,20 +22,7 @@ namespace PE_Tools;
 //     public string Name
 // }
 
-public class FamilyMigratorSettings : SettingsManager.BaseSettings {
-    [Description(
-        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
-    [Required]
-    public bool OverrideExistingValues { get; set; } = true;
 
-    [Description("Remove parameters that have no values during family cleanup operations")]
-    [Required]
-    public bool DeleteEmptyParameters { get; set; } = true; // unused right now
-
-    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
-    [Required]
-    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
-}
 
 [Transaction(TransactionMode.Manual)]
 public class CmdFamilyMigrator : IExternalCommand {
@@ -193,3 +181,18 @@ public record SharedParameterInfo(
     ForgeTypeId groupTypeId,
     bool isInstance
 );
+
+public class FamilyMigratorSettings : Storage.BaseSettings {
+    [Description(
+        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
+    [Required]
+    public bool OverrideExistingValues { get; set; } = true;
+
+    [Description("Remove parameters that have no values during family cleanup operations")]
+    [Required]
+    public bool DeleteEmptyParameters { get; set; } = true; // unused right now
+
+    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
+    [Required]
+    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
+}

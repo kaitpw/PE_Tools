@@ -1,4 +1,3 @@
-
 namespace PeServices.Aps.Models;
 
 public class OAuth {

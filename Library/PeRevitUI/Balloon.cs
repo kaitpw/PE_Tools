@@ -1,5 +1,6 @@
 ﻿using Autodesk.Internal.InfoCenter;
 using Autodesk.Windows;
+using PeServices.Storage;
 using System.Text;
 using System.Windows;
 
@@ -59,24 +60,20 @@ internal class Balloon {
 
     /// <summary>Add a DEBUG build message</summary>
     public Balloon AddDebug(Log log, StackFrame sf, string message) {
-#if DEBUG
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         var prefix = "DEBUG " + log;
         if (!string.IsNullOrWhiteSpace(message))
             this._messages.Add(string.Format(FmtMethod, prefix, method, message.Trim()));
-#endif
         return this;
     }
 
     /// <summary>Add a DEBUG build error message (with an optional stack trace)</summary>
     public Balloon AddDebug(StackFrame sf, Exception ex, bool trace = false) {
-#if DEBUG
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         var prefix = "DEBUG " + Log.ERR;
         this._messages.Add(trace
             ? string.Format(FmtErrorTrace, prefix, method, ex.Message, ex.StackTrace)
             : string.Format(FmtMethod, prefix, method, ex.Message));
-#endif
         return this;
     }
 
@@ -88,9 +85,13 @@ internal class Balloon {
         var combinedMessage = new StringBuilder();
         if (this._messages.Count == 0) _ = this.Add(Log.WARN, "No messages to display");
 
-        foreach (var message in this._messages)
+        foreach (var message in this._messages) {
+            Storage.GlobalLogging().Write(message);
+#if RELEASE
+            if (message.StartsWith("DEBUG")) continue;
+#endif
             _ = combinedMessage.AppendLine("\u2588 " + message);
-
+        }
         ShowSingle(() => Clipboard.SetText(combinedMessage.ToString().Trim()), "Click to copy",
             combinedMessage.ToString(), title);
         this.Clear();

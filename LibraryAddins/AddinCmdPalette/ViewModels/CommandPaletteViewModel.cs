@@ -3,7 +3,7 @@ using AddinCmdPalette.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PeLib;
-using PeServices;
+using PeServices.Storage;
 using System.Collections.ObjectModel;
 
 namespace AddinCmdPalette.ViewModels;

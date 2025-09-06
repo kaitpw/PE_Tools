@@ -1,8 +1,8 @@
 using PE_Tools.Properties;
 using PeRevitUI;
-using PeServices;
 using PeServices.Aps;
 using PeServices.Aps.Models;
+using PeServices.Storage;
 
 namespace AddinCmdApsAuth;
 
@@ -17,7 +17,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
             var settings = storage.Settings().Json<ApsAuthPkce>().Read();
             var aps = new Aps(settings);
             var token = aps.GetToken();
-            new Balloon().Add(Balloon.Log.INFO, token).Show();
+            new Balloon().AddDebug(Balloon.Log.INFO, new StackFrame(), token).Show();
             return Result.Succeeded;
         } catch (Exception ex) {
             new Balloon().Add(Balloon.Log.ERR, ex.Message).Show();
@@ -35,7 +35,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
         ).Data;
 }
 
-public class ApsAuthPkce : SettingsManager.BaseSettings, OAuth.IApsTokenProvider {
+public class ApsAuthPkce : Storage.BaseSettings, OAuth.IApsTokenProvider {
     public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 }

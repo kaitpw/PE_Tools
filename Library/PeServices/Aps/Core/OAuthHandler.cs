@@ -47,9 +47,8 @@ internal static class OAuthHandler {
         try {
             TcpListener.Stop(); // Ensure any previous listener is stopped
             TcpListener.Start();
-            if (!((IPEndPoint)TcpListener.LocalEndpoint).Port.Equals(Port)) {
+            if (!((IPEndPoint)TcpListener.LocalEndpoint).Port.Equals(Port))
                 throw new Exception($"Failed to start TCP listener on port {Port}");
-            }
             _ = Process.Start(new ProcessStartInfo(oAuthUrl) { UseShellExecute = true });
             _ = Task.Run(async () => {
                 try {
@@ -74,7 +73,7 @@ internal static class OAuthHandler {
                 }
             });
         } catch (Exception ex) {
-            new Balloon().Add(new StackFrame(), ex, false).Show();
+            new Balloon().Add(new StackFrame(), ex).Show();
             cb?.Invoke(null);
         }
     }
