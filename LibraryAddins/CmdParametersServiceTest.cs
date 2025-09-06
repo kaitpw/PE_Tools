@@ -5,7 +5,7 @@ using PeServices.Aps;
 using PeServices.Aps.Models;
 using PeServices.Storage;
 
-namespace AddinCmdApsAuth;
+namespace AddinCmdParametersServiceTest;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdParametersServiceTest : IExternalCommand {
