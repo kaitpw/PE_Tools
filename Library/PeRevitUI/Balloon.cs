@@ -92,6 +92,7 @@ internal class Balloon {
 #endif
             _ = combinedMessage.AppendLine("\u2588 " + message);
         }
+
         ShowSingle(() => Clipboard.SetText(combinedMessage.ToString().Trim()), "Click to copy",
             combinedMessage.ToString(), title);
         this.Clear();

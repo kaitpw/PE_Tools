@@ -3,8 +3,8 @@ namespace PeServices.Storage.Core;
 public class GlobalLoggingManager {
     private const string _dateTimeFormat = "yyyy-MM-dd HH:mm:ss";
     private const int _maxLines = 500;
-    private readonly string _logFilePath;
     private readonly string _basePath;
+    private readonly string _logFilePath;
 
     public GlobalLoggingManager(string basePath) {
         this._basePath = basePath;
