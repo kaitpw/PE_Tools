@@ -11,10 +11,12 @@ using System.Text.RegularExpressions;
 namespace PeServices.Aps.Core;
 
 /// <summary>
-///     Defines the <see cref="OAuthHandler" />
+///     Fully static class to handle Oauth flow. <see cref="Invoke3LeggedOAuth" /> will open the users
+///     default browser to give permissions to this app. Upon approval <see cref="CallbackDelegate" />
+///     will receive the bearer token.
 /// </summary>
 /// <remarks>
-///     Uses a TCP listener rather than HTTP in order to sidestep need for admin privileges. Furthermore
+///     Uses a TCP listener rather than HTTP in order to sidestep need for admin privileges.
 /// </remarks>
 internal static class OAuthHandler {
     /// <summary> A delegate to hold the callback function for when 3-legged OAuth completes </summary>
@@ -233,32 +235,6 @@ internal static class OAuthHandler {
                                         </html>
                                         """;
     }
-
-    // /// <summary>
-    // ///     Generate a URL page that asks for permissions for the specified Scopes, and call our default web browser
-    // /// </summary>
-    // private class CallbackHandler : IExternalEventHandler {
-    //     private readonly ThreeLeggedToken _bearer;
-    //     private readonly CallbackDelegate _cb;
-    //     private readonly Exception _error;
-
-    //     public CallbackHandler(CallbackDelegate cb, ThreeLeggedToken bearer = null, Exception error = null) {
-    //         this._cb = cb;
-    //         this._bearer = bearer;
-    //         this._error = error;
-    //     }
-
-    //     public void Execute(UIApplication app) {
-    //         if (this._error != null) {
-    //             new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {this._error.Message}")
-    //                 .Show();
-    //         }
-
-    //         this._cb?.Invoke(this._bearer);
-    //     }
-
-    //     public string GetName() => "APS OAuth Callback";
-    // }
 
     private delegate Task<ThreeLeggedToken> Get3LegTokenDelegate(string code);
 }

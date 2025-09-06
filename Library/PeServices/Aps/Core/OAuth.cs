@@ -2,7 +2,7 @@ namespace PeServices.Aps.Core;
 
 /// <summary>
 ///     Autodesk Platform Services Authentication Handler. Instances of this class with the same credentials
-///     will share their tokens between each other. In otherwords, refreshing a token from one instance will
+///     will share their tokens between each other. In other words, refreshing a token from one instance will
 ///     refresh the token for all other instances with the same credentials.
 /// </summary>
 /// <remarks>
@@ -40,9 +40,11 @@ public class OAuth {
 
         OAuthHandler.Invoke3LeggedOAuth(clientId, clientSecret, bearer => {
             try {
-                if (bearer == null)
-                    tcs.SetResult(new Exception("Authentication was denied or failed. Please try again."));
-                else {
+                if (bearer == null) {
+                    tcs.SetResult(new Exception(
+                        "Authentication was denied or failed. Please try again." +
+                        "In the event of unexpected failure after 2 or 3 attempts then contact the developer."));
+                } else {
                     var expiresAt = DateTime.UtcNow.AddSeconds(bearer.ExpiresIn ?? 0);
                     lock (CacheLock) TokenCache[clientId] = (bearer.AccessToken, expiresAt);
                     tcs.SetResult(bearer.AccessToken);
