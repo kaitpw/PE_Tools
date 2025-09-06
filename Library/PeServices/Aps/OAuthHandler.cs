@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace PeServices;
+namespace PeServices.Aps;
 
 /// <summary>
 ///     Defines the <see cref="OAuthHandler" />

@@ -1,8 +1,7 @@
-using Json.Schema.Generation;
 using PE_Tools.Properties;
 using PeRevitUI;
 using PeServices;
-
+using PeServices.Aps;
 namespace AddinCmdApsAuth;
 
 [Transaction(TransactionMode.Manual)]
@@ -14,7 +13,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
         try {
             var storage = new Storage("ApsAuthPKCE");
             var settings = storage.Settings().Json<ApsAuthSettingsPKCE>().Read();
-            var auth = new ApsAuth(settings);
+            var auth = new OAuth(settings);
             var (token, tokenErr) = auth.GetToken();
             if (tokenErr is not null) throw tokenErr;
             new Balloon().Add(Balloon.Log.INFO, token).Show();

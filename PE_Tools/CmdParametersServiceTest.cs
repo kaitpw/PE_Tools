@@ -2,6 +2,7 @@ using Json.Schema.Generation;
 using PE_Tools.Properties;
 using PeRevitUI;
 using PeServices;
+using PeServices.Aps;
 
 namespace AddinCmdApsAuth;
 
@@ -15,12 +16,12 @@ public class CmdParametersServiceTest : IExternalCommand {
             var storage = new Storage("ParametersServiceTest");
             var settings = storage.Settings().Json<ParametersServiceTest>().Read();
             var (acc, gp, col) = (settings.AccountId, settings.GroupId, settings.CollectionId);
-            var auth = new ApsAuth(settings);
+            var auth = new OAuth(settings);
             var (token, tokenErr) = auth.GetToken();
             if (tokenErr is not null) throw tokenErr;
             new Balloon().Add(Balloon.Log.INFO, token).Show();
 
-            var parametersService = new ParametersService();
+            var parametersService = new Parameters();
             Exception capturedErr = null;
             // var hubs = [];
             // var accounts = [];
@@ -29,16 +30,16 @@ public class CmdParametersServiceTest : IExternalCommand {
             // var parameters = [];
             _ = Task.Run(async () => {
                 try {
-                    var hubs = await parametersService.GetHubs(token);
-                    var firstHub = hubs.First();
-                    var groups = await parametersService.GetGroups(firstHub.Item2, token);
-                    var firstGroup = groups.First();
-                    var collections = await parametersService.GetCollections(firstHub.Item2, firstGroup.Item2, token);
-                    var firstCollection = collections.First();
+                    var hubs = await Hubs.GetHubs(token);
+                    var firstHub = hubs.Data.First();
+                    var groups = await parametersService.GetGroups(firstHub.Id, token);
+                    var firstGroup = groups.Results.First();
+                    var collections = await parametersService.GetCollections(firstHub.Id, firstGroup.Id, token);
+                    var firstCollection = collections.Results.First();
                     var parameters =
-                        await parametersService.GetParameters(firstHub.Item2, firstGroup.Item2, firstCollection.Item2,
+                        await parametersService.GetParameters(firstHub.Id, firstGroup.Id, firstCollection.Id,
                             token);
-                    var firstParameter = parameters.First();
+                    var firstParameter = parameters.Results.First();
                 } catch (Exception ex) {
                     capturedErr = ex;
                 }

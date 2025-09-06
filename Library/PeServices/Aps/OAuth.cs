@@ -2,12 +2,12 @@
 
 using Json.Schema.Generation;
 
-namespace PeServices;
+namespace PeServices.Aps;
 
 /// <summary>
 ///     Autodesk Platform Services Authentication Handler.
 /// </summary>
-public class ApsAuth {
+public class OAuth {
     private static readonly Dictionary<string, (string Token, DateTime ExpiresAt)> TokenCache = new();
     private static readonly object CacheLock = new();
     private readonly object _lock = new();
@@ -17,7 +17,7 @@ public class ApsAuth {
     ///     Creates a new instance of ApsAuth using the provided token provider
     /// </summary>
     /// <param name="tokenProvider">Provider for APS authentication credentials</param>
-    public ApsAuth(IApsTokenProvider tokenProvider) => this._tokenProvider = tokenProvider;
+    public OAuth(IApsTokenProvider tokenProvider) => this._tokenProvider = tokenProvider;
 
     /// <summary>
     ///     Gets a valid access token, refreshing if necessary

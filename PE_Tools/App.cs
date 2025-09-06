@@ -1,7 +1,7 @@
+using PeRevitUI;
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
 using AddinCmdApsAuth;
 #endif
-using PeRevitUI;
 
 namespace PE_Tools;
 
