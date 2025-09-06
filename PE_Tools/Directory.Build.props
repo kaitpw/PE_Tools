@@ -4,12 +4,12 @@
     <Import Project="$(MSBuildThisFileDirectory)\..\LibraryAddins\Shared.props"/>
 
     <ItemGroup>
-        <!-- Exclude APS Auth command files for Revit 2023/2024 since they require .NET 8.0 -->
+        <!-- Exclude APS-related command files for Revit 2023/2024 since they require .NET 8.0 -->
         <Compile Remove="$(MSBuildProjectDirectory)\..\LibraryAddins\CmdApsAuthNormal.cs" Condition="$(Configuration.Contains('R23')) Or $(Configuration.Contains('R24'))"/>
         <Compile Remove="$(MSBuildProjectDirectory)\..\LibraryAddins\CmdApsAuthPKCE.cs" Condition="$(Configuration.Contains('R23')) Or $(Configuration.Contains('R24'))"/>
         <Compile Remove="$(MSBuildProjectDirectory)\..\LibraryAddins\CmdParametersServiceTest.cs" Condition="$(Configuration.Contains('R23')) Or $(Configuration.Contains('R24'))"/>
 
-        <!-- Exclude APS Auth files for Revit 2023/2024 since they require .NET 8.0 -->
+        <!-- Exclude APS-related libraryfiles for Revit 2023/2024 since they require .NET 8.0 -->
         <Compile Remove="$(MSBuildThisFileDirectory)\..\Library\PeServices\Aps\**\*.cs" Condition="$(Configuration.Contains('R23')) Or $(Configuration.Contains('R24'))"/>
 
     </ItemGroup>
