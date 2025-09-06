@@ -72,14 +72,7 @@ public class CmdParametersServiceTest : IExternalCommand {
         }
     }
 
-    internal static PushButtonData GetButtonData() =>
-        new ButtonDataClass(
-            "Parameters Service Test",
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
-            Resources.Blue_32,
-            Resources.Blue_16,
-            "Click this button to test the parameters service for. This is primarily for testing purposes, but running it will not hurt anything."
-        ).Data;
+
 }
 
 public class ParametersServiceTest : Storage.BaseSettings, OAuth.IApsTokenProvider {

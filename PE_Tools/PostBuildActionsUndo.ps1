@@ -4,8 +4,8 @@ $REVIT_VERSIONS = 2023..2027
 $PROJECT_NAME = "PE_Tools"
 
 foreach ($REVIT_VERSION in $REVIT_VERSIONS) {
-    $RvtAddinsAddinPath = "$APPDATA\Autodesk\REVIT\Addins\$REVIT_VERSION"
-    $RvtAddinsDllPath = "$APPDATA\Autodesk\REVIT\Addins\$REVIT_VERSION\$PROJECT_NAME"
+    $RvtAddinsAddinPath = "$APPDATA\Autodesk\Revit\Addins\$REVIT_VERSION"
+    $RvtAddinsDllPath = "$APPDATA\Autodesk\Revit\Addins\$REVIT_VERSION\$PROJECT_NAME"
 
     Write-Host "****** UNDO LOCAL DEV ADDIN COPY for Revit $REVIT_VERSION *******"
     Write-Host "* Removing $PROJECT_NAME.addin from: $RvtAddinsAddinPath"

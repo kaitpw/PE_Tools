@@ -1,6 +1,5 @@
 using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.UI.Selection;
-using PE_Tools.Properties;
 using PeLib;
 using PeMech;
 using PeRevitUI;
@@ -52,21 +51,6 @@ public class CmdTapMaker : IExternalCommand {
             return Result.Failed;
         }
     }
-
-    internal static PushButtonData GetButtonData() =>
-        new ButtonDataClass(
-            "Tap Maker",
-            MethodBase.GetCurrentMethod()?.DeclaringType?.FullName,
-            Resources.Green_32,
-            Resources.Green_16,
-            """
-            Add a (default) 6" tap to a clicked point on a duct face. Works in all views and on both round/rect ducts. \
-            Click-point adjustments will prevent overlaps (with other taps) and overhangs (over face edges). \
-            Size adjustments will size down a duct until it fits on a duct face.
-
-            In the event an easy location or size adjustment is not found, no tap will be placed.
-            """
-        ).Data;
 
 
     private static bool CreateTapOnFace(

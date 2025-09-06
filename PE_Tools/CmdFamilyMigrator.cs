@@ -96,16 +96,6 @@ public class CmdFamilyMigrator : IExternalCommand {
         }
     }
 
-    internal static PushButtonData GetButtonData() =>
-        new ButtonDataClass(
-            "Family Migrator",
-            MethodBase.GetCurrentMethod()?.DeclaringType?.FullName,
-            Resources.Yellow_32,
-            Resources.Yellow_16,
-            "Open the family migrator to migrate a project family in-place."
-        ).Data;
-
-
     private static void AddParameters(
         FamilyManager fm,
         FamilyParameterInfo[] parameters,

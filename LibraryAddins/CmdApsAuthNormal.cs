@@ -25,14 +25,7 @@ public class CmdApsAuthNormal : IExternalCommand {
         }
     }
 
-    internal static PushButtonData GetButtonData() =>
-        new ButtonDataClass(
-            "APS Auth (Normal)",
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
-            Resources.Blue_32,
-            Resources.Blue_16,
-            "Click this button to get an access token from Autodesk Platform Services. This is primarily for testing purposes, but running it will not hurt anything."
-        ).Data;
+
 }
 
 public class ApsAuthNormal : Storage.BaseSettings, OAuth.IApsTokenProvider {

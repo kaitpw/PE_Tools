@@ -31,13 +31,4 @@ public class CmdCommandPalette : IExternalCommand {
             throw new InvalidOperationException($"Error opening command palette: {ex.Message}");
         }
     }
-
-    internal static PushButtonData GetButtonData() =>
-        new ButtonDataClass(
-            "Command Palette",
-            MethodBase.GetCurrentMethod()?.DeclaringType?.FullName,
-            Resources.Yellow_32,
-            Resources.Yellow_16,
-            "Open the command palette to search and execute Revit commands quickly. Use Ctrl+K for quick access."
-        ).Data;
 }

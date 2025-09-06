@@ -31,14 +31,6 @@ public class CmdUpdate : IExternalCommand {
         return Result.Succeeded;
     }
 
-    internal static PushButtonData GetButtonData() =>
-        new ButtonDataClass(
-            "Update",
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
-            Resources.Blue_32,
-            Resources.Blue_16,
-            "Click this button to update PE Tools to the latest release. You will need to restart Revit"
-        ).Data;
 
     public static Task<bool> RunRequest(GithubRequestService request) =>
         Task.Run(() => request.Initialize(Console.WriteLine));

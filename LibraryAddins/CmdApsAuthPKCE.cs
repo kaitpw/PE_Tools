@@ -24,15 +24,6 @@ public class CmdApsAuthPKCE : IExternalCommand {
             return Result.Failed;
         }
     }
-
-    internal static PushButtonData GetButtonData() =>
-        new ButtonDataClass(
-            "APS Auth (PKCE)",
-            MethodBase.GetCurrentMethod().DeclaringType?.FullName,
-            Resources.Blue_32,
-            Resources.Blue_16,
-            "Click this button to get an access token from Autodesk Platform Services. This is primarily for testing purposes, but running it will not hurt anything."
-        ).Data;
 }
 
 public class ApsAuthPkce : Storage.BaseSettings, OAuth.IApsTokenProvider {
