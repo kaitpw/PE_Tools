@@ -29,25 +29,25 @@ internal class App : IExternalApplication {
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
         var cmdApsAuthNormal = CmdApsAuthNormal.GetButtonData();
         var cmdApsAuthPKCE = CmdApsAuthPKCE.GetButtonData();
+        var cmdParametersServiceTest = CmdParametersServiceTest.GetButtonData();
 #endif
         var cmdUpdate = CmdUpdate.GetButtonData();
         var cmdMep2040 = CmdMep2040.GetButtonData();
         var cmdCommandPalette = CmdCommandPalette.GetButtonData();
         var cmdTapMaker = CmdTapMaker.GetButtonData();
         var cmdFamilyMigrator = CmdFamilyMigrator.GetButtonData();
-        var cmdParametersServiceTest = CmdParametersServiceTest.GetButtonData();
 
         // 4. Add buttons to panel
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
         _ = panelManage.AddItem(cmdApsAuthNormal) as PushButton;
         _ = panelManage.AddItem(cmdApsAuthPKCE) as PushButton;
+        _ = panelMigration.AddItem(cmdParametersServiceTest) as PushButton;
 #endif
         _ = panelManage.AddItem(cmdUpdate) as PushButton;
         _ = panelTools.AddItem(cmdMep2040) as PushButton;
         _ = panelTools.AddItem(cmdCommandPalette) as PushButton;
         _ = panelTools.AddItem(cmdTapMaker) as PushButton;
         _ = panelMigration.AddItem(cmdFamilyMigrator) as PushButton;
-        _ = panelMigration.AddItem(cmdParametersServiceTest) as PushButton;
 
         return Result.Succeeded;
     }

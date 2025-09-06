@@ -1,8 +1,10 @@
+#if !REVIT2023 && !REVIT2024
+using PeServices.Aps.Models;
+#endif
 using Json.Schema.Generation;
 using PE_Tools.Properties;
 using PeLib;
 using PeRevitUI;
-using PeServices.Aps.Models;
 using PeServices.Storage;
 using PeUtils.Files;
 

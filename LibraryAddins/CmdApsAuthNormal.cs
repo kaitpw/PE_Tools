@@ -4,7 +4,7 @@ using PeServices.Aps;
 using PeServices.Aps.Models;
 using PeServices.Storage;
 
-namespace AddinCmdApsAuth;
+namespace AddinCmdApsAuthNormal;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdApsAuthNormal : IExternalCommand {
