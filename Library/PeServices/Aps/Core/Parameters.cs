@@ -1,0 +1,43 @@
+using PeServices.Aps.Models;
+using System.Net.Http;
+using System.Text.Json;
+
+namespace PeServices.Aps.Core;
+
+public class Parameters(HttpClient httpClient) {
+    private const string Suffix = "parameters/v1/accounts/";
+
+    private static async Task<T> DeserializeToType<T>(HttpResponseMessage res) =>
+        JsonSerializer.Deserialize<T>(
+            await res.Content.ReadAsStringAsync(),
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        );
+
+    private static string Clean(string v) => v.Replace("b.", "").Replace("-", "");
+
+
+    public async Task<ParametersApi.Groups> GetGroups(string hubId) {
+        var response = await httpClient.GetAsync(Suffix + Clean(hubId) + "/groups");
+        return response.IsSuccessStatusCode
+            ? await DeserializeToType<ParametersApi.Groups>(response)
+            : new ParametersApi.Groups();
+    }
+
+    public async Task<ParametersApi.Collections> GetCollections(string hubId, string grpId) {
+        var response = await httpClient.GetAsync(
+            Suffix + Clean(hubId) + "/groups/" + Clean(grpId) + "/collections?offset=0&limit=10"
+        );
+        return response.IsSuccessStatusCode
+            ? await DeserializeToType<ParametersApi.Collections>(response)
+            : new ParametersApi.Collections();
+    }
+
+    public async Task<ParametersApi.Parameters> GetParameters(string hubId, string grpId, string colId) {
+        var response = await httpClient.GetAsync(
+            Suffix + Clean(hubId) + "/groups/" + Clean(grpId) + "/collections/" + Clean(colId) + "/parameters"
+        );
+        return response.IsSuccessStatusCode
+            ? await DeserializeToType<ParametersApi.Parameters>(response)
+            : new ParametersApi.Parameters();
+    }
+}

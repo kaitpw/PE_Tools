@@ -8,7 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace PeServices.Aps;
+namespace PeServices.Aps.Core;
 
 /// <summary>
 ///     Defines the <see cref="OAuthHandler" />
@@ -156,107 +156,109 @@ internal static class OAuthHandler {
         return code;
     }
 
-    /// <summary>
-    ///     Generate a URL page that asks for permissions for the specified Scopes, and call our default web browser
-    /// </summary>
-    private class CallbackHandler : IExternalEventHandler {
-        private readonly ThreeLeggedToken _bearer;
-        private readonly CallbackDelegate _cb;
-        private readonly Exception _error;
+    private class OAuthData {
+        public readonly string ClientId;
+        public readonly string ClientSecret;
+        public readonly string CodeVerifier;
 
-        public CallbackHandler(CallbackDelegate cb, ThreeLeggedToken bearer = null, Exception error = null) {
-            this._cb = cb;
-            this._bearer = bearer;
-            this._error = error;
+        public OAuthData(string clientId, string clientSecret, string codeVerifier) {
+            var hasClientSecret = !string.IsNullOrEmpty(clientSecret);
+            var hasCodeVerifier = !string.IsNullOrEmpty(codeVerifier);
+
+            if (string.IsNullOrEmpty(clientId)) throw new Exception("ClientId is not set.");
+            this.ClientId = clientId;
+
+            if (hasClientSecret && !hasCodeVerifier) {
+                this.ClientSecret = clientSecret;
+                this.CodeVerifier = null;
+            } else if (!hasClientSecret && hasCodeVerifier) {
+                this.ClientSecret = null;
+                this.CodeVerifier = codeVerifier;
+            } else {
+                var emptyValue = string.Empty;
+                if (!hasClientSecret) emptyValue = "ClientSecret";
+                if (!hasCodeVerifier) emptyValue = "CodeVerifier";
+                throw new Exception($"{emptyValue} is not set.");
+            }
         }
 
-        public void Execute(UIApplication app) {
-            if (this._error != null)
-                new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {this._error.Message}")
-                    .Show();
-            this._cb?.Invoke(this._bearer);
-        }
-
-        public string GetName() => "APS OAuth Callback";
+        public bool IsNormalFlow() => this.ClientSecret != null && this.CodeVerifier == null;
+        public bool IsPkceFlow() => this.ClientSecret == null && this.CodeVerifier != null;
     }
+
+    private static class CallbackPages {
+        public const string SuccessPage = """
+                                          <html>
+                                            <head>
+                                              <title>Login Status</title>
+                                              <style>
+                                                body {
+                                                  font-family: Arial, Helvetica, sans-serif;
+                                                  display: flex;
+                                                  flex-direction: column;
+                                                  justify-content: center;
+                                                  align-items: center;
+                                                  min-height: 100vh; /* Ensures the body takes at least the full viewport height */
+                                                  margin: 0; /* Remove default body margin */
+                                                }
+                                              </style>
+                                            </head>
+                                            <body>
+                                              <h2>Login Success</h2>
+                                              <p>You can now close this window!</p>
+                                            </body>
+                                          </html>
+                                          """;
+
+        public const string ErrorPage = """
+                                        <html>
+                                          <head>
+                                            <title>Login Status</title>
+                                            <style>
+                                              body {
+                                                font-family: Arial, Helvetica, sans-serif;
+                                                display: flex;
+                                                flex-direction: column;
+                                                justify-content: center;
+                                                align-items: center;
+                                                min-height: 100vh; /* Ensures the body takes at least the full viewport height */
+                                                margin: 0; /* Remove default body margin */
+                                              }
+                                            </style>
+                                          </head>
+                                          <body>
+                                            <h2>Login Failed</h2>
+                                            <p>Please try again.</p>
+                                          </body>
+                                        </html>
+                                        """;
+    }
+
+    // /// <summary>
+    // ///     Generate a URL page that asks for permissions for the specified Scopes, and call our default web browser
+    // /// </summary>
+    // private class CallbackHandler : IExternalEventHandler {
+    //     private readonly ThreeLeggedToken _bearer;
+    //     private readonly CallbackDelegate _cb;
+    //     private readonly Exception _error;
+
+    //     public CallbackHandler(CallbackDelegate cb, ThreeLeggedToken bearer = null, Exception error = null) {
+    //         this._cb = cb;
+    //         this._bearer = bearer;
+    //         this._error = error;
+    //     }
+
+    //     public void Execute(UIApplication app) {
+    //         if (this._error != null) {
+    //             new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {this._error.Message}")
+    //                 .Show();
+    //         }
+
+    //         this._cb?.Invoke(this._bearer);
+    //     }
+
+    //     public string GetName() => "APS OAuth Callback";
+    // }
 
     private delegate Task<ThreeLeggedToken> Get3LegTokenDelegate(string code);
-}
-
-internal class OAuthData {
-    public readonly string ClientId;
-    public readonly string ClientSecret;
-    public readonly string CodeVerifier;
-
-    public OAuthData(string clientId, string clientSecret, string codeVerifier) {
-        var hasClientSecret = !string.IsNullOrEmpty(clientSecret);
-        var hasCodeVerifier = !string.IsNullOrEmpty(codeVerifier);
-
-        if (string.IsNullOrEmpty(clientId)) throw new Exception("ClientId is not set.");
-        this.ClientId = clientId;
-
-        if (hasClientSecret && !hasCodeVerifier) {
-            this.ClientSecret = clientSecret;
-            this.CodeVerifier = null;
-        } else if (!hasClientSecret && hasCodeVerifier) {
-            this.ClientSecret = null;
-            this.CodeVerifier = codeVerifier;
-        } else {
-            var emptyValue = string.Empty;
-            if (!hasClientSecret) emptyValue = "ClientSecret";
-            if (!hasCodeVerifier) emptyValue = "CodeVerifier";
-            throw new Exception($"{emptyValue} is not set.");
-        }
-    }
-
-    public bool IsNormalFlow() => this.ClientSecret != null && this.CodeVerifier == null;
-    public bool IsPkceFlow() => this.ClientSecret == null && this.CodeVerifier != null;
-}
-
-internal static class CallbackPages {
-    public const string SuccessPage = """
-                                      <html>
-                                        <head>
-                                          <title>Login Status</title>
-                                          <style>
-                                            body {
-                                              font-family: Arial, Helvetica, sans-serif;
-                                              display: flex;
-                                              flex-direction: column;
-                                              justify-content: center;
-                                              align-items: center;
-                                              min-height: 100vh; /* Ensures the body takes at least the full viewport height */
-                                              margin: 0; /* Remove default body margin */
-                                            }
-                                          </style>
-                                        </head>
-                                        <body>
-                                          <h2>Login Success</h2>
-                                          <p>You can now close this window!</p>
-                                        </body>
-                                      </html>
-                                      """;
-
-    public const string ErrorPage = """
-                                    <html>
-                                      <head>
-                                        <title>Login Status</title>
-                                        <style>
-                                          body {
-                                            font-family: Arial, Helvetica, sans-serif;
-                                            display: flex;
-                                            flex-direction: column;
-                                            justify-content: center;
-                                            align-items: center;
-                                            min-height: 100vh; /* Ensures the body takes at least the full viewport height */
-                                            margin: 0; /* Remove default body margin */
-                                          }
-                                        </style>
-                                      </head>
-                                      <body>
-                                        <h2>Login Failed</h2>
-                                        <p>Please try again.</p>
-                                      </body>
-                                    </html>
-                                    """;
 }
