@@ -3,6 +3,7 @@ using PE_Tools.Properties;
 using PeRevitUI;
 using PeServices;
 using PeServices.Aps;
+using PeServices.Aps.Models;
 
 namespace AddinCmdApsAuth;
 
@@ -81,7 +82,7 @@ public class CmdParametersServiceTest : IExternalCommand {
         ).Data;
 }
 
-public class ParametersServiceTest : Aps.BaseSettingsPkce {
+public class ParametersServiceTest : SettingsManager.BaseSettings, OAuth.IApsTokenProvider {
     [Description(
         "The account ID derived from an 'id' field returned by `project/v1/hubs` but with the 'b.' prefix sliced off. If left empty, the first item of 'data' will be used.")]
     [Required]
@@ -95,4 +96,7 @@ public class ParametersServiceTest : Aps.BaseSettingsPkce {
     [Description(
         "The collection ID derived from an 'id' field returned by `parameters/v1/accounts/<accountId>/groups/<groupId>/collections`. If left empty, the first item of 'results' will be used.")]
     public string CollectionId { get; set; } = "";
+
+    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
+    public string GetClientSecret() => null;
 }

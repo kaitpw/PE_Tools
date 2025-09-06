@@ -2,6 +2,7 @@ using PE_Tools.Properties;
 using PeRevitUI;
 using PeServices;
 using PeServices.Aps;
+using PeServices.Aps.Models;
 
 namespace AddinCmdApsAuth;
 
@@ -34,5 +35,7 @@ public class CmdApsAuthNormal : IExternalCommand {
         ).Data;
 }
 
-public class ApsAuthNormal : Aps.BaseSettingsNormal {
+public class ApsAuthNormal : SettingsManager.BaseSettings, OAuth.IApsTokenProvider {
+    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
+    public string GetClientSecret() => null;
 }

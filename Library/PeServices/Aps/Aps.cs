@@ -20,11 +20,6 @@ public class Aps(OAuth.IApsTokenProvider tokenProvider) {
     public Hubs Hubs() => new(this.HttpClient);
     public string GetToken() => this._oAuth.GetToken();
 
-    public class BaseSettingsPkce : OAuth.BaseSettingsPKCE {
-    }
-
-    public class BaseSettingsNormal : OAuth.BaseSettingsNormal {
-    }
 
     // public Models.OAuth ApsBaseSettings(): SettingsManager.BaseSettings => new();
 }

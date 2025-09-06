@@ -4,10 +4,20 @@ using PeUtils.Files;
 namespace PeServices;
 
 public class Storage(string addinName) {
-    private readonly string _basePath = Path.Combine(
+    private static readonly string BasePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-        Assembly.GetExecutingAssembly().GetName().Name ?? "PE_Tools",
-        addinName);
+        Assembly.GetExecutingAssembly().GetName().Name ?? "PE_Tools");
+
+    private readonly string _addinPath = Path.Combine(BasePath, addinName);
+
+    /// <summary>
+    ///     Manager for the settings.json in the  storage dir. Handles read/write to JSON.
+    /// </summary>
+    /// <remarks>
+    ///     Use this manager to store global add-in settings that should be persisted between Revit sessions.
+    ///     The default file path is `/settings.json`
+    /// </remarks>
+    public static GlobalSettingsManager GlobalSettings() => new(BasePath);
 
     /// <summary>
     ///     Manager for the `settings\` storage dir. Handles granular read-only to JSON and CSV.
@@ -18,10 +28,11 @@ public class Storage(string addinName) {
     ///     Data here should be updated but never completely overwritten (unless via an import).
     ///     The default file path is `{addinName}/settings/settings.json`
     /// </remarks>
-    public SettingsManager Settings() => new(this._basePath);
+    public SettingsManager Settings() => new(this._addinPath);
 
     /// <summary>
-    ///     Manager for the `state\` storage dir. Handles granular read/write to CSV and JSON.
+    ///     Manager for the `state\` storage dir. Handles granular read/write to CSV, and full (non-granular) read/write to
+    ///     JSON.
     /// </summary>
     /// <typeparam name="T">Type of stored data. Either a JSON schema or a record representing a csv row.</typeparam>
     /// <remarks>
@@ -29,9 +40,8 @@ public class Storage(string addinName) {
     ///     Data here is meant to be frequently granularly updated but never overwritten (unless via an import).
     ///     The default file path is `{addinName}/state/state.json`
     /// </remarks>
-    public StateManager State() => new(this._basePath);
+    public StateManager State() => new(this._addinPath);
 
-    /// TODO: figure out how to support any file type while still keeping csv and json type-safety.
     /// <summary>
     ///     Manager for the `output\` storage dir. Handles full (non-granular) writes to any file type.
     /// </summary>
@@ -41,7 +51,7 @@ public class Storage(string addinName) {
     ///     Data here should be written once to and then opened by the user.
     ///     There is NO DEFAULT FILE PATH for output files.
     /// </remarks>
-    public OutputManager Output() => new(this._basePath);
+    public OutputManager Output() => new(this._addinPath);
 
     // /// TODO: figure out how to support any file type while still keeping csv and json type-safety.
     // /// <summary>
@@ -56,14 +66,47 @@ public class Storage(string addinName) {
     // ///     Data here should/can be overwritten or granularly read/written.
     // ///     There is NO DEFAULT FILE PATH for temp files.
     // /// </remarks>
-    // public TempManager<T> Temp<T>() where T : class, new() => new(this._basePath);
+    // public TempManager<T> Temp<T>() where T : class, new() => new(this._addinPath);
+}
+
+public class GlobalSettingsManager {
+    private readonly string _thisPath;
+
+    public GlobalSettingsManager(string basePath) {
+        this._thisPath = basePath;
+        _ = Directory.CreateDirectory(this._thisPath);
+    }
+
+    public JsonReader<GlobalSettings> Json() =>
+        new(new Json<GlobalSettings>(Path.Combine(this._thisPath, "settings.json")));
+
+    public JsonReader<GlobalSettings> Json(string filename) =>
+        new(new Json<GlobalSettings>(Path.Combine(this._thisPath, filename)));
+
+    /// <summary> Base interface for all settings classes. Provides global settings properties.</summary>
+    public class GlobalSettings {
+        [Description(
+            "The desktop-app client id of the Autodesk Platform Services app. If none exists yet, make a 'Desktop App' at https://aps.autodesk.com/hubs/@personal/applications/")]
+        [Required]
+        public string ApsDesktopClientId1 { get; set; } = "";
+
+        [Description(
+            "The web-app client id of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
+        [Required]
+        public string ApsWebClientId1 { get; set; } = "";
+
+        [Description(
+            "The web-app client secret of the Autodesk Platform Services app. If none exists yet, make a 'Traditional Web App' at https://aps.autodesk.com/hubs/@personal/applications/")]
+        [Required]
+        public string ApsWebClientSecret1 { get; set; } = "";
+    }
 }
 
 public class SettingsManager {
     private readonly string _thisPath;
 
-    public SettingsManager(string basePath) {
-        this._thisPath = Path.Combine(basePath, "settings");
+    public SettingsManager(string addinPath) {
+        this._thisPath = Path.Combine(addinPath, "settings");
         _ = Directory.CreateDirectory(this._thisPath);
     }
 
@@ -88,8 +131,8 @@ public class SettingsManager {
 public class StateManager {
     private readonly string _thisPath;
 
-    public StateManager(string basePath) {
-        this._thisPath = Path.Combine(basePath, "state");
+    public StateManager(string addinPath) {
+        this._thisPath = Path.Combine(addinPath, "state");
         _ = Directory.CreateDirectory(this._thisPath);
     }
 
@@ -109,8 +152,8 @@ public class StateManager {
 public class OutputManager {
     private readonly string _thisPath;
 
-    public OutputManager(string basePath) {
-        this._thisPath = Path.Combine(basePath, "output");
+    public OutputManager(string addinPath) {
+        this._thisPath = Path.Combine(addinPath, "output");
         _ = Directory.CreateDirectory(this._thisPath);
     }
 
@@ -128,7 +171,7 @@ public class OutputManager {
 }
 
 //////////////////////////////////////////////////////////////////////////////////
-// Restricted interfaces for different operation types
+// Restrictive interfaces for different operation types
 
 public class JsonReader<T>(Json<T> json) where T : class, new() {
     public string FilePath => json.FilePath;
