@@ -17,7 +17,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
             var settings = storage.Settings().Json<ApsAuthPkce>().Read();
             var aps = new Aps(settings);
             var token = aps.GetToken();
-            new Balloon().AddDebug(Balloon.Log.INFO, new StackFrame(), token).Show();
+            new Balloon().AddDebug(new StackFrame(), Balloon.Log.INFO, token).Show();
             return Result.Succeeded;
         } catch (Exception ex) {
             new Balloon().Add(Balloon.Log.ERR, ex.Message).Show();

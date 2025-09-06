@@ -117,7 +117,7 @@ public class CmdTapMaker : IExternalCommand {
             }
 
             _ = trans.Commit();
-            _ = balloon.Add(Balloon.Log.INFO, new StackFrame(),
+            _ = balloon.Add(new StackFrame(), Balloon.Log.INFO,
                 $"Created a {tapSizeInches}\" tap successfully (tap ID: {tap.Id}).");
             balloon?.Show();
             return true;

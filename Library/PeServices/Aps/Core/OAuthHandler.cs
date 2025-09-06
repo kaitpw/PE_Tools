@@ -66,7 +66,7 @@ internal static class OAuthHandler {
                     } else
                         cb?.Invoke(null);
                 } catch (Exception ex) {
-                    new Balloon().Add(Balloon.Log.ERR, new StackFrame(), $"Error in OAuth flow: {ex.Message}").Show();
+                    new Balloon().Add(new StackFrame(), Balloon.Log.ERR, $"Error in OAuth flow: {ex.Message}").Show();
                     cb?.Invoke(null);
                 } finally {
                     TcpListener?.Stop();
@@ -136,10 +136,10 @@ internal static class OAuthHandler {
         var query = urlPart[(queryStart + 1)..];
         var parameters = query.Split('&');
         return (from param in parameters
-            select param.Split('=')
+                select param.Split('=')
             into kv
-            where kv.Length == 2 && kv[0] == "code"
-            select kv[1]).FirstOrDefault();
+                where kv.Length == 2 && kv[0] == "code"
+                select kv[1]).FirstOrDefault();
     }
 
 

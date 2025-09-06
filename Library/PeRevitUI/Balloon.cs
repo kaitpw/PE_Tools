@@ -42,7 +42,7 @@ internal class Balloon {
     }
 
     /// <summary>Add a normal message (with the method's name)</summary>
-    public Balloon Add(Log log, StackFrame sf, string message) {
+    public Balloon Add(StackFrame sf, Log log, string message) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         if (!string.IsNullOrWhiteSpace(message))
             this._messages.Add(string.Format(FmtMethod, log, method, message.Trim()));
@@ -59,7 +59,7 @@ internal class Balloon {
     }
 
     /// <summary>Add a DEBUG build message</summary>
-    public Balloon AddDebug(Log log, StackFrame sf, string message) {
+    public Balloon AddDebug(StackFrame sf, Log log, string message) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         var prefix = "DEBUG " + log;
         if (!string.IsNullOrWhiteSpace(message))

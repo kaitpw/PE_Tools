@@ -58,13 +58,13 @@ internal class Ducts {
                 branchEnd
             );
             if (branchDuct is null) return new InvalidOperationException("Branch duct is null, creation was faulty");
-            _ = balloon?.AddDebug(Balloon.Log.INFO, new StackFrame(),
+            _ = balloon?.AddDebug(new StackFrame(), Balloon.Log.INFO,
                 $"Created branch duct on {level.Name} with DuctType: {ductType.Name}, SystemType: {systemType.Name}");
 
             // Set the duct diameter to the correct tap size
             var setDiamSuccess = branchDuct.get_Parameter(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM).Set(tapSizeFeet);
             if (!setDiamSuccess)
-                _ = balloon?.Add(Balloon.Log.WARN, new StackFrame(), "Branch duct's diameter could not be set");
+                _ = balloon?.Add(new StackFrame(), Balloon.Log.WARN, "Branch duct's diameter could not be set");
 
             // Get the connector from the branch duct closest to the main duct
             var (branchConns, _) = Connectors.GetClosestToPoint(branchDuct, location);
