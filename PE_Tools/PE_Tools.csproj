@@ -60,14 +60,20 @@
         <StartArguments>/language ENG</StartArguments>
     </PropertyGroup>
     <ItemGroup>
-        <EmbeddedResource Include="Resources\Blue_16.png"/>
-        <EmbeddedResource Include="Resources\Blue_32.png"/>
-        <EmbeddedResource Include="Resources\Green_16.png"/>
-        <EmbeddedResource Include="Resources\Green_32.png"/>
-        <EmbeddedResource Include="Resources\Red_16.png"/>
-        <EmbeddedResource Include="Resources\Red_32.png"/>
-        <EmbeddedResource Include="Resources\Yellow_16.png"/>
-        <EmbeddedResource Include="Resources\Yellow_32.png"/>
+        <Resource Include="Resources\Red_16.png"/>
+        <Resource Include="Resources\Red_32.png"/>
+        <Resource Include="Resources\id-card16.png"/>
+        <Resource Include="Resources\id-card32.png"/>
+        <Resource Include="Resources\square-terminal16.png"/>
+        <Resource Include="Resources\square-terminal32.png"/>
+        <Resource Include="Resources\key-round16.png"/>
+        <Resource Include="Resources\key-round32.png"/>
+        <Resource Include="Resources\key-square16.png"/>
+        <Resource Include="Resources\key-square32.png"/>
+        <Resource Include="Resources\monitor-down16.png"/>
+        <Resource Include="Resources\monitor-down32.png"/>
+
+
     </ItemGroup>
     <ItemGroup>
         <!-- <PackageReference Include="System.Text.Json" Version="9.0.0" /> -->
