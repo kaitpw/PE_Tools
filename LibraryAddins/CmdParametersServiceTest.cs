@@ -1,5 +1,4 @@
 using Json.Schema.Generation;
-using PE_Tools.Properties;
 using PeRevitUI;
 using PeServices.Aps;
 using PeServices.Aps.Models;
@@ -71,8 +70,6 @@ public class CmdParametersServiceTest : IExternalCommand {
             return Result.Failed;
         }
     }
-
-
 }
 
 public class ParametersServiceTest : Storage.BaseSettings, OAuth.IApsTokenProvider {

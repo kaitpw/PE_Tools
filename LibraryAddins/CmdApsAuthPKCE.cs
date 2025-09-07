@@ -1,4 +1,3 @@
-using PE_Tools.Properties;
 using PeRevitUI;
 using PeServices.Aps;
 using PeServices.Aps.Models;

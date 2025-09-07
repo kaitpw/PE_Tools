@@ -1,5 +1,4 @@
-﻿using PE_Tools.Properties;
-using PeRevitUI;
+﻿using PeRevitUI;
 using ricaun.Revit.Github;
 
 namespace PE_Tools;

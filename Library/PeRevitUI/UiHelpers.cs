@@ -1,26 +1,12 @@
 ﻿namespace PeRevitUI;
 
 internal class UiHelpers {
-    internal static void CreateTab(UIControlledApplication app, string name) {
-        try {
-            app.CreateRibbonTab(name);
-        } catch (Exception err) {
-            Debug.Print(err.Message);
-        }
-    }
-
     internal static RibbonPanel CreateRibbonPanel(
         UIControlledApplication app,
         string tabName,
         string panelName
     ) {
-        RibbonPanel curPanel;
-
-        if (GetRibbonPanelByName(app, tabName, panelName) == null)
-            curPanel = app.CreateRibbonPanel(tabName, panelName);
-        else
-            curPanel = GetRibbonPanelByName(app, tabName, panelName);
-
+        var curPanel = GetRibbonPanelByName(app, tabName, panelName) ?? app.CreateRibbonPanel(tabName, panelName);
         return curPanel;
     }
 
@@ -35,5 +21,18 @@ internal class UiHelpers {
         }
 
         return null;
+    }
+}
+
+internal class CommandAvailability : IExternalCommandAvailability {
+    public bool IsCommandAvailable(
+        UIApplication applicationData,
+        CategorySet selectedCategories
+    ) {
+        var result = false;
+        var activeDoc = applicationData.ActiveUIDocument;
+        if (activeDoc != null && activeDoc.Document != null) result = true;
+
+        return result;
     }
 }

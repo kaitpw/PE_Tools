@@ -1,5 +1,4 @@
 ﻿using Autodesk.Revit.DB.Plumbing;
-using PE_Tools.Properties;
 using PeLib;
 using PeRevitUI;
 using System.Text;
