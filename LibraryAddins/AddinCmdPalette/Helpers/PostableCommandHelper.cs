@@ -94,7 +94,7 @@ public class PostableCommandHelper(Storage storage) {
         // Check if shortcuts are current, if not, clear the cache to force reload
         if (!shortcutsService.IsShortcutsCurrent()) shortcutsService.ClearCache();
 
-        // Get all values from the PostableCommand enumeration
+        // Get all commands from the ribbon
         var ribbonCommands = Ribbon.GetAllCommands();
 
         foreach (var command in ribbonCommands) {
@@ -109,7 +109,6 @@ public class PostableCommandHelper(Storage storage) {
             };
             // Try to get shortcut info from XML
             var (shortcutInfo, infoErr) = shortcutsService.GetShortcutInfo(command.Id);
-            if (shortcutInfo is null) continue;
             if (infoErr is not null) {
                 commandItem.Name = this.FormatCommandName(command.Name);
                 commandItem.Paths =
