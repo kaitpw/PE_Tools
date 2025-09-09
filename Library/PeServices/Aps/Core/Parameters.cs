@@ -15,7 +15,6 @@ public class Parameters(HttpClient httpClient) {
 
     private static string Clean(string v) => v.Replace("b.", "").Replace("-", "");
 
-
     public async Task<ParametersApi.Groups> GetGroups(string hubId) {
         var response = await httpClient.GetAsync(Suffix + Clean(hubId) + "/groups");
         return response.IsSuccessStatusCode

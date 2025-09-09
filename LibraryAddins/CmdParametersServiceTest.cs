@@ -1,7 +1,6 @@
 using Json.Schema.Generation;
 using PeRevitUI;
 using PeServices.Aps;
-using PeServices.Aps.Models;
 using PeServices.Storage;
 
 namespace AddinCmdParametersServiceTest;
@@ -72,7 +71,7 @@ public class CmdParametersServiceTest : IExternalCommand {
     }
 }
 
-public class ParametersServiceTest : Storage.BaseSettings, OAuth.IApsTokenProvider {
+public class ParametersServiceTest : Storage.BaseSettings, Aps.ITokenProvider {
     [Description(
         "The account ID derived from an 'id' field returned by `project/v1/hubs` but with the 'b.' prefix sliced off. If left empty, the first item of 'data' will be used.")]
     [Required]

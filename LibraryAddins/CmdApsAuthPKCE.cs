@@ -1,6 +1,5 @@
 using PeRevitUI;
 using PeServices.Aps;
-using PeServices.Aps.Models;
 using PeServices.Storage;
 
 namespace AddinCmdApsAuthPKCE;
@@ -25,7 +24,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
     }
 }
 
-public class ApsAuthPkce : Storage.BaseSettings, OAuth.IApsTokenProvider {
+public class ApsAuthPkce : Storage.BaseSettings, Aps.ITokenProvider {
     public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 }

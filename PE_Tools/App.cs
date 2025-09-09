@@ -31,26 +31,19 @@ internal class App : IExternalApplication {
         var manageStackButton = panelManage.AddPullDownButton("General");
 
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
-        var cmdApsAuthPkce = manageStackButton.AddPushButton<CmdApsAuthPKCE>("OAuth PKCE");
-        var cmdApsAuthNormal = manageStackButton.AddPushButton<CmdApsAuthNormal>("OAuth Normal");
-        var cmdParametersServiceTest = panelManage.AddPushButton<CmdParametersServiceTest>("Params Service Test");
+        ButtonDataHydrator.AddButtonData([
+            manageStackButton.AddPushButton<CmdApsAuthPKCE>("OAuth PKCE"),
+            manageStackButton.AddPushButton<CmdApsAuthNormal>("OAuth Normal"),
+            panelManage.AddPushButton<CmdParametersServiceTest>("Params Svc Test")
+        ]);
 #endif
 
-        var cmdUpdate = manageStackButton.AddPushButton<CmdUpdate>("Update");
-        var cmdMep2040 = panelTools.AddPushButton<CmdMep2040>("MEP 2040");
-        var cmdCommandPalette = panelTools.AddPushButton<CmdCommandPalette>("Command Palette");
-        var cmdTapMaker = panelTools.AddPushButton<CmdTapMaker>("Tap Maker");
-        var cmdFamilyMigrator = panelMigration.AddPushButton<CmdFamilyMigrator>("Family Migrator");
-
         ButtonDataHydrator.AddButtonData([
-            cmdUpdate,
-            cmdApsAuthPkce,
-            cmdApsAuthNormal,
-            cmdParametersServiceTest,
-            cmdMep2040,
-            cmdCommandPalette,
-            cmdTapMaker,
-            cmdFamilyMigrator
+            manageStackButton.AddPushButton<CmdUpdate>("Update"),
+            panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
+            panelTools.AddPushButton<CmdCommandPalette>("Command Palette"),
+            panelTools.AddPushButton<CmdTapMaker>("Tap Maker"),
+            panelMigration.AddPushButton<CmdFamilyMigrator>("Family Migrator")
         ]);
 
         return Result.Succeeded;
