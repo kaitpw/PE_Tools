@@ -14,7 +14,8 @@ public class GlobalLoggingManager {
 
     public void Write(string message) {
         this.CleanLog();
-        var logEntry = $"({DateTime.Now.ToString(_dateTimeFormat)}) {message}{Environment.NewLine}{Environment.NewLine}";
+        var logEntry =
+            $"({DateTime.Now.ToString(_dateTimeFormat)}) {message}{Environment.NewLine}{Environment.NewLine}";
         File.AppendAllText(this._logFilePath, logEntry);
     }
 

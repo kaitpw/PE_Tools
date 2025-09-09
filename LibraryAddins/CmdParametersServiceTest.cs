@@ -1,4 +1,3 @@
-using Json.Schema.Generation;
 using PeRevitUI;
 using PeServices.Aps;
 using PeServices.Storage;
@@ -72,11 +71,10 @@ public class CmdParametersServiceTest : IExternalCommand {
 }
 
 public class ParametersServiceTest : Storage.BaseSettings, Aps.ITokenProvider {
+    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
+    public string GetClientSecret() => null;
 
     public string AccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
     public string GroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
     public string CollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
-
-    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
-    public string GetClientSecret() => null;
 }

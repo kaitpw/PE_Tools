@@ -1,5 +1,4 @@
 using Json.Schema.Generation;
-using PeServices.Storage.Models;
 using PeUtils.Files;
 
 namespace PeServices.Storage.Core;
@@ -12,11 +11,11 @@ public class SettingsManager {
         _ = Directory.CreateDirectory(this._thisPath);
     }
 
-    public JsonReader<T> Json<T>() where T : class, new() =>
-        new(new Json<T>(Path.Combine(this._thisPath, "settings.json")));
+    public JsonReader<T> Json<T>(bool throwIfNotExists = true) where T : class, new() =>
+        new(new Json<T>(Path.Combine(this._thisPath, "settings.json"), throwIfNotExists));
 
-    public JsonReader<T> Json<T>(string filename) where T : class, new() =>
-        new(new Json<T>(Path.Combine(this._thisPath, filename)));
+    public JsonReader<T> Json<T>(string filename, bool throwIfNotExists = true) where T : class, new() =>
+        new(new Json<T>(Path.Combine(this._thisPath, filename), throwIfNotExists));
 
     /// <summary> Base interface for all settings classes. Provides global settings properties.</summary>
     public abstract class BaseSettings {
@@ -39,10 +38,10 @@ public class StateManager {
     }
 
     public JsonReadWriter<T> Json<T>() where T : class, new() =>
-        new(new Json<T>(Path.Combine(this._thisPath, "state.json")));
+        new(new Json<T>(Path.Combine(this._thisPath, "state.json"), false));
 
     public JsonReadWriter<T> Json<T>(string filename) where T : class, new() =>
-        new(new Json<T>(Path.Combine(this._thisPath, filename)));
+        new(new Json<T>(Path.Combine(this._thisPath, filename), false));
 
     public CsvReadWriter<T> Csv<T>() where T : class, new() =>
         new(new Csv<T>(Path.Combine(this._thisPath, "state.csv")));
@@ -60,10 +59,10 @@ public class OutputManager {
     }
 
     public JsonWriter<T> Json<T>() where T : class, new() =>
-        new(new Json<T>(Path.Combine(this._thisPath, $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json")));
+        new(new Json<T>(Path.Combine(this._thisPath, $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json"), false));
 
     public JsonWriter<T> Json<T>(string filename) where T : class, new() =>
-        new(new Json<T>(Path.Combine(this._thisPath, filename)));
+        new(new Json<T>(Path.Combine(this._thisPath, filename), false));
 
     public CsvWriter<T> Csv<T>() where T : class, new() =>
         new(new Csv<T>(Path.Combine(this._thisPath, $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.csv")));

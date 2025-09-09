@@ -3,7 +3,7 @@ namespace PeLib;
 public class Families {
     public static Result<Family> EditAndLoad(Document doc,
         Family family,
-        params Action<FamilyManager>[] callbacks) {
+        params Action<Document>[] callbacks) {
         var famDoc = doc.EditFamily(family);
         if (!famDoc.IsFamilyDocument) return new ArgumentException("Document is not a family document.");
         if (famDoc.FamilyManager is null)
@@ -11,7 +11,7 @@ public class Families {
 
         using var transFamily = new Transaction(famDoc, "Edit Family Document");
         _ = transFamily.Start();
-        foreach (var callback in callbacks) callback(famDoc.FamilyManager);
+        foreach (var callback in callbacks) callback(famDoc);
         _ = transFamily.Commit();
 
 

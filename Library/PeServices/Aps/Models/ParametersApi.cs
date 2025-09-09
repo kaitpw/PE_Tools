@@ -1,5 +1,6 @@
 using JetBrains.Annotations;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PeServices.Aps.Models;
 
@@ -43,20 +44,24 @@ public class ParametersApi {
     }
 
     public class Parameters {
-        [UsedImplicitly] public List<ParametersResult> Results { get; init; }
+        [UsedImplicitly] public List<ParametersResult> Results { get; set; }
 
         public class ParametersResult {
-            [UsedImplicitly] public string Id { get; init; }
+            [UsedImplicitly] public string Id { get; set; }
             [UsedImplicitly] public string Name { get; init; }
             [UsedImplicitly] public string Description { get; init; }
             [UsedImplicitly] public string SpecId { get; init; }
             [UsedImplicitly] public string ValueTypeId { get; init; }
             [UsedImplicitly] public bool ReadOnly { get; init; }
-            [UsedImplicitly] private List<RawMetadataValue> RawMetadata { get; init; }
+
+            [UsedImplicitly] [JsonInclude] private List<RawMetadataValue> Metadata { get; init; }
+
             [UsedImplicitly] public string CreatedBy { get; init; }
             [UsedImplicitly] public string CreatedAt { get; init; }
 
-            public ParametersResultMetadata Metadata => new(this.RawMetadata);
+            [UsedImplicitly] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
+
+            public ParameterDownloadOptions DownloadOptions => new(this.TypedMetadata);
 
             public class RawMetadataValue {
                 [UsedImplicitly] public string Id { get; init; }
@@ -64,52 +69,68 @@ public class ParametersApi {
             }
 
             public class ParametersResultMetadata {
+                private static readonly JsonSerializerOptions
+                    JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
                 public ParametersResultMetadata(List<RawMetadataValue> metadata) {
                     foreach (var item in metadata) {
                         _ = item.Id switch {
-                            "isHidden" => this.IsHidden = Convert.ToBoolean(item.Value),
-                            "isArchived" => this.IsArchived = Convert.ToBoolean(item.Value),
+                            "isHidden" =>
+                                this.IsHidden = item.Value is JsonElement { ValueKind: JsonValueKind.True },
+                            "isArchived" =>
+                                this.IsArchived = item.Value is JsonElement { ValueKind: JsonValueKind.True },
                             "instanceTypeAssociation" =>
-                                this.InstanceTypeAssociation = item.Value.ToString(),
+                                this.InstanceTypeAssociation = item.Value is JsonElement jsonString
+                                    ? jsonString.GetString() ?? "NONE"
+                                    : item.Value?.ToString() ?? "NONE",
                             "categories" =>
                                 this.Categories = item.Value is JsonElement {
                                     ValueKind: JsonValueKind.Array
                                 } json
-                                    ? JsonSerializer.Deserialize<List<Binding>>(json.GetRawText())
+                                    ? JsonSerializer.Deserialize<List<Binding>>(json.GetRawText(), JsonOptions)
                                     : null,
                             "labelIds" =>
                                 this.LabelIds = item.Value is JsonElement {
                                     ValueKind: JsonValueKind.Array
                                 } json
-                                    ? JsonSerializer.Deserialize<List<string>>(json.GetRawText())
+                                    ? JsonSerializer.Deserialize<List<string>>(json.GetRawText(), JsonOptions)
                                     : null,
                             "group" =>
                                 this.Group = item.Value is JsonElement groupElem
-                                    ? JsonSerializer.Deserialize<Binding>(groupElem.GetRawText())
+                                    ? JsonSerializer.Deserialize<Binding>(groupElem.GetRawText(), JsonOptions)
                                     : null,
                             _ => default(object)
                         };
                     }
                 }
 
-                private bool IsHidden { get; }
-                private string InstanceTypeAssociation { get; }
-                private List<Binding> Categories { get; }
-                private Binding Group { get; }
+                public bool IsHidden { get; }
+                public string InstanceTypeAssociation { get; }
+                public List<Binding> Categories { get; }
+                public Binding Group { get; }
                 public List<string> LabelIds { get; init; }
                 public bool IsArchived { get; init; }
 
+                public class Binding {
+                    [UsedImplicitly] public string BindingId { get; init; }
+                    [UsedImplicitly] public string Id { get; init; }
+                }
+            }
+
+            public class ParameterDownloadOptions(ParametersResultMetadata metadata) {
                 public ForgeTypeId GroupTypeId => // check this logic in testing
-                    this.Group?.Id != null ? new ForgeTypeId(this.Group.Id) : new ForgeTypeId("ABYV-32458-BXMZ-08934");
+                    metadata.Group?.Id != null
+                        ? new ForgeTypeId(metadata.Group.BindingId)
+                        : new ForgeTypeId("ABYV-32458-BXMZ-08934");
 
                 public bool IsInstance =>
-                    this.InstanceTypeAssociation?.Equals("INSTANCE", StringComparison.OrdinalIgnoreCase) ?? true;
+                    metadata.InstanceTypeAssociation?.Equals("INSTANCE", StringComparison.OrdinalIgnoreCase) ?? true;
 
-                public bool Visible => !this.IsHidden;
+                public bool Visible => !metadata.IsHidden;
 
                 public ISet<ElementId> CategorySet(Document doc) => // check this logic in testing
-                    this.Categories?.Any() == true
-                        ? MapCategoriesToElementIds(doc, this.Categories)
+                    metadata.Categories?.Any() == true
+                        ? MapCategoriesToElementIds(doc, metadata.Categories)
                         : null;
 
                 /// <summary>
@@ -118,7 +139,7 @@ public class ParametersApi {
                 /// </summary>
                 private static ISet<ElementId> MapCategoriesToElementIds(
                     Document doc,
-                    List<Binding> categories
+                    List<ParametersResultMetadata.Binding> categories
                 ) {
                     var categorySet = new HashSet<ElementId>();
 
@@ -170,11 +191,6 @@ public class ParametersApi {
                     } catch (Exception ex) {
                         throw new Exception($"Failed to map category '{categoryName}' to Revit category: {ex.Message}");
                     }
-                }
-
-                private class Binding {
-                    [UsedImplicitly] public string BindingId { get; init; }
-                    [UsedImplicitly] public string Id { get; init; }
                 }
             }
         }

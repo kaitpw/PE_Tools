@@ -16,13 +16,12 @@ namespace PE_Tools;
 // - add support for formulas
 // - add support for getting the value from an existing parameter
 // - add support for cleaning family
-//     - delete unused params
-//     - delete parameters with no value
+//     - purge unused nested families
+//     - delete unused reference lines
+//     - delete unused params with no value (may need to discriminate more specifically)
 //     - maybe delete certain reference lines
-
-// public record ParamAdditionResults {
-//     public string Name
-// }
+//     - delete linear dimensions (maybe?)
+//
 
 [Transaction(TransactionMode.Manual)]
 public class CmdFamilyMigrator : IExternalCommand {
@@ -69,12 +68,14 @@ public class CmdFamilyMigrator : IExternalCommand {
         try {
             var storage = new Storage("FamilyMigrator");
             var settings = storage.Settings().Json<FamilyMigratorSettings>().Read();
+            var paramSvcIds = GetParamSvcParamIds(storage, settings);
+
             foreach (var family in families) {
                 _ = balloon.Add(Balloon.Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
                 var (fam, famErr) = Families.EditAndLoad(doc, family,
-                    fm => AddFamilyParameters(fm, parameters, settings.OverrideExistingValues),
-                    fm => CleanParameters(fm, ParametersOrder.Ascending, settings.DeleteEmptyParameters),
-                    fm => AddSharedParameters(doc, fm, settings)
+                    famDoc => AddFamilyParams(famDoc, parameters, settings.OverrideExistingValues),
+                    famDoc => AddParamSvcParams(famDoc, paramSvcIds),
+                    famDoc => SortParams(famDoc, ParametersOrder.Ascending)
                 );
                 if (famErr is not null) {
                     _ = balloon.Add(Balloon.Log.ERR, famErr.Message);
@@ -93,16 +94,29 @@ public class CmdFamilyMigrator : IExternalCommand {
             balloon.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
-            _ = TaskDialog.Show("Error", ex.Message);
+            _ = TaskDialog.Show("Error",
+                $"{ex.Message}  \n {ex.StackTrace} \n {ex.InnerException?.Message} \n {ex.InnerException?.StackTrace}");
             return Result.Cancelled;
         }
     }
 
-    private static void AddFamilyParameters(
-        FamilyManager fm,
+    private static ParametersApi.Parameters GetParamSvcParamIds(Storage storage, FamilyMigratorSettings settings) {
+        var parameters = new ParametersApi.Parameters();
+        var cache = storage.State().Json<ParamSvcCache>("parameters-service-cache.json").Read();
+        if (cache.LastRead > DateTime.Now.AddMinutes(-10)) parameters = GetParamServiceParams(settings);
+        else
+            parameters.Results = cache.ParameterIds
+                .Select(id => new ParametersApi.Parameters.ParametersResult { Id = id }).ToList();
+        return parameters;
+    }
+
+    private static void AddFamilyParams(
+        Document famDoc,
         FamilyParameterInfo[] parameters,
         bool overrideExistingValue
     ) {
+        var fm = famDoc.FamilyManager;
+
         bool NoExistingParam(FamilyParameterInfo p) {
             return fm.get_Parameter(p.Name) == null;
         }
@@ -141,54 +155,86 @@ public class CmdFamilyMigrator : IExternalCommand {
         }
     }
 
-    private static void AddSharedParameters(
-        Document doc,
-        FamilyManager fm,
-        FamilyMigratorSettings settings
+    private static void AddParamSvcParams(
+        Document famDoc,
+        // FamilyMigratorSettings settings,
+        ParametersApi.Parameters paramSvcIds
     ) {
-        var sharedParameterElements = AddParameterServiceParameters(doc, settings);
+        var sharedParameterElements = GetParamSvcParams(famDoc, paramSvcIds);
         foreach (var sharedParam in sharedParameterElements) {
             // SharedParameterElement contains the ExternalDefinition we need
             // We can get it directly from the element, not through GetDefinition()
             try {
                 // Add the shared parameter to the family using the shared parameter element
-                var externalDefinition = doc.Application.OpenSharedParameterFile()?.Groups?
-                    .SelectMany(g => g.Definitions)
-                    .OfType<ExternalDefinition>()
-                    .FirstOrDefault(def => def.GUID == sharedParam.GuidValue);
-
-                if (externalDefinition != null) _ = fm.AddParameter(externalDefinition, GroupTypeId.General, true);
+                // TODO: uncomment after first phase of tests
+                // var externalDefinition = doc.Application.OpenSharedParameterFile()?.Groups?
+                //     .SelectMany(g => g.Definitions)
+                //     .OfType<ExternalDefinition>()
+                //     .FirstOrDefault(def => def.GUID == sharedParam.GuidValue);
+                //
+                // if (externalDefinition != null) _ = fm.AddParameter(externalDefinition, GroupTypeId.General, true);
             } catch (Exception ex) {
                 throw new Exception($"Failed to add shared parameter {sharedParam.Name}: {ex.Message}");
             }
         }
     }
 
-    private static SharedParameterElement[] AddParameterServiceParameters(
-        Document doc,
-        FamilyMigratorSettings settings
+    private static SharedParameterElement[] GetParamSvcParams(
+        Document famDoc,
+        // FamilyMigratorSettings settings,
+        ParametersApi.Parameters parameters
     ) {
-        var parameters = GetParamServiceParams(settings);
-        if (parameters?.Results == null) throw new Exception("NO PARAMETERS FOUND");
+        var balloon = new Balloon();
+        if (parameters?.Results == null) _ = balloon.AddDebug(new StackFrame(), Balloon.Log.ERR, "NO PARAMETERS FOUND");
 
         var sharedParameterElements = new List<SharedParameterElement>();
 
         foreach (var p in parameters.Results) {
+            if (!p.Name.Contains("Manufacturer")) continue;
             // Create ForgeTypeId from parameter ID
             var parameterTypeId = new ForgeTypeId(p.Id);
 
             // Download parameter options from APS
-            var downloadOptions = ParameterUtils.DownloadParameterOptions(parameterTypeId);
-            downloadOptions.SetCategories(p.Metadata.CategorySet(doc));
-            downloadOptions.IsInstance = p.Metadata.IsInstance;
-            downloadOptions.Visible = !p.Metadata.Visible;
-            downloadOptions.SetGroupTypeId(p.Metadata.GroupTypeId);
-            var sharedParameterElement = ParameterUtils.DownloadParameter(doc, downloadOptions, parameterTypeId)
-                                         ?? throw new Exception($"Failed to download parameter: {p.Name} (ID: {p.Id})");
+            try {
+                var downloadOptions = ParameterUtils.DownloadParameterOptions(parameterTypeId);
+                if (downloadOptions.GetCategories().Count == 0) {
+                    var owner = famDoc.OwnerFamily;
+                    var familyCategory = owner.FamilyCategoryId;
+                    if (familyCategory != null) {
+                        var familyCategorySet = new HashSet<ElementId> { familyCategory };
+                        downloadOptions.SetCategories(familyCategorySet);
+                    }
+                }
 
-            sharedParameterElements.Add(sharedParameterElement);
+                var sharedParameterElement = ParameterUtils.DownloadParameter(famDoc, downloadOptions, parameterTypeId)
+                                             ?? throw new Exception(
+                                                 $"Failed to download parameter: {p.Name} (ID: {p.Id})");
+
+                sharedParameterElements.Add(sharedParameterElement);
+            } catch (Exception ex) {
+                var msgBase = $"Error for Parameter {p.Name}: {p.Id}.";
+                if (ex.IsExceptionFromMethod(nameof(ParameterUtils.DownloadParameterOptions))) {
+                    switch (ex.Message) {
+                    case { } msg when msg.Contains("Object reference not set to an instance of an object."):
+                        _ = balloon.AddDebug(new StackFrame(), Balloon.Log.ERR, msgBase +
+                            "\nA crucial value of this parameter in Parameters Service is not set, probably the instace/type association");
+                        break;
+                    case { } msg when msg.Contains("Parameter with a matching name"):
+                        continue; // TODO: delete the current param, retry adding new one. need to figure out how to test for an unused param first though
+                    case { } msg when msg.Contains("Parameter with a matching GUID"):
+                        continue; // TODO: Ignore this case? maybe add a log or write to storage output
+                    default:
+                        _ = balloon.AddDebug(new StackFrame(), Balloon.Log.ERR,
+                            $"Unknown {msgBase}" +
+                            $"\nError: {ex.Message}\n{ex.StackTrace}");
+                        break;
+                    }
+                } else
+                    _ = balloon.AddDebug(new StackFrame(), Balloon.Log.ERR, msgBase);
+            }
         }
 
+        balloon.Show();
         return sharedParameterElements.ToArray();
     }
 
@@ -208,29 +254,9 @@ public class CmdFamilyMigrator : IExternalCommand {
 
         _ = Task.Run(async () => {
             try {
-                var hubs = await aps.Hubs().GetHubs();
-                var hub = hubs.Data.First().Id;
-                if (!string.IsNullOrEmpty(acc)) hub = acc;
-
-                var groups = await aps.Parameters().GetGroups(hub);
-                var group = groups.Results.First().Id;
-                if (!string.IsNullOrEmpty(gp)) group = gp;
-
-                var collections = await aps.Parameters().GetCollections(hub, group);
-                var collection = collections.Results.First().Id;
-                if (!string.IsNullOrEmpty(col)) collection = col;
-
                 var parameters =
-                    await aps.Parameters().GetParameters(hub, group, collection);
+                    await aps.Parameters().GetParameters(acc, gp, col);
                 tcsParams.SetResult(parameters);
-
-                messages.AddRange(hubs.Data.Select(h => "Hubs (plural)      : " + h.Id));
-                messages.Add("SELECTED          -> " + hub + "\n");
-                messages.AddRange(groups.Results.Select(g => "Groups (plural)    : " + g.Id));
-                messages.Add("SELECTED          -> " + group + "\n");
-                messages.AddRange(collections.Results.Select(c => "Collections (plural): " + c.Title + ": " + c.Id));
-                messages.Add("SELECTED          -> " + collection + "\n");
-                messages.AddRange(parameters.Results.Select(p => "Parameters (plural): " + p.Name));
 
                 tcsMessages.SetResult(messages);
             } catch (Exception ex) {
@@ -250,20 +276,9 @@ public class CmdFamilyMigrator : IExternalCommand {
         return paramsErr != null ? throw paramsErr : parameters;
     }
 
-    /// <summary>
-    ///     TODO:
-    ///     - purge unused nested families
-    ///     - delete unused params with no value (may need to discriminate more specifically)
-    ///     - delete unused reference lines
-    ///     - delete linear dimensions (maybe?)
-    /// </summary>
-    private static void CleanParameters(FamilyManager fm, ParametersOrder order, bool deleteEmpty) {
-        fm.SortParameters(order);
-        var parametersToDelete = fm.GetParameters() // to do, figure out filters before deleting anything
-            .Where(p => deleteEmpty) // prob need to get FamilyManager.Types first to get actual values.
-            .Where(p => p.IsReadOnly)
-            .ToList();
-    }
+
+    private static void SortParams(Document famDoc, ParametersOrder order) =>
+        famDoc.FamilyManager.SortParameters(order);
 }
 
 public record FamilyParameterInfo {
@@ -277,7 +292,19 @@ public record FamilyParameterInfo {
     public Result<FamilyParameter> AddParamResult { get; set; }
 }
 
+public class ParamSvcCache {
+    public DateTime LastRead { get; set; } = DateTime.Now;
+    public List<string> ParameterIds { get; set; } = [];
+}
+
 public class FamilyMigratorSettings : Storage.BaseSettings, Aps.ITokenProvider {
+    [Description(
+        "Use cached Parameters Service data instead of downloading from APS on every run. " +
+        "Only set to true if you are sure no one has changed the param definitions since the last time you opened Revit " +
+        "and/or you are running this command in quick succession.")]
+    [Required]
+    public bool UseCachedParametersServiceData { get; set; } = false;
+
     [Description(
         "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
     [Required]

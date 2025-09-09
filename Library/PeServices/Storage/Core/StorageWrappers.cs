@@ -1,8 +1,7 @@
 using PeUtils.Files;
 
-namespace PeServices.Storage.Models;
+namespace PeServices.Storage.Core;
 
-//////////////////////////////////////////////////////////////////////////////////
 // Restrictive interfaces for different operation types
 
 public class JsonReader<T>(Json<T> json) where T : class, new() {

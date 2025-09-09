@@ -10,7 +10,7 @@ public class Json<T> where T : class, new() {
     private readonly JsonSchema _schema;
     public readonly string FilePath;
 
-    public Json(string filePath) {
+    public Json(string filePath, bool throwIfNotExists) {
         FileUtils.ValidateFileNameAndExtension(filePath, "json");
         this.FilePath = filePath;
         this._jsonOptions =
@@ -20,11 +20,16 @@ public class Json<T> where T : class, new() {
             .AdditionalProperties(false)
             .Build();
         this.SaveSchema();
+        var fileDidntExist = !File.Exists(this.FilePath);
         this.SaveJson();
+        if (throwIfNotExists && fileDidntExist) {
+            throw new CrashProgramException(
+                $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
+        }
     }
 
-    /// <summary> Reads JSON settings from the specified file, validating against schema </summary>
-    /// <returns>Deserialized settings object</returns>
+    /// <summary> Reads JSON object from the specified file, validating against schema </summary>
+    /// <returns>Deserialized object</returns>
     public T Read() {
         this.SaveJson();
 
@@ -36,17 +41,17 @@ public class Json<T> where T : class, new() {
             var errors = new List<string>();
             CollectValidationErrors(validationResults, errors);
 
-            throw new JsonValidationException(errors);
+            throw new JsonValidationException(this.FilePath, errors);
         }
 
-        var settings = SysJson.JsonSerializer.Deserialize<T>(jsonContent, this._jsonOptions);
-        return settings ?? new T();
+        var content = SysJson.JsonSerializer.Deserialize<T>(jsonContent, this._jsonOptions);
+        return content ?? new T();
     }
 
-    /// <summary> Writes settings object to JSON file after validation </summary>
-    /// <param name="settings">Settings object to save</param>
-    public void Write(T settings) {
-        var jsonContent = SysJson.JsonSerializer.Serialize(settings, this._jsonOptions);
+    /// <summary> Writes object to JSON file after validation </summary>
+    /// <param name="content">Object to save</param>
+    public void Write(T content) {
+        var jsonContent = SysJson.JsonSerializer.Serialize(content, this._jsonOptions);
         var jsonNode = SysJsonNodes.JsonNode.Parse(jsonContent);
 
         // Validate before saving
@@ -54,7 +59,7 @@ public class Json<T> where T : class, new() {
         if (!validationResults.IsValid) {
             var errors = new List<string>();
             CollectValidationErrors(validationResults, errors);
-            throw new JsonValidationException(errors);
+            throw new JsonValidationException(this.FilePath, errors);
         }
 
         File.WriteAllText(this.FilePath, jsonContent);
@@ -62,10 +67,8 @@ public class Json<T> where T : class, new() {
 
     private void SaveJson() {
         if (!File.Exists(this.FilePath)) {
-            var defaultSettings = new T();
-            this.Write(defaultSettings);
-            throw new CrashProgramException(
-                $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
+            var defaultContent = new T();
+            this.Write(defaultContent);
         }
     }
 
