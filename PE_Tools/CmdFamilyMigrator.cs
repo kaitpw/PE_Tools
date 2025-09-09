@@ -104,9 +104,11 @@ public class CmdFamilyMigrator : IExternalCommand {
         var parameters = new ParametersApi.Parameters();
         var cache = storage.State().Json<ParamSvcCache>("parameters-service-cache.json").Read();
         if (cache.LastRead > DateTime.Now.AddMinutes(-10)) parameters = GetParamServiceParams(settings);
-        else
+        else {
             parameters.Results = cache.ParameterIds
                 .Select(id => new ParametersApi.Parameters.ParametersResult { Id = id }).ToList();
+        }
+
         return parameters;
     }
 
@@ -217,7 +219,7 @@ public class CmdFamilyMigrator : IExternalCommand {
                     switch (ex.Message) {
                     case { } msg when msg.Contains("Object reference not set to an instance of an object."):
                         _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase +
-                            "\nA crucial value of this parameter in Parameters Service is not set, probably the instace/type association");
+                                                                        "\nA crucial value of this parameter in Parameters Service is not set, probably the instace/type association");
                         break;
                     case { } msg when msg.Contains("Parameter with a matching name"):
                         continue; // TODO: delete the current param, retry adding new one. need to figure out how to test for an unused param first though
@@ -248,30 +250,18 @@ public class CmdFamilyMigrator : IExternalCommand {
         var aps = new Aps(settings);
 
         var messages = new List<string> { "Parameters Service Test", "\n" }; // TODO: delete after testing
-        var tcsMessages = new TaskCompletionSource<Result<List<string>>>();
-
         var tcsParams = new TaskCompletionSource<Result<ParametersApi.Parameters>>();
 
         _ = Task.Run(async () => {
             try {
-                var parameters =
-                    await aps.Parameters().GetParameters(acc, gp, col);
+                var parameters = await aps.Parameters().GetParameters(acc, gp, col);
                 tcsParams.SetResult(parameters);
-
-                tcsMessages.SetResult(messages);
             } catch (Exception ex) {
-                tcsMessages.SetResult(ex);
                 tcsParams.SetResult(ex);
             }
         });
 
-        tcsMessages.Task.Wait();
         tcsParams.Task.Wait();
-
-        var (msg, msgErr) = tcsMessages.Task.Result;
-        if (msgErr != null) throw msgErr;
-        foreach (var m in msg) Debug.WriteLine(m);
-
         var (parameters, paramsErr) = tcsParams.Task.Result;
         return paramsErr != null ? throw paramsErr : parameters;
     }
