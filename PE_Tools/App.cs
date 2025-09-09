@@ -16,7 +16,7 @@ internal class App : IExternalApplication {
             app.CreateRibbonTab(tabName);
         } catch (Exception) {
             new Balloon()
-                .Add(Balloon.Log.INFO, $"{tabName} already exists in the current Revit instance.")
+                .Add(Log.INFO, $"{tabName} already exists in the current Revit instance.")
                 .Show();
         }
 

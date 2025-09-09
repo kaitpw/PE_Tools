@@ -1,5 +1,4 @@
 using Json.Schema.Generation;
-using PeServices.Storage.Models;
 using PeUtils.Files;
 
 namespace PeServices.Storage.Core;
@@ -16,7 +15,7 @@ public class GlobalSettingsManager {
     }
 
     public JsonReader<GlobalSettings> Json() =>
-        new(new Json<GlobalSettings>(this._settingsFilePath));
+        new(new Json<GlobalSettings>(this._settingsFilePath, true));
 
 
     /// <summary> Base interface for all settings classes. Provides global settings properties.</summary>

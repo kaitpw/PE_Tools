@@ -15,10 +15,10 @@ public class CmdApsAuthNormal : IExternalCommand {
             var settings = storage.Settings().Json<ApsAuthNormal>().Read();
             var auth = new Aps(settings);
             var token = auth.GetToken();
-            new Balloon().AddDebug(new StackFrame(), Balloon.Log.INFO, token).Show();
+            new Balloon().AddDebug(new StackFrame(), Log.INFO, token).Show();
             return Result.Succeeded;
         } catch (Exception ex) {
-            new Balloon().Add(Balloon.Log.ERR, ex.Message).Show();
+            new Balloon().Add(Log.ERR, ex.Message).Show();
             return Result.Failed;
         }
     }

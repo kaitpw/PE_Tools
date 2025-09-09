@@ -58,7 +58,7 @@ public class CmdParametersServiceTest : IExternalCommand {
             var (msg, msgErr) = tcs.Task.Result;
             if (msgErr is not null) throw msgErr;
             // var balloon = new Balloon();
-            // foreach (var m in msg) _ = balloon.Add(Balloon.Log.TEST, m);
+            // foreach (var m in msg) _ = balloon.Add(Log.TEST, m);
             // balloon.Show();
             foreach (var m in msg) Debug.WriteLine(m);
 

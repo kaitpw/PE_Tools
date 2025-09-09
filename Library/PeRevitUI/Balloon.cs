@@ -8,22 +8,22 @@ namespace PeRevitUI;
 
 /// <summary>Message collector for accumulating messages, then showing all at once</summary>
 internal class Balloon {
-    public enum Log {
-        // ReSharper disable once InconsistentNaming
-        INFO,
+    // public enum Log {
+    //     // ReSharper disable once InconsistentNaming
+    //     INFO,
 
-        // ReSharper disable once InconsistentNaming
-        WARN,
+    //     // ReSharper disable once InconsistentNaming
+    //     WARN,
 
-        // ReSharper disable once InconsistentNaming
-        ERR,
+    //     // ReSharper disable once InconsistentNaming
+    //     ERR,
 
-        // ReSharper disable once InconsistentNaming
-        TODO,
+    //     // ReSharper disable once InconsistentNaming
+    //     TODO,
 
-        // ReSharper disable once InconsistentNaming
-        TEST
-    }
+    //     // ReSharper disable once InconsistentNaming
+    //     TEST
+    // }
 
     private const string FmtNormal = "{0}: {1}";
     private const string FmtMethod = "{0} ({1}): {2}";

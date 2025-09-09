@@ -71,14 +71,14 @@ public class CmdFamilyMigrator : IExternalCommand {
             var paramSvcIds = GetParamSvcParamIds(storage, settings);
 
             foreach (var family in families) {
-                _ = balloon.Add(Balloon.Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
+                _ = balloon.Add(Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
                 var (fam, famErr) = Families.EditAndLoad(doc, family,
                     famDoc => AddFamilyParams(famDoc, parameters, settings.OverrideExistingValues),
                     famDoc => AddParamSvcParams(famDoc, paramSvcIds),
                     famDoc => SortParams(famDoc, ParametersOrder.Ascending)
                 );
                 if (famErr is not null) {
-                    _ = balloon.Add(Balloon.Log.ERR, famErr.Message);
+                    _ = balloon.Add(Log.ERR, famErr.Message);
                     return Result.Failed;
                 }
 
@@ -185,7 +185,7 @@ public class CmdFamilyMigrator : IExternalCommand {
         ParametersApi.Parameters parameters
     ) {
         var balloon = new Balloon();
-        if (parameters?.Results == null) _ = balloon.AddDebug(new StackFrame(), Balloon.Log.ERR, "NO PARAMETERS FOUND");
+        if (parameters?.Results == null) _ = balloon.AddDebug(new StackFrame(), Log.ERR, "NO PARAMETERS FOUND");
 
         var sharedParameterElements = new List<SharedParameterElement>();
 
@@ -216,7 +216,7 @@ public class CmdFamilyMigrator : IExternalCommand {
                 if (ex.IsExceptionFromMethod(nameof(ParameterUtils.DownloadParameterOptions))) {
                     switch (ex.Message) {
                     case { } msg when msg.Contains("Object reference not set to an instance of an object."):
-                        _ = balloon.AddDebug(new StackFrame(), Balloon.Log.ERR, msgBase +
+                        _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase +
                             "\nA crucial value of this parameter in Parameters Service is not set, probably the instace/type association");
                         break;
                     case { } msg when msg.Contains("Parameter with a matching name"):
@@ -224,13 +224,13 @@ public class CmdFamilyMigrator : IExternalCommand {
                     case { } msg when msg.Contains("Parameter with a matching GUID"):
                         continue; // TODO: Ignore this case? maybe add a log or write to storage output
                     default:
-                        _ = balloon.AddDebug(new StackFrame(), Balloon.Log.ERR,
+                        _ = balloon.AddDebug(new StackFrame(), Log.ERR,
                             $"Unknown {msgBase}" +
                             $"\nError: {ex.Message}\n{ex.StackTrace}");
                         break;
                     }
                 } else
-                    _ = balloon.AddDebug(new StackFrame(), Balloon.Log.ERR, msgBase);
+                    _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase);
             }
         }
 

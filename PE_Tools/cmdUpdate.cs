@@ -20,11 +20,11 @@ public class CmdUpdate : IExternalCommand {
         var result = RunRequest(request);
 
         new Balloon()
-            .Add(Balloon.Log.INFO, $"Download: {result}")
+            .Add(Log.INFO, $"Download: {result}")
             .Show(() => { }, "None"
-                // TODO: Figure out how to get the request to rerun
-                // RunRequest(request),
-                // "Click to Retry Download"
+            // TODO: Figure out how to get the request to rerun
+            // RunRequest(request),
+            // "Click to Retry Download"
             );
 
         return Result.Succeeded;
