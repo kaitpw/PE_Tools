@@ -17,7 +17,7 @@ public class CmdParametersServiceTest : IExternalCommand {
         try {
             var storage = new Storage("ParametersServiceTest");
             var settings = storage.Settings().Json<ParametersServiceTest>().Read();
-            var (acc, gp, col) = (settings.AccountId, settings.GroupId, settings.CollectionId);
+            var (acc, gp, col) = (settings.AccountId(), settings.GroupId(), settings.CollectionId());
             var aps = new Aps(settings);
 
             var messages = new List<string> { "Parameters Service Test", "\n" };
@@ -72,19 +72,10 @@ public class CmdParametersServiceTest : IExternalCommand {
 }
 
 public class ParametersServiceTest : Storage.BaseSettings, Aps.ITokenProvider {
-    [Description(
-        "The account ID derived from an 'id' field returned by `project/v1/hubs` but with the 'b.' prefix sliced off. If left empty, the first item of 'data' will be used.")]
-    [Required]
-    public string AccountId { get; set; } = "";
 
-    [Description(
-        "The group ID derived from an 'id' field returned by `parameters/v1/accounts/<accountId>/groups`. If left empty, the first item of 'results' will be used.")]
-    [Required]
-    public string GroupId { get; set; } = "";
-
-    [Description(
-        "The collection ID derived from an 'id' field returned by `parameters/v1/accounts/<accountId>/groups/<groupId>/collections`. If left empty, the first item of 'results' will be used.")]
-    public string CollectionId { get; set; } = "";
+    public string AccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
+    public string GroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
+    public string CollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
 
     public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;

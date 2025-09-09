@@ -26,13 +26,13 @@ public class JsonValidationException : Exception {
 
     /// <summary>Creates a JsonValidationException with a formatted list of validation errors</summary>
     /// <param name="validationErrors">List of validation error messages</param>
-    public JsonValidationException(IEnumerable<string> validationErrors)
-        : base(FormatValidationErrors(validationErrors)) {
+    public JsonValidationException(string path,IEnumerable<string> validationErrors)
+        : base(FormatValidationErrors(path, validationErrors)) {
     }
 
-    private static string FormatValidationErrors(IEnumerable<string> errors) {
+    private static string FormatValidationErrors(string path,IEnumerable<string> errors) {
         var errorList = errors.ToList();
-        return $"JSON validation failed with {errorList.Count} error{(errorList.Count != 1 ? "s" : "")}:\n" +
+        return $"JSON validation failed at {path} with {errorList.Count} error{(errorList.Count != 1 ? "s" : "")}:\n" +
                string.Join("\n", errorList.Select((error, index) => $"  {index + 1}. {error}"));
     }
 }
