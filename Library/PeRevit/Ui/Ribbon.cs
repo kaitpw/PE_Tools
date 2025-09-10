@@ -28,10 +28,7 @@ public class Ribbon {
             foreach (var panel in tab.Panels) {
                 if (!panel.IsVisible || !panel.IsEnabled) continue;
                 panelList.Add(new DiscoveredPanel {
-                    Tab = panel.Tab,
-                    Cookie = panel.Cookie,
-                    Source = panel.Source,
-                    RibbonControl = panel.RibbonControl
+                    Tab = panel.Tab, Cookie = panel.Cookie, Source = panel.Source, RibbonControl = panel.RibbonControl
                 });
             }
         }

@@ -1,6 +1,6 @@
-namespace PeRevit.Lib;
+namespace PeRevit.Families;
 
-public class Families {
+public class FamUtils {
     /// <summary>
     ///     Edits a family document and loads the family back into the document (without saving it as a file).
     /// </summary>
@@ -35,6 +35,8 @@ public class Families {
 
         public void Add(string operation, Result<object> result) => this.Results.Add((operation, result));
     }
+
+    
 }
 
 internal class EditAndLoadFamilyOptions : IFamilyLoadOptions {

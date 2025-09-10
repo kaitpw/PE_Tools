@@ -1,5 +1,4 @@
 using Json.Schema.Generation;
-using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Aps;
 using PeServices.Aps.Core;
@@ -45,14 +44,14 @@ public class CmdFamilyFoundry : IExternalCommand {
 
         // TODO: remove this after testing family parameter additions
         var famParamInfos = new[] {
-            new FamilyParameterInfo {
+            new AddParams.FamilyParamInfo {
                 Name = "TEST5_Instance",
                 Group = GroupTypeId.General,
                 Category = SpecTypeId.String.Text,
                 IsInstance = true,
                 Value = "TEST1"
             },
-            new FamilyParameterInfo {
+            new AddParams.FamilyParamInfo {
                 Name = "TEST5_Type",
                 Group = GroupTypeId.General,
                 Category = SpecTypeId.String.Text,
@@ -73,14 +72,14 @@ public class CmdFamilyFoundry : IExternalCommand {
 
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
-                var (fam, operationResults) = Families.EditAndLoad(doc, family,
+                var (fam, operationResults) = FamUtils.EditAndLoad(doc, family,
                     (famDoc, results) => {
-                        var result = AddFamilyParams(famDoc, famParamInfos, settings.OverrideExistingValues);
-                        results.Add(nameof(AddFamilyParams), result);
+                        var result = AddParams.Family(famDoc, famParamInfos, settings.OverrideExistingValues);
+                        results.Add(nameof(AddParams.Family), result);
                     },
                     (famDoc, results) => {
-                        var result = AddParamSvcParams(famDoc, paramSvcIds);
-                        results.Add(nameof(AddParamSvcParams), result);
+                        var result = AddParams.ParamSvc(famDoc, paramSvcIds);
+                        results.Add(nameof(AddParams.ParamSvc), result);
                     },
                     (famDoc, _) => SortParams(famDoc, ParametersOrder.Ascending)
                 );
@@ -103,202 +102,83 @@ public class CmdFamilyFoundry : IExternalCommand {
 
     private static ParametersApi.Parameters GetParamSvcParamIds(Storage storage, Parameters ApsParameters) {
         const string cacheFileName = "parameters-service-cache.json";
-        var cache = storage.State().Json<ParametersApi.Parameters>(cacheFileName).Read();
-        var lastWrite = File.GetLastWriteTime(cacheFileName);
-        if (lastWrite < DateTime.Now.AddMinutes(-10) && cache.Results.Count > 1) return cache;
-
+        var cache = storage.State().Json<ParametersApi.Parameters>(cacheFileName);
         var tcsParams = new TaskCompletionSource<Result<ParametersApi.Parameters>>();
-
         _ = Task.Run(async () => {
             try {
-                tcsParams.SetResult(await ApsParameters.GetParameters());
+                tcsParams.SetResult(await ApsParameters.GetParameters(cache));
             } catch (Exception ex) {
                 tcsParams.SetResult(ex);
             }
         });
-
         tcsParams.Task.Wait();
+
         var (parameters, paramsResult) = tcsParams.Task.Result;
         return paramsResult != null ? throw paramsResult : parameters;
     }
 
-    private static List<Result<FamilyParameter>> AddFamilyParams(
-        Document famDoc,
-        FamilyParameterInfo[] parameters,
-        bool overrideExistingValue
-    ) {
-        var fm = famDoc.FamilyManager;
-        var result = new List<Result<FamilyParameter>>();
-
-        bool NoExistingParam(FamilyParameterInfo p) {
-            return fm.get_Parameter(p.Name) == null;
-        }
-
-        parameters = parameters
-            .Where(p => NoExistingParam(p) || overrideExistingValue)
-            .ToArray();
-        foreach (FamilyType type in fm.Types) {
-            fm.CurrentType = type;
-            foreach (var p in parameters) {
-                try {
-                    var param = fm.get_Parameter(p.Name) ?? fm.AddParameter(p.Name, p.Group, p.Category, p.IsInstance);
-
-                    // Set parameter value based on its type, look into storageType of params and spectypeid
-                    if (p.Value != null) {
-                        switch (p.Value) {
-                        case double doubleValue:
-                            fm.Set(param, doubleValue);
-                            break;
-                        case int intValue:
-                            fm.Set(param, intValue);
-                            break;
-                        case string stringValue:
-                            fm.Set(param, stringValue);
-                            break;
-                        }
-                    }
-
-                    result.Add(fm.get_Parameter(p.Name) != p.Value
-                        ? new Exception($"Parameter {p.Name} was not set to {p.Value}")
-                        : param);
-                } catch (Exception ex) {
-                    result.Add(ex);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    private static List<Result<FamilyParameter>> AddParamSvcParams(
-        Document famDoc,
-        ParametersApi.Parameters paramSvcIds
-    ) {
-        var fm = famDoc.FamilyManager;
-        var results = new List<Result<FamilyParameter>>();
-        var downloadParamsResults = DownloadParamSvcParams(famDoc, paramSvcIds);
+    private static SharedParameterElement[] DownloadParamSvcParams(Document famDoc, Parameters apsParams) {
+        var downloadParamsResults = apsParams.DownloadParameters(famDoc, paramSvcIds);
 
         foreach (var result in downloadParamsResults) {
             var (sharedParam, downloadErr) = result;
             if (downloadErr is not null) throw downloadErr;
-            // SharedParameterElement contains the ExternalDefinition we need
-            // We can get it directly from the element, not through GetDefinition()
-            try {
-                // Add the shared parameter to the family using the shared parameter element
-                // TODO: uncomment after first phase of tests
-                var externalDefinition = famDoc.Application.OpenSharedParameterFile()?.Groups?
-                    .SelectMany(g => g.Definitions)
-                    .OfType<ExternalDefinition>()
-                    .FirstOrDefault(def => def.GUID == sharedParam.GuidValue);
-
-                if (externalDefinition != null)
-                    results.Add(fm.AddParameter(externalDefinition, GroupTypeId.General, true));
-            } catch (Exception ex) {
-                throw new Exception($"Failed to add parameter service parameter {sharedParam.Name}: {ex.Message}");
-            }
+            // } catch (Exception ex) {
+            //     // TODO: FIGURE THIS OUT
+            //     var balloon = new Balloon();
+            //     var msgBase = $"Error for Parameter {p.Name}: {p.Id}.";
+            //     if (ex.IsExceptionFromMethod(nameof(ParameterUtils.DownloadParameterOptions))) {
+            //         switch (ex.Message) {
+            //         case { } msg when msg.Contains("Object reference not set to an instance of an object."):
+            //             _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase +
+            //                                                             "\nA crucial value of this parameter in Parameters Service is not set, probably the instace/type association");
+            //             break;
+            //         case { } msg when msg.Contains("Parameter with a matching name"):
+            //             continue; // TODO: delete the current param, retry adding new one. need to figure out how to test for an unused param first though
+            //         case { } msg when msg.Contains("Parameter with a matching GUID"):
+            //             continue; // TODO: Ignore this case? maybe add a log or write to storage output
+            //         default:
+            //             _ = balloon.AddDebug(new StackFrame(), Log.ERR,
+            //                 $"Unknown {msgBase}" +
+            //                 $"\nError: {ex.Message}\n{ex.StackTrace}");
+            //             break;
+            //         }
+            //     } else
+            //         _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase);
+            // }
         }
 
-        return results;
-    }
 
-    private static Result<SharedParameterElement>[] DownloadParamSvcParams(
-        Document famDoc,
-        ParametersApi.Parameters parameters
-    ) {
-        // var balloon = new Balloon();
-        var downloadedParams = new List<Result<SharedParameterElement>>();
-        if (parameters is { Results: null }) {
-            downloadedParams.Add(new Exception("No Parameters Service parameters were found"));
-            return downloadedParams.ToArray();
+        private static void SortParams(Document famDoc, ParametersOrder order) {
+            famDoc.FamilyManager.SortParameters(order);
         }
-
-        foreach (var p in parameters.Results) {
-            // if (!p.Name.Contains("Manufacturer")) continue;
-            var parameterTypeId = new ForgeTypeId(p.Id);
-
-            try {
-                var downloadOptions = ParameterUtils.DownloadParameterOptions(parameterTypeId);
-                if (downloadOptions.GetCategories().Count == 0) {
-                    var owner = famDoc.OwnerFamily;
-                    var familyCategory = owner.FamilyCategoryId;
-                    if (familyCategory != null) {
-                        var familyCategorySet = new HashSet<ElementId> { familyCategory };
-                        downloadOptions.SetCategories(familyCategorySet);
-                    }
-                }
-
-                var sharedParam = ParameterUtils.DownloadParameter(famDoc, downloadOptions, parameterTypeId);
-                downloadedParams.Add(sharedParam);
-            } catch (Exception ex) {
-                // TODO: FIGURE THIS OUT
-                var balloon = new Balloon();
-                var msgBase = $"Error for Parameter {p.Name}: {p.Id}.";
-                if (ex.IsExceptionFromMethod(nameof(ParameterUtils.DownloadParameterOptions))) {
-                    switch (ex.Message) {
-                    case { } msg when msg.Contains("Object reference not set to an instance of an object."):
-                        _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase +
-                                                                        "\nA crucial value of this parameter in Parameters Service is not set, probably the instace/type association");
-                        break;
-                    case { } msg when msg.Contains("Parameter with a matching name"):
-                        continue; // TODO: delete the current param, retry adding new one. need to figure out how to test for an unused param first though
-                    case { } msg when msg.Contains("Parameter with a matching GUID"):
-                        continue; // TODO: Ignore this case? maybe add a log or write to storage output
-                    default:
-                        _ = balloon.AddDebug(new StackFrame(), Log.ERR,
-                            $"Unknown {msgBase}" +
-                            $"\nError: {ex.Message}\n{ex.StackTrace}");
-                        break;
-                    }
-                } else
-                    _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase);
-            }
-        }
-
-        return downloadedParams.ToArray();
     }
 
 
-    private static void SortParams(Document famDoc, ParametersOrder order) =>
-        famDoc.FamilyManager.SortParameters(order);
-}
+    public class FamilyFoundrySettings : Storage.BaseSettings, Aps.IOAuthTokenProvider, Aps.IParametersTokenProvider {
+        [Description(
+            "Use cached Parameters Service data instead of downloading from APS on every run. " +
+            "Only set to true if you are sure no one has changed the param definitions since the last time you opened Revit " +
+            "and/or you are running this command in quick succession.")]
+        [Required]
+        public bool UseCachedParametersServiceData { get; set; } = false;
 
-public record FamilyParameterInfo {
-    public string Name { get; init; }
-    public ForgeTypeId Group { get; init; } // must find how to default to other
-    public ForgeTypeId Category { get; init; }
-    public bool IsInstance { get; init; } = true;
-    public object Value { get; init; }
-}
+        [Description(
+            "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
+        [Required]
+        public bool OverrideExistingValues { get; set; } = true;
 
-public class ParamSvcCache {
-    public DateTime LastRead { get; set; } = DateTime.Now;
-    public List<string> ParameterIds { get; set; } = [];
-}
+        [Description("Remove parameters that have no values during family cleanup operations")]
+        [Required]
+        public bool DeleteEmptyParameters { get; set; } = true; // unused right now
 
-public class FamilyFoundrySettings : Storage.BaseSettings, Aps.IOAuthTokenProvider, Aps.IParametersTokenProvider {
-    [Description(
-        "Use cached Parameters Service data instead of downloading from APS on every run. " +
-        "Only set to true if you are sure no one has changed the param definitions since the last time you opened Revit " +
-        "and/or you are running this command in quick succession.")]
-    [Required]
-    public bool UseCachedParametersServiceData { get; set; } = false;
+        [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
+        [Required]
+        public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
 
-    [Description(
-        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
-    [Required]
-    public bool OverrideExistingValues { get; set; } = true;
-
-    [Description("Remove parameters that have no values during family cleanup operations")]
-    [Required]
-    public bool DeleteEmptyParameters { get; set; } = true; // unused right now
-
-    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
-    [Required]
-    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
-
-    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
-    public string GetClientSecret() => null;
-    public string GetAccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
-    public string GetGroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
-    public string GetCollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
-}
+        public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
+        public string GetClientSecret() => null;
+        public string GetAccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
+        public string GetGroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
+        public string GetCollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
+    }

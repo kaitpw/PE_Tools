@@ -136,10 +136,10 @@ internal static class OAuthHandler {
         var query = urlPart[(queryStart + 1)..];
         var parameters = query.Split('&');
         return (from param in parameters
-                select param.Split('=')
+            select param.Split('=')
             into kv
-                where kv.Length == 2 && kv[0] == "code"
-                select kv[1]).FirstOrDefault();
+            where kv.Length == 2 && kv[0] == "code"
+            select kv[1]).FirstOrDefault();
     }
 
 
