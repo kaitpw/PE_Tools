@@ -1,4 +1,5 @@
 ﻿using Autodesk.Revit.DB.Plumbing;
+using Nice3point.Revit.Extensions;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using System.Text;
@@ -53,7 +54,7 @@ public class CmdMep2040 : IExternalCommand {
                     continue;
             }
 
-            var lengthParam = pipe.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH);
+            var lengthParam = pipe.FindParameter(BuiltInParameter.CURVE_ELEM_LENGTH);
             if (lengthParam is { StorageType: StorageType.Double })
                 totalLength += lengthParam.AsDouble();
         }
@@ -68,11 +69,11 @@ public class CmdMep2040 : IExternalCommand {
     private static double TotalPipeVolume(Document doc, string pst = "") {
         var pipes = Filters.AllElementsOfType<Pipe>(doc,
             pipe =>
-                pipe.get_Parameter(BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM) // EXTRACT THIS LATER
+                pipe.FindParameter(BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM) // EXTRACT THIS LATER
                     .AsValueString() == pst
         );
 
-        return pipes.Select(pipe => pipe.get_Parameter(BuiltInParameter.HOST_VOLUME_COMPUTED))
+        return pipes.Select(pipe => pipe.FindParameter(BuiltInParameter.HOST_VOLUME_COMPUTED))
             .Where(volParam => volParam != null && volParam.StorageType == StorageType.Double)
             .Sum(volParam => volParam.AsDouble());
     }

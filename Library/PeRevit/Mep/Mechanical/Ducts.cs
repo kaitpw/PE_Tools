@@ -1,4 +1,5 @@
 ﻿using Autodesk.Revit.DB.Mechanical;
+using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
 
 namespace PeRevit.Mep.Mechanical;
@@ -61,7 +62,7 @@ internal class Ducts {
                 $"Created branch duct on {level.Name} with DuctType: {ductType.Name}, SystemType: {systemType.Name}");
 
             // Set the duct diameter to the correct tap size
-            var setDiamSuccess = branchDuct.get_Parameter(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM).Set(tapSizeFeet);
+            var setDiamSuccess = branchDuct.FindParameter(BuiltInParameter.RBS_CURVE_DIAMETER_PARAM).Set(tapSizeFeet);
             if (!setDiamSuccess)
                 _ = balloon?.Add(new StackFrame(), Log.WARN, "Branch duct's diameter could not be set");
 

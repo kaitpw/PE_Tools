@@ -1,3 +1,5 @@
+using Nice3point.Revit.Extensions;
+
 namespace PeRevit.Mep;
 
 public class MepCurve {
@@ -62,22 +64,22 @@ public class MepCurve {
             var abbrevSuccess = false;
             var classifSuccess = false;
 
-            var sourceSysName = sourceCurve.get_Parameter(BuiltInParameter.RBS_SYSTEM_NAME_PARAM);
-            var targetSysName = targetCurve.get_Parameter(BuiltInParameter.RBS_SYSTEM_NAME_PARAM);
+            var sourceSysName = sourceCurve.FindParameter(BuiltInParameter.RBS_SYSTEM_NAME_PARAM);
+            var targetSysName = targetCurve.FindParameter(BuiltInParameter.RBS_SYSTEM_NAME_PARAM);
             if (sourceSysName != null && targetSysName is { IsReadOnly: false }) {
                 // targetSysName.Set(sourceSysName.AsString());
                 nameSuccess = true;
             }
 
-            var sourceSysAbbrev = sourceCurve.get_Parameter(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM);
-            var targetSysAbbrev = targetCurve.get_Parameter(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM);
+            var sourceSysAbbrev = sourceCurve.FindParameter(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM);
+            var targetSysAbbrev = targetCurve.FindParameter(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM);
             if (sourceSysAbbrev != null && targetSysAbbrev is { IsReadOnly: false }) {
                 // targetSysAbbrev.Set(sourceSysAbbrev.AsString());
                 abbrevSuccess = true;
             }
 
-            var sourceSysClassif = sourceCurve.get_Parameter(BuiltInParameter.RBS_SYSTEM_CLASSIFICATION_PARAM);
-            var targetSysClassif = targetCurve.get_Parameter(BuiltInParameter.RBS_SYSTEM_CLASSIFICATION_PARAM);
+            var sourceSysClassif = sourceCurve.FindParameter(BuiltInParameter.RBS_SYSTEM_CLASSIFICATION_PARAM);
+            var targetSysClassif = targetCurve.FindParameter(BuiltInParameter.RBS_SYSTEM_CLASSIFICATION_PARAM);
             if (sourceSysClassif != null && targetSysClassif is { IsReadOnly: false }) {
                 // targetSysClassif.Set(sourceSysClassif.AsString());
                 classifSuccess = true;
