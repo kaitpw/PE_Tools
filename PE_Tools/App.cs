@@ -43,7 +43,7 @@ internal class App : IExternalApplication {
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
             panelTools.AddPushButton<CmdCommandPalette>("Command Palette"),
             panelTools.AddPushButton<CmdTapMaker>("Tap Maker"),
-            panelMigration.AddPushButton<CmdFamilyMigrator>("Family Migrator")
+            panelMigration.AddPushButton<CmdFamilyFoundry>("Family Foundry")
         ]);
 
         return Result.Succeeded;
@@ -105,11 +105,11 @@ public static class ButtonDataHydrator {
                     """
             }
         }, {
-            "CmdFamilyMigrator",
+            "CmdFamilyFoundry",
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
-                ToolTip = "Click to migrate families to the latest version."
+                ToolTip = "Process families in a variety of ways from the Family Foundry."
             }
         }, {
             "CmdParametersServiceTest",

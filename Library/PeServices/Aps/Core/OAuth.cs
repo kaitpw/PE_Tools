@@ -1,3 +1,5 @@
+using PeServices.Aps.Models;
+
 namespace PeServices.Aps.Core;
 
 /// <summary>
@@ -8,7 +10,7 @@ namespace PeServices.Aps.Core;
 /// <remarks>
 ///     Uses a TCP listener rather than HTTP in order to sidestep need for admin privileges.
 /// </remarks>
-public class OAuth {
+public class OAuth(TokenProviders.IAuth tokenProvider) {
     /// <summary>
     ///     A static cache of tokens and their expiration times, keyed by client ID. Allows for multiple
     ///     OAuth instances to use the same token if the OAuth instances' credentials are the same.
@@ -18,8 +20,7 @@ public class OAuth {
     /// <summary>Lock for thread-safe access to the cache</summary>
     private static readonly object CacheLock = new();
 
-    private readonly Models.OAuth.IApsTokenProvider _tokenProvider;
-    public OAuth(Models.OAuth.IApsTokenProvider tokenProvider) => this._tokenProvider = tokenProvider;
+    private readonly TokenProviders.IAuth _tokenProvider = tokenProvider;
 
     /// <summary>
     ///     Gets a valid access token, refreshing if necessary

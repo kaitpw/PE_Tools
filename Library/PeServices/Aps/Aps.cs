@@ -1,12 +1,12 @@
 using PeServices.Aps.Core;
+using PeServices.Aps.Models;
 using System.Net.Http;
 using System.Net.Http.Headers;
-using OAuth = PeServices.Aps.Models.OAuth;
 
 namespace PeServices.Aps;
 
-public class Aps(OAuth.IApsTokenProvider tokenProvider) {
-    private readonly Core.OAuth _oAuth = new(tokenProvider);
+public class Aps(TokenProviders.IAuth authTokenProvider) {
+    private readonly OAuth _oAuth = new(authTokenProvider);
 
     private HttpClient HttpClient => new() {
         BaseAddress = new Uri("https://developer.api.autodesk.com/"),
@@ -16,11 +16,15 @@ public class Aps(OAuth.IApsTokenProvider tokenProvider) {
         }
     };
 
-    public Parameters Parameters() => new(this.HttpClient);
+    public Parameters Parameters(TokenProviders.IParameters parametersTokenProvider) =>
+        new(this.HttpClient, parametersTokenProvider);
+
     public Hubs Hubs() => new(this.HttpClient);
     public string GetToken() => this._oAuth.GetToken();
 
-    public interface ITokenProvider : OAuth.IApsTokenProvider;
+    public interface IOAuthTokenProvider : TokenProviders.IAuth;
+
+    public interface IParametersTokenProvider : TokenProviders.IParameters;
 
 
     // public Models.OAuth ApsBaseSettings(): SettingsManager.BaseSettings => new();

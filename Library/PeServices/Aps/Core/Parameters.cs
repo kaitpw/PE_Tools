@@ -4,8 +4,9 @@ using System.Text.Json;
 
 namespace PeServices.Aps.Core;
 
-public class Parameters(HttpClient httpClient) {
+public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenProvider) {
     private const string Suffix = "parameters/v1/accounts/";
+    private readonly TokenProviders.IParameters _tokenProvider = tokenProvider;
 
     private static async Task<T> DeserializeToType<T>(HttpResponseMessage res) =>
         JsonSerializer.Deserialize<T>(
@@ -13,16 +14,19 @@ public class Parameters(HttpClient httpClient) {
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
         );
 
+
     private static string Clean(string v) => v.Replace("b.", "").Replace("-", "");
 
-    public async Task<ParametersApi.Groups> GetGroups(string hubId) {
+    public async Task<ParametersApi.Groups> GetGroups() {
+        var hubId = tokenProvider.GetAccountId();
         var response = await httpClient.GetAsync(Suffix + Clean(hubId) + "/groups");
         return response.IsSuccessStatusCode
             ? await DeserializeToType<ParametersApi.Groups>(response)
             : new ParametersApi.Groups();
     }
 
-    public async Task<ParametersApi.Collections> GetCollections(string hubId, string grpId) {
+    public async Task<ParametersApi.Collections> GetCollections() {
+        var (hubId, grpId) = (tokenProvider.GetAccountId(), tokenProvider.GetGroupId());
         var response = await httpClient.GetAsync(
             Suffix + Clean(hubId) + "/groups/" + Clean(grpId) + "/collections?offset=0&limit=10"
         );
@@ -31,7 +35,9 @@ public class Parameters(HttpClient httpClient) {
             : new ParametersApi.Collections();
     }
 
-    public async Task<ParametersApi.Parameters> GetParameters(string hubId, string grpId, string colId) {
+    public async Task<ParametersApi.Parameters> GetParameters() {
+        var (hubId, grpId, colId) = (tokenProvider.GetAccountId(), tokenProvider.GetGroupId(),
+            tokenProvider.GetCollectionId());
         var response = await httpClient.GetAsync(
             Suffix + Clean(hubId) + "/groups/" + Clean(grpId) + "/collections/" + Clean(colId) + "/parameters"
         );

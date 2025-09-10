@@ -24,7 +24,7 @@ public class CmdApsAuthNormal : IExternalCommand {
     }
 }
 
-public class ApsAuthNormal : Storage.BaseSettings, Aps.ITokenProvider {
+public class ApsAuthNormal : Storage.BaseSettings, Aps.IOAuthTokenProvider {
     public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsWebClientId1;
     public string GetClientSecret() => Storage.GlobalSettings().Json().Read().ApsWebClientSecret1;
 }

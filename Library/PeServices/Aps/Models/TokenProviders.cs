@@ -1,9 +1,16 @@
 namespace PeServices.Aps.Models;
 
-public class OAuth {
+public class TokenProviders {
     /// <summary>Interface for providing APS authentication credentials to the OAuth class</summary>
-    public interface IApsTokenProvider {
+    public interface IAuth {
         string GetClientId();
         string GetClientSecret();
+    }
+
+
+    public interface IParameters {
+        string GetAccountId();
+        string GetGroupId();
+        string GetCollectionId();
     }
 }

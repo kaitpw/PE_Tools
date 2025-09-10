@@ -70,7 +70,7 @@ public class CmdParametersServiceTest : IExternalCommand {
     }
 }
 
-public class ParametersServiceTest : Storage.BaseSettings, Aps.ITokenProvider {
+public class ParametersServiceTest : Storage.BaseSettings, Aps.IOAuthTokenProvider {
     public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 
