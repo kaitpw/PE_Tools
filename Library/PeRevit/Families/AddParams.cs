@@ -1,16 +1,9 @@
-using Json.Schema.Generation;
-using PeRevit.Families;
-using PeRevit.Ui;
-using PeRevit.Families;
-using PeServices.Aps;
-using PeServices.Aps.Core;
-using PeServices.Aps.Models;
-using PeServices.Storage;
+using Nice3point.Revit.Extensions;
 
 namespace PeRevit.Families;
 
 public static class AddParams {
-     public static List<Result<FamilyParameter>> Family(
+    public static List<Result<FamilyParameter>> Family(
         Document famDoc,
         FamilyParamInfo[] parameters,
         bool overrideExistingValue
@@ -19,7 +12,7 @@ public static class AddParams {
         var result = new List<Result<FamilyParameter>>();
 
         bool NoExistingParam(FamilyParamInfo p) {
-            return fm.get_Parameter(p.Name) == null;
+            return fm.FindParameter(p.Name) == null;
         }
 
         parameters = parameters
@@ -27,31 +20,13 @@ public static class AddParams {
             .ToArray();
         foreach (FamilyType type in fm.Types) {
             fm.CurrentType = type;
-            foreach (var p in parameters) {
+            foreach (var par in parameters) {
                 try {
-                    var param = fm.get_Parameter(p.Name) ?? fm.AddParameter(p.Name, p.Group, p.Category, p.IsInstance);
+                    var parameter = fm.FindParameter(par.Name);
+                    parameter ??= fm.AddParameter(par.Name, par.Group, par.Category, par.IsInstance);
 
-                    // Set parameter value based on its type, look into storageType of params and spectypeid
-                    if (p.Value != null) {
-                        switch (p.Value) {
-                        case double doubleValue:
-                            fm.Set(param, doubleValue);
-                            break;
-                        case int intValue:
-                            fm.Set(param, intValue);
-                            break;
-                        case string stringValue:
-                            fm.Set(param, stringValue);
-                            break;
-                        case ElementId elementIdValue: // TODO: check if this works
-                            fm.Set(param, elementIdValue);
-                            break;
-                        }
-                    }
-
-                    result.Add(fm.get_Parameter(p.Name) != p.Value
-                        ? new Exception($"Parameter {p.Name} was not set to {p.Value}")
-                        : param);
+                    fm.Set(parameter, par.Value);
+                    result.Add(parameter);
                 } catch (Exception ex) {
                     result.Add(ex);
                 }
@@ -63,7 +38,7 @@ public static class AddParams {
 
     public static List<Result<FamilyParameter>> ParamSvc(
         Document famDoc,
-        SharedParameterElement[] sharedParams
+        List<SharedParameterElement> sharedParams
     ) {
         var fm = famDoc.FamilyManager;
         var results = new List<Result<FamilyParameter>>();
@@ -91,10 +66,10 @@ public static class AddParams {
     }
 
     public record FamilyParamInfo {
-    public string Name { get; init; }
-    public ForgeTypeId Group { get; init; } // must find how to default to other
-    public ForgeTypeId Category { get; init; }
-    public bool IsInstance { get; init; } = true;
-    public object Value { get; init; }
-}
+        public string Name { get; init; }
+        public ForgeTypeId Group { get; init; } // must find how to default to other
+        public ForgeTypeId Category { get; init; }
+        public bool IsInstance { get; init; } = true;
+        public object Value { get; init; }
+    }
 }

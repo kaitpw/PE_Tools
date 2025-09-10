@@ -1,4 +1,6 @@
 using Json.Schema.Generation;
+using Nice3point.Revit.Extensions;
+using PeRevit.Families;
 using PeRevit.Ui;
 using PeServices.Aps;
 using PeServices.Aps.Core;
@@ -20,7 +22,7 @@ namespace PE_Tools;
 //     - delete unused params with no value (may need to discriminate more specifically)
 //     - maybe delete certain reference lines
 //     - delete linear dimensions (maybe?)
-//
+// - retroactively change the group of the params
 
 [Transaction(TransactionMode.Manual)]
 public class CmdFamilyFoundry : IExternalCommand {
@@ -39,26 +41,26 @@ public class CmdFamilyFoundry : IExternalCommand {
             .OfClass(typeof(Family))
             .Cast<Family>()
             .Where(f => f.IsEditable)
-            .Where(f => f.Name.Contains("Price JS-1_Slot")) // TODO: remove this filter, it's just for testing
+            .Where(f => f.Name.Contains("Price LBP15A Exhaust")) // Price LBP15A Exhaust, Fantech RC Series, 
             .ToList();
 
-        // TODO: remove this after testing family parameter additions
-        var famParamInfos = new[] {
-            new AddParams.FamilyParamInfo {
-                Name = "TEST5_Instance",
-                Group = GroupTypeId.General,
-                Category = SpecTypeId.String.Text,
-                IsInstance = true,
-                Value = "TEST1"
-            },
-            new AddParams.FamilyParamInfo {
-                Name = "TEST5_Type",
-                Group = GroupTypeId.General,
-                Category = SpecTypeId.String.Text,
-                IsInstance = false,
-                Value = "TEST1"
-            }
-        };
+        // // TODO: remove this after testing family parameter additions
+        // var famParamInfos = new[] {
+        //     new AddParams.FamilyParamInfo {
+        //         Name = "TEST5_Instance",
+        //         Group = GroupTypeId.General,
+        //         Category = SpecTypeId.String.Text,
+        //         IsInstance = true,
+        //         Value = "TEST1"
+        //     },
+        //     new AddParams.FamilyParamInfo {
+        //         Name = "TEST5_Type",
+        //         Group = GroupTypeId.General,
+        //         Category = SpecTypeId.String.Text,
+        //         IsInstance = false,
+        //         Value = "TEST1"
+        //     }
+        // };
 
 
         var balloon = new Balloon();
@@ -66,30 +68,42 @@ public class CmdFamilyFoundry : IExternalCommand {
         try {
             var storage = new Storage("FamilyFoundry");
             var settings = storage.Settings().Json<FamilyFoundrySettings>().Read();
-            var aps = new Aps(settings);
-            var apsParams = aps.Parameters(settings);
-            var paramSvcIds = GetParamSvcParamIds(storage, apsParams);
+            var svcAps = new Aps(settings);
+            var svcApsParams = svcAps.Parameters(settings);
+            var psParamInfos = GetParamSvcParamInfo(storage, svcApsParams);
+            var psParamDlOpts = GetParameterDownloadOptions(doc, psParamInfos);
+            List<Result<SharedParameterElement>> psParamsDownloadResults = [];
+            List<Result<FamilyParameter>> psParamAdditionResults = [];
 
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
-                var (fam, operationResults) = FamUtils.EditAndLoad(doc, family,
-                    (famDoc, results) => {
-                        var result = AddParams.Family(famDoc, famParamInfos, settings.OverrideExistingValues);
-                        results.Add(nameof(AddParams.Family), result);
+                var fam = FamUtils.EditAndLoad(doc, family,
+                    // (famDoc, results) => {
+                    //     var result = AddParams.Family(famDoc, famParamInfos,
+                    //         settings.ParameterAdditionSettings.FamilyParameter.OverrideExistingValues);
+                    //     results.Add(nameof(AddParams.Family), result);
+                    // },
+                    famDoc => {
+                        var recoverFromErrorSettings = settings.ParameterAdditionSettings.ParametersService
+                            .RecoverFromErrorSettings;
+                        var validPsParamDlOpts = psParamDlOpts.Where(o => o.PsParamDlOptsResult.AsTuple().value != null)
+                            .ToList();
+                        psParamsDownloadResults = DownloadParamSvcParams(famDoc, svcApsParams,
+                            recoverFromErrorSettings,
+                            validPsParamDlOpts);
                     },
-                    (famDoc, results) => {
-                        var result = AddParams.ParamSvc(famDoc, paramSvcIds);
-                        results.Add(nameof(AddParams.ParamSvc), result);
+                    famDoc => {
+                        var psParams = psParamsDownloadResults
+                            .Where(p => p.AsTuple().value != null)
+                            .Select(p => p.AsTuple().value)
+                            .ToList();
+                        psParamAdditionResults = AddParams.ParamSvc(famDoc, psParams);
                     },
-                    (famDoc, _) => SortParams(famDoc, ParametersOrder.Ascending)
+                    famDoc => SortParams(famDoc, ParametersOrder.Ascending)
                 );
             }
 
-            // Save all parameter data to CSV at once
-            // var csv = storage.Output().Csv<FamilyParameterInfo>();
-            // csv.Write(allParameterData);
-            // if (settings.OpenOutputFilesOnCommandFinish)
-            //     FileUtils.OpenInDefaultApp(csv.FilePath);
+            // tODO: write to output somehow
 
             balloon.Show();
             return Result.Succeeded;
@@ -100,13 +114,13 @@ public class CmdFamilyFoundry : IExternalCommand {
         }
     }
 
-    private static ParametersApi.Parameters GetParamSvcParamIds(Storage storage, Parameters ApsParameters) {
+    private static ParametersApi.Parameters GetParamSvcParamInfo(Storage storage, Parameters svcApsParams) {
         const string cacheFileName = "parameters-service-cache.json";
-        var cache = storage.State().Json<ParametersApi.Parameters>(cacheFileName);
+        // var cache = storage.State().Json<ParametersApi.Parameters>(cacheFileName); // TODO, figure this out later
         var tcsParams = new TaskCompletionSource<Result<ParametersApi.Parameters>>();
         _ = Task.Run(async () => {
             try {
-                tcsParams.SetResult(await ApsParameters.GetParameters(cache));
+                tcsParams.SetResult(await svcApsParams.GetParameters());
             } catch (Exception ex) {
                 tcsParams.SetResult(ex);
             }
@@ -117,68 +131,185 @@ public class CmdFamilyFoundry : IExternalCommand {
         return paramsResult != null ? throw paramsResult : parameters;
     }
 
-    private static SharedParameterElement[] DownloadParamSvcParams(Document famDoc, Parameters apsParams) {
-        var downloadParamsResults = apsParams.DownloadParameters(famDoc, paramSvcIds);
-
-        foreach (var result in downloadParamsResults) {
-            var (sharedParam, downloadErr) = result;
-            if (downloadErr is not null) throw downloadErr;
-            // } catch (Exception ex) {
-            //     // TODO: FIGURE THIS OUT
-            //     var balloon = new Balloon();
-            //     var msgBase = $"Error for Parameter {p.Name}: {p.Id}.";
-            //     if (ex.IsExceptionFromMethod(nameof(ParameterUtils.DownloadParameterOptions))) {
-            //         switch (ex.Message) {
-            //         case { } msg when msg.Contains("Object reference not set to an instance of an object."):
-            //             _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase +
-            //                                                             "\nA crucial value of this parameter in Parameters Service is not set, probably the instace/type association");
-            //             break;
-            //         case { } msg when msg.Contains("Parameter with a matching name"):
-            //             continue; // TODO: delete the current param, retry adding new one. need to figure out how to test for an unused param first though
-            //         case { } msg when msg.Contains("Parameter with a matching GUID"):
-            //             continue; // TODO: Ignore this case? maybe add a log or write to storage output
-            //         default:
-            //             _ = balloon.AddDebug(new StackFrame(), Log.ERR,
-            //                 $"Unknown {msgBase}" +
-            //                 $"\nError: {ex.Message}\n{ex.StackTrace}");
-            //             break;
-            //         }
-            //     } else
-            //         _ = balloon.AddDebug(new StackFrame(), Log.ERR, msgBase);
-            // }
+    public static List<DlOptsConstructionResult> GetParameterDownloadOptions(
+        Document doc,
+        ParametersApi.Parameters psParamInfos
+    ) {
+        // if (!doc.IsFamilyDocument) throw new ArgumentException("Document is not a family document");
+        var dlOptsList = new List<DlOptsConstructionResult>();
+        if (psParamInfos is { Results: null }) return dlOptsList.ToList();
+        foreach (var psParamInfo in psParamInfos.Results) {
+            try {
+                if (psParamInfo.TypedMetadata.IsArchived) continue;
+                var downloadOpts = new ParameterDownloadOptions(
+                    new HashSet<ElementId>(), // TODO: come back to
+                    psParamInfo.DownloadOptions.IsInstance,
+                    psParamInfo.DownloadOptions.Visible,
+                    GroupTypeId.General);
+                dlOptsList.Add(new DlOptsConstructionResult(
+                    psParamInfo, downloadOpts));
+            } catch (Exception ex) {
+                if (ex.IsFromMethod(nameof(ParameterUtils.DownloadParameterOptions))) {
+                    var msg = "Parameter cannot have an empty instance/type association in parameters service";
+                    dlOptsList.Add(new DlOptsConstructionResult(
+                        psParamInfo, new InvalidOperationException(msg, ex)));
+                }
+            }
         }
 
+        return dlOptsList;
+    }
 
-        private static void SortParams(Document famDoc, ParametersOrder order) {
-            famDoc.FamilyManager.SortParameters(order);
+    private static List<Result<SharedParameterElement>> DownloadParamSvcParams(
+        Document famDoc,
+        Parameters apsParams,
+        PsRecoverFromErrorSettings settings,
+        List<DlOptsConstructionResult> psParamDlOpts
+    ) {
+        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
+        var downloadResults = apsParams.DownloadParameters(famDoc, psParamDlOpts);
+        var finalDownloadResults = new List<Result<SharedParameterElement>>();
+
+        // Handle Download Errors
+        foreach (var downloadResult in downloadResults) {
+            var originalPsParamInfo = downloadResult.OriginalParameter;
+            var (sharedParam, downloadErr) = downloadResult.DownloadResult;
+            if (downloadErr is not null) {
+                finalDownloadResults.Add(RecoverDownloadError(famDoc, originalPsParamInfo, downloadErr, settings));
+                continue;
+            }
+
+            finalDownloadResults.Add(sharedParam);
+        }
+
+        return finalDownloadResults;
+    }
+
+    private static Result<SharedParameterElement> RecoverDownloadError(
+        Document famDoc,
+        ParametersApi.Parameters.ParametersResult originalParamInfo,
+        Exception downloadErr,
+        PsRecoverFromErrorSettings settings
+    ) {
+        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
+        var fm = famDoc.FamilyManager;
+        // var balloon = new Balloon();
+        var parameterTypeId = originalParamInfo.DownloadOptions.ParameterTypeId;
+        var paramMsg = $"\n({originalParamInfo.Name}: {parameterTypeId})";
+        var downloadOptions = new ParameterDownloadOptions();
+        try {
+            downloadOptions = ParameterUtils.DownloadParameterOptions(parameterTypeId);
+        } catch (Exception ex) {
+            downloadErr = new Exception(downloadErr.Message, ex);
+        }
+
+        var familyCategorySet = new HashSet<ElementId> { famDoc.OwnerFamily.FamilyCategoryId };
+
+        switch (downloadErr.Message) {
+        case { } msg when msg.Contains("empty category set"):
+            try {
+                downloadOptions.SetCategories(familyCategorySet);
+                return ParameterUtils.DownloadParameter(famDoc, downloadOptions, parameterTypeId);
+            } catch (Exception ex) {
+                return new Exception($"Failed to recover from an empty category set {paramMsg}", ex);
+            }
+        case { } msg when msg.Contains("empty instance/type association"):
+            try {
+                downloadOptions.Visible = true;
+                downloadOptions.IsInstance = true;
+                downloadOptions.SetGroupTypeId(GroupTypeId.General); // TODO: come back to this default
+                downloadOptions.SetCategories(familyCategorySet);
+                return ParameterUtils.DownloadParameter(famDoc, downloadOptions, parameterTypeId);
+            } catch (Exception ex) {
+                return new Exception($"Failed to recover from an empty instance/type association {paramMsg}", ex);
+            }
+        case { } msg when msg.Contains("Parameter with a matching name"):
+            try {
+                if (settings.ReplaceParameterWithMatchingName) {
+                    var currentParam = fm.FindParameter(originalParamInfo.Name);
+                    fm.RemoveParameter(currentParam);
+                    return ParameterUtils.DownloadParameter(famDoc, downloadOptions, parameterTypeId);
+                }
+
+                return downloadErr;
+            } catch (Exception ex) {
+                return new Exception($"Failed to recover from a \"matching name\" error {paramMsg}", ex);
+            }
+        case { } msg when msg.Contains("Parameter with a matching GUID"):
+            // return fm.FindParameter(new ForgeTypeId(originalParamInfo.Id)); // TODO: Figure this out!!!!!!!!!!!!
+            return new Exception("TODO: recover from \"param with matching GUID\" error");
+        default:
+            return new Exception($"Skipped recovery for unknown error {downloadErr.Message} ", downloadErr);
         }
     }
 
+    private static void SortParams(Document famDoc, ParametersOrder order) =>
+        famDoc.FamilyManager.SortParameters(order);
+}
 
-    public class FamilyFoundrySettings : Storage.BaseSettings, Aps.IOAuthTokenProvider, Aps.IParametersTokenProvider {
-        [Description(
-            "Use cached Parameters Service data instead of downloading from APS on every run. " +
-            "Only set to true if you are sure no one has changed the param definitions since the last time you opened Revit " +
-            "and/or you are running this command in quick succession.")]
-        [Required]
-        public bool UseCachedParametersServiceData { get; set; } = false;
+public class DlOptsConstructionResult(
+    ParametersApi.Parameters.ParametersResult psParamInfo,
+    Result<ParameterDownloadOptions> psParamDlOptsResult) {
+    public ParametersApi.Parameters.ParametersResult PsParamInfo { get; } = psParamInfo;
+    public Result<ParameterDownloadOptions> PsParamDlOptsResult { get; } = psParamDlOptsResult;
+}
 
-        [Description(
-            "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
-        [Required]
-        public bool OverrideExistingValues { get; set; } = true;
+public class FamilyFoundrySettings : Storage.BaseSettings, Aps.IOAuthTokenProvider, Aps.IParametersTokenProvider {
+    [Description(
+        "Use cached Parameters Service data instead of downloading from APS on every run. " +
+        "Only set to true if you are sure no one has changed the param definitions since the last time you opened Revit " +
+        "and/or you are running this command in quick succession.")]
+    [Required]
+    public bool UseCachedParametersServiceData { get; set; } = true;
 
-        [Description("Remove parameters that have no values during family cleanup operations")]
-        [Required]
-        public bool DeleteEmptyParameters { get; set; } = true; // unused right now
+    [Description("Remove parameters that have no values during family cleanup operations")]
+    [Required]
+    public bool DeleteEmptyParameters { get; set; } = true; // unused right now
 
-        [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
-        [Required]
-        public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
+    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
+    [Required]
+    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
 
-        public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
-        public string GetClientSecret() => null;
-        public string GetAccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
-        public string GetGroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
-        public string GetCollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
-    }
+    public ParameterAdditionSettings ParameterAdditionSettings { get; set; } = new();
+
+
+    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
+    public string GetClientSecret() => null;
+    public string GetAccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
+    public string GetGroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
+    public string GetCollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
+}
+
+public class ParameterAdditionSettings {
+    public ParametersServiceSettings ParametersService { get; init; } = new();
+    public SharedParameterSettings SharedParameter { get; init; } = new();
+    public FamilyParameterSettings FamilyParameter { get; init; } = new();
+}
+
+public class ParametersServiceSettings {
+    public PsRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
+}
+
+public class PsRecoverFromErrorSettings {
+    public bool ReplaceParameterWithMatchingName { get; init; } = true;
+}
+
+public class FamilyParameterSettings {
+    [Description(
+        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
+    [Required]
+    public bool OverrideExistingValues { get; set; } = true;
+    // public FpRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
+    //
+    // public class FpRecoverFromErrorSettings {
+    //     public bool DangerouslyReplaceParameterWithMatchingName;
+    // }
+}
+
+public class SharedParameterSettings {
+    //     public SpRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
+    //
+    //     public class SpRecoverFromErrorSettings {
+    //         public bool DangerouslyReplaceParameterWithMatchingName;
+    //     }
+}

@@ -1,3 +1,4 @@
+using PE_Tools;
 using PeServices.Aps.Models;
 using PeServices.Storage.Core;
 using System.Net.Http;
@@ -57,33 +58,38 @@ public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenP
         return deserializedResponse;
     }
 
-    public Result<SharedParameterElement>[] DownloadParameters(
-        Document famDoc,
-        ParametersApi.Parameters parameters
+    public ParameterDownloadResult[] DownloadParameters(
+        Document doc,
+        List<DlOptsConstructionResult> psParamsDlOptsResultList
     ) {
-        var downloadedParams = new List<Result<SharedParameterElement>>();
-        if (parameters is { Results: null }) {
-            downloadedParams.Add(new Exception("No Parameters Service parameters were found"));
-            return downloadedParams.ToArray();
-        }
+        var downloadedParams = new List<ParameterDownloadResult>();
+        foreach (var listEl in psParamsDlOptsResultList) {
+            var psParamInfo = listEl.PsParamInfo;
+            var (downloadOpts, err) = listEl.PsParamDlOptsResult;
+            try {
+                if (err is not null) throw new Exception(err.Message);
 
-        foreach (var p in parameters.Results) {
-            // if (!p.Name.Contains("Manufacturer")) continue;
-            var parameterTypeId = new ForgeTypeId(p.Id);
-            var downloadOptions = ParameterUtils.DownloadParameterOptions(parameterTypeId);
-            if (downloadOptions.GetCategories().Count == 0) {
-                var owner = famDoc.OwnerFamily;
-                var familyCategory = owner.FamilyCategoryId;
-                if (familyCategory != null) {
-                    var familyCategorySet = new HashSet<ElementId> { familyCategory };
-                    downloadOptions.SetCategories(familyCategorySet);
+                var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
+                var sharedParam = ParameterUtils.DownloadParameter(doc, downloadOpts, parameterTypeId);
+                downloadedParams.Add(new ParameterDownloadResult(psParamInfo, sharedParam));
+            } catch (Exception ex) {
+                if (ex.Message.Contains("Parameter with a matching name") ||
+                    ex.Message.Contains("Parameter with a matching GUID"))
+                    downloadedParams.Add(new ParameterDownloadResult(psParamInfo, ex));
+                else {
+                    var unknownException = new Exception("Unknown parameter download exception", ex);
+                    downloadedParams.Add(new ParameterDownloadResult(psParamInfo, unknownException));
                 }
-            } // TODO: workout other defaults if needed.
-
-            var sharedParam = ParameterUtils.DownloadParameter(famDoc, downloadOptions, parameterTypeId);
-            downloadedParams.Add(sharedParam);
+            }
         }
 
         return downloadedParams.ToArray();
+    }
+
+    public class ParameterDownloadResult(
+        ParametersApi.Parameters.ParametersResult originalParameter,
+        Result<SharedParameterElement> downloadResult) {
+        public ParametersApi.Parameters.ParametersResult OriginalParameter { get; } = originalParameter;
+        public Result<SharedParameterElement> DownloadResult { get; } = downloadResult;
     }
 }

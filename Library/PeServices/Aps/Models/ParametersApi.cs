@@ -61,7 +61,7 @@ public class ParametersApi {
 
             [UsedImplicitly] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
 
-            public ParameterDownloadOptions DownloadOptions => new(this.TypedMetadata);
+            public ParameterDownloadOptions DownloadOptions => new(this.Id, this.TypedMetadata);
 
             public class RawMetadataValue {
                 [UsedImplicitly] public string Id { get; init; }
@@ -117,11 +117,13 @@ public class ParametersApi {
                 }
             }
 
-            public class ParameterDownloadOptions(ParametersResultMetadata metadata) {
+            public class ParameterDownloadOptions(string Id, ParametersResultMetadata metadata) {
+                public ForgeTypeId ParameterTypeId => new(Id);
+
                 public ForgeTypeId GroupTypeId => // check this logic in testing
                     metadata.Group?.Id != null
-                        ? new ForgeTypeId(metadata.Group.BindingId)
-                        : new ForgeTypeId("ABYV-32458-BXMZ-08934");
+                        ? new ForgeTypeId(metadata.Group.Id)
+                        : new ForgeTypeId("autodesk.parameter:group-1.0.0");
 
                 public bool IsInstance =>
                     metadata.InstanceTypeAssociation?.Equals("INSTANCE", StringComparison.OrdinalIgnoreCase) ?? true;
@@ -173,6 +175,7 @@ public class ParametersApi {
                 /// <summary>
                 ///     Converts APS category name to Revit category ElementId.
                 ///     Maps common APS category names to Revit BuiltInCategory values.
+                ///     TODO: fix this, it does not do anything
                 /// </summary>
                 private static ElementId GetRevitCategoryElementId(Document doc, string categoryName) {
                     try {

@@ -12,6 +12,8 @@ public readonly struct Result<T> {
         error = this._error;
     }
 
+    public (T value, Exception error) AsTuple() => (this._value, this._error);
+
     public static implicit operator Result<T>(T value) =>
         new(value, null!);
 

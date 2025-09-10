@@ -8,9 +8,9 @@ public class FamUtils {
     /// <param name="family">The family to edit</param>
     /// <param name="callbacks">The callbacks to execute. callbacks operate on the family document and return a result</param>
     /// <returns>The loaded family</returns>
-    public static (Family, OperationResults) EditAndLoad(Document doc,
+    public static Family EditAndLoad(Document doc,
         Family family,
-        params Action<Document, OperationResults>[] callbacks) {
+        params Action<Document>[] callbacks) {
         var famDoc = doc.EditFamily(family);
         if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
         if (famDoc.FamilyManager is null)
@@ -18,25 +18,15 @@ public class FamUtils {
 
         using var transFamily = new Transaction(famDoc, "Edit Family Document");
         _ = transFamily.Start();
-        var resultAggregator = new OperationResults();
-        foreach (var callback in callbacks) callback(famDoc, resultAggregator);
+        foreach (var callback in callbacks) callback(famDoc);
         _ = transFamily.Commit();
-
 
         var fam = famDoc.LoadFamily(doc, new EditAndLoadFamilyOptions());
         if (fam is null) throw new InvalidOperationException("Failed to load family after edit.");
         var closed = famDoc.Close(false);
         if (!closed) throw new InvalidOperationException("Failed to close family document after load error.");
-        return (fam, resultAggregator);
+        return fam;
     }
-
-    public class OperationResults {
-        private List<(string Operation, Result<object> Result)> Results { get; } = [];
-
-        public void Add(string operation, Result<object> result) => this.Results.Add((operation, result));
-    }
-
-    
 }
 
 internal class EditAndLoadFamilyOptions : IFamilyLoadOptions {

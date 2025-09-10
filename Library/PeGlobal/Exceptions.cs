@@ -78,7 +78,7 @@ public static class ExceptionExtensions {
     /// <param name="methodName">The method name</param>
     /// <param name="parameterTypes">Optional parameter types to match specific overloads</param>
     /// <returns>True if the exception originated from the specified method</returns>
-    public static bool IsExceptionFromMethod(
+    public static bool IsFromMethod(
         this Exception exception,
         string methodName,
         params Type[] parameterTypes
