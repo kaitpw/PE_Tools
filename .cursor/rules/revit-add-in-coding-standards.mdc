@@ -23,12 +23,12 @@ PE_Tools/
 │   ├── PeMep/              <-- MEP systems library
 │   │   ├── Connectors.cs
 │   │   └── MepCurve.cs
-│   ├── PeRevitUI/          <-- infrastructure for initializing addins
+│   ├── PeRevit.Ui/          <-- infrastructure for initializing addins
 │   │   ├── Balloon.cs
 │   │   ├── ButtonDataClass.cs
 │   │   ├── Ribbon.cs
 │   │   └── UiHelpers.cs
-│   ├── PeRevitUtils/       <-- Revit-specific utility methods
+│   ├── PeRevit.Utils/       <-- Revit-specific utility methods
 │   │   └── Utils.cs
 │   ├── PeUtils/            <-- general utility methods
 │   │   └── Files.cs
@@ -168,7 +168,7 @@ This is somewhat contradictory to being a never-nester since “extraction” en
 using AddinCmdPalette.ViewModels;
 using AddinCmdPalette.Views;
 using PE_Tools.Properties;
-using PeRevitUI;
+using PeRevit.Ui;
 
 namespace PE_Tools;
 

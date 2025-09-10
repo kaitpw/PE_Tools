@@ -1,4 +1,4 @@
-using PeRevitUI;
+using PeRevit.Ui;
 using PeServices.Aps;
 using PeServices.Storage;
 
@@ -16,7 +16,6 @@ public class CmdParametersServiceTest : IExternalCommand {
         try {
             var storage = new Storage("ParametersServiceTest");
             var settings = storage.Settings().Json<ParametersServiceTest>().Read();
-            var (acc, gp, col) = (settings.AccountId(), settings.GroupId(), settings.CollectionId());
             var aps = new Aps(settings);
 
             var messages = new List<string> { "Parameters Service Test", "\n" };
@@ -30,13 +29,13 @@ public class CmdParametersServiceTest : IExternalCommand {
                     foreach (var h in hubs.Data) messages.Add("Hubs (plural)      : " + h.Id);
                     messages.Add("SELECTED          -> " + hub + "\n");
 
-                    var groups = await aps.Parameters().GetGroups(hub);
+                    var groups = await aps.Parameters(settings).GetGroups();
                     var group = groups.Results.First().Id;
                     // if (!string.IsNullOrEmpty(gp)) group = gp;
                     foreach (var g in groups.Results) messages.Add("Groups (plural)    : " + g.Id);
                     messages.Add("SELECTED          -> " + group + "\n");
 
-                    var collections = await aps.Parameters().GetCollections(hub, group);
+                    var collections = await aps.Parameters(settings).GetCollections();
                     var collection = collections.Results.First().Id;
                     // if (!string.IsNullOrEmpty(col)) collection = col;
                     foreach (var c in collections.Results)
@@ -44,7 +43,7 @@ public class CmdParametersServiceTest : IExternalCommand {
                     messages.Add("SELECTED          -> " + collection + "\n");
 
                     var parameters =
-                        await aps.Parameters().GetParameters(hub, group, collection);
+                        await aps.Parameters(settings).GetParameters();
                     var parameter = parameters.Results.First();
                     foreach (var p in parameters.Results) messages.Add("Parameters (plural): " + p.Name);
 
@@ -70,11 +69,11 @@ public class CmdParametersServiceTest : IExternalCommand {
     }
 }
 
-public class ParametersServiceTest : Storage.BaseSettings, Aps.IOAuthTokenProvider {
+public class ParametersServiceTest : Storage.BaseSettings, Aps.IOAuthTokenProvider, Aps.IParametersTokenProvider {
     public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 
-    public string AccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
-    public string GroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
-    public string CollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
+    public string GetAccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
+    public string GetGroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
+    public string GetCollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
 }

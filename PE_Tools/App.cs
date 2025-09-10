@@ -1,5 +1,5 @@
 using Nice3point.Revit.Extensions;
-using PeRevitUI;
+using PeRevit.Ui;
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
 using AddinCmdApsAuthNormal;
 using AddinCmdApsAuthPKCE;

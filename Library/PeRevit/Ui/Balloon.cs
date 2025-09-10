@@ -4,7 +4,7 @@ using PeServices.Storage;
 using System.Text;
 using System.Windows;
 
-namespace PeRevitUI;
+namespace PeRevit.Ui;
 
 /// <summary>Message collector for accumulating messages, then showing all at once</summary>
 internal class Balloon {
@@ -118,7 +118,8 @@ internal class Balloon {
             title = Assembly.GetExecutingAssembly().GetName().Name;
 #pragma warning disable CA1416 // Validate platform compatibility
         var ri = new ResultItem {
-            Title = text.Trim(), Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
+            Title = text.Trim(),
+            Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
         };
         ri.ResultClicked += (_, _) => clickHandler();
 

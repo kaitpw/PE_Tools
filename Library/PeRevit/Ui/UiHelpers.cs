@@ -1,4 +1,4 @@
-﻿namespace PeRevitUI;
+﻿namespace PeRevit.Ui;
 
 internal class UiHelpers {
     internal static RibbonPanel CreateRibbonPanel(
