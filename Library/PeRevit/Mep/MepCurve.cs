@@ -1,4 +1,4 @@
-namespace PeMep;
+namespace PeRevit.Mep;
 
 public class MepCurve {
     /// <summary>

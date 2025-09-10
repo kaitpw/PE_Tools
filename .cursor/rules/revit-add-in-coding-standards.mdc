@@ -17,10 +17,10 @@ PE_Tools/
 │   │   ├── Levels.cs
 │   │   ├── Pickers.cs
 │   │   └── Result.cs
-│   ├── PeMech/             <-- mechanical systems library
+│   ├── PeRevit.Mep.Mechanical/             <-- mechanical systems library
 │   │   ├── Ducts.cs
 │   │   └── Enums.cs
-│   ├── PeMep/              <-- MEP systems library
+│   ├── PeRevit.Mep/              <-- MEP systems library
 │   │   ├── Connectors.cs
 │   │   └── MepCurve.cs
 │   ├── PeRevit.Ui/          <-- infrastructure for initializing addins

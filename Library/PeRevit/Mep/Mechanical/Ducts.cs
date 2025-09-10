@@ -1,8 +1,8 @@
 ﻿using Autodesk.Revit.DB.Mechanical;
-using PeMep;
+using PeRevit.Mep;
 using PeRevit.Ui;
 
-namespace PeMech;
+namespace PeRevit.Mep.Mechanical;
 
 internal class Ducts {
     /// <summary>
