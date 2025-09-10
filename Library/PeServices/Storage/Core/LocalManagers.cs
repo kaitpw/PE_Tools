@@ -50,6 +50,27 @@ public class StateManager {
         new(new Csv<T>(Path.Combine(this._thisPath, filename)));
 }
 
+// public class TempManager {
+//     private readonly string _thisPath;
+//
+//     public TempeManager(string addinPath) {
+//         this._thisPath = Path.Combine(addinPath, "state");
+//         _ = Directory.CreateDirectory(this._thisPath);
+//     }
+//
+//     public JsonReadWriter<T> Json<T>() where T : class, new() =>
+//         new(new Json<T>(Path.Combine(this._thisPath, "state.json"), false));
+//
+//     public JsonReadWriter<T> Json<T>(string filename) where T : class, new() =>
+//         new(new Json<T>(Path.Combine(this._thisPath, filename), false));
+//
+//     public CsvReadWriter<T> Csv<T>() where T : class, new() =>
+//         new(new Csv<T>(Path.Combine(this._thisPath, "state.csv")));
+//
+//     public CsvReadWriter<T> Csv<T>(string filename) where T : class, new() =>
+//         new(new Csv<T>(Path.Combine(this._thisPath, filename)));
+// }
+
 public class OutputManager {
     private readonly string _thisPath;
 

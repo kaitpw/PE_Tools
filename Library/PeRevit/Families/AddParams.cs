@@ -1,42 +1,34 @@
+using Json.Schema.Generation;
 using Nice3point.Revit.Extensions;
+using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
+using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
 namespace PeRevit.Families;
 
 public static class AddParams {
     public static List<Result<FamilyParameter>> Family(
         Document famDoc,
-        FamilyParamInfo[] parameters,
-        bool overrideExistingValue
+        FamilyParamInfo[] parameters
     ) {
         var fm = famDoc.FamilyManager;
-        var result = new List<Result<FamilyParameter>>();
-
-        bool NoExistingParam(FamilyParamInfo p) {
-            return fm.FindParameter(p.Name) == null;
-        }
-
-        parameters = parameters
-            .Where(p => NoExistingParam(p) || overrideExistingValue)
-            .ToArray();
+        var results = new List<Result<FamilyParameter>>();
         foreach (FamilyType type in fm.Types) {
             fm.CurrentType = type;
-            foreach (var par in parameters) {
+            foreach (var param in parameters) {
                 try {
-                    var parameter = fm.FindParameter(par.Name);
-                    parameter ??= fm.AddParameter(par.Name, par.Group, par.Category, par.IsInstance);
-
-                    fm.Set(parameter, par.Value);
-                    result.Add(parameter);
+                    var parameter = fm.FindParameter(param.Name);
+                    parameter ??= fm.AddParameter(param.Name, param.Group, param.Category, param.IsInstance);
+                    results.Add(parameter);
                 } catch (Exception ex) {
-                    result.Add(ex);
+                    results.Add(ex);
                 }
             }
         }
 
-        return result;
+        return results;
     }
 
-    public static List<Result<FamilyParameter>> ParamSvc(
+    public static List<Result<FamilyParameter>> SharedParam(
         Document famDoc,
         List<SharedParameterElement> sharedParams
     ) {
@@ -44,12 +36,7 @@ public static class AddParams {
         var results = new List<Result<FamilyParameter>>();
 
         foreach (var sharedParam in sharedParams) {
-            // SharedParameterElement contains the ExternalDefinition we need
-            // We can get it directly from the element, not through GetDefinition()
             try {
-                // Add the shared parameter to the family using the shared parameter element
-                // TODO: uncomment after first phase of tests
-                // TODO: make a temporary shared param file!!!!!!!!!!!!!!!!!!! maybe?
                 var externalDefinition = famDoc.Application.OpenSharedParameterFile()?.Groups?
                     .SelectMany(g => g.Definitions)
                     .OfType<ExternalDefinition>()
@@ -65,6 +52,73 @@ public static class AddParams {
         return results;
     }
 
+    public static List<Result<SharedParameterElement>> ParamService(
+        Document famDoc,
+        PsRecoverFromErrorSettings settings,
+        ParamModel psParamInfos
+    ) {
+        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
+        var finalDownloadResults = new List<Result<SharedParameterElement>>();
+
+        foreach (var psParamInfo in psParamInfos.Results) {
+            if (psParamInfo.TypedMetadata.IsArchived) continue;
+            var dlOpts = new ParameterDownloadOptions(
+                new HashSet<ElementId>(),
+                psParamInfo.DownloadOptions.IsInstance,
+                psParamInfo.DownloadOptions.Visible,
+                GroupTypeId.General);
+            var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
+            try {
+                finalDownloadResults.Add(ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId));
+            } catch (Exception ex) {
+                finalDownloadResults.Add(HandleDownloadError(famDoc, psParamInfo, ex, settings));
+            }
+        }
+
+        return finalDownloadResults;
+    }
+
+    // TODO: this needs some major love and testing
+    private static Result<SharedParameterElement> HandleDownloadError(
+        Document famDoc,
+        ParamModelRes psParamInfo,
+        Exception downloadErr,
+        PsRecoverFromErrorSettings settings
+    ) {
+        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
+        var fm = famDoc.FamilyManager;
+        // var balloon = new Balloon();
+        var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
+        var paramMsg = $"\n({psParamInfo.Name}: {parameterTypeId})";
+        var downloadOptions = new ParameterDownloadOptions();
+        try {
+            downloadOptions = ParameterUtils.DownloadParameterOptions(parameterTypeId);
+        } catch (Exception ex) {
+            downloadErr = new Exception(downloadErr.Message, ex);
+        }
+
+        switch (downloadErr.Message) {
+        case { } msg when msg.Contains("Parameter with a matching name"):
+            try {
+                if (settings.ReplaceParameterWithMatchingName) {
+                    var currentParam = fm.FindParameter(psParamInfo.Name);
+                    fm.RemoveParameter(currentParam);
+                    return ParameterUtils.DownloadParameter(famDoc, downloadOptions, parameterTypeId);
+                }
+
+                return downloadErr;
+            } catch (Exception ex) {
+                return new Exception($"Failed to recover from a \"matching name\" error {paramMsg}", ex);
+            }
+        case { } msg when msg.Contains("Parameter with a matching GUID"):
+            // return fm.FindParameter(new ForgeTypeId(originalParamInfo.Id)); // TODO: Figure this out!!!!!!!!!!!!
+            return new Exception("TODO: recover from \"param with matching GUID\" error");
+        default:
+            return new Exception($"Skipped recovery for unknown error {downloadErr.Message} ", downloadErr);
+        }
+    }
+
+
     public record FamilyParamInfo {
         public string Name { get; init; }
         public ForgeTypeId Group { get; init; } // must find how to default to other
@@ -72,4 +126,38 @@ public static class AddParams {
         public bool IsInstance { get; init; } = true;
         public object Value { get; init; }
     }
+}
+
+public class ParameterAdditionSettings {
+    public ParametersServiceSettings ParametersService { get; init; } = new();
+    public SharedParameterSettings SharedParameter { get; init; } = new();
+    public FamilyParameterSettings FamilyParameter { get; init; } = new();
+}
+
+public class ParametersServiceSettings {
+    public PsRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
+}
+
+public class PsRecoverFromErrorSettings {
+    public bool ReplaceParameterWithMatchingName { get; init; } = true;
+}
+
+public class FamilyParameterSettings {
+    [Description(
+        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
+    [Required]
+    public bool OverrideExistingValues { get; set; } = true;
+    // public FpRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
+    //
+    // public class FpRecoverFromErrorSettings {
+    //     public bool DangerouslyReplaceParameterWithMatchingName;
+    // }
+}
+
+public class SharedParameterSettings {
+    //     public SpRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
+    //
+    //     public class SpRecoverFromErrorSettings {
+    //         public bool DangerouslyReplaceParameterWithMatchingName;
+    //     }
 }

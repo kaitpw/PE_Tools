@@ -61,7 +61,7 @@ public class ParametersApi {
 
             [UsedImplicitly] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
 
-            public ParameterDownloadOptions DownloadOptions => new(this.Id, this.TypedMetadata);
+            public ParameterDownloadOpts DownloadOptions => new(this.Id, this.TypedMetadata);
 
             public class RawMetadataValue {
                 [UsedImplicitly] public string Id { get; init; }
@@ -117,7 +117,7 @@ public class ParametersApi {
                 }
             }
 
-            public class ParameterDownloadOptions(string Id, ParametersResultMetadata metadata) {
+            public class ParameterDownloadOpts(string Id, ParametersResultMetadata metadata) {
                 public ForgeTypeId ParameterTypeId => new(Id);
 
                 public ForgeTypeId GroupTypeId => // check this logic in testing
