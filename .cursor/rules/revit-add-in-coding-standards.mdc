@@ -9,7 +9,7 @@ PE_Tools/
 ├── build/                   <-- the actual project name is `Nuke` (you see "Nuke" in solution explorer)
 │   ├── Build.cs <-- nuke build definition file
 ├── Library/                 <-- shared projects containing reusable libraries
-│   ├── PeLib/              <-- core library of reusable methods and business logic
+│   ├── PeRevit.Lib/              <-- core library of reusable methods and business logic
 │   │   ├── Commands.cs
 │   │   ├── Exceptions.cs
 │   │   ├── Faces.cs

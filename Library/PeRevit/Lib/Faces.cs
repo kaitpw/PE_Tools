@@ -1,4 +1,4 @@
-namespace PeLib;
+namespace PeRevit.Lib;
 
 public class Faces {
     public static UV GetCenter(Face face) {
@@ -72,12 +72,6 @@ public class Faces {
             bb.Min.V + (vRatio * (bb.Max.V - bb.Min.V))
         );
     }
-
-    public static Result<UV> ConstrainUVPointTODO(Face face, UV point) =>
-        new NotImplementedException("Not implemented");
-
-    public static Result<XYZ> ConstrainXYZPointTODO(XYZ point) =>
-        new NotImplementedException("Not implemented, more thought to be put to the args");
 
     ///<summary>Using a length and an angle, get a new point relative to a reference point</summary>
     public static UV GetPointAtAngle(UV referencePoint, double lengthFeet, double angleInDegrees) {

@@ -2,7 +2,7 @@ using AddinCmdPalette.Helpers;
 using AddinCmdPalette.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using PeLib;
+using PeRevit.Lib;
 using PeServices.Storage;
 using System.Collections.ObjectModel;
 

@@ -1,7 +1,7 @@
 ﻿using Autodesk.Revit.DB.Mechanical;
 using PeMech;
 
-namespace PeLib;
+namespace PeRevit.Lib;
 
 internal class Filters {
     /// <summary>

@@ -1,6 +1,6 @@
 using PeRevit.Ui;
 
-namespace PeLib;
+namespace PeRevit.Lib;
 
 /// <summary>
 ///     Immutable reference to either an internal PostableCommand or an external command id.

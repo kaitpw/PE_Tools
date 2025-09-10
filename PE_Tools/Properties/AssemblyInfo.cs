@@ -17,7 +17,7 @@
 // COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
-// The following GUID is for the ID of the typelib if this project is exposed to COM
+// The following GUID is for the ID of the typeRevit.Lib if this project is exposed to COM
 [assembly: Guid("04b918ec-6956-4fd9-ac34-1018929b7763")]
 
 // Version information for an assembly consists of the following four values:
