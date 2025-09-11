@@ -71,7 +71,7 @@ public static class AddParams {
             try {
                 finalDownloadResults.Add(ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId));
             } catch (Exception ex) {
-                finalDownloadResults.Add(HandleDownloadError(famDoc, psParamInfo, ex, settings));
+                finalDownloadResults.Add(HandleDownloadError(famDoc, psParamInfo, dlOpts, ex, settings));
             }
         }
 
@@ -82,6 +82,7 @@ public static class AddParams {
     private static Result<SharedParameterElement> HandleDownloadError(
         Document famDoc,
         ParamModelRes psParamInfo,
+        ParameterDownloadOptions dlOpts,
         Exception downloadErr,
         PsRecoverFromErrorSettings settings
     ) {
@@ -90,29 +91,43 @@ public static class AddParams {
         // var balloon = new Balloon();
         var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
         var paramMsg = $"\n({psParamInfo.Name}: {parameterTypeId})";
-        var downloadOptions = new ParameterDownloadOptions();
-        try {
-            downloadOptions = ParameterUtils.DownloadParameterOptions(parameterTypeId);
-        } catch (Exception ex) {
-            downloadErr = new Exception(downloadErr.Message, ex);
-        }
 
         switch (downloadErr.Message) {
         case { } msg when msg.Contains("Parameter with a matching name"):
             try {
-                if (settings.ReplaceParameterWithMatchingName) {
-                    var currentParam = fm.FindParameter(psParamInfo.Name);
-                    fm.RemoveParameter(currentParam);
-                    return ParameterUtils.DownloadParameter(famDoc, downloadOptions, parameterTypeId);
-                }
-
-                return downloadErr;
+                if (!settings.ReplaceParameterWithMatchingName) return downloadErr;
+                var currentParam = fm.FindParameter(psParamInfo.Name);
+                fm.RemoveParameter(currentParam);
+                return ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId);
             } catch (Exception ex) {
-                return new Exception($"Failed to recover from a \"matching name\" error {paramMsg}", ex);
+                return new Exception($"Recovery failed for a \"matching name\" error {paramMsg}", ex);
             }
         case { } msg when msg.Contains("Parameter with a matching GUID"):
-            // return fm.FindParameter(new ForgeTypeId(originalParamInfo.Id)); // TODO: Figure this out!!!!!!!!!!!!
-            return new Exception("TODO: recover from \"param with matching GUID\" error");
+            // TODO: this is to test the retrieval of param, break out into another FindParameter overload when we figure this out later
+            var id = psParamInfo.Id;
+            var idParts = id.Split(':');
+            var idPartParam = idParts[1];
+            var idPartParamGuid = idPartParam.Split('-')[0];
+
+            var g1 = new Guid(psParamInfo.Id); // breakpoint here
+            var g2 = Guid.Parse(psParamInfo.Id); // breakpoint here
+            var g3 = new Guid(idPartParamGuid); // breakpoint here
+            var g4 = Guid.Parse(idPartParamGuid); // breakpoint here
+
+            var fem = new FilteredElementCollector(famDoc)
+                .OfClass(typeof(SharedParameterElement))
+                .OfType<SharedParameterElement>()
+                .Where(p => {
+                    // compute per-item booleans so you can break here too
+                    var c1 = p.GuidValue == g1; // breakpoint
+                    var c2 = p.GuidValue == g2; // breakpoint
+                    var c3 = p.GuidValue == g3; // breakpoint
+                    var c4 = p.GuidValue == g4; // breakpoint
+                    return c1 || c2 || c3 || c4;
+                });
+
+            return fem.FirstOrDefault();
+        // return new Exception("TODO: recover from \"param with matching GUID\" error");
         default:
             return new Exception($"Skipped recovery for unknown error {downloadErr.Message} ", downloadErr);
         }
