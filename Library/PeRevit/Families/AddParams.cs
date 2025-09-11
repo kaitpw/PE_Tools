@@ -1,9 +1,8 @@
 using Nice3point.Revit.Extensions;
-using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
-using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
-using NJsonSchema;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
+using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
 namespace PeRevit.Families;
 
@@ -89,49 +88,28 @@ public static class AddParams {
         PsRecoverFromErrorSettings settings
     ) {
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
-        var fm = famDoc.FamilyManager;
-        // var balloon = new Balloon();
         var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
-        var paramMsg = $"\n({psParamInfo.Name}: {parameterTypeId})";
+        var paramMsg = $"\n{psParamInfo.Name} ({parameterTypeId})";
 
         switch (downloadErr.Message) {
         case { } msg when msg.Contains("Parameter with a matching name"):
             try {
+                var fm = famDoc.FamilyManager;
                 if (!settings.ReplaceParameterWithMatchingName) return downloadErr;
                 var currentParam = fm.FindParameter(psParamInfo.Name);
                 fm.RemoveParameter(currentParam);
                 return ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId);
             } catch (Exception ex) {
-                return new Exception($"Recovery failed for a \"matching name\" error {paramMsg}", ex);
+                return new Exception($"Recovery failed for \"matching name\" error with parameter: {paramMsg}", ex);
             }
         case { } msg when msg.Contains("Parameter with a matching GUID"):
-            // TODO: this is to test the retrieval of param, break out into another FindParameter overload when we figure this out later
-            var id = psParamInfo.Id;
-            var idParts = id.Split(':');
-            var idPartParam = idParts[1];
-            var idPartParamGuid = idPartParam.Split('-')[0];
-
-            var g1 = new Guid(psParamInfo.Id); // breakpoint here
-            var g2 = Guid.Parse(psParamInfo.Id); // breakpoint here
-            var g3 = new Guid(idPartParamGuid); // breakpoint here
-            var g4 = Guid.Parse(idPartParamGuid); // breakpoint here
-
-            var fem = new FilteredElementCollector(famDoc)
-                .OfClass(typeof(SharedParameterElement))
-                .OfType<SharedParameterElement>()
-                .Where(p => {
-                    // compute per-item booleans so you can break here too
-                    var c1 = p.GuidValue == g1; // breakpoint
-                    var c2 = p.GuidValue == g2; // breakpoint
-                    var c3 = p.GuidValue == g3; // breakpoint
-                    var c4 = p.GuidValue == g4; // breakpoint
-                    return c1 || c2 || c3 || c4;
-                });
-
-            return fem.FirstOrDefault();
-        // return new Exception("TODO: recover from \"param with matching GUID\" error");
+            try {
+                return famDoc.FindParameter(parameterTypeId);
+            } catch (Exception ex) {
+                return new Exception($"Recovery failed for \"matching GUID\" error with parameter: {paramMsg}", ex);
+            }
         default:
-            return new Exception($"Skipped recovery for unknown error {downloadErr.Message} ", downloadErr);
+            return new Exception($"Recovery skipped for unknown error: {downloadErr.Message} ", downloadErr);
         }
     }
 

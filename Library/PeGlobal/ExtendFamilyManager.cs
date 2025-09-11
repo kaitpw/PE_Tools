@@ -3,7 +3,7 @@ namespace Nice3point.Revit.Extensions;
 /// <summary>
 ///     Revit FamilyManager Extensions
 /// </summary>
-public static class FamilyManagerExtensions {
+public static class ExtendFamilyManager {
     /// <summary>
     ///     Find a parameter by ForgeTypeId identifier
     /// </summary>

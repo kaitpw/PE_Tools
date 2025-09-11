@@ -77,19 +77,19 @@ public class Json<T> where T : class, new() {
     /// <returns>True if cache is valid and can be used</returns>
     public bool IsCacheValid(int maxAgeMinutes, Func<T, bool> contentValidator = null) {
         if (!File.Exists(this.FilePath)) return false;
-        
+
         var fileLastWrite = File.GetLastWriteTime(this.FilePath);
         var cacheAge = DateTime.Now - fileLastWrite;
-        
+
         // Check if cache is too old
         if (cacheAge.TotalMinutes > maxAgeMinutes) return false;
-        
+
         // Check content validity if validator is provided
         if (contentValidator != null) {
             var content = this.Read();
             return contentValidator(content);
         }
-        
+
         return true;
     }
 

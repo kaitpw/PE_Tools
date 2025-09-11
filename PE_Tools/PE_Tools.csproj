@@ -76,7 +76,6 @@
 
     </ItemGroup>
     <ItemGroup>
-        <!-- <PackageReference Include="System.Text.Json" Version="9.0.0" /> -->
         <!-- <PackageReference Include="Adsk.Platform.DataManagement" Version="0.1.16"/> -->
         <PackageReference Include="NJsonSchema" Version="11.4.0"/>
         <PackageReference Include="NJsonSchema.NewtonsoftJson" Version="11.4.0"/>

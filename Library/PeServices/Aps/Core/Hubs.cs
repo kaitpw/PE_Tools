@@ -1,15 +1,13 @@
+using Newtonsoft.Json;
 using PeServices.Aps.Models;
 using System.Net.Http;
-using System.Text.Json;
 
 namespace PeServices.Aps.Core;
 
 public class Hubs(HttpClient httpClient) {
     private static async Task<T> DeserializeToType<T>(HttpResponseMessage res) =>
-        JsonSerializer.Deserialize<T>(
-            await res.Content.ReadAsStringAsync(),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-        );
+        JsonConvert.DeserializeObject<T>(await res.Content.ReadAsStringAsync());
+
 
     private static string Clean(string v) => v.Replace("b.", "").Replace("-", "");
 

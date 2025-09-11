@@ -1,7 +1,7 @@
+using Newtonsoft.Json;
 using PeServices.Aps.Models;
 using PeServices.Storage.Core;
 using System.Net.Http;
-using System.Text.Json;
 
 namespace PeServices.Aps.Core;
 
@@ -10,10 +10,7 @@ public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenP
     private readonly TokenProviders.IParameters _tokenProvider = tokenProvider;
 
     private static async Task<T> DeserializeToType<T>(HttpResponseMessage res) =>
-        JsonSerializer.Deserialize<T>(
-            await res.Content.ReadAsStringAsync(),
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-        );
+        JsonConvert.DeserializeObject<T>(await res.Content.ReadAsStringAsync());
 
     private static string Clean(string v) => v.Replace("b.", "").Replace("-", "");
 
@@ -37,16 +34,14 @@ public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenP
 
     public async Task<ParametersApi.Parameters> GetParameters(
         JsonReadWriter<ParametersApi.Parameters> cache = null,
-        int invalidateCacheAfterMinutes = 10
+        int invalidateCacheAfterMinutes = 100
     ) {
         if (cache is not null) {
             var isCacheValid = cache.IsCacheValid(
                 invalidateCacheAfterMinutes,
                 data => data?.Results?.Count > 0
             );
-            if (isCacheValid) {
-                return cache.Read();
-            }
+            if (isCacheValid) return cache.Read();
         }
 
         var (hubId, grpId, colId) = (tokenProvider.GetAccountId(), tokenProvider.GetGroupId(),

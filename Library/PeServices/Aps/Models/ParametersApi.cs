@@ -1,6 +1,5 @@
 using JetBrains.Annotations;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace PeServices.Aps.Models;
 
@@ -73,20 +72,13 @@ public class ParametersApi {
                 public ParametersResultMetadata(List<RawMetadataValue> metadata) {
                     foreach (var item in metadata) {
                         _ = item.Id switch {
-                            "isHidden" => this.IsHidden = item.Value is JValue { Value: true },
-                            "isArchived" => this.IsArchived = item.Value is JValue { Value: true },
-                            "instanceTypeAssociation" => this.InstanceTypeAssociation = item.Value is JValue jValue
-                                ? jValue.Value?.ToString() ?? "NONE"
-                                : item.Value?.ToString() ?? "NONE",
-                            "categories" => this.Categories = item.Value is JArray jArray
-                                ? jArray.ToObject<List<Binding>>()
-                                : null,
-                            "labelIds" => this.LabelIds = item.Value is JArray jArray
-                                ? jArray.ToObject<List<string>>()
-                                : null,
-                            "group" => this.Group = item.Value is JObject jObj
-                                ? jObj.ToObject<Binding>()
-                                : null,
+                            "isHidden" => this.IsHidden = item.Value is bool v && v,
+                            "isArchived" => this.IsArchived = item.Value is bool v && v,
+                            "instanceTypeAssociation" => this.InstanceTypeAssociation =
+                                item.Value is string v ? v : "NONE",
+                            "categories" => this.Categories = item.Value is List<Binding> v ? v : null,
+                            "labelIds" => this.LabelIds = item.Value is string[] v ? v.ToList() : null,
+                            "group" => this.Group = item.Value is Binding v ? v : null,
                             _ => default(object)
                         };
                     }

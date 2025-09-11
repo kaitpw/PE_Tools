@@ -1,12 +1,11 @@
-using NJsonSchema;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using PeRevit.Families;
 using PeRevit.Ui;
 using PeServices.Aps;
 using PeServices.Aps.Core;
 using PeServices.Aps.Models;
 using PeServices.Storage;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 #if !REVIT2023 && !REVIT2024
 #endif
 
@@ -42,7 +41,7 @@ public class CmdFamilyFoundry : IExternalCommand {
             .OfClass(typeof(Family))
             .Cast<Family>()
             .Where(f => f.IsEditable)
-            .Where(f => f.Name.Contains("Price LBP15A Exhaust")) // Price LBP15A Exhaust, Fantech RC Series, 
+            .Where(f => f.Name.Contains("Price LBP15A Return")) // Price LBP15A Exhaust, Fantech RC Series, 
             .ToList();
 
         // // TODO: remove this after testing family parameter additions
@@ -71,24 +70,32 @@ public class CmdFamilyFoundry : IExternalCommand {
             var settings = storage.Settings().Json<FamilyFoundrySettings>().Read();
             var svcAps = new Aps(settings);
             var svcApsParams = svcAps.Parameters(settings);
-            var psParamInfos = GetParamSvcParamInfo(storage, svcApsParams);
+            var psParamInfos = GetParamSvcParamInfos(storage, svcApsParams);
             List<Result<SharedParameterElement>> psParamsDownloadResults = [];
             List<Result<FamilyParameter>> psParamAdditionResults = [];
 
             foreach (var family in families) {
-                _ = balloon.Add(Log.TEST, $"Processing family: {family.Name} (ID: {family.Id})");
+                _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
                 var fam = FamUtils.EditAndLoad(doc, family,
-                    // (famDoc, results) => {
-                    //     var result = AddParams.Family(famDoc, famParamInfos,
-                    //         settings.ParameterAdditionSettings.FamilyParameter.OverrideExistingValues);
-                    //     results.Add(nameof(AddParams.Family), result);
-                    // },
                     famDoc => {
                         var recoverFromErrorSettings = settings.ParameterAdditionSettings.ParametersService
                             .RecoverFromErrorSettings;
                         psParamsDownloadResults = AddParams.ParamService(famDoc,
                             recoverFromErrorSettings, psParamInfos);
-                    },
+
+                        // NOTE: make the results return a snapshot of the shared param instead so that we can 
+                        var count = 0;
+                        foreach (var (res, err) in psParamsDownloadResults) {
+                            count++;
+                            if (res is not null) Debug.WriteLine($"{count}" + res.Name);
+                            if (err is not null) Debug.WriteLine($"{count}" + err.Message);
+                        }
+                    }
+                    // (famDoc, results) => {
+                    //     var result = AddParams.Family(famDoc, famParamInfos,
+                    //         settings.ParameterAdditionSettings.FamilyParameter.OverrideExistingValues);
+                    //     results.Add(nameof(AddParams.Family), result);
+                    // },
                     // famDoc => {
                     //     var psParams = psParamsDownloadResults
                     //         .Where(p => p.AsTuple().value != null)
@@ -96,22 +103,22 @@ public class CmdFamilyFoundry : IExternalCommand {
                     //         .ToList();
                     //     psParamAdditionResults = AddParams.ParamSvc(famDoc, psParams);
                     // },
-                    famDoc => SortParams(famDoc, ParametersOrder.Ascending)
+                    // famDoc => SortParams(famDoc, ParametersOrder.Ascending)
                 );
             }
 
-            // tODO: write to output somehow
 
             balloon.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
             new Balloon().Add(new StackFrame(), Log.ERR,
-                $"{ex.Message}  \n {ex.StackTrace} \n {ex.InnerException?.Message} \n {ex.InnerException?.StackTrace}").Show();
+                    $"{ex.Message}  \n {ex.StackTrace} \n {ex.InnerException?.Message} \n {ex.InnerException?.StackTrace}")
+                .Show();
             return Result.Cancelled;
         }
     }
 
-    private static ParametersApi.Parameters GetParamSvcParamInfo(Storage storage, Parameters svcApsParams) {
+    private static ParametersApi.Parameters GetParamSvcParamInfos(Storage storage, Parameters svcApsParams) {
         const string cacheFileName = "parameters-service-cache.json";
         var cache = storage.State().Json<ParametersApi.Parameters>(cacheFileName);
         var tcsParams = new TaskCompletionSource<Result<ParametersApi.Parameters>>();
