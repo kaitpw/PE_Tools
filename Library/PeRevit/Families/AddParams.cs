@@ -1,7 +1,9 @@
-using Json.Schema.Generation;
 using Nice3point.Revit.Extensions;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
+using NJsonSchema;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace PeRevit.Families;
 

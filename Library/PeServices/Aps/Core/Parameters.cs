@@ -40,11 +40,13 @@ public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenP
         int invalidateCacheAfterMinutes = 10
     ) {
         if (cache is not null) {
-            var cacheData = cache.Read();
-            // check if cache is old, or if it was just created by initializing the Json instance
-            var invalidCache = File.GetLastWriteTime(cache.FilePath) <
-                               DateTime.Now.AddMinutes(-invalidateCacheAfterMinutes);
-            if (!invalidCache && cacheData.Results.Count > 1) return cacheData;
+            var isCacheValid = cache.IsCacheValid(
+                invalidateCacheAfterMinutes,
+                data => data?.Results?.Count > 0
+            );
+            if (isCacheValid) {
+                return cache.Read();
+            }
         }
 
         var (hubId, grpId, colId) = (tokenProvider.GetAccountId(), tokenProvider.GetGroupId(),

@@ -18,6 +18,8 @@ public class JsonReadWriter<T>(Json<T> json) where T : class, new() {
     public string FilePath => json.FilePath;
     public T Read() => json.Read();
     public void Write(T data) => json.Write(data);
+    public bool IsCacheValid(int maxAgeMinutes, Func<T, bool> contentValidator = null) => 
+        json.IsCacheValid(maxAgeMinutes, contentValidator);
 }
 
 public class CsvReader<T>(Csv<T> csv) where T : class, new() {

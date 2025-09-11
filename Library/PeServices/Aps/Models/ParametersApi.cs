@@ -1,6 +1,6 @@
 using JetBrains.Annotations;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace PeServices.Aps.Models;
 
@@ -54,14 +54,14 @@ public class ParametersApi {
             [UsedImplicitly] public string ValueTypeId { get; init; }
             [UsedImplicitly] public bool ReadOnly { get; init; }
 
-            [UsedImplicitly] [JsonInclude] private List<RawMetadataValue> Metadata { get; init; }
+            [UsedImplicitly] public List<RawMetadataValue> Metadata { get; init; }
 
             [UsedImplicitly] public string CreatedBy { get; init; }
             [UsedImplicitly] public string CreatedAt { get; init; }
 
-            [UsedImplicitly] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
+            [UsedImplicitly] [JsonIgnore] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
 
-            public ParameterDownloadOpts DownloadOptions => new(this.Id, this.TypedMetadata);
+            [JsonIgnore] public ParameterDownloadOpts DownloadOptions => new(this.Id, this.TypedMetadata);
 
             public class RawMetadataValue {
                 [UsedImplicitly] public string Id { get; init; }
@@ -69,36 +69,24 @@ public class ParametersApi {
             }
 
             public class ParametersResultMetadata {
-                private static readonly JsonSerializerOptions
-                    JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
+                // NOTE: Intentionally uses default de/serialization settings inherent in JToken.ToObject
                 public ParametersResultMetadata(List<RawMetadataValue> metadata) {
                     foreach (var item in metadata) {
                         _ = item.Id switch {
-                            "isHidden" =>
-                                this.IsHidden = item.Value is JsonElement { ValueKind: JsonValueKind.True },
-                            "isArchived" =>
-                                this.IsArchived = item.Value is JsonElement { ValueKind: JsonValueKind.True },
-                            "instanceTypeAssociation" =>
-                                this.InstanceTypeAssociation = item.Value is JsonElement jsonString
-                                    ? jsonString.GetString() ?? "NONE"
-                                    : item.Value?.ToString() ?? "NONE",
-                            "categories" =>
-                                this.Categories = item.Value is JsonElement {
-                                    ValueKind: JsonValueKind.Array
-                                } json
-                                    ? JsonSerializer.Deserialize<List<Binding>>(json.GetRawText(), JsonOptions)
-                                    : null,
-                            "labelIds" =>
-                                this.LabelIds = item.Value is JsonElement {
-                                    ValueKind: JsonValueKind.Array
-                                } json
-                                    ? JsonSerializer.Deserialize<List<string>>(json.GetRawText(), JsonOptions)
-                                    : null,
-                            "group" =>
-                                this.Group = item.Value is JsonElement groupElem
-                                    ? JsonSerializer.Deserialize<Binding>(groupElem.GetRawText(), JsonOptions)
-                                    : null,
+                            "isHidden" => this.IsHidden = item.Value is JValue { Value: true },
+                            "isArchived" => this.IsArchived = item.Value is JValue { Value: true },
+                            "instanceTypeAssociation" => this.InstanceTypeAssociation = item.Value is JValue jValue
+                                ? jValue.Value?.ToString() ?? "NONE"
+                                : item.Value?.ToString() ?? "NONE",
+                            "categories" => this.Categories = item.Value is JArray jArray
+                                ? jArray.ToObject<List<Binding>>()
+                                : null,
+                            "labelIds" => this.LabelIds = item.Value is JArray jArray
+                                ? jArray.ToObject<List<string>>()
+                                : null,
+                            "group" => this.Group = item.Value is JObject jObj
+                                ? jObj.ToObject<Binding>()
+                                : null,
                             _ => default(object)
                         };
                     }

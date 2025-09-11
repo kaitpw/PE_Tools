@@ -1,27 +1,35 @@
-using Json.Schema;
-using Json.Schema.Generation;
-using SysJson = System.Text.Json;
-using SysJsonNodes = System.Text.Json.Nodes;
+using Newtonsoft.Json;
+using NJsonSchema;
+using NJsonSchema.Generation;
+using NJsonSchema.NewtonsoftJson.Generation;
 
 namespace PeUtils.Files;
 
 public class Json<T> where T : class, new() {
-    private readonly SysJson.JsonSerializerOptions _jsonOptions;
+    private readonly DateTime _instanceCreationTime;
     private readonly JsonSchema _schema;
+    private readonly JsonSerializerSettings _serializerSettings;
     public readonly string FilePath;
 
     public Json(string filePath, bool throwIfNotExists) {
         FileUtils.ValidateFileNameAndExtension(filePath, "json");
         this.FilePath = filePath;
-        this._jsonOptions =
-            new SysJson.JsonSerializerOptions { WriteIndented = true, PropertyNameCaseInsensitive = true };
-        this._schema = new JsonSchemaBuilder()
-            .FromType<T>()
-            .AdditionalProperties(false)
-            .Build();
+        this._instanceCreationTime = DateTime.Now;
+        this._serializerSettings = new JsonSerializerSettings {
+            Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore
+        };
+
+        var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings {
+            AllowReferencesWithProperties = false, // default, keep for explicatory purposes
+            AlwaysAllowAdditionalObjectProperties = false, // default, keep for explicatory purposes
+            FlattenInheritanceHierarchy = true
+        };
+        var generator = new JsonSchemaGenerator(schemaSettings);
+        this._schema = generator.Generate(typeof(T));
+
         this.SaveSchema();
         var fileDidntExist = !File.Exists(this.FilePath);
-        this.SaveJson();
+        this.SaveJson(); // Always create the file
         if (throwIfNotExists && fileDidntExist) {
             throw new CrashProgramException(
                 $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
@@ -31,38 +39,58 @@ public class Json<T> where T : class, new() {
     /// <summary> Reads JSON object from the specified file, validating against schema </summary>
     /// <returns>Deserialized object</returns>
     public T Read() {
-        this.SaveJson();
+        if (!File.Exists(this.FilePath)) return new T();
 
         var jsonContent = File.ReadAllText(this.FilePath);
-        var jsonNode = SysJsonNodes.JsonNode.Parse(jsonContent);
-
-        var validationResults = this._schema.Evaluate(jsonNode);
-        if (!validationResults.IsValid) {
-            var errors = new List<string>();
-            CollectValidationErrors(validationResults, errors);
-
+        var validationErrors = this._schema.Validate(jsonContent);
+        if (validationErrors.Any()) {
+            var errors = validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}").ToList();
             throw new JsonValidationException(this.FilePath, errors);
         }
 
-        var content = SysJson.JsonSerializer.Deserialize<T>(jsonContent, this._jsonOptions);
+        var content = JsonConvert.DeserializeObject<T>(jsonContent, this._serializerSettings);
         return content ?? new T();
     }
+
 
     /// <summary> Writes object to JSON file after validation </summary>
     /// <param name="content">Object to save</param>
     public void Write(T content) {
-        var jsonContent = SysJson.JsonSerializer.Serialize(content, this._jsonOptions);
-        var jsonNode = SysJsonNodes.JsonNode.Parse(jsonContent);
-
-        // Validate before saving
-        var validationResults = this._schema.Evaluate(jsonNode);
-        if (!validationResults.IsValid) {
-            var errors = new List<string>();
-            CollectValidationErrors(validationResults, errors);
+        var jsonContent = JsonConvert.SerializeObject(content, this._serializerSettings);
+        var validationErrors = this._schema.Validate(jsonContent);
+        if (validationErrors.Any()) {
+            var errors = validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}").ToList();
             throw new JsonValidationException(this.FilePath, errors);
         }
 
         File.WriteAllText(this.FilePath, jsonContent);
+    }
+
+    /// <summary>
+    ///     Checks if the cached data is valid based on age and content.
+    /// </summary>
+    /// <param name="maxAgeMinutes">Maximum age in minutes before cache is considered invalid</param>
+    /// <param name="contentValidator">
+    ///     Optional function to validate the cached content like, for example, checking for an
+    ///     empty cache
+    /// </param>
+    /// <returns>True if cache is valid and can be used</returns>
+    public bool IsCacheValid(int maxAgeMinutes, Func<T, bool> contentValidator = null) {
+        if (!File.Exists(this.FilePath)) return false;
+        
+        var fileLastWrite = File.GetLastWriteTime(this.FilePath);
+        var cacheAge = DateTime.Now - fileLastWrite;
+        
+        // Check if cache is too old
+        if (cacheAge.TotalMinutes > maxAgeMinutes) return false;
+        
+        // Check content validity if validator is provided
+        if (contentValidator != null) {
+            var content = this.Read();
+            return contentValidator(content);
+        }
+        
+        return true;
     }
 
     private void SaveJson() {
@@ -78,30 +106,7 @@ public class Json<T> where T : class, new() {
         if (directory == null) return;
         var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(this.FilePath);
         var schemaPath = Path.Combine(directory, $"{fileNameWithoutExtension}.schema.json");
-        var schemaJson = SysJson.JsonSerializer.Serialize(this._schema, this._jsonOptions);
+        var schemaJson = this._schema.ToJson();
         File.WriteAllText(schemaPath, schemaJson);
-    }
-
-    /// <summary> Recursively collects validation errors from evaluation results </summary>
-    private static void CollectValidationErrors(EvaluationResults results, List<string> errors) {
-        if (results.HasErrors && results?.Errors != null) {
-            foreach (var error in results.Errors)
-                errors.Add($"At '{results.InstanceLocation}': {error.Key} - {error.Value}");
-        }
-
-        if (!results.IsValid && !results.HasErrors && results.InstanceLocation.ToString() == "") {
-            errors.Add(
-                "Validation failed at root level. An additional, missing, or misspelled property likely exists. Check for schema mismatch or delete the it and try again.");
-        }
-
-        if (results.HasDetails) {
-            foreach (var detail in results.Details)
-                CollectValidationErrors(detail, errors);
-        }
-
-        if (!results.IsValid && errors.Count == 0 && !results.HasDetails) {
-            errors.Add(
-                $"Validation failed at '{results.InstanceLocation}' but no specific error was provided. Check for schema mismatch or delete the file and try again.");
-        }
     }
 }

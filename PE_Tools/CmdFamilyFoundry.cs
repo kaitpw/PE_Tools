@@ -1,4 +1,6 @@
-using Json.Schema.Generation;
+using NJsonSchema;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using PeRevit.Families;
 using PeRevit.Ui;
 using PeServices.Aps;
@@ -103,19 +105,19 @@ public class CmdFamilyFoundry : IExternalCommand {
             balloon.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
-            _ = TaskDialog.Show("Error",
-                $"{ex.Message}  \n {ex.StackTrace} \n {ex.InnerException?.Message} \n {ex.InnerException?.StackTrace}");
+            new Balloon().Add(new StackFrame(), Log.ERR,
+                $"{ex.Message}  \n {ex.StackTrace} \n {ex.InnerException?.Message} \n {ex.InnerException?.StackTrace}").Show();
             return Result.Cancelled;
         }
     }
 
     private static ParametersApi.Parameters GetParamSvcParamInfo(Storage storage, Parameters svcApsParams) {
         const string cacheFileName = "parameters-service-cache.json";
-        // var cache = storage.State().Json<ParametersApi.Parameters>(cacheFileName); // TODO, figure this out later
+        var cache = storage.State().Json<ParametersApi.Parameters>(cacheFileName);
         var tcsParams = new TaskCompletionSource<Result<ParametersApi.Parameters>>();
         _ = Task.Run(async () => {
             try {
-                tcsParams.SetResult(await svcApsParams.GetParameters());
+                tcsParams.SetResult(await svcApsParams.GetParameters(cache));
             } catch (Exception ex) {
                 tcsParams.SetResult(ex);
             }

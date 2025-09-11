@@ -1,4 +1,6 @@
-using Json.Schema.Generation;
+using NJsonSchema;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using PeUtils.Files;
 
 namespace PeServices.Storage.Core;
