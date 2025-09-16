@@ -9,7 +9,7 @@ using System.ComponentModel.DataAnnotations;
 #if !REVIT2023 && !REVIT2024
 #endif
 
-namespace PE_Tools;
+namespace AddinFamilyFoundrySuite.Cmds;
 
 // TODO: 
 // - add support for all param types (both in creating and verifying)
