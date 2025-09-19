@@ -110,9 +110,10 @@ public class PostableCommandHelper(Storage storage) {
             // Try to get shortcut info from XML
             var (shortcutInfo, infoErr) = shortcutsService.GetShortcutInfo(command.Id);
             if (infoErr is not null) {
-                commandItem.Name = this.FormatCommandName(command.Name); // TODO: come back to this
-                commandItem.Paths =
-                    [$"{command.Tab} > {command.Panel}"]; // TOTO: probablyRevise this logic
+                continue;
+                // commandItem.Name = this.FormatCommandName(command.Name); // TODO: come back to this
+                // commandItem.Paths =
+                //     [$"{command.Tab} > {command.Panel}"]; // TOTO: probablyRevise this logic
             }
 
             if (shortcutInfo is not null) {

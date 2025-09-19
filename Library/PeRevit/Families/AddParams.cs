@@ -11,6 +11,9 @@ public static class AddParams {
         Document famDoc,
         FamilyParamInfo[] parameters
     ) {
+        ArgumentNullException.ThrowIfNull(famDoc);
+        ArgumentNullException.ThrowIfNull(parameters);
+        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
         var fm = famDoc.FamilyManager;
         var results = new List<Result<FamilyParameter>>();
         foreach (FamilyType type in fm.Types) {
@@ -33,6 +36,9 @@ public static class AddParams {
         Document famDoc,
         List<SharedParameterElement> sharedParams
     ) {
+        ArgumentNullException.ThrowIfNull(famDoc);
+        ArgumentNullException.ThrowIfNull(sharedParams);
+        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
         var fm = famDoc.FamilyManager;
         var results = new List<Result<FamilyParameter>>();
 
@@ -55,24 +61,32 @@ public static class AddParams {
 
     public static List<Result<SharedParameterElement>> ParamService(
         Document famDoc,
-        PsRecoverFromErrorSettings settings,
-        ParamModel psParamInfos
+        ParamModel psParamInfos,
+        Func<ParamModelRes, bool> filter = null
     ) {
+        ArgumentNullException.ThrowIfNull(famDoc);
+        ArgumentNullException.ThrowIfNull(psParamInfos);
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
         var finalDownloadResults = new List<Result<SharedParameterElement>>();
 
-        foreach (var psParamInfo in psParamInfos.Results) {
+        var filteredResults = filter != null
+            ? psParamInfos.Results.Where(filter).ToList()
+            : psParamInfos.Results;
+
+        foreach (var psParamInfo in filteredResults) {
             if (psParamInfo.TypedMetadata.IsArchived) continue;
+
+            var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
             var dlOpts = new ParameterDownloadOptions(
                 new HashSet<ElementId>(),
                 psParamInfo.DownloadOptions.IsInstance,
                 psParamInfo.DownloadOptions.Visible,
                 GroupTypeId.General);
-            var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
+
             try {
                 finalDownloadResults.Add(ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId));
             } catch (Exception ex) {
-                finalDownloadResults.Add(HandleDownloadError(famDoc, psParamInfo, dlOpts, ex, settings));
+                finalDownloadResults.Add(HandleDownloadError(famDoc, psParamInfo, dlOpts, ex, true));
             }
         }
 
@@ -85,7 +99,7 @@ public static class AddParams {
         ParamModelRes psParamInfo,
         ParameterDownloadOptions dlOpts,
         Exception downloadErr,
-        PsRecoverFromErrorSettings settings
+        bool ReplaceParameterWithMatchingName
     ) {
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
         var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
@@ -95,7 +109,7 @@ public static class AddParams {
         case { } msg when msg.Contains("Parameter with a matching name"):
             try {
                 var fm = famDoc.FamilyManager;
-                if (!settings.ReplaceParameterWithMatchingName) return downloadErr;
+                if (!ReplaceParameterWithMatchingName) return downloadErr;
                 var currentParam = fm.FindParameter(psParamInfo.Name);
                 fm.RemoveParameter(currentParam);
                 return ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId);

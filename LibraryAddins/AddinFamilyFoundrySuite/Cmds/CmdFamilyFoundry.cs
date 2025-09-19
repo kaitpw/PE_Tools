@@ -78,10 +78,7 @@ public class CmdFamilyFoundry : IExternalCommand {
                 _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
                 var fam = FamUtils.EditAndLoad(doc, family,
                     famDoc => {
-                        var recoverFromErrorSettings = settings.ParameterAdditionSettings.ParametersService
-                            .RecoverFromErrorSettings;
-                        psParamsDownloadResults = AddParams.ParamService(famDoc,
-                            recoverFromErrorSettings, psParamInfos);
+                        psParamsDownloadResults = AddParams.ParamService(famDoc, psParamInfos);
 
                         // NOTE: make the results return a snapshot of the shared param instead so that we can 
                         var count = 0;
