@@ -33,13 +33,21 @@ public static class ExtendParameter {
         };
     }
 
-
-    public static object SetValue(this FamilyParameter familyParameter, FamilyManager familyManager, FamilyType famType, object value) {
-        ArgumentNullException.ThrowIfNull(famType);
+    /// <summary>
+    ///     Set a parameter value
+    /// </summary>
+    /// <remarks>
+    ///     YOU MUST set FamilyManager.CurrentType BEFORE using this method. Both getting and setting CurrentType 
+    ///     are VERY expensive operations, thus it is not done inside this method. Do it at the highest-level possible
+    ///     in your loop/s.
+    /// </remarks>
+    /// <param name="familyParameter">The parameter to set</param>
+    /// <param name="familyManager">The family manager</param>
+    /// <param name="value">The value to set</param>
+    /// <returns>The value that was set (not the parameter that was set)</returns>
+    public static object SetValue(this FamilyParameter familyParameter, FamilyManager familyManager, object value) {
         ArgumentNullException.ThrowIfNull(familyManager);
         ArgumentNullException.ThrowIfNull(value);
-        if (familyManager.CurrentType != famType)
-            familyManager.CurrentType = famType;
 
         switch (value) {
         case double doubleValue:
@@ -59,12 +67,21 @@ public static class ExtendParameter {
         }
     }
 
-    public static object SetValueCoerced(this FamilyParameter familyParameter, FamilyManager familyManager, FamilyType famType, object value) {
-        ArgumentNullException.ThrowIfNull(famType);
+    /// <summary>
+    ///     Set a parameter value and coerce the value to the correct type if it is reasonably coercable.
+    /// </summary>
+    /// <remarks>
+    ///     YOU MUST set FamilyManager.CurrentType BEFORE using this method. Both getting and setting CurrentType 
+    ///     are VERY expensive operations, thus it is not done inside this method. Do it at the highest-level possible
+    ///     in your loop/s.
+    /// </remarks>
+    /// <param name="familyParameter">The parameter to set</param>
+    /// <param name="familyManager">The family manager</param>
+    /// <param name="value">The value to set</param>
+    /// <returns>The value that was set (not the parameter that was set)</returns>
+    public static object SetValueCoerced(this FamilyParameter familyParameter, FamilyManager familyManager, object value) {
         ArgumentNullException.ThrowIfNull(familyManager);
         ArgumentNullException.ThrowIfNull(value);
-        if (familyManager.CurrentType != famType)
-            familyManager.CurrentType = famType;
 
         switch (value) {
         case bool boolValue when familyParameter.StorageType == StorageType.Integer:

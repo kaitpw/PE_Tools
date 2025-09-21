@@ -6,7 +6,6 @@ using PeServices.Aps.Core;
 using PeServices.Aps.Models;
 using PeServices.Storage;
 using PeServices.Storage.Core;
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 #if !REVIT2023 && !REVIT2024
@@ -17,12 +16,12 @@ namespace AddinFamilyFoundrySuite.Cmds;
 [Transaction(TransactionMode.Manual)]
 public class CmdFamilyFoundry : IExternalCommand {
     private ParametersApi.Parameters _apsParams;
+
+    private List<ParamRemap> _remapData;
+    private FamilyFoundrySettings _settings;
     private Aps _svcAps;
     private Parameters _svcApsParams;
     private JsonReadWriter<ParametersApi.Parameters> _svcStorageCache;
-    private FamilyFoundrySettings _settings;
-
-    private List<ParamRemap> _remapData;
 
     public Result Execute(
         ExternalCommandData commandData,
@@ -40,17 +39,21 @@ public class CmdFamilyFoundry : IExternalCommand {
             var families = new FilteredElementCollector(doc)
                 .OfClass(typeof(Family))
                 .Cast<Family>()
-                .Where(f => f.Name.Contains("Mitsubishi_SUZ-KA09NAHZ"))
+                .Where(f =>
+                    f.Name.Contains("Mitsubishi_SUZ-KA09NAHZ")
+                    || f.Name.Contains("Mitsubishi_MSZ-EF"))
                 .ToList();
-
-            List<Result<SharedParameterElement>> paramAddResults = [];
-            List<Result<FamilyParameter>> paramRemapResults = [];
 
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
                 var fam = FamUtils.EditAndLoad(doc, family,
-                    famDoc => paramAddResults = this.AddParameters(famDoc, this._apsParams),
-                    famDoc => paramRemapResults = this.RemapParameters(famDoc, this._remapData));
+                    famDoc => {
+                        Debug.WriteLine($"Processing family: {family.Name}");
+                        Debug.WriteLine($"Types: {famDoc.FamilyManager.Types.Size}");
+                        Debug.WriteLine($"Parameters: {famDoc.FamilyManager.Parameters.Size}");
+                    },
+                    famDoc => this.AddParameters(famDoc, this._apsParams),
+                    famDoc => this.RemapParameters(famDoc, this._remapData));
             }
 
 
@@ -95,14 +98,37 @@ public class CmdFamilyFoundry : IExternalCommand {
     public List<Result<FamilyParameter>> RemapParameters(Document famDoc, List<ParamRemap> paramRemaps) {
         List<Result<FamilyParameter>> results = new();
 
+        if (!famDoc.IsFamilyDocument)
+            throw new Exception("Family document is null or not a family document");
+
         var famParams = this.GetFamilyParameters(famDoc);
+        var fm = famDoc.FamilyManager;
+        var familyTypes = fm.Types.Cast<FamilyType>().ToList(); // Evaluate once
+        var paramPairs = new List<(FamilyParameter oldParam, FamilyParameter newParam)>();
+
         foreach (var paramRemap in paramRemaps) {
             try {
                 var oldParam = this.ValidateOldParam(famParams, paramRemap.CurrNameOrId);
                 var newParam = famParams.First(p => p.Definition.Name == paramRemap.NewNameOrId);
-                results.Add(MutateParam.Remap(famDoc, oldParam, newParam));
+                paramPairs.Add((oldParam, newParam));
+                results.Add(newParam); // Success result
             } catch (Exception e) {
                 results.Add(e);
+            }
+        }
+
+        foreach (var famType in familyTypes) {
+            fm.CurrentType = famType;
+            foreach (var (oldParam, newParam) in paramPairs) {
+                try {
+                    var currentValue = oldParam.GetValue(famType);
+                    if (currentValue != null) {
+                        _ = newParam.SetValueCoerced(fm, currentValue);
+                    }
+                } catch {
+                    // Individual value setting failures shouldn't stop the entire process
+                    // The outer try-catch for parameter validation already handled major errors
+                }
             }
         }
 
@@ -129,7 +155,7 @@ public class CmdFamilyFoundry : IExternalCommand {
 }
 
 public class FamilyFoundrySettings : FamilyFoundryBaseSettings {
-    public string RemapDataFilename { get; set; } = "remap-data.json";
+    [Required] public string RemapDataFilename { get; set; } = "remap-data.json";
 }
 
 public record ParamRemap {
