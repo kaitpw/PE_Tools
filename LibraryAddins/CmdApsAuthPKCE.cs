@@ -24,7 +24,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
     }
 }
 
-public class ApsAuthPkce : Storage.BaseSettings, Aps.IOAuthTokenProvider {
+public class ApsAuthPkce : Aps.IOAuthTokenProvider {
     public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 }

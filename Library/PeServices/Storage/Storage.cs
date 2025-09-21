@@ -75,7 +75,4 @@ public class Storage(string addinName) {
     // ///     There is NO DEFAULT FILE PATH for temp files.
     // /// </remarks>
     // public TempManager<T> Temp<T>() where T : class, new() => new(this._addinPath);
-
-    public class BaseSettings : SettingsManager.BaseSettings {
-    }
 }

@@ -28,9 +28,9 @@ public static class MutateParam {
         foreach (FamilyType famType in fm.Types) {
             var currentValue = oldParam.GetValue(famType);
             if (currentValue != null)
-                _ = newParam.SetValue(fm, famType, currentValue);
+                _ = newParam.SetValueCoerced(fm, famType, currentValue);
             else if (defaultValue != null)
-                _ = newParam.SetValue(fm, famType, defaultValue);
+                _ = newParam.SetValueCoerced(fm, famType, defaultValue);
         }
         return newParam;
     }

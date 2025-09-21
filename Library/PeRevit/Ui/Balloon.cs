@@ -18,7 +18,7 @@ internal class Balloon {
     public void Clear() => this._messages.Clear();
 
     /// <summary>Add a normal message (with a Log Level)</summary>
-    public Balloon Add(Log log, string message) {
+    public Balloon Add(Log log, string message) { // TODO: update API and move all uses to other overload, then swithc the order of log and stackframe
         if (!string.IsNullOrWhiteSpace(message))
             this._messages.Add(string.Format(FmtNormal, log, message.Trim()));
         return this;
@@ -27,8 +27,12 @@ internal class Balloon {
     /// <summary>Add a normal message (with the method's name)</summary>
     public Balloon Add(StackFrame sf, Log log, string message) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
-        if (!string.IsNullOrWhiteSpace(message))
-            this._messages.Add(string.Format(FmtMethod, log, method, message.Trim()));
+        if (!string.IsNullOrWhiteSpace(message)) {
+            if (sf is null)
+                this._messages.Add(string.Format(FmtNormal, log, message.Trim()));
+            else
+                this._messages.Add(string.Format(FmtMethod, log, method, message.Trim()));
+        }
         return this;
     }
 
@@ -118,7 +122,8 @@ internal class Balloon {
             title = Assembly.GetExecutingAssembly().GetName().Name;
 #pragma warning disable CA1416 // Validate platform compatibility
         var ri = new ResultItem {
-            Title = text.Trim(), Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
+            Title = text.Trim(),
+            Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
         };
         ri.ResultClicked += (_, _) => clickHandler();
 

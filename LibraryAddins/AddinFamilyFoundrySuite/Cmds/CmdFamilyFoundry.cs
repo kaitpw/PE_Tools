@@ -1,31 +1,29 @@
+using AddinFamilyFoundrySuite.Core;
 using PeRevit.Families;
 using PeRevit.Ui;
 using PeServices.Aps;
 using PeServices.Aps.Core;
 using PeServices.Aps.Models;
 using PeServices.Storage;
+using PeServices.Storage.Core;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 #if !REVIT2023 && !REVIT2024
 #endif
 
 namespace AddinFamilyFoundrySuite.Cmds;
 
-// TODO: 
-// - add support for all param types (both in creating and verifying)
-// - add support for shared parameters/parameters service
-// - add support for formulas
-// - add support for getting the value from an existing parameter
-// - add support for cleaning family
-//     - purge unused nested families
-//     - delete unused reference lines
-//     - delete unused params with no value (may need to discriminate more specifically)
-//     - maybe delete certain reference lines
-//     - delete linear dimensions (maybe?)
-// - retroactively change the group of the params
-
 [Transaction(TransactionMode.Manual)]
 public class CmdFamilyFoundry : IExternalCommand {
+    private ParametersApi.Parameters _apsParams;
+    private Aps _svcAps;
+    private Parameters _svcApsParams;
+    private JsonReadWriter<ParametersApi.Parameters> _svcStorageCache;
+    private FamilyFoundrySettings _settings;
+
+    private List<ParamRemap> _remapData;
+
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -34,74 +32,25 @@ public class CmdFamilyFoundry : IExternalCommand {
         var uiapp = commandData.Application;
         var uidoc = uiapp.ActiveUIDocument;
         var doc = uidoc.Document;
-
-
-        // Get the first editable family in the project
-        var families = new FilteredElementCollector(doc)
-            .OfClass(typeof(Family))
-            .Cast<Family>()
-            .Where(f => f.IsEditable)
-            .Where(f => f.Name.Contains("Price LBP15A Return")) // Price LBP15A Exhaust, Fantech RC Series, 
-            .ToList();
-
-        // // TODO: remove this after testing family parameter additions
-        // var famParamInfos = new[] {
-        //     new AddParams.FamilyParamInfo {
-        //         Name = "TEST5_Instance",
-        //         Group = GroupTypeId.General,
-        //         Category = SpecTypeId.String.Text,
-        //         IsInstance = true,
-        //         Value = "TEST1"
-        //     },
-        //     new AddParams.FamilyParamInfo {
-        //         Name = "TEST5_Type",
-        //         Group = GroupTypeId.General,
-        //         Category = SpecTypeId.String.Text,
-        //         IsInstance = false,
-        //         Value = "TEST1"
-        //     }
-        // };
-
-
         var balloon = new Balloon();
 
         try {
-            var storage = new Storage("FamilyFoundry");
-            var settings = storage.Settings().Json<FamilyFoundrySettings>().Read();
-            var svcAps = new Aps(settings);
-            var svcApsParams = svcAps.Parameters(settings);
-            var psParamInfos = GetParamSvcParamInfos(storage, svcApsParams);
-            List<Result<SharedParameterElement>> psParamsDownloadResults = [];
-            List<Result<FamilyParameter>> psParamAdditionResults = [];
+            this.InitAndFetch();
+
+            var families = new FilteredElementCollector(doc)
+                .OfClass(typeof(Family))
+                .Cast<Family>()
+                .Where(f => f.Name.Contains("Mitsubishi_SUZ-KA09NAHZ"))
+                .ToList();
+
+            List<Result<SharedParameterElement>> paramAddResults = [];
+            List<Result<FamilyParameter>> paramRemapResults = [];
 
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
                 var fam = FamUtils.EditAndLoad(doc, family,
-                    famDoc => {
-                        psParamsDownloadResults = AddParams.ParamService(famDoc, psParamInfos);
-
-                        // NOTE: make the results return a snapshot of the shared param instead so that we can 
-                        var count = 0;
-                        foreach (var (res, err) in psParamsDownloadResults) {
-                            count++;
-                            if (res is not null) Debug.WriteLine($"{count}" + res.Name);
-                            if (err is not null) Debug.WriteLine($"{count}" + err.Message);
-                        }
-                    }
-                    // (famDoc, results) => {
-                    //     var result = AddParams.Family(famDoc, famParamInfos,
-                    //         settings.ParameterAdditionSettings.FamilyParameter.OverrideExistingValues);
-                    //     results.Add(nameof(AddParams.Family), result);
-                    // },
-                    // famDoc => {
-                    //     var psParams = psParamsDownloadResults
-                    //         .Where(p => p.AsTuple().value != null)
-                    //         .Select(p => p.AsTuple().value)
-                    //         .ToList();
-                    //     psParamAdditionResults = AddParams.ParamSvc(famDoc, psParams);
-                    // },
-                    // famDoc => SortParams(famDoc, ParametersOrder.Ascending)
-                );
+                    famDoc => paramAddResults = this.AddParameters(famDoc, this._apsParams),
+                    famDoc => paramRemapResults = this.RemapParameters(famDoc, this._remapData));
             }
 
 
@@ -115,48 +64,75 @@ public class CmdFamilyFoundry : IExternalCommand {
         }
     }
 
-    private static ParametersApi.Parameters GetParamSvcParamInfos(Storage storage, Parameters svcApsParams) {
-        const string cacheFileName = "parameters-service-cache.json";
-        var cache = storage.State().Json<ParametersApi.Parameters>(cacheFileName);
-        var tcsParams = new TaskCompletionSource<Result<ParametersApi.Parameters>>();
-        _ = Task.Run(async () => {
-            try {
-                tcsParams.SetResult(await svcApsParams.GetParameters(cache));
-            } catch (Exception ex) {
-                tcsParams.SetResult(ex);
-            }
-        });
-        tcsParams.Task.Wait();
+    private void InitAndFetch() {
+        var storageName = "FamilyFoundry";
+        var cacheFilename = "parameters-service-cache.json";
 
-        var (parameters, paramsResult) = tcsParams.Task.Result;
-        return paramsResult != null ? throw paramsResult : parameters;
+        var storage = new Storage(storageName);
+        this._svcStorageCache = storage.State().Json<ParametersApi.Parameters>(cacheFilename);
+        this._settings = storage.Settings().Json<FamilyFoundrySettings>().Read();
+        this._remapData = storage.Settings().Json<List<ParamRemap>>(this._settings.RemapDataFilename).Read();
+
+        this._svcAps = new Aps(this._settings);
+        this._svcApsParams = this._svcAps.Parameters(this._settings);
+        this._apsParams = Task.Run(async () =>
+            await this._svcApsParams.GetParameters(this._svcStorageCache)).Result;
     }
 
-    private static void SortParams(Document famDoc, ParametersOrder order) =>
-        famDoc.FamilyManager.SortParameters(order);
+    private List<Result<SharedParameterElement>> AddParameters(Document famDoc, ParametersApi.Parameters psParamInfos) {
+        List<Result<SharedParameterElement>> results = [];
+
+        static bool filter(ParamModelRes p) {
+            return new[] { "PE_M", "PE_G", "PE_E" }.Any(p.Name.StartsWith);
+        }
+
+        results = AddParams.ParamService(famDoc, psParamInfos, filter);
+
+        return results;
+    }
+
+
+    public List<Result<FamilyParameter>> RemapParameters(Document famDoc, List<ParamRemap> paramRemaps) {
+        List<Result<FamilyParameter>> results = new();
+
+        var famParams = this.GetFamilyParameters(famDoc);
+        foreach (var paramRemap in paramRemaps) {
+            try {
+                var oldParam = this.ValidateOldParam(famParams, paramRemap.CurrNameOrId);
+                var newParam = famParams.First(p => p.Definition.Name == paramRemap.NewNameOrId);
+                results.Add(MutateParam.Remap(famDoc, oldParam, newParam));
+            } catch (Exception e) {
+                results.Add(e);
+            }
+        }
+
+        return results;
+    }
+
+    public FamilyParameter ValidateOldParam(List<FamilyParameter> famParams, string param) {
+        var match = famParams.Where(p => p.Definition.Name == param);
+        if (!match.Any())
+            throw new Exception("Parameter does not exist on this family");
+        if (match.Count() > 1)
+            throw new Exception("More that one parameter with this name exist on the family.");
+
+        return match.First();
+    }
+
+    // get all family parameters
+    public List<FamilyParameter> GetFamilyParameters(Document famDoc) {
+        var fm = famDoc.FamilyManager;
+        var parameterList = new List<FamilyParameter>();
+        foreach (FamilyParameter param in fm.Parameters) parameterList.Add(param);
+        return parameterList;
+    }
 }
 
-public class FamilyFoundrySettings : Storage.BaseSettings, Aps.IOAuthTokenProvider, Aps.IParametersTokenProvider {
-    [Description(
-        "Use cached Parameters Service data instead of downloading from APS on every run. " +
-        "Only set to true if you are sure no one has changed the param definitions since the last time you opened Revit " +
-        "and/or you are running this command in quick succession.")]
-    [Required]
-    public bool UseCachedParametersServiceData { get; set; } = true;
+public class FamilyFoundrySettings : FamilyFoundryBaseSettings {
+    public string RemapDataFilename { get; set; } = "remap-data.json";
+}
 
-    [Description("Remove parameters that have no values during family cleanup operations")]
-    [Required]
-    public bool DeleteEmptyParameters { get; set; } = true; // unused right now
-
-    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
-    [Required]
-    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
-
-    public ParameterAdditionSettings ParameterAdditionSettings { get; set; } = new();
-
-    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
-    public string GetClientSecret() => null;
-    public string GetAccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
-    public string GetGroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
-    public string GetCollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
+public record ParamRemap {
+    public string CurrNameOrId { get; set; }
+    public string NewNameOrId { get; set; }
 }

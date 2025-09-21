@@ -50,7 +50,7 @@ public class Csv<T> where T : class, new() {
             return state;
         } catch {
             // TODO: Maybe return Result type instead
-            new Balloon().Add(Log.ERR, $"Failed to read from CSV file: {this.FilePath}").Show();
+            new Balloon().Add(null, Log.ERR, $"Failed to read from CSV file: {this.FilePath}").Show();
             return new Dictionary<string, T>();
         }
     }

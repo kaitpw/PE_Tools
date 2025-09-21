@@ -16,17 +16,6 @@ public class SettingsManager {
 
     public JsonReader<T> Json<T>(string filename, bool throwIfNotExists = true) where T : class, new() =>
         new(new Json<T>(Path.Combine(this._thisPath, filename), throwIfNotExists));
-
-    /// <summary> Base interface for all settings classes. Provides global settings properties.</summary>
-    public abstract class BaseSettings {
-        [Description(
-            "Current profile to use for the command. This determines which profile is used in the next launch of a command.")]
-        public string CurrentProfile { get; set; } = "";
-
-        [Description(
-            "Profiles for the command. The profile that a command uses is determined by the `CurrentProfile` property.")]
-        public List<object> Profiles { get; set; } = [];
-    }
 }
 
 public class StateManager {

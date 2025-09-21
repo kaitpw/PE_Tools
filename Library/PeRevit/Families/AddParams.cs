@@ -1,6 +1,4 @@
 using Nice3point.Revit.Extensions;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
@@ -135,38 +133,4 @@ public static class AddParams {
         public bool IsInstance { get; init; } = true;
         public object Value { get; init; }
     }
-}
-
-public class ParameterAdditionSettings {
-    public ParametersServiceSettings ParametersService { get; init; } = new();
-    public SharedParameterSettings SharedParameter { get; init; } = new();
-    public FamilyParameterSettings FamilyParameter { get; init; } = new();
-}
-
-public class ParametersServiceSettings {
-    public PsRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
-}
-
-public class PsRecoverFromErrorSettings {
-    public bool ReplaceParameterWithMatchingName { get; init; } = true;
-}
-
-public class FamilyParameterSettings {
-    [Description(
-        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
-    [Required]
-    public bool OverrideExistingValues { get; set; } = true;
-    // public FpRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
-    //
-    // public class FpRecoverFromErrorSettings {
-    //     public bool DangerouslyReplaceParameterWithMatchingName;
-    // }
-}
-
-public class SharedParameterSettings {
-    //     public SpRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
-    //
-    //     public class SpRecoverFromErrorSettings {
-    //         public bool DangerouslyReplaceParameterWithMatchingName;
-    //     }
 }
