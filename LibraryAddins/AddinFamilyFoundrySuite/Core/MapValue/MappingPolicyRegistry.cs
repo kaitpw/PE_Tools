@@ -1,11 +1,13 @@
-namespace PeExtensions;
+namespace AddinFamilyFoundrySuite.Core.MapValue;
 
 /// <summary>
 ///     Registry for mapping policies. Maps policy names to strategy factory functions.
 ///     Keeps things simple without heavy DI frameworks.
 /// </summary>
-public static class MappingPolicyRegistry {
-    private static readonly Dictionary<string, Func<Document, FamilyParameter, FamilyParameter, IMappingStrategy>> _strategyFactories = new(StringComparer.OrdinalIgnoreCase) {
+public static class MappingPolicyRegistry
+{
+    private static readonly Dictionary<string, Func<Document, FamilyParameter, FamilyParameter, IMappingStrategy>> _strategyFactories = new(StringComparer.OrdinalIgnoreCase)
+    {
         ["Strict"] = (doc, source, target) => new StrictMappingStrategy(doc, source, target),
         ["AllowStorageTypeCoercion"] = (doc, source, target) => new StorageTypeCoercionStrategy(doc, source, target),
         ["AllowElectricalCoercion"] = (doc, source, target) => new ChainedMappingStrategy(
@@ -18,7 +20,8 @@ public static class MappingPolicyRegistry {
         )
     };
 
-    private static readonly Dictionary<string, Func<Document, object, FamilyParameter, IMappingStrategy>> _valueStrategyFactories = new(StringComparer.OrdinalIgnoreCase) {
+    private static readonly Dictionary<string, Func<Document, object, FamilyParameter, IMappingStrategy>> _valueStrategyFactories = new(StringComparer.OrdinalIgnoreCase)
+    {
         ["Strict"] = (doc, value, target) => new StrictMappingStrategy(doc, value, target),
         ["AllowStorageTypeCoercion"] = (doc, value, target) => new StorageTypeCoercionStrategy(doc, value, target),
         ["AllowElectricalCoercion"] = (doc, value, target) => new ChainedMappingStrategy(
@@ -34,7 +37,8 @@ public static class MappingPolicyRegistry {
     /// <summary>
     ///     Gets the strategy for a given policy name when mapping from source parameter to target parameter.
     /// </summary>
-    public static IMappingStrategy GetStrategy(string policyName, Document document, FamilyParameter sourceParam, FamilyParameter targetParam) {
+    public static IMappingStrategy GetStrategy(string policyName, Document document, FamilyParameter sourceParam, FamilyParameter targetParam)
+    {
         if (string.IsNullOrWhiteSpace(policyName)) policyName = "Strict"; // Default fallback
 
         if (_strategyFactories.TryGetValue(policyName, out var factory)) return factory(document, sourceParam, targetParam);
@@ -46,7 +50,8 @@ public static class MappingPolicyRegistry {
     /// <summary>
     ///     Gets the strategy for a given policy name when mapping from source value to target parameter.
     /// </summary>
-    public static IMappingStrategy GetStrategy(string policyName, Document document, object sourceValue, FamilyParameter targetParam) {
+    public static IMappingStrategy GetStrategy(string policyName, Document document, object sourceValue, FamilyParameter targetParam)
+    {
         if (string.IsNullOrWhiteSpace(policyName)) policyName = "Strict"; // Default fallback
 
         if (_valueStrategyFactories.TryGetValue(policyName, out var factory)) return factory(document, sourceValue, targetParam);
@@ -59,10 +64,12 @@ public static class MappingPolicyRegistry {
 /// <summary>
 ///     Strategy that chains multiple strategies together. Tries each in order until one can handle the mapping.
 /// </summary>
-public class ChainedMappingStrategy : IMappingStrategy {
+public class ChainedMappingStrategy : IMappingStrategy
+{
     private readonly IMappingStrategy[] _strategies;
 
-    public ChainedMappingStrategy(params IMappingStrategy[] strategies) {
+    public ChainedMappingStrategy(params IMappingStrategy[] strategies)
+    {
         this._strategies = strategies ?? throw new ArgumentNullException(nameof(strategies));
         if (this._strategies.Length == 0)
             throw new ArgumentException("At least one strategy must be provided", nameof(strategies));
@@ -70,7 +77,8 @@ public class ChainedMappingStrategy : IMappingStrategy {
 
     public bool CanMap() => this._strategies.Any(s => s.CanMap());
 
-    public Result<FamilyParameter> Map() {
+    public Result<FamilyParameter> Map()
+    {
         foreach (var strategy in this._strategies)
             if (strategy.CanMap())
                 return strategy.Map();

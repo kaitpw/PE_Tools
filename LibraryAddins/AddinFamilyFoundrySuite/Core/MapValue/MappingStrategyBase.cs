@@ -2,13 +2,14 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace PeExtensions;
+namespace AddinFamilyFoundrySuite.Core.MapValue;
 
 /// <summary>
 ///     Interface for parameter mapping strategies.
 ///     Each strategy decides if it can handle a mapping and executes the mapping.
 /// </summary>
-public interface IMappingStrategy {
+public interface IMappingStrategy
+{
     bool CanMap();
     Result<FamilyParameter> Map();
 }
@@ -19,7 +20,8 @@ public interface IMappingStrategy {
 ///     Implements the IMappingStrategy interface and predefines useful properties.
 ///     If the strategy is simple, implement the IMappingStrategy interface directly to reduce per overhead.
 /// </summary>
-public abstract class MappingStrategyBase : IMappingStrategy {
+public abstract class MappingStrategyBase : IMappingStrategy
+{
     public FamilyManager FamilyManager { get; protected init; }
 
     /// <summary>
@@ -49,7 +51,8 @@ public abstract class MappingStrategyBase : IMappingStrategy {
     ///     however here it is derived from the source value in order to support initialization with direct values.
     /// </summary>
     public StorageType SourceStorageType =>
-        this.SourceValue switch {
+        this.SourceValue switch
+        {
             double => StorageType.Double,
             int => StorageType.Integer,
             string => StorageType.String,
@@ -88,7 +91,8 @@ public abstract class MappingStrategyBase : IMappingStrategy {
     /// <summary>
     /// Constructor for mapping from source parameter to target parameter
     /// </summary>
-    protected MappingStrategyBase(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) {
+    protected MappingStrategyBase(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam)
+    {
         this.FamilyManager = famDoc.FamilyManager;
 
         this.SourceValue = this.FamilyManager.GetValue(sourceParam);
@@ -104,7 +108,8 @@ public abstract class MappingStrategyBase : IMappingStrategy {
     /// <summary>
     /// Constructor for mapping from direct value to target parameter
     /// </summary>
-    protected MappingStrategyBase(Document famDoc, object sourceValue, FamilyParameter targetParam) {
+    protected MappingStrategyBase(Document famDoc, object sourceValue, FamilyParameter targetParam)
+    {
         this.FamilyManager = famDoc.FamilyManager;
 
         this.SourceValue = sourceValue;

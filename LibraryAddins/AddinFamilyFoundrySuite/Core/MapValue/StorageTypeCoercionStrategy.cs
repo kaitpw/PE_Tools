@@ -1,21 +1,25 @@
 using PeUtils;
 
-namespace PeExtensions;
+namespace AddinFamilyFoundrySuite.Core.MapValue;
 
 /// <summary>
 /// Storage type coercion strategy - handles cases where storage types differ but data types are compatible.
 /// Implements comprehensive storage type conversions based on Revit's parameter system.
 /// </summary>
-public class StorageTypeCoercionStrategy : MappingStrategyBase {
+public class StorageTypeCoercionStrategy : MappingStrategyBase
+{
     public StorageTypeCoercionStrategy(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
-        base(famDoc, sourceParam, targetParam) { }
+        base(famDoc, sourceParam, targetParam)
+    { }
 
     public StorageTypeCoercionStrategy(Document famDoc, object sourceValue, FamilyParameter targetParam) :
-        base(famDoc, sourceValue, targetParam) { }
+        base(famDoc, sourceValue, targetParam)
+    { }
 
 
     public override bool CanMap() => this.SourceStorageType == this.TargetStorageType
-        || (this.SourceStorageType, this.TargetStorageType) switch {
+        || (this.SourceStorageType, this.TargetStorageType) switch
+        {
             (StorageType.Integer, StorageType.String) => true,
             (StorageType.Integer, StorageType.Double) => true,
             (StorageType.Double, StorageType.String) => true,
@@ -25,8 +29,10 @@ public class StorageTypeCoercionStrategy : MappingStrategyBase {
             _ => false
         };
 
-    public override Result<FamilyParameter> Map() {
-        var convertedValue = (this.SourceStorageType, this.TargetStorageType) switch {
+    public override Result<FamilyParameter> Map()
+    {
+        var convertedValue = (this.SourceStorageType, this.TargetStorageType) switch
+        {
             // Same type - no conversion needed
             _ when this.SourceStorageType == this.TargetStorageType => this.SourceValue,
 

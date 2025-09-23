@@ -157,5 +157,5 @@ public class FamilyFoundrySettings : FamilyFoundryBaseSettings {
 public record ParamRemap {
     public string CurrNameOrId { get; set; }
     public string NewNameOrId { get; set; }
-    public string MappingPolicy { get; set; } = "AllowElectricalCoercion"; // Default policy
+    public string MappingPolicy { get; set; } = "Strict"; // Default policy
 }
