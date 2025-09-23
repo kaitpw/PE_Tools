@@ -1,4 +1,5 @@
 using AddinFamilyFoundrySuite.Core;
+using PeExtensions;
 using PeRevit.Families;
 using PeRevit.Ui;
 using PeServices.Aps;
@@ -44,15 +45,23 @@ public class CmdFamilyFoundry : IExternalCommand {
                     || f.Name.Contains("Mitsubishi_MSZ-EF"))
                 .ToList();
 
+            static bool filter(ParamModelRes p) {
+                var includeList = new[] { "PE_M", "PE_G", "PE_E" };
+                var excludeList = new[] { "PE_M_GRD", "PE_G_Dim_Clearance" };
+                return includeList.Any(p.Name.StartsWith)
+                       && !excludeList.Any(p.Name.StartsWith);
+            }
+
+
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
                 var fam = FamUtils.EditAndLoad(doc, family,
                     famDoc => {
-                        Debug.WriteLine($"Processing family: {family.Name}");
+                        Debug.WriteLine($"\nProcessing family: {family.Name}");
                         Debug.WriteLine($"Types: {famDoc.FamilyManager.Types.Size}");
                         Debug.WriteLine($"Parameters: {famDoc.FamilyManager.Parameters.Size}");
                     },
-                    famDoc => this.AddParameters(famDoc, this._apsParams),
+                    famDoc => AddParams.ParamService(famDoc, this._apsParams, filter),
                     famDoc => this.RemapParameters(famDoc, this._remapData));
             }
 
@@ -82,18 +91,6 @@ public class CmdFamilyFoundry : IExternalCommand {
             await this._svcApsParams.GetParameters(this._svcStorageCache)).Result;
     }
 
-    private List<Result<SharedParameterElement>> AddParameters(Document famDoc, ParametersApi.Parameters psParamInfos) {
-        List<Result<SharedParameterElement>> results = [];
-
-        static bool filter(ParamModelRes p) {
-            return new[] { "PE_M", "PE_G", "PE_E" }.Any(p.Name.StartsWith);
-        }
-
-        results = AddParams.ParamService(famDoc, psParamInfos, filter);
-
-        return results;
-    }
-
 
     public List<Result<FamilyParameter>> RemapParameters(Document famDoc, List<ParamRemap> paramRemaps) {
         List<Result<FamilyParameter>> results = new();
@@ -101,30 +98,35 @@ public class CmdFamilyFoundry : IExternalCommand {
         if (!famDoc.IsFamilyDocument)
             throw new Exception("Family document is null or not a family document");
 
-        var famParams = this.GetFamilyParameters(famDoc);
         var fm = famDoc.FamilyManager;
         var familyTypes = fm.Types.Cast<FamilyType>().ToList(); // Evaluate once
-        var paramPairs = new List<(FamilyParameter oldParam, FamilyParameter newParam)>();
 
+        var famParams = this.GetFamilyParameters(famDoc);
+        var paramPairs = new List<(FamilyParameter oldParam, FamilyParameter newParam)>();
         foreach (var paramRemap in paramRemaps) {
             try {
                 var oldParam = this.ValidateOldParam(famParams, paramRemap.CurrNameOrId);
                 var newParam = famParams.First(p => p.Definition.Name == paramRemap.NewNameOrId);
                 paramPairs.Add((oldParam, newParam));
-                results.Add(newParam); // Success result
-            } catch (Exception e) {
-                results.Add(e);
-            }
+            } catch { } // TODO: make an informative error message to prompt user to fix settings
         }
 
         foreach (var famType in familyTypes) {
             fm.CurrentType = famType;
             foreach (var (oldParam, newParam) in paramPairs) {
+                var mapper = famDoc.MapValue().Source(oldParam).Target(newParam);
                 try {
-                    var currentValue = oldParam.GetValue(famType);
-                    if (currentValue != null) {
-                        _ = newParam.SetValueCoerced(fm, currentValue);
-                    }
+                    if (mapper.IsSameDataType)
+                        results.Add(mapper.MapStrictly());
+                    else if (mapper.IsTargetElectrical)
+                        results.Add(mapper.MapCoercivelyToElectrical());
+                    else
+                        results.Add(new Exception(mapper.ErrorMessage));
+
+                    var (newValue, valErr) = results.Last();
+                    Debug.WriteLine($"Set {oldParam.Definition.Name} -> {newParam.Definition.Name} ");
+                    Debug.WriteLine(
+                        $"  {oldParam.StorageType}({fm.GetValue(oldParam)}) -> {newParam.StorageType}({fm.GetValue(newValue)})");
                 } catch {
                     // Individual value setting failures shouldn't stop the entire process
                     // The outer try-catch for parameter validation already handled major errors

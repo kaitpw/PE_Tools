@@ -110,9 +110,9 @@ public class PostableCommandHelper(Storage storage) {
             // Try to get shortcut info from XML
             var (shortcutInfo, infoErr) = shortcutsService.GetShortcutInfo(command.Id);
             if (infoErr is not null) {
-                if (command.ItemType != "RibbonButton" || command.Panel.Contains("_shr_")) 
+                if (command.ItemType != "RibbonButton" || command.Panel.Contains("_shr_"))
                     continue;
-                
+
                 var panel = command.Panel.Split("_").Last();
                 commandItem.Name = command.Text;
                 commandItem.Paths = [$"{command.Tab} > {panel}"];
@@ -149,7 +149,7 @@ public class PostableCommandHelper(Storage storage) {
 
         return result.ToString();
     }
-    
+
 
     /// <summary>
     ///     Calculates search relevance score using fuzzy matching

@@ -42,6 +42,7 @@ public class ParameterAdditionSettings {
 
     public class ParametersServiceSettings {
         public PsRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
+
         public class PsRecoverFromErrorSettings {
             public bool ReplaceParameterWithMatchingName { get; init; } = true;
         }
@@ -68,9 +69,3 @@ public class ParameterAdditionSettings {
         //     }
     }
 }
-
-
-
-
-
-

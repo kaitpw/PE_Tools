@@ -1,17 +1,20 @@
-namespace Nice3point.Revit.Extensions;
+namespace PeExtensions;
 
-public static class ExtendDocument {
+public static class DocumentFindParameter {
     public static SharedParameterElement? FindParameter(this Document famDoc, ForgeTypeId parameterTypeId) {
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
-        var typeIdParts = parameterTypeId.TypeId?.Split(':');
-        if (typeIdParts == null || typeIdParts.Length < 2) throw new ArgumentException("Invalid parameterTypeId");
+
+        var typeId = parameterTypeId.TypeId;
+        var typeIdParts = typeId?.Split(':');
+        if (typeIdParts == null || typeIdParts.Length < 2)
+            throw new ArgumentException($"ParameterTypeId is not of the Parameters Service format: {typeId}");
 
         var parameterPart = typeIdParts[1];
         var dashIndex = parameterPart.IndexOf('-');
         var guidText = dashIndex > 0 ? parameterPart[..dashIndex] : parameterPart;
 
         return !Guid.TryParse(guidText, out var guid)
-            ? throw new ArgumentException("Invalid parameterTypeId")
+            ? throw new ArgumentException($"Could not extract GUID from parameterTypeId: {typeId}")
             : new FilteredElementCollector(famDoc)
                 .OfClass(typeof(SharedParameterElement))
                 .OfType<SharedParameterElement>()
