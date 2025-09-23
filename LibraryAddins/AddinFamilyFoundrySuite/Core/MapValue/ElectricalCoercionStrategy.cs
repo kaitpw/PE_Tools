@@ -1,5 +1,3 @@
-using PeUtils;
-
 namespace AddinFamilyFoundrySuite.Core.MapValue;
 
 /// <summary>
@@ -7,10 +5,12 @@ namespace AddinFamilyFoundrySuite.Core.MapValue;
 /// </summary>
 public class ElectricalCoercionStrategy : MappingStrategyBase {
     public ElectricalCoercionStrategy(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
-        base(famDoc, sourceParam, targetParam) { }
+        base(famDoc, sourceParam, targetParam) {
+    }
 
     public ElectricalCoercionStrategy(Document famDoc, object sourceValue, FamilyParameter targetParam) :
-        base(famDoc, sourceValue, targetParam) { }
+        base(famDoc, sourceValue, targetParam) {
+    }
 
     public override bool CanMap() {
         var isTargetElectrical = this.TargetDataType?.TypeId.Contains(".electrical:") == true;

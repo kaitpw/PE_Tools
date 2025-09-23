@@ -1,17 +1,9 @@
+using System.Globalization;
+using System.Text.RegularExpressions;
+
 namespace AddinFamilyFoundrySuite.Core.MapValue;
 
 public static class Regexes {
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
-    private static readonly Regex CanExtractDoubleRegexCompiled =
-        new Regex(@"^-?\d*\.?\d+", RegexOptions.Compiled);
-    private static readonly Regex ExtractIntRegexCompiled =
-        new Regex(@"^-?\d+", RegexOptions.Compiled);
-    private static readonly Regex ExtractDoubleRegexCompiled =
-        new Regex(@"^-?\d*\.?\d+", RegexOptions.Compiled);
-    private static readonly Regex CanExtractIntRegexCompiled =
-        new Regex(@"^-?\d+", RegexOptions.Compiled);
-#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
-
     public static bool CanExtractInteger(string input) {
         if (string.IsNullOrWhiteSpace(input)) return false;
         var trimmed = input.Trim();
@@ -21,12 +13,12 @@ public static class Regexes {
 
         var numericString = CanExtractIntRegexCompiled.Match(trimmed).Value;
         return !string.IsNullOrWhiteSpace(numericString)
-            && int.TryParse(
-                numericString,
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out _
-            );
+               && int.TryParse(
+                   numericString,
+                   NumberStyles.Integer,
+                   CultureInfo.InvariantCulture,
+                   out _
+               );
     }
 
     // Check if string can be converted to double (similar rules)
@@ -39,12 +31,12 @@ public static class Regexes {
 
         var numericString = CanExtractDoubleRegexCompiled.Match(trimmed).Value;
         return !string.IsNullOrWhiteSpace(numericString)
-            && double.TryParse(
-                numericString,
-                NumberStyles.Float | NumberStyles.AllowLeadingSign,
-                CultureInfo.InvariantCulture,
-                out _
-            );
+               && double.TryParse(
+                   numericString,
+                   NumberStyles.Float | NumberStyles.AllowLeadingSign,
+                   CultureInfo.InvariantCulture,
+                   out _
+               );
     }
 
     public static int ExtractInteger(string input) {
@@ -70,4 +62,13 @@ public static class Regexes {
             )
             : double.Parse(match.Value, CultureInfo.InvariantCulture);
     }
+#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
+    private static readonly Regex CanExtractDoubleRegexCompiled = new(@"^-?\d*\.?\d+", RegexOptions.Compiled);
+
+    private static readonly Regex ExtractIntRegexCompiled = new(@"^-?\d+", RegexOptions.Compiled);
+
+    private static readonly Regex ExtractDoubleRegexCompiled = new(@"^-?\d*\.?\d+", RegexOptions.Compiled);
+
+    private static readonly Regex CanExtractIntRegexCompiled = new(@"^-?\d+", RegexOptions.Compiled);
+#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 }
