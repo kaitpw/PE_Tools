@@ -102,29 +102,23 @@ public class CmdFamilyFoundry : IExternalCommand {
         var familyTypes = fm.Types.Cast<FamilyType>().ToList(); // Evaluate once
 
         var famParams = this.GetFamilyParameters(famDoc);
-        var paramPairs = new List<(FamilyParameter oldParam, FamilyParameter newParam)>();
+        var paramPairs = new List<(FamilyParameter oldParam, FamilyParameter newParam, string policy)>();
         foreach (var paramRemap in paramRemaps) {
             try {
                 var oldParam = this.ValidateOldParam(famParams, paramRemap.CurrNameOrId);
                 var newParam = famParams.First(p => p.Definition.Name == paramRemap.NewNameOrId);
-                paramPairs.Add((oldParam, newParam));
+                paramPairs.Add((oldParam, newParam, paramRemap.MappingPolicy));
             } catch { } // TODO: make an informative error message to prompt user to fix settings
         }
 
         foreach (var famType in familyTypes) {
             fm.CurrentType = famType;
-            foreach (var (oldParam, newParam) in paramPairs) {
-                var mapper = famDoc.MapValue().Source(oldParam).Target(newParam);
+            foreach (var (oldParam, newParam, policy) in paramPairs) {
                 try {
-                    if (mapper.IsSameDataType)
-                        results.Add(mapper.MapStrictly());
-                    else if (mapper.IsTargetElectrical)
-                        results.Add(mapper.MapCoercivelyToElectrical());
-                    else
-                        results.Add(new Exception(mapper.ErrorMessage));
-
+                    results.Add(famDoc.MapValue(oldParam, newParam, policy));
+                    // for debugging
                     var (newValue, valErr) = results.Last();
-                    Debug.WriteLine($"Set {oldParam.Definition.Name} -> {newParam.Definition.Name} ");
+                    Debug.WriteLine($"Set {oldParam.Definition.Name} -> {newParam.Definition.Name} (Policy: {policy})");
                     Debug.WriteLine(
                         $"  {oldParam.StorageType}({fm.GetValue(oldParam)}) -> {newParam.StorageType}({fm.GetValue(newValue)})");
                 } catch {
@@ -163,4 +157,5 @@ public class FamilyFoundrySettings : FamilyFoundryBaseSettings {
 public record ParamRemap {
     public string CurrNameOrId { get; set; }
     public string NewNameOrId { get; set; }
+    public string MappingPolicy { get; set; } = "AllowElectricalCoercion"; // Default policy
 }
