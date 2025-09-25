@@ -43,11 +43,10 @@ public static class MappingPolicyRegistry {
         FamilyParameter targetParam) {
         if (string.IsNullOrWhiteSpace(policyName)) policyName = "Strict"; // Default fallback
 
-        if (_strategyFactories.TryGetValue(policyName, out var factory))
-            return factory(document, sourceParam, targetParam);
-
-        throw new ArgumentException(
-            $"Unknown mapping policy: {policyName}. Available policies: {string.Join(", ", _strategyFactories.Keys)}");
+        return _strategyFactories.TryGetValue(policyName, out var factory)
+            ? factory(document, sourceParam, targetParam)
+            : throw new ArgumentException(
+                $"Unknown mapping policy: {policyName}. Available policies: {string.Join(", ", _strategyFactories.Keys)}");
     }
 
     /// <summary>
@@ -59,12 +58,13 @@ public static class MappingPolicyRegistry {
         FamilyParameter targetParam) {
         if (string.IsNullOrWhiteSpace(policyName)) policyName = "Strict"; // Default fallback
 
-        if (_valueStrategyFactories.TryGetValue(policyName, out var factory))
-            return factory(document, sourceValue, targetParam);
-
-        throw new ArgumentException(
-            $"Unknown mapping policy: {policyName}. Available policies: {string.Join(", ", _valueStrategyFactories.Keys)}");
+        return _valueStrategyFactories.TryGetValue(policyName, out var factory)
+            ? factory(document, sourceValue, targetParam)
+            : throw new ArgumentException(
+                $"Unknown mapping policy: {policyName}. Available policies: {string.Join(", ", _valueStrategyFactories.Keys)}");
     }
+
+    public static List<string> GetAllPolicies() => _strategyFactories.Keys.ToList();
 }
 
 /// <summary>

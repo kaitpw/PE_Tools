@@ -54,6 +54,7 @@
         <Optimize>True</Optimize>
         <OutputPath>bin\Release\$(RevitVersion)</OutputPath>
         <DebugType>None</DebugType>
+        <DefineConstants>$(DefineConstants);RELEASE</DefineConstants>
     </PropertyGroup>
     <PropertyGroup>
         <Version>$(RevitVersion)</Version>

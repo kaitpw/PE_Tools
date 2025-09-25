@@ -36,7 +36,7 @@ internal class App : IExternalApplication {
             manageStackButton.AddPushButton<CmdApsAuthPKCE>("OAuth PKCE"),
             manageStackButton.AddPushButton<CmdApsAuthNormal>("OAuth Normal"),
             panelManage.AddPushButton<CmdParametersServiceTest>("Params Svc Test"),
-            panelMigration.AddPushButton<CmdFamilyFoundry>("Family Foundry")
+            panelMigration.AddPushButton<CmdFamilyFoundryRemap>("Family Foundry")
         ]);
 #endif
 
