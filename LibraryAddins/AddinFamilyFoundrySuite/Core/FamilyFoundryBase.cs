@@ -30,10 +30,11 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
         var cacheFilename = "parameters-service-cache.json";
         this._svcAps = new Aps(this._settings);
         this._svcApsParams = this._svcAps.Parameters(this._settings);
-        if (this._settings.UseCachedParametersServiceData)
-            this._apsParamsCache = storage.State().Json<ParametersApi.Parameters>(cacheFilename);
+        this._apsParamsCache = storage.State().Json<ParametersApi.Parameters>(cacheFilename);
         this._apsParams = Task.Run(async () =>
-            await this._svcApsParams.GetParameters(this._apsParamsCache)).Result;
+            await this._svcApsParams.GetParameters(
+                this._apsParamsCache, this._settings.UseCachedParametersServiceData)
+        ).Result;
     }
 
     /// <summary>

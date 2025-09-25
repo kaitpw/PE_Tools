@@ -34,9 +34,10 @@ public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenP
 
     public async Task<ParametersApi.Parameters> GetParameters(
         JsonReadWriter<ParametersApi.Parameters> cache = null,
+        bool useCache = true,
         int invalidateCacheAfterMinutes = 100
     ) {
-        if (cache is not null) {
+        if (cache is not null && useCache) {
             var isCacheValid = cache.IsCacheValid(
                 invalidateCacheAfterMinutes,
                 data => data?.Results?.Count > 0
