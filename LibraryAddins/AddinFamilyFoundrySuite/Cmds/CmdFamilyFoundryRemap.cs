@@ -18,19 +18,18 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            var filter = this._profile.ParamsAddPS.Filter;
-
-            // var hydratedRemapData = new List<(FamilyParameter oldParam, FamilyParameter newParam, string policy)>();
-
-            this.Process(doc,
-                famDoc => {
+            // New fluent API - batches type operations into a single optimized loop
+            var queue = this.EnqueueOperations(doc)
+                .DocOperation(famDoc => {
                     var familyName = famDoc.OwnerFamily?.Name ?? "Unknown";
                     Debug.WriteLine($"\nProcessing family: {familyName}");
                     Debug.WriteLine($"Types: {famDoc.FamilyManager.Types.Size}");
                     Debug.WriteLine($"Parameters: {famDoc.FamilyManager.Parameters.Size}");
-                },
-                famDoc => AddParams.ParamService(famDoc, this._apsParams, filter),
-                famDoc => this.RemapParameters(famDoc, this._profile.ParamsRemap.RemapData));
+                })
+                .DocOperation(famDoc => AddParams.ParamService(famDoc, this._apsParams, this._profile.ParamsAddPS.Filter))
+                .TypeOperation((famDoc) => this.RemapParameters(famDoc, this._profile.ParamsRemap.RemapData));
+
+            this.ProcessQueue(queue);
 
             return Result.Succeeded;
         } catch (Exception ex) {
@@ -41,28 +40,18 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
         }
     }
 
-    public List<Result<FamilyParameter>> RemapParameters(Document famDoc, List<ParamsRemap.RemapDataRecord> paramRemaps) {
-        List<Result<FamilyParameter>> results = new();
 
-        if (!famDoc.IsFamilyDocument)
-            throw new Exception("Family document is null or not a family document");
-
-        var fm = famDoc.FamilyManager;
-        var familyTypes = fm.Types.Cast<FamilyType>().ToList(); // Evaluate once
-
-        foreach (var famType in familyTypes) {
-            fm.CurrentType = famType;
-            foreach (var p in paramRemaps) {
-                try {
-                    results.Add(famDoc.MapValue(p.CurrNameOrId, p.NewNameOrId, p.MappingPolicy));
-
-                } catch (Exception ex) {
-                    results.Add(ex);
-                }
+    /// <summary>
+    /// Per-type remap method for use with the new fluent API
+    /// </summary>
+    private void RemapParameters(Document famDoc, List<ParamsRemap.RemapDataRecord> paramRemaps) {
+        foreach (var p in paramRemaps) {
+            try {
+                _ = famDoc.MapValue(p.CurrNameOrId, p.NewNameOrId, p.MappingPolicy);
+            } catch (Exception ex) {
+                Debug.WriteLine(ex.Message);
             }
         }
-
-        return results;
     }
 
     // get all family parameters

@@ -35,12 +35,22 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
             await this._svcApsParams.GetParameters(this._apsParamsCache)).Result;
     }
 
-    protected void Process(
-        Document doc,
-        params Action<Document>[] familyActions
-    ) {
+    /// <summary>
+    /// Creates a new fluent processor for building family operations
+    /// </summary>
+    /// <param name="doc">The document to process</param>
+    /// <returns>A processor that can be chained with DocProcess/TypeProcess calls</returns>
+    protected OperationEnqueuer EnqueueOperations(Document doc) =>
+        new OperationEnqueuer(doc);
+
+    /// <summary>
+    /// Execute a configured processor with full initialization and document handling
+    /// </summary>
+    protected void ProcessQueue(OperationEnqueuer enqueuer) {
         this.InitAndFetch();
         var balloon = new Balloon();
+        var doc = enqueuer.doc;
+        var familyActions = enqueuer.ToFamilyActions();
 
         if (doc.IsFamilyDocument) {
             _ = FamUtils.EditOpenFamily(doc, familyActions);
@@ -53,7 +63,7 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
 
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
-                _ = FamUtils.EditAndLoad(doc, family, familyActions);  // move edit and load method into here later?
+                _ = FamUtils.EditAndLoad(doc, family, familyActions);  // Future: could be EditAndLoadAndSave, etc.
             }
         }
 
