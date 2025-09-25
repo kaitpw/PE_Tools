@@ -30,14 +30,12 @@ public class ElectricalCoercionStrategy : MappingStrategyBase {
         };
 
         var convertedVal = UnitUtils.ConvertToInternalUnits(currVal, this.TargetUnitType);
-        Debug.WriteLine($"Current value: {currVal}");
-        Debug.WriteLine($"Converted value: {convertedVal}");
 
         return this.FamilyManager.SetValueStrict(this.TargetParam, convertedVal);
     }
 
     public double ExtractDouble(string sourceValue) {
-        if (sourceValue.Contains("Voltage", StringComparison.OrdinalIgnoreCase)) {
+        if (TargetParam.Definition.Name.Contains("Voltage", StringComparison.OrdinalIgnoreCase)) {
             // somewhat arbitrary ranges. 240 must account for 230. 120 must account for 110 or 115.
             var voltRange240 = Enumerable.Range(225, 21).Select(x => (double)x).ToList();
             voltRange240.Add(208);

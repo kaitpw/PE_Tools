@@ -29,7 +29,9 @@ public abstract class MappingStrategyBase : IMappingStrategy {
         this.TargetParam = targetParam;
         this.TargetDataType = targetParam.Definition.GetDataType();
         this.TargetStorageType = targetParam.StorageType;
-        this.TargetUnitType = famDoc.GetUnits().GetFormatOptions(this.TargetDataType).GetUnitTypeId();
+        try {
+            this.TargetUnitType = famDoc.GetUnits().GetFormatOptions(this.TargetDataType).GetUnitTypeId();
+        } catch { } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
     }
 
     /// <summary>
@@ -45,7 +47,9 @@ public abstract class MappingStrategyBase : IMappingStrategy {
         this.TargetParam = targetParam;
         this.TargetDataType = targetParam.Definition.GetDataType();
         this.TargetStorageType = targetParam.StorageType;
-        this.TargetUnitType = famDoc.GetUnits().GetFormatOptions(this.TargetDataType).GetUnitTypeId();
+        try {
+            this.TargetUnitType = famDoc.GetUnits().GetFormatOptions(this.TargetDataType).GetUnitTypeId();
+        } catch { } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
     }
 
     public FamilyManager FamilyManager { get; protected init; }
@@ -110,7 +114,7 @@ public abstract class MappingStrategyBase : IMappingStrategy {
     /// this.FamilyManager.SetValueStrict(this.TargetParam, convertedVal);
     /// </code>
     /// </summary>
-    public ForgeTypeId TargetUnitType { get; protected init; }
+    public ForgeTypeId? TargetUnitType { get; protected init; }
 
     /// <summary>
     ///     Determines if this strategy can handle the given parameter mapping scenario.

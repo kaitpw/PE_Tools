@@ -27,6 +27,7 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
                     Debug.WriteLine($"Parameters: {famDoc.FamilyManager.Parameters.Size}");
                 })
                 .DocOperation(famDoc => AddParams.ParamService(famDoc, this._apsParams, this._profile.ParamsAddPS.Filter))
+                .DocOperation(this.HydrateElectricalConnector)
                 .TypeOperation((famDoc) => this.RemapParameters(famDoc, this._profile.ParamsRemap.RemapData));
 
             this.ProcessQueue(queue);
@@ -54,12 +55,52 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
         }
     }
 
-    // get all family parameters
-    public List<FamilyParameter> GetFamilyParameters(Document famDoc) {
-        var fm = famDoc.FamilyManager;
-        var parameterList = new List<FamilyParameter>();
-        foreach (FamilyParameter param in fm.Parameters) parameterList.Add(param);
-        return parameterList;
+    public void HydrateElectricalConnector(Document doc) {
+        var apparentPower = doc.FamilyManager.Parameters
+            .OfType<FamilyParameter>()
+            .FirstOrDefault(fp => fp.Definition.Name == "PE_E___ApparentPower");
+
+        doc.FamilyManager.SetFormula(apparentPower, "PE_E___Voltage * PE_E___MCA");
+
+        // Get all connector elements in the family
+        var connectorElements = new FilteredElementCollector(doc)
+            .OfClass(typeof(ConnectorElement))
+            .Cast<ConnectorElement>()
+            .Where(ce => ce.Domain == Domain.DomainElectrical)
+            .ToList();
+
+        if (!connectorElements.Any()) {
+            Console.WriteLine("No electrical connector elements found in family");
+            return;
+        }
+
+        foreach (var connectorElement in connectorElements) {
+            var voltageParam = connectorElement.get_Parameter(BuiltInParameter.RBS_ELEC_VOLTAGE);
+            if (voltageParam != null) {
+                // Find the PE_E___Voltage family parameter
+                var targetFamilyParam = doc.FamilyManager.Parameters
+                    .Cast<FamilyParameter>()
+                    .FirstOrDefault(fp => fp.Definition.Name == "PE_E___Voltage");
+
+                if (targetFamilyParam != null) {
+                    // Associate the connector voltage parameter with the family parameter
+                    doc.FamilyManager.AssociateElementParameterToFamilyParameter(voltageParam, targetFamilyParam);
+                }
+            }
+
+            // Try to set apparent power parameter (5000VA)
+            var powerParam = connectorElement.get_Parameter(BuiltInParameter.RBS_ELEC_APPARENT_LOAD);
+            if (powerParam != null && !powerParam.IsReadOnly) {
+                var targetFamilyParam = doc.FamilyManager.Parameters
+                    .Cast<FamilyParameter>()
+                    .FirstOrDefault(fp => fp.Definition.Name == "PE_E___ApparentPower");
+
+                if (targetFamilyParam != null) {
+                    doc.FamilyManager.AssociateElementParameterToFamilyParameter(powerParam, targetFamilyParam);
+                }
+            }
+        }
+
     }
 }
 
