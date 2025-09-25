@@ -1,0 +1,62 @@
+using PeRevit.Families;
+using PeRevit.Ui;
+using PeServices.Aps;
+using PeServices.Aps.Core;
+using PeServices.Aps.Models;
+using PeServices.Storage;
+using PeServices.Storage.Core;
+using AddinFamilyFoundrySuite.Core.Settings;
+
+namespace AddinFamilyFoundrySuite.Core;
+
+[Transaction(TransactionMode.Manual)]
+public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TSettings, TProfile>
+    where TSettings : BaseSettings<TProfile>, new()
+    where TProfile : BaseProfileSettings, new() {
+
+    public TSettings _settings { get; private set; }
+    public TProfile _profile { get; private set; }
+    protected Aps _svcAps;
+    protected Parameters _svcApsParams;
+    protected JsonReadWriter<ParametersApi.Parameters> _apsParamsCache;
+    protected ParametersApi.Parameters _apsParams;
+    public void InitAndFetch() {
+        var storageName = "FamilyFoundry";
+
+        var storage = new Storage(storageName);
+        this._settings = storage.Settings().Json<TSettings>().Read();
+        this._profile = this._settings.GetProfile();
+
+        var cacheFilename = "parameters-service-cache.json";
+        this._svcAps = new Aps(this._settings);
+        this._svcApsParams = this._svcAps.Parameters(this._settings);
+        this._apsParamsCache = storage.State().Json<ParametersApi.Parameters>(cacheFilename);
+        this._apsParams = Task.Run(async () =>
+            await this._svcApsParams.GetParameters(this._apsParamsCache)).Result;
+    }
+
+    protected void Process(
+        Document doc,
+        params Action<Document>[] familyActions
+    ) {
+        this.InitAndFetch();
+        var balloon = new Balloon();
+
+        if (doc.IsFamilyDocument) {
+            _ = FamUtils.EditOpenFamily(doc, familyActions);
+        } else {
+            var families = new FilteredElementCollector(doc)
+                .OfClass(typeof(Family))
+                .Cast<Family>()
+                .Where(this._profile.FilterFamilies.Filter)
+                .ToList();
+
+            foreach (var family in families) {
+                _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
+                _ = FamUtils.EditAndLoad(doc, family, familyActions);  // move edit and load method into here later?
+            }
+        }
+
+        balloon.Show();
+    }
+}

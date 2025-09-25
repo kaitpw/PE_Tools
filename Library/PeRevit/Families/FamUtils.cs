@@ -22,11 +22,19 @@ public class FamUtils {
         foreach (var callback in callbacks) callback(famDoc);
         _ = transFamily.Commit();
 
-        var fam = famDoc.LoadFamily(doc, new EditAndLoadFamilyOptions());
-        if (fam is null) throw new InvalidOperationException("Failed to load family after edit.");
+        var fam = famDoc.LoadFamily(doc, new EditAndLoadFamilyOptions())
+            ?? throw new InvalidOperationException("Failed to load family after edit.");
         var closed = famDoc.Close(false);
-        if (!closed) throw new InvalidOperationException("Failed to close family document after load error.");
-        return fam;
+        return closed ? fam
+            : throw new InvalidOperationException("Failed to close family document after load error.");
+    }
+
+    public static Family EditOpenFamily(Document famDoc, params Action<Document>[] callbacks) {
+        using var transFamily = new Transaction(famDoc, "Edit Family Document");
+        _ = transFamily.Start();
+        foreach (var callback in callbacks) callback(famDoc);
+        _ = transFamily.Commit();
+        return famDoc.OwnerFamily;
     }
 }
 

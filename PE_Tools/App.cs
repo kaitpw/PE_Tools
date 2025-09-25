@@ -36,7 +36,7 @@ internal class App : IExternalApplication {
             manageStackButton.AddPushButton<CmdApsAuthPKCE>("OAuth PKCE"),
             manageStackButton.AddPushButton<CmdApsAuthNormal>("OAuth Normal"),
             panelManage.AddPushButton<CmdParametersServiceTest>("Params Svc Test"),
-            panelMigration.AddPushButton<CmdFamilyFoundryRemap>("Family Foundry")
+            panelMigration.AddPushButton<CmdFamilyFoundryRemap>("Family Foundry Remap")
         ]);
 #endif
 
@@ -56,42 +56,42 @@ internal class App : IExternalApplication {
 public static class ButtonDataHydrator {
     private static readonly Dictionary<string, ButtonDataRecord> ButtonDataRecords = new() {
         {
-            "CmdUpdate", new ButtonDataRecord {
+            nameof(CmdUpdate), new ButtonDataRecord {
                 SmallImage = "monitor-down16.png",
                 LargeImage = "monitor-down32.png",
                 ToolTip =
                     "Update the PE Tools addin suite to the latest release. You will need to restart Revit. TODO; fix this"
             }
         }, {
-            "CmdApsAuthPKCE", new ButtonDataRecord {
+            nameof(CmdApsAuthPKCE), new ButtonDataRecord {
                 SmallImage = "id-card16.png",
                 LargeImage = "id-card32.png",
                 ToolTip =
                     "Get an access token from Autodesk Platform Services. This is primarily for testing purposes, but running it will not hurt anything."
             }
         }, {
-            "CmdApsAuthNormal", new ButtonDataRecord {
+            nameof(CmdApsAuthNormal), new ButtonDataRecord {
                 SmallImage = "id-card16.png",
                 LargeImage = "id-card32.png",
                 ToolTip =
                     "Get an access token from Autodesk Platform Services. This is primarily for testing purposes, but running it will not hurt anything."
             }
         }, {
-            "CmdMep2040",
+            nameof(CmdMep2040),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Analyze MEP sustainability metrics (pipe length, refrigerant volume, mech equipment count)."
             }
         }, {
-            "CmdCommandPalette", new ButtonDataRecord {
+            nameof(CmdCommandPalette), new ButtonDataRecord {
                 SmallImage = "square-terminal16.png",
                 LargeImage = "square-terminal32.png",
                 ToolTip =
                     "Search and execute Revit commands quickly without looking through Revit's tabs, ribbons, and panels. Not all commands are guaranteed to run."
             }
         }, {
-            "CmdTapMaker", new ButtonDataRecord {
+            nameof(CmdTapMaker), new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip =
@@ -106,14 +106,14 @@ public static class ButtonDataHydrator {
                     """
             }
         }, {
-            "CmdFamilyFoundry",
+            nameof(CmdFamilyFoundryRemap),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Process families in a variety of ways from the Family Foundry."
             }
         }, {
-            "CmdParametersServiceTest",
+            nameof(CmdParametersServiceTest),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png", LargeImage = "Red_32.png", ToolTip = "Click to test the parameters service."
             }

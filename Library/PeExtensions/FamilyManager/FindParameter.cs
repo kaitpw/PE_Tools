@@ -13,7 +13,7 @@ public static class FamilyManagerFindParameter {
         familyManager.GetParameter(parameter);
 
     /// <summary>
-    ///     Find a parameter by built-in parameter identifier
+    ///     Find a parameter by built-in parameter identifier. Returns null if the parameter is not found
     /// </summary>
     /// <param name="familyManager">The family manager</param>
     /// <param name="parameter">The built-in parameter ID</param>
@@ -21,7 +21,7 @@ public static class FamilyManagerFindParameter {
         familyManager.get_Parameter(parameter);
 
     /// <summary>
-    ///     Find a parameter by definition
+    ///     Find a parameter by definition. Returns null if the parameter is not found
     /// </summary>
     /// <param name="familyManager">The family manager</param>
     /// <param name="definition">The internal or external definition of the parameter</param>
@@ -29,7 +29,7 @@ public static class FamilyManagerFindParameter {
         familyManager.get_Parameter(definition);
 
     /// <summary>
-    ///     Find a shared parameter by GUID
+    ///     Find a shared parameter by GUID. Returns null if the parameter is not found
     /// </summary>
     /// <param name="familyManager">The family manager</param>
     /// <param name="guid">The unique id associated with the shared parameter</param>
@@ -37,7 +37,7 @@ public static class FamilyManagerFindParameter {
         familyManager.get_Parameter(guid);
 
     /// <summary>
-    ///     Find a parameter by name
+    ///     Find a parameter by name. Returns null if the parameter is not found
     /// </summary>
     /// <param name="familyManager">The family manager</param>
     /// <param name="name">The name of the parameter to be found</param>

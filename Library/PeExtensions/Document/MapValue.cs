@@ -12,14 +12,21 @@ public static class FamilyManagerMapValue {
     ///     in your loop/s.
     /// </remarks>
     public static Result<FamilyParameter> MapValue(this Document doc,
-        FamilyParameter sourceParam,
-        FamilyParameter targetParam,
-        string policy = null) {
+        string sourceName,
+        string targetName,
+        string policy = null
+    ) {
+        var sourceParam = doc.FamilyManager.FindParameter(sourceName);
+        var targetParam = doc.FamilyManager.FindParameter(targetName);
+        if (sourceParam == null) {
+            return new Exception($"Source parameter {sourceName} not found");
+        }
+        if (targetParam == null) {
+            return new Exception($"Target parameter {targetName} not found");
+        }
         var strategy = MappingPolicyRegistry.GetStrategy(policy, doc, sourceParam, targetParam);
 
         if (!strategy.CanMap()) {
-            var sourceName = sourceParam?.Definition.Name ?? "Unknown";
-            var targetName = targetParam?.Definition.Name ?? "Unknown";
             var sourceDataType = sourceParam?.Definition.GetDataType();
             var targetDataType = targetParam?.Definition.GetDataType();
             return new Exception(
@@ -39,12 +46,15 @@ public static class FamilyManagerMapValue {
     /// </remarks>
     public static Result<FamilyParameter> MapValue(this Document doc,
         object sourceValue,
-        FamilyParameter targetParam,
+        string targetName,
         string policy = null) {
+        var targetParam = doc.FamilyManager.FindParameter(targetName);
+        if (targetParam == null) {
+            return new Exception($"Target parameter {targetName} not found");
+        }
         var strategy = MappingPolicyRegistry.GetStrategy(policy, doc, sourceValue, targetParam);
 
         if (!strategy.CanMap()) {
-            var targetName = targetParam?.Definition.Name ?? "Unknown";
             var targetDataType = targetParam?.Definition.GetDataType();
             return new Exception(
                 $"Cannot map value '{sourceValue}' to {targetName} ({targetDataType}) using policy '{policy ?? "default"}'");
