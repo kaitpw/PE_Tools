@@ -113,7 +113,7 @@ public class PostableCommandHelper(Storage storage) {
                 if (command.ItemType != "RibbonButton" || command.Panel.Contains("_shr_"))
                     continue;
 
-                var panel = command.Panel.Split("_").Last();
+                var panel = command.Panel.Split('_').Last();
                 commandItem.Name = command.Text;
                 commandItem.Paths = [$"{command.Tab} > {panel}"];
             }

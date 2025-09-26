@@ -12,8 +12,9 @@ public static class FamilyManagerGetSetValue {
     ///     Thrown if the input argument-"familyParameter"-is invalid,
     /// </exception>
     public static object GetValue(this FamilyManager familyManager, FamilyParameter familyParameter) {
-        ArgumentNullException.ThrowIfNull(familyManager);
-        ArgumentNullException.ThrowIfNull(familyParameter);
+        if (familyManager is null) throw new ArgumentNullException(nameof(familyManager));
+        if (familyParameter is null) throw new ArgumentNullException(nameof(familyParameter));
+
         var famType = familyManager.CurrentType;
         if (!famType.HasValue(familyParameter)) return null;
 
@@ -47,9 +48,9 @@ public static class FamilyManagerGetSetValue {
     public static FamilyParameter SetValueStrict(this FamilyManager familyManager,
         FamilyParameter targetParam,
         object value) {
-        ArgumentNullException.ThrowIfNull(familyManager);
-        ArgumentNullException.ThrowIfNull(targetParam);
-        ArgumentNullException.ThrowIfNull(value);
+        if (familyManager is null) throw new ArgumentNullException(nameof(familyManager));
+        if (targetParam is null) throw new ArgumentNullException(nameof(targetParam));
+        if (value is null) throw new ArgumentNullException(nameof(value));
 
         switch (value) {
         case double doubleValue:
@@ -88,9 +89,10 @@ public static class FamilyManagerGetSetValue {
     ///     or the current family type is invalid.
     /// </exception>
     public static object SetValueCoerced(this FamilyManager familyManager, FamilyParameter targetParam, object value) {
-        ArgumentNullException.ThrowIfNull(familyManager);
-        ArgumentNullException.ThrowIfNull(targetParam);
-        ArgumentNullException.ThrowIfNull(value);
+        if (familyManager is null) throw new ArgumentNullException(nameof(familyManager));
+        if (targetParam is null) throw new ArgumentNullException(nameof(targetParam));
+        if (value is null) throw new ArgumentNullException(nameof(value));
+
 
         switch (value) {
         case bool boolValue when targetParam.StorageType == StorageType.Integer:

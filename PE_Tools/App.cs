@@ -1,11 +1,11 @@
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
+#endif
+using AddinCmdParametersServiceTest;
 using AddinCmdApsAuthNormal;
 using AddinCmdApsAuthPKCE;
-using AddinCmdParametersServiceTest;
 using AddinFamilyFoundrySuite.Cmds;
-#endif
 
 namespace PE_Tools;
 
@@ -36,11 +36,11 @@ internal class App : IExternalApplication {
             manageStackButton.AddPushButton<CmdApsAuthPKCE>("OAuth PKCE"),
             manageStackButton.AddPushButton<CmdApsAuthNormal>("OAuth Normal"),
             panelManage.AddPushButton<CmdParametersServiceTest>("Params Svc Test"),
-            panelMigration.AddPushButton<CmdFamilyFoundryRemap>("Family Foundry Remap")
         ]);
 #endif
 
         ButtonDataHydrator.AddButtonData([
+            panelMigration.AddPushButton<CmdFamilyFoundryRemap>("Family Foundry Remap"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
             panelTools.AddPushButton<CmdCommandPalette>("Command Palette"),

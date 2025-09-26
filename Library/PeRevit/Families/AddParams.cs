@@ -8,8 +8,8 @@ public static class AddParams {
         Document famDoc,
         FamilyParamInfo[] parameters
     ) {
-        ArgumentNullException.ThrowIfNull(famDoc);
-        ArgumentNullException.ThrowIfNull(parameters);
+        if (famDoc is null) throw new ArgumentNullException(nameof(famDoc));
+        if (parameters is null) throw new ArgumentNullException(nameof(parameters));
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
         var fm = famDoc.FamilyManager;
         var results = new List<Result<FamilyParameter>>();
@@ -33,8 +33,8 @@ public static class AddParams {
         Document famDoc,
         List<SharedParameterElement> sharedParams
     ) {
-        ArgumentNullException.ThrowIfNull(famDoc);
-        ArgumentNullException.ThrowIfNull(sharedParams);
+        if (famDoc is null) throw new ArgumentNullException(nameof(famDoc));
+        if (sharedParams is null) throw new ArgumentNullException(nameof(sharedParams));
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
         var fm = famDoc.FamilyManager;
         var results = new List<Result<FamilyParameter>>();
@@ -61,8 +61,8 @@ public static class AddParams {
         ParamModel psParamInfos,
         Func<ParamModelRes, bool> filter = null
     ) {
-        ArgumentNullException.ThrowIfNull(famDoc);
-        ArgumentNullException.ThrowIfNull(psParamInfos);
+        if (famDoc is null) throw new ArgumentNullException(nameof(famDoc));
+        if (psParamInfos is null) throw new ArgumentNullException(nameof(psParamInfos));
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
         var fm = famDoc.FamilyManager;
 
@@ -137,7 +137,7 @@ public static class AddParams {
         DefinitionGroup group,
         ParamModelRes psParamInfo) {
         try {
-            ArgumentNullException.ThrowIfNull(group);
+            if (group is null) throw new ArgumentNullException(nameof(group));
 
             // Extract the actual GUID from Parameters Service ID (similar to your FindParameter method)
             var parameterTypeId = psParamInfo.DownloadOptions.ParameterTypeId;
