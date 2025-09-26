@@ -46,6 +46,8 @@ public class OutputManager {
         _ = Directory.CreateDirectory(this._thisPath);
     }
 
+    public string GetFolderPath() => this._thisPath;
+
     public JsonWriter<T> Json<T>() where T : class, new() =>
         new(new Json<T>(Path.Combine(this._thisPath, $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json"), false));
 

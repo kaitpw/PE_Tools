@@ -14,6 +14,7 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
     where TSettings : BaseSettings<TProfile>, new()
     where TProfile : BaseProfileSettings, new() {
 
+    public Storage storage { get; private set; }
     public TSettings _settings { get; private set; }
     public TProfile _profile { get; private set; }
     protected Aps _svcAps;
@@ -23,14 +24,14 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
     public void InitAndFetch() {
         var storageName = "FamilyFoundry";
 
-        var storage = new Storage(storageName);
-        this._settings = storage.Settings().Json<TSettings>().Read();
+        this.storage = new Storage(storageName);
+        this._settings = this.storage.Settings().Json<TSettings>().Read();
         this._profile = this._settings.GetProfile();
 
         var cacheFilename = "parameters-service-cache.json";
         this._svcAps = new Aps(this._settings);
         this._svcApsParams = this._svcAps.Parameters(this._settings);
-        this._apsParamsCache = storage.State().Json<ParametersApi.Parameters>(cacheFilename);
+        this._apsParamsCache = this.storage.State().Json<ParametersApi.Parameters>(cacheFilename);
         this._apsParams = Task.Run(async () =>
             await this._svcApsParams.GetParameters(
                 this._apsParamsCache, this._settings.UseCachedParametersServiceData)
@@ -65,7 +66,9 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
 
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
-                _ = FamUtils.EditAndLoad(doc, family, familyActions);  // Future: could be EditAndLoadAndSave, etc.
+                // _ = FamUtils.EditAndLoad(doc, family, familyActions);  // Future: could be EditAndLoadAndSave, etc.
+                var savePath = this.storage.Output().GetFolderPath();
+                _ = FamUtils.EditAndLoadAndSave(doc, family, savePath, familyActions);  // Future: could be EditAndLoadAndSave, etc.
             }
         }
 
