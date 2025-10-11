@@ -36,7 +36,7 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
             return Result.Succeeded;
         } catch (Exception ex) {
             new Balloon().Add(new StackFrame(), Log.ERR,
-                    $"{ex.Message}  \n {ex.StackTrace} \n {ex.InnerException?.Message} \n {ex.InnerException?.StackTrace}")
+                    $"{ex.Message}  \n {ex.ToStringDemystified()} \n {ex.InnerException?.Message} \n {ex.InnerException?.ToStringDemystified()}")
                 .Show();
             return Result.Cancelled;
         }
