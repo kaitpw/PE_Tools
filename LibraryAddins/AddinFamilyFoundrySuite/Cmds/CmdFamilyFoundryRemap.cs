@@ -26,9 +26,10 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
                     Debug.WriteLine($"Types: {famDoc.FamilyManager.Types.Size}");
                     Debug.WriteLine($"Parameters: {famDoc.FamilyManager.Parameters.Size}");
                 })
-                .DocOperation(famDoc => AddParams.ParamService(famDoc, this._apsParams, this._profile.ParamsAddPS.Filter))
+                .DocOperation(famDoc =>
+                    AddParams.ParamService(famDoc, this._apsParams, this._profile.ParamsAddPS.Filter))
                 .DocOperation(this.HydrateElectricalConnector)
-                .TypeOperation((famDoc) => this.RemapParameters(famDoc, this._profile.ParamsRemap.RemapData));
+                .TypeOperation(famDoc => this.RemapParameters(famDoc, this._profile.ParamsRemap.RemapData));
 
             this.ProcessQueue(queue);
 
@@ -43,7 +44,7 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
 
 
     /// <summary>
-    /// Per-type remap method for use with the new fluent API
+    ///     Per-type remap method for use with the new fluent API
     /// </summary>
     private void RemapParameters(Document famDoc, List<ParamsRemap.RemapDataRecord> paramRemaps) {
         foreach (var p in paramRemaps) {
@@ -81,10 +82,14 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
                 var targetFamilyParam = doc.FamilyManager.Parameters
                     .Cast<FamilyParameter>()
                     .FirstOrDefault(fp => fp.Definition.Name == "PE_E___Voltage");
-
-                if (targetFamilyParam != null) {
-                    // Associate the connector voltage parameter with the family parameter
-                    doc.FamilyManager.AssociateElementParameterToFamilyParameter(voltageParam, targetFamilyParam);
+                try {
+                    if (targetFamilyParam != null) {
+                        // Associate the connector voltage parameter with the family parameter
+                        doc.FamilyManager.AssociateElementParameterToFamilyParameter(voltageParam, targetFamilyParam);
+                    }
+                } catch (Exception ex) {
+                    Debug.WriteLine($"{voltageParam.Definition.Name} can't be assigned to " +
+                                    $"{targetFamilyParam?.Definition.Name} because {ex.Message}");
                 }
             }
 
@@ -94,13 +99,15 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
                 var targetFamilyParam = doc.FamilyManager.Parameters
                     .Cast<FamilyParameter>()
                     .FirstOrDefault(fp => fp.Definition.Name == "PE_E___ApparentPower");
-
-                if (targetFamilyParam != null) {
-                    doc.FamilyManager.AssociateElementParameterToFamilyParameter(powerParam, targetFamilyParam);
+                try {
+                    if (targetFamilyParam != null)
+                        doc.FamilyManager.AssociateElementParameterToFamilyParameter(powerParam, targetFamilyParam);
+                } catch (Exception ex) {
+                    Debug.WriteLine($"{powerParam.Definition.Name} can't be assigned to " +
+                                    $"{targetFamilyParam?.Definition.Name} because {ex.Message}");
                 }
             }
         }
-
     }
 }
 

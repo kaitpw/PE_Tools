@@ -6,6 +6,7 @@ using PeServices.Aps.Models;
 using PeServices.Storage;
 using PeServices.Storage.Core;
 using AddinFamilyFoundrySuite.Core.Settings;
+using PeRevit.Utils;
 
 namespace AddinFamilyFoundrySuite.Core;
 
@@ -17,25 +18,38 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
     public Storage storage { get; private set; }
     public TSettings _settings { get; private set; }
     public TProfile _profile { get; private set; }
-    protected Aps _svcAps;
-    protected Parameters _svcApsParams;
     protected JsonReadWriter<ParametersApi.Parameters> _apsParamsCache = null;
     protected ParametersApi.Parameters _apsParams;
+
+    public void FetchAPSParams() {
+        var cacheFilename = "parameters-service-cache.json";
+        this._apsParamsCache = this.storage.State().Json<ParametersApi.Parameters>(cacheFilename);
+
+        var revitVersion = int.Parse(Utils.GetRevitVersion());
+        if (revitVersion <= 2024) {
+            try {
+                this._apsParams = this._apsParamsCache.Read();
+                return;
+            } catch (FileNotFoundException) {
+                throw new InvalidOperationException(
+                    $"Revit {revitVersion} requires cached parameters data, but no cache file exists. " +
+                    "Please run this command on Revit 2025+ first to generate the cache.");
+            }
+        }
+
+        var svcAps = new Aps(this._settings);
+        this._apsParams = Task.Run(async () =>
+            await svcAps.Parameters(this._settings).GetParameters(
+                this._apsParamsCache, this._settings.UseCachedParametersServiceData)
+        ).Result;
+    }
     public void InitAndFetch() {
         var storageName = "FamilyFoundry";
 
         this.storage = new Storage(storageName);
         this._settings = this.storage.Settings().Json<TSettings>().Read();
         this._profile = this._settings.GetProfile();
-
-        var cacheFilename = "parameters-service-cache.json";
-        this._svcAps = new Aps(this._settings);
-        this._svcApsParams = this._svcAps.Parameters(this._settings);
-        this._apsParamsCache = this.storage.State().Json<ParametersApi.Parameters>(cacheFilename);
-        this._apsParams = Task.Run(async () =>
-            await this._svcApsParams.GetParameters(
-                this._apsParamsCache, this._settings.UseCachedParametersServiceData)
-        ).Result;
+        this.FetchAPSParams();
     }
 
     /// <summary>

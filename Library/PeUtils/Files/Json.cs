@@ -44,8 +44,10 @@ public class Json<T> where T : class, new() {
 
     /// <summary> Reads JSON object from the specified file, validating against schema </summary>
     /// <returns>Deserialized object</returns>
+    /// <exception cref="System.IO.FileNotFoundException">Thrown when the file doesn't exist</exception>
     public T Read() {
-        if (!File.Exists(this.FilePath)) return new T();
+        if (!File.Exists(this.FilePath))
+            throw new FileNotFoundException($"JSON file not found: {this.FilePath}");
 
         var jsonContent = File.ReadAllText(this.FilePath);
         var validationErrors = this._schema.Validate(jsonContent);
