@@ -35,7 +35,7 @@ public class ElectricalCoercionStrategy : MappingStrategyBase {
     }
 
     public double ExtractDouble(string sourceValue) {
-        if (TargetParam.Definition.Name.Contains("Voltage", StringComparison.OrdinalIgnoreCase)) {
+        if (this.TargetParam.Definition.Name.Contains("Voltage", StringComparison.OrdinalIgnoreCase)) {
             // somewhat arbitrary ranges. 240 must account for 230. 120 must account for 110 or 115.
             var voltRange240 = Enumerable.Range(225, 21).Select(x => (double)x).ToList();
             voltRange240.Add(208);

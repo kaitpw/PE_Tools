@@ -18,12 +18,8 @@ public static class FamilyManagerMapValue {
     ) {
         var sourceParam = doc.FamilyManager.FindParameter(sourceName);
         var targetParam = doc.FamilyManager.FindParameter(targetName);
-        if (sourceParam == null) {
-            return new Exception($"Source parameter {sourceName} not found");
-        }
-        if (targetParam == null) {
-            return new Exception($"Target parameter {targetName} not found");
-        }
+        if (sourceParam == null) return new Exception($"Source parameter {sourceName} not found");
+        if (targetParam == null) return new Exception($"Target parameter {targetName} not found");
         var strategy = MappingPolicyRegistry.GetStrategy(policy, doc, sourceParam, targetParam);
 
         if (!strategy.CanMap()) {
@@ -49,9 +45,7 @@ public static class FamilyManagerMapValue {
         string targetName,
         string policy = null) {
         var targetParam = doc.FamilyManager.FindParameter(targetName);
-        if (targetParam == null) {
-            return new Exception($"Target parameter {targetName} not found");
-        }
+        if (targetParam == null) return new Exception($"Target parameter {targetName} not found");
         var strategy = MappingPolicyRegistry.GetStrategy(policy, doc, sourceValue, targetParam);
 
         if (!strategy.CanMap()) {

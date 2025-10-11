@@ -1,16 +1,16 @@
 namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
-/// Fluent processor that batches document and type operations for optimal execution
+///     Fluent processor that batches document and type operations for optimal execution
 /// </summary>
 public class OperationEnqueuer {
     private readonly List<IOperation> _operations = new();
     public readonly Document doc;
 
-    internal OperationEnqueuer(Document document) => doc = document;
+    internal OperationEnqueuer(Document document) => this.doc = document;
 
     /// <summary>
-    /// Add a (family) document-level operation to the queue
+    ///     Add a (family) document-level operation to the queue
     /// </summary>
     /// <param name="action">The action to perform on the document</param>
     /// <returns>The enqueuer</returns>
@@ -20,7 +20,7 @@ public class OperationEnqueuer {
     }
 
     /// <summary>
-    /// Add a family-type-level operation to the queue
+    ///     Add a family-type-level operation to the queue
     /// </summary>
     /// <param name="action">The action to perform on the type</param>
     /// <returns>The enqueuer</returns>
@@ -31,7 +31,7 @@ public class OperationEnqueuer {
 
 
     /// <summary>
-    /// Converts the queued operations into optimized family document callbacks for FamUtils
+    ///     Converts the queued operations into optimized family document callbacks for FamUtils
     /// </summary>
     /// <returns>Array of callbacks that FamUtils can execute</returns>
     public Action<Document>[] ToFamilyActions() {
@@ -42,9 +42,7 @@ public class OperationEnqueuer {
             switch (batch) {
             case DocOperationBatch docBatch:
                 familyActions.Add(famDoc => {
-                    foreach (var docOp in docBatch.Operations) {
-                        docOp.Action(famDoc);
-                    }
+                    foreach (var docOp in docBatch.Operations) docOp.Action(famDoc);
                 });
                 break;
 
@@ -55,9 +53,7 @@ public class OperationEnqueuer {
 
                     foreach (var famType in familyTypes) {
                         fm.CurrentType = famType;
-                        foreach (var typeOp in typeBatch.Operations) {
-                            typeOp.Action(famDoc);
-                        }
+                        foreach (var typeOp in typeBatch.Operations) typeOp.Action(famDoc);
                     }
                 });
                 break;
@@ -80,6 +76,7 @@ public class OperationEnqueuer {
                     batches.Add(new TypeOperationBatch(currentTypeOps));
                     currentTypeOps = new List<TypeOperation>();
                 }
+
                 currentDocOps.Add(docOp);
                 break;
 
@@ -89,27 +86,26 @@ public class OperationEnqueuer {
                     batches.Add(new DocOperationBatch(currentDocOps));
                     currentDocOps = new List<DocOperation>();
                 }
+
                 currentTypeOps.Add(typeOp);
                 break;
             }
         }
 
         // Flush remaining operations
-        if (currentDocOps.Count > 0) {
-            batches.Add(new DocOperationBatch(currentDocOps));
-        }
-        if (currentTypeOps.Count > 0) {
-            batches.Add(new TypeOperationBatch(currentTypeOps));
-        }
+        if (currentDocOps.Count > 0) batches.Add(new DocOperationBatch(currentDocOps));
+        if (currentTypeOps.Count > 0) batches.Add(new TypeOperationBatch(currentTypeOps));
 
         return batches;
     }
 }
 
 // Supporting interfaces and classes
-public interface IOperation { }
+public interface IOperation {
+}
 
-public interface IOperationBatch { }
+public interface IOperationBatch {
+}
 
 public record DocOperation(Action<Document> Action) : IOperation;
 

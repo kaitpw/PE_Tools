@@ -31,7 +31,8 @@ public abstract class MappingStrategyBase : IMappingStrategy {
         this.TargetStorageType = targetParam.StorageType;
         try {
             this.TargetUnitType = famDoc.GetUnits().GetFormatOptions(this.TargetDataType).GetUnitTypeId();
-        } catch { } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
+        } catch {
+        } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
     }
 
     /// <summary>
@@ -49,7 +50,8 @@ public abstract class MappingStrategyBase : IMappingStrategy {
         this.TargetStorageType = targetParam.StorageType;
         try {
             this.TargetUnitType = famDoc.GetUnits().GetFormatOptions(this.TargetDataType).GetUnitTypeId();
-        } catch { } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
+        } catch {
+        } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
     }
 
     public FamilyManager FamilyManager { get; protected init; }

@@ -6,6 +6,7 @@ namespace AddinFamilyFoundrySuite.Core.Settings;
 
 public class ParamsRemap {
     [Required] public List<RemapDataRecord> RemapData { get; set; } = [];
+
     public record RemapDataRecord {
         public string CurrNameOrId { get; set; }
         public string NewNameOrId { get; set; }

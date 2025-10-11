@@ -1,13 +1,11 @@
-using PeServices.Aps;
 using PeServices.Storage;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using ParamServiceModel = PeServices.Aps.Models.ParametersApi.Parameters;
 
 namespace AddinFamilyFoundrySuite.Core.Settings;
 
-public class BaseSettings<T>
-    : Aps.IOAuthTokenProvider, Aps.IParametersTokenProvider
-    where T : BaseProfileSettings, new() {
+public class BaseSettings<T> where T : BaseProfileSettings, new() {
     [Description(
         "Use cached Parameters Service data instead of downloading from APS on every run. " +
         "Only set to true if you are sure no one has changed the param definitions since the last time you opened Revit " +
@@ -31,17 +29,8 @@ public class BaseSettings<T>
 
     public T GetProfile() => this.Profiles[this.CurrentProfile];
 
-#if DEBUG
-    // TODO: fix this, not working for some reason
-    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsWebClientId1;
-    public string GetClientSecret() => Storage.GlobalSettings().Json().Read().ApsWebClientSecret1;
-#else
-    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
-    public string GetClientSecret() => null;
-#endif
-    public string GetAccountId() => Storage.GlobalSettings().Json().Read().Bim360AccountId;
-    public string GetGroupId() => Storage.GlobalSettings().Json().Read().ParamServiceGroupId;
-    public string GetCollectionId() => Storage.GlobalSettings().Json().Read().ParamServiceCollectionId;
+    public ParamServiceModel GetAPSParams() =>
+        Storage.GlobalState("parameters-service-cache.json").Json<ParamServiceModel>().Read();
 }
 
 public class BaseProfileSettings {

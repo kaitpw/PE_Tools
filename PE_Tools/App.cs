@@ -1,11 +1,7 @@
+using AddinApsAuthSuite;
+using AddinFamilyFoundrySuite.Cmds;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
-#if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
-#endif
-using AddinCmdParametersServiceTest;
-using AddinCmdApsAuthNormal;
-using AddinCmdApsAuthPKCE;
-using AddinFamilyFoundrySuite.Cmds;
 
 namespace PE_Tools;
 
@@ -35,13 +31,14 @@ internal class App : IExternalApplication {
         ButtonDataHydrator.AddButtonData([
             manageStackButton.AddPushButton<CmdApsAuthPKCE>("OAuth PKCE"),
             manageStackButton.AddPushButton<CmdApsAuthNormal>("OAuth Normal"),
-            panelManage.AddPushButton<CmdParametersServiceTest>("Params Svc Test"),
         ]);
 #endif
 
         ButtonDataHydrator.AddButtonData([
             panelMigration.AddPushButton<CmdFamilyFoundryRemap>("Family Foundry Remap"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
+            manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
+
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
             panelTools.AddPushButton<CmdCommandPalette>("Command Palette"),
             panelTools.AddPushButton<CmdTapMaker>("Tap Maker")
@@ -61,6 +58,13 @@ public static class ButtonDataHydrator {
                 LargeImage = "monitor-down32.png",
                 ToolTip =
                     "Update the PE Tools addin suite to the latest release. You will need to restart Revit. TODO; fix this"
+            }
+        }, {
+            nameof(CmdCacheParametersService),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Cache the parameters service data for use in the Family Foundry command."
             }
         }, {
             nameof(CmdApsAuthPKCE), new ButtonDataRecord {
@@ -111,11 +115,6 @@ public static class ButtonDataHydrator {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Process families in a variety of ways from the Family Foundry."
-            }
-        }, {
-            nameof(CmdParametersServiceTest),
-            new ButtonDataRecord {
-                SmallImage = "Red_16.png", LargeImage = "Red_32.png", ToolTip = "Click to test the parameters service."
             }
         }
     };

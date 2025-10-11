@@ -13,7 +13,7 @@ public static class MappingPolicyRegistry {
             ["PeElectrical"] = (doc, source, target) => new ChainedMappingStrategy(
                 new StrictMappingStrategy(doc, source, target),
                 new ElectricalCoercionStrategy(doc, source, target)
-            ),
+            )
             // ["AllowAllCoercion"] = (doc, source, target) => new ChainedMappingStrategy(
             //     new ElectricalCoercionStrategy(doc, source, target),
             //     new StorageTypeCoercionStrategy(doc, source, target)
@@ -27,7 +27,7 @@ public static class MappingPolicyRegistry {
             ["PeElectrical"] = (doc, value, target) => new ChainedMappingStrategy(
                 new StrictMappingStrategy(doc, value, target),
                 new ElectricalCoercionStrategy(doc, value, target)
-            ),
+            )
             // ["AllowAllCoercion"] = (doc, value, target) => new ChainedMappingStrategy(
             //     new ElectricalCoercionStrategy(doc, value, target),
             //     new StorageTypeCoercionStrategy(doc, value, target)

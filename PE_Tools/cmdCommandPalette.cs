@@ -17,7 +17,7 @@ public class CmdCommandPalette : IExternalCommand {
             var doc = uidoc.Document;
 
             // Create persistence service for the command palette
-            var persistence = new Storage("CommandPalette");
+            var persistence = new Storage(nameof(CmdCommandPalette));
 
             var paletteWindow = new CommandPaletteWindow();
             var viewModel = new CommandPaletteViewModel(commandData.Application, persistence);

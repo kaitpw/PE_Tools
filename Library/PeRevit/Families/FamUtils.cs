@@ -23,9 +23,10 @@ public class FamUtils {
         _ = transFamily.Commit();
 
         var fam = famDoc.LoadFamily(doc, new EditAndLoadFamilyOptions())
-            ?? throw new InvalidOperationException("Failed to load family after edit.");
+                  ?? throw new InvalidOperationException("Failed to load family after edit.");
         var closed = famDoc.Close(false);
-        return closed ? fam
+        return closed
+            ? fam
             : throw new InvalidOperationException("Failed to close family document after load error.");
     }
 
@@ -52,9 +53,7 @@ public class FamUtils {
         _ = transFamily.Commit();
 
         // Save the family to the specified location
-        if (!Directory.Exists(saveLocation)) {
-            _ = Directory.CreateDirectory(saveLocation);
-        }
+        if (!Directory.Exists(saveLocation)) _ = Directory.CreateDirectory(saveLocation);
 
         var familyFileName = $"{family.Name}.rfa";
         var fullSavePath = Path.Combine(saveLocation, familyFileName);
@@ -63,9 +62,10 @@ public class FamUtils {
         famDoc.SaveAs(fullSavePath, saveOptions);
 
         var fam = famDoc.LoadFamily(doc, new EditAndLoadFamilyOptions())
-            ?? throw new InvalidOperationException("Failed to load family after edit.");
+                  ?? throw new InvalidOperationException("Failed to load family after edit.");
         var closed = famDoc.Close(false);
-        return closed ? fam
+        return closed
+            ? fam
             : throw new InvalidOperationException("Failed to close family document after load error.");
     }
 
