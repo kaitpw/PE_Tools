@@ -15,6 +15,10 @@ public static class DocumentProcessFamily {
         this Document famDoc,
         string saveLocation
     ) {
+        if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
+        if (famDoc.FamilyManager is null)
+            throw new InvalidOperationException("Family documents FamilyManager is null.");
+
         if (saveLocation is null) return famDoc;
         if (!Directory.Exists(saveLocation)) _ = Directory.CreateDirectory(saveLocation);
 
@@ -27,8 +31,8 @@ public static class DocumentProcessFamily {
         return famDoc;
     }
 
-    public static Family LoadFamily(this Document famDoc, Document doc, IFamilyLoadOptions options) {
-        if (famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
+    public static Family LoadAndCloseFamily(this Document famDoc, Document doc, IFamilyLoadOptions options) {
+        if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
         if (famDoc.FamilyManager is null)
             throw new InvalidOperationException("Family documents FamilyManager is null.");
 

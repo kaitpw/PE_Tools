@@ -43,7 +43,8 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
         if (doc.IsFamilyDocument) {
             var saveLocation = this.GetSaveLocation(doc, this.LoadAndSaveOptions);
 
-            var family = doc.ProcessFamily(familyActions)
+            _ = doc
+                .ProcessFamily(familyActions)
                 .SaveFamily(saveLocation)
                 .Close(false);
         } else {
@@ -54,13 +55,14 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
                 .ToList();
 
             foreach (var family in families) {
+                _ = balloon.Add(Log.TEST, null, $"Processing family: {family.Name} (ID: {family.Id})");
                 var saveLocation = this.GetSaveLocation(doc, this.LoadAndSaveOptions);
-                var famDoc = DocumentProcessFamily.LoadFamily(doc.EditFamily(family)
-                        .ProcessFamily(familyActions)
-                        .SaveFamily(saveLocation)
-                    , doc, new EditAndLoadFamilyOptions());
+                _ = doc
+                    .EditFamily(family)
+                    .ProcessFamily(familyActions)
+                    .SaveFamily(saveLocation)
+                    .LoadAndCloseFamily(doc, new EditAndLoadFamilyOptions());
 
-                _ = balloon.Add(Log.TEST, null, $"Processed family: {family.Name} (ID: {family.Id})");
             }
         }
 

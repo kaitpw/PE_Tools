@@ -25,17 +25,18 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
         try {
             var options = new LoadAndSaveOptionsClass();
 
-            this.Init(options, () => {
-                // test if the cache exists, if not throw error to prompt user to run command to generate cache
-                var tmpParams = this._settings.GetAPSParams();
-                if (tmpParams.Results == null) {
-                    throw new InvalidOperationException(
-                        $"This Family Foundry command requires cached parameters data, but no cached data exists. " +
-                        $"Run the \"Cache Parameters Service\" command on a Revit version above 2024 to generate the cache.");
-                }
+            this.Init(
+                options,
+                () => {
+                    var tmpParams = this._settings.GetAPSParams();
+                    if (tmpParams.Results == null) {
+                        throw new InvalidOperationException(
+                            $"This Family Foundry command requires cached parameters data, but no cached data exists. " +
+                            $"Run the \"Cache Parameters Service\" command on a Revit version above 2024 to generate the cache.");
+                    }
 
-                this._apsParams = tmpParams;
-            });
+                    this._apsParams = tmpParams;
+                });
 
             var queue = new OperationEnqueuer(doc)
                 .DocOperation(famDoc => {

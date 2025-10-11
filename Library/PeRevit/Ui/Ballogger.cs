@@ -19,16 +19,17 @@ internal class Ballogger {
 
     /// <summary>Add a normal message (with the method's name)</summary>
     public Ballogger Add(Log log, StackFrame sf, string message) {
-        var method = sf.GetMethod()?.Name ?? StrNoMethod;
-        if (!string.IsNullOrWhiteSpace(message)) {
-            if (sf is null)
-                this._messages.Add(string.Format(FmtNormal, log, message.Trim()));
-            else
-                this._messages.Add(string.Format(FmtMethod, log, method, message.Trim()));
+        if (string.IsNullOrWhiteSpace(message)) return this;
+        if (sf is null)
+            this._messages.Add(string.Format(FmtNormal, log, message.Trim()));
+        else {
+            var method = sf.GetMethod()?.Name ?? StrNoMethod;
+            this._messages.Add(string.Format(FmtMethod, log, method, message.Trim()));
         }
 
         return this;
     }
+
 
     /// <summary>Add an error message (with an optional stack trace)</summary>
     public Ballogger Add(Log log, StackFrame sf, Exception ex, bool trace = false) {
