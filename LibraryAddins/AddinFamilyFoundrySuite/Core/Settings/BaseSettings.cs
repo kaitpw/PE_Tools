@@ -28,9 +28,6 @@ public class BaseSettings<T> where T : BaseProfileSettings, new() {
     public Dictionary<string, T> Profiles { get; set; } = new() { { "Default", new T() } };
 
     public T GetProfile() => this.Profiles[this.CurrentProfile];
-
-    public ParamServiceModel GetAPSParams() =>
-        Storage.GlobalState("parameters-service-cache.json").Json<ParamServiceModel>().Read();
 }
 
 public class BaseProfileSettings {

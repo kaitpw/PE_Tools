@@ -7,7 +7,7 @@ public class OperationEnqueuer {
     private readonly List<IOperation> _operations = new();
     public readonly Document doc;
 
-    internal OperationEnqueuer(Document document) => this.doc = document;
+    public OperationEnqueuer(Document document) => this.doc = document;
 
     /// <summary>
     ///     Add a (family) document-level operation to the queue

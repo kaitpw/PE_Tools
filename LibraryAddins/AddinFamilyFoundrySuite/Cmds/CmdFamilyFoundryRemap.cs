@@ -2,14 +2,19 @@ using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Settings;
 using PeRevit.Families;
 using PeRevit.Ui;
+using PeServices.Aps.Models;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using PeServices.Storage;
+
 
 namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
 
 [Transaction(TransactionMode.Manual)]
 public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRemap>, IExternalCommand {
+    protected ParametersApi.Parameters _apsParams;
+
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -18,8 +23,19 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            // New fluent API - batches type operations into a single optimized loop
-            var queue = this.EnqueueOperations(doc)
+            this.Init(() => {
+                // test if the cache exists, if not throw error to prompt user to run command to generate cache
+                var tmpParams = this._settings.GetAPSParams();
+                if (tmpParams.Results == null) {
+                    throw new InvalidOperationException(
+                        $"This Family Foundry command requires cached parameters data, but no cached data exists. " +
+                        $"Run the \"Cache Parameters Service\" command on a Revit version above 2024 to generate the cache.");
+                }
+
+                this._apsParams = tmpParams;
+            });
+
+            var queue = new OperationEnqueuer(doc)
                 .DocOperation(famDoc => {
                     var familyName = famDoc.OwnerFamily?.Name ?? "Unknown";
                     Debug.WriteLine($"\nProcessing family: {familyName}");
@@ -110,6 +126,8 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
 }
 
 public class SettingsRemap : BaseSettings<ProfileRemap> {
+    public ParametersApi.Parameters GetAPSParams() =>
+        Storage.GlobalState("parameters-service-cache.json").Json<ParametersApi.Parameters>().Read();
 }
 
 public class ProfileRemap : BaseProfileSettings {
