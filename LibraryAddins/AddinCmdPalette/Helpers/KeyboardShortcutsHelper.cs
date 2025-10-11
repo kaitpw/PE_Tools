@@ -48,8 +48,8 @@ public class KeyboardShortcutsHelper {
     private Result<string> GetShortcutsFilePath() {
         var revitVersion = Utils.GetRevitVersion();
         if (revitVersion == null) {
-            new Balloon()
-                .Add(Log.WARN, "Revit version not found")
+            new Ballogger()
+                .Add(Log.WARN, null, "Revit version not found")
                 .Show();
             return string.Empty;
         }
@@ -86,8 +86,8 @@ public class KeyboardShortcutsHelper {
     private Dictionary<string, ShortcutInfo> LoadShortcutsFromXml() {
         var shortcuts = new Dictionary<string, ShortcutInfo>(StringComparer.OrdinalIgnoreCase);
         var (filePath, pathErr) = this.GetShortcutsFilePath();
-        new Balloon()
-            .Add(Log.INFO, $"Loading Keyboard shortcuts file\n {filePath}")
+        new Ballogger()
+            .Add(Log.INFO, null, $"Loading Keyboard shortcuts file\n {filePath}")
             .Show(() => Clipboard.SetText(filePath), "Click to copy path");
         if (pathErr is not null) return shortcuts; // Return empty dictionary if file doesn't exist
 

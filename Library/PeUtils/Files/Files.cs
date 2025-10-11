@@ -57,7 +57,7 @@ public static class FileUtils {
                 _ = Process.Start(processStartInfo);
             }
         } catch {
-            new Balloon().Add(Log.ERR, $"Failed to open file: {filePath}").Show();
+            new Ballogger().Add(Log.ERR, null, $"Failed to open file: {filePath}").Show();
         }
     }
 }

@@ -65,14 +65,14 @@ public class Commands {
     /// <summary> Checks if a command is available for execution. </summary>
     public static bool IsAvailable(UIApplication uiApp, CommandRef command) {
         var (validId, validIdErr) = command.GetPostableCommandId(uiApp);
-        if (validIdErr is not null) new Balloon().AddDebug(new StackFrame(), validIdErr, true).Show();
+        if (validIdErr is not null) new Ballogger().AddDebug(Log.ERR, new StackFrame(), validIdErr, true).Show();
         return validId is not null && validIdErr is null;
     }
 
     /// <summary> Returns a human-readable availability status. </summary>
     public static string GetStatus(UIApplication uiApp, CommandRef command) {
         var (validId, validIdErr) = command.GetPostableCommandId(uiApp);
-        if (validIdErr is not null) new Balloon().AddDebug(new StackFrame(), validIdErr, true).Show();
+        if (validIdErr is not null) new Ballogger().AddDebug(Log.ERR, new StackFrame(), validIdErr, true).Show();
         return validIdErr is not null
             ? "Availability Unknown"
             : validId is not null

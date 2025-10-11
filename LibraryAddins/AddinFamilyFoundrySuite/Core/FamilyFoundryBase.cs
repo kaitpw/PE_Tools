@@ -49,7 +49,7 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
     /// </summary>
     protected void ProcessQueue(OperationEnqueuer enqueuer) {
         this.InitAndFetch();
-        var balloon = new Balloon();
+        var balloon = new Ballogger();
         var doc = enqueuer.doc;
         var familyActions = enqueuer.ToFamilyActions();
 
@@ -63,7 +63,7 @@ public abstract class FamilyFoundryBase<TSettings, TProfile> : IFamilyFoundry<TS
                 .ToList();
 
             foreach (var family in families) {
-                _ = balloon.Add(Log.TEST, $"Processed family: {family.Name} (ID: {family.Id})");
+                _ = balloon.Add(Log.TEST, null, $"Processed family: {family.Name} (ID: {family.Id})");
                 // _ = FamUtils.EditAndLoad(doc, family, familyActions);  // Future: could be EditAndLoadAndSave, etc.
                 var savePath = this.storage.Output().GetFolderPath();
                 _ = FamUtils.EditAndLoadAndSave(doc, family, savePath,

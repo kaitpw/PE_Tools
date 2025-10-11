@@ -60,7 +60,7 @@ public class CmdTapMaker : IExternalCommand {
         UV clickPosition,
         double tapSizeInches = 6.0
     ) {
-        var balloon = new Balloon();
+        var balloon = new Ballogger();
 
         try {
             var uidoc = uiApplication.ActiveUIDocument;
@@ -95,18 +95,18 @@ public class CmdTapMaker : IExternalCommand {
 
             if (tapError is not null) {
                 _ = trans.RollBack();
-                _ = balloon.Add(new StackFrame(), tapError);
+                _ = balloon.Add(Log.ERR, new StackFrame(), tapError);
                 balloon.Show();
                 return false;
             }
 
             _ = trans.Commit();
-            _ = balloon.Add(new StackFrame(), Log.INFO,
+            _ = balloon.Add(Log.INFO, new StackFrame(),
                 $"Created a {tapSizeInches}\" tap successfully (tap ID: {tap.Id}).");
             balloon?.Show();
             return true;
         } catch (Exception ex) {
-            _ = balloon.Add(new StackFrame(), ex);
+            _ = balloon.Add(Log.ERR, new StackFrame(), ex);
             balloon.Show();
             return false; // Don't throw, just return false so user can see debug info
         }
@@ -119,7 +119,7 @@ public class CmdTapMaker : IExternalCommand {
         UV locationAdjusted,
         double tapSizeFeet,
         DuctType ductType,
-        Balloon balloon = null
+        Ballogger balloon = null
     ) {
         // Get all radial points at 45 degree increments in order of center-proximity
         var positions = Enumerable.Range(1, 9)

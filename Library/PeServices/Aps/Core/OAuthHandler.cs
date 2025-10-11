@@ -36,9 +36,7 @@ internal static class OAuthHandler {
         var oAuthData = new OAuthData(clientId, clientSecret,
             string.IsNullOrEmpty(clientSecret) ? GenerateRandomString() : null);
 
-        async Task<ThreeLeggedToken> GetToken(string code) {
-            return await Get3LeggedToken(oAuthData, code);
-        }
+        async Task<ThreeLeggedToken> GetToken(string code) => await Get3LeggedToken(oAuthData, code);
 
         _Async3LegOAuth(GenerateOAuthUrl(oAuthData), GetToken, callback);
     }
@@ -66,14 +64,14 @@ internal static class OAuthHandler {
                     } else
                         cb?.Invoke(null);
                 } catch (Exception ex) {
-                    new Balloon().Add(new StackFrame(), Log.ERR, $"Error in OAuth flow: {ex.Message}").Show();
+                    new Ballogger().Add(Log.ERR, new StackFrame(), $"Error in OAuth flow: {ex.Message}").Show();
                     cb?.Invoke(null);
                 } finally {
                     TcpListener?.Stop();
                 }
             });
         } catch (Exception ex) {
-            new Balloon().Add(new StackFrame(), ex).Show();
+            new Ballogger().Add(Log.ERR, new StackFrame(), ex).Show();
             cb?.Invoke(null);
         }
     }
@@ -136,10 +134,10 @@ internal static class OAuthHandler {
         var query = urlPart[(queryStart + 1)..];
         var parameters = query.Split('&');
         return (from param in parameters
-            select param.Split('=')
+                select param.Split('=')
             into kv
-            where kv.Length == 2 && kv[0] == "code"
-            select kv[1]).FirstOrDefault();
+                where kv.Length == 2 && kv[0] == "code"
+                select kv[1]).FirstOrDefault();
     }
 
 

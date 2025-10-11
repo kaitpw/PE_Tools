@@ -15,10 +15,10 @@ public class CmdApsAuthNormal : IExternalCommand {
             var settings = storage.Settings().Json<ApsAuthNormal>().Read();
             var auth = new Aps(settings);
             var token = auth.GetToken();
-            new Balloon().AddDebug(new StackFrame(), Log.INFO, token).Show();
+            new Ballogger().AddDebug(Log.INFO, new StackFrame(), token).Show();
             return Result.Succeeded;
         } catch (Exception ex) {
-            new Balloon().Add(Log.ERR, ex.Message).Show();
+            new Ballogger().Add(Log.ERR, null, ex.Message).Show();
             return Result.Failed;
         }
     }
@@ -35,10 +35,10 @@ public class CmdApsAuthPKCE : IExternalCommand {
             var settings = storage.Settings().Json<ApsAuthPkce>().Read();
             var aps = new Aps(settings);
             var token = aps.GetToken();
-            new Balloon().AddDebug(new StackFrame(), Log.INFO, token).Show();
+            new Ballogger().AddDebug(Log.INFO, new StackFrame(), token).Show();
             return Result.Succeeded;
         } catch (Exception ex) {
-            new Balloon().Add(Log.ERR, ex.Message).Show();
+            new Ballogger().Add(Log.ERR, null, ex.Message).Show();
             return Result.Failed;
         }
     }

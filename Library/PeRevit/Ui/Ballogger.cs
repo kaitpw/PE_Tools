@@ -7,7 +7,7 @@ using System.Windows;
 namespace PeRevit.Ui;
 
 /// <summary>Message collector for accumulating messages, then showing all at once</summary>
-internal class Balloon {
+internal class Ballogger {
     private const string FmtNormal = "{0}: {1}";
     private const string FmtMethod = "{0} ({1}): {2}";
     private const string FmtErrorTrace = "{0} ({1}): {2}\n{3}";
@@ -17,16 +17,8 @@ internal class Balloon {
     /// <summary>Clear all accumulated messages</summary>
     public void Clear() => this._messages.Clear();
 
-    /// <summary>Add a normal message (with a Log Level)</summary>
-    public Balloon Add(Log log, string message) {
-        // TODO: update API and move all uses to other overload, then swithc the order of log and stackframe
-        if (!string.IsNullOrWhiteSpace(message))
-            this._messages.Add(string.Format(FmtNormal, log, message.Trim()));
-        return this;
-    }
-
     /// <summary>Add a normal message (with the method's name)</summary>
-    public Balloon Add(StackFrame sf, Log log, string message) {
+    public Ballogger Add(Log log, StackFrame sf, string message) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         if (!string.IsNullOrWhiteSpace(message)) {
             if (sf is null)
@@ -39,16 +31,16 @@ internal class Balloon {
     }
 
     /// <summary>Add an error message (with an optional stack trace)</summary>
-    public Balloon Add(StackFrame sf, Exception ex, bool trace = false) {
+    public Ballogger Add(Log log, StackFrame sf, Exception ex, bool trace = false) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         this._messages.Add(trace
-            ? string.Format(FmtErrorTrace, Log.ERR, method, ex.Message, ex.StackTrace)
-            : string.Format(FmtMethod, Log.ERR, method, ex.Message));
+            ? string.Format(FmtErrorTrace, log, method, ex.Message, ex.StackTrace)
+            : string.Format(FmtMethod, log, method, ex.Message));
         return this;
     }
 
     /// <summary>Add a DEBUG build message</summary>
-    public Balloon AddDebug(StackFrame sf, Log log, string message) {
+    public Ballogger AddDebug(Log log, StackFrame sf, string message) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         var prefix = "DEBUG " + log;
         if (!string.IsNullOrWhiteSpace(message))
@@ -57,9 +49,9 @@ internal class Balloon {
     }
 
     /// <summary>Add a DEBUG build error message (with an optional stack trace)</summary>
-    public Balloon AddDebug(StackFrame sf, Exception ex, bool trace = false) {
+    public Ballogger AddDebug(Log log, StackFrame sf, Exception ex, bool trace = false) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
-        var prefix = "DEBUG " + Log.ERR;
+        var prefix = "DEBUG " + log;
         this._messages.Add(trace
             ? string.Format(FmtErrorTrace, prefix, method, ex.Message, ex.StackTrace)
             : string.Format(FmtMethod, prefix, method, ex.Message));
@@ -72,7 +64,7 @@ internal class Balloon {
         string title = null
     ) {
         var combinedMessage = new StringBuilder();
-        if (this._messages.Count == 0) _ = this.Add(Log.WARN, "No messages to display");
+        if (this._messages.Count == 0) _ = this.Add(Log.WARN, null, "No messages to display");
 
         foreach (var message in this._messages) {
             Storage.GlobalLogging().Write(message);
@@ -98,10 +90,15 @@ internal class Balloon {
     ) {
         var combinedMessage = new StringBuilder();
         _ = combinedMessage.AppendLine(new string('-', 35));
-        if (this._messages.Count == 0) _ = this.Add(Log.WARN, "No messages to display");
+        if (this._messages.Count == 0) _ = this.Add(Log.WARN, null, "No messages to display");
 
-        foreach (var message in this._messages)
+        foreach (var message in this._messages) {
+            Storage.GlobalLogging().Write(message);
+#if RELEASE
+            if (message.StartsWith("DEBUG")) continue;
+#endif
             _ = combinedMessage.AppendLine("\u2588 " + message);
+        }
 
         ShowSingle(clickHandler, clickDescription, combinedMessage.ToString(), title);
         this.Clear();
@@ -124,7 +121,8 @@ internal class Balloon {
             title = Assembly.GetExecutingAssembly().GetName().Name;
 #pragma warning disable CA1416 // Validate platform compatibility
         var ri = new ResultItem {
-            Title = text.Trim(), Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
+            Title = text.Trim(),
+            Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
         };
         ri.ResultClicked += (_, _) => clickHandler();
 
