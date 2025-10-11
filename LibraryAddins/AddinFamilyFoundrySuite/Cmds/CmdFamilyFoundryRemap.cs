@@ -24,7 +24,6 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
 
         try {
             this.Init(
-                this._settings,
                 () => this._apsParams = this._settings.GetAPSParams()
             );
 

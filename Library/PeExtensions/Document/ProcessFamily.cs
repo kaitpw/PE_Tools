@@ -13,21 +13,24 @@ public static class DocumentProcessFamily {
 
     public static Document SaveFamily(
         this Document famDoc,
-        string saveLocation
+        List<string> saveLocations
     ) {
         if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
         if (famDoc.FamilyManager is null)
             throw new InvalidOperationException("Family documents FamilyManager is null.");
 
-        if (saveLocation is null) return famDoc;
-        if (!Directory.Exists(saveLocation)) _ = Directory.CreateDirectory(saveLocation);
+        if (saveLocations.Count == 0 || saveLocations.Count(l => l == null) > 0) return famDoc;
+        foreach (var location in saveLocations) {
+            if (!Directory.Exists(location)) _ = Directory.CreateDirectory(location);
 
-        var family = famDoc.OwnerFamily;
-        var familyFileName = $"{family.Name}.rfa";
-        var fullSavePath = Path.Combine(saveLocation, familyFileName);
+            var family = famDoc.OwnerFamily;
+            var familyFileName = $"{family.Name}.rfa";
+            var fullSavePath = Path.Combine(location, familyFileName);
 
-        var saveOptions = new SaveAsOptions { OverwriteExistingFile = true };
-        famDoc.SaveAs(fullSavePath, saveOptions);
+            var saveOptions = new SaveAsOptions { OverwriteExistingFile = true };
+            famDoc.SaveAs(fullSavePath, saveOptions);
+        }
+
         return famDoc;
     }
 

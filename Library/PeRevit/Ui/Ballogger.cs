@@ -35,7 +35,7 @@ internal class Ballogger {
     public Ballogger Add(Log log, StackFrame sf, Exception ex, bool trace = false) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         this._messages.Add(trace
-            ? string.Format(FmtErrorTrace, log, method, ex.Message, ex.StackTrace)
+            ? string.Format(FmtMethod, log, method, ex.ToStringDemystified())
             : string.Format(FmtMethod, log, method, ex.Message));
         return this;
     }
@@ -54,7 +54,7 @@ internal class Ballogger {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
         var prefix = "DEBUG " + log;
         this._messages.Add(trace
-            ? string.Format(FmtErrorTrace, prefix, method, ex.Message, ex.StackTrace)
+            ? string.Format(FmtMethod, prefix, method, ex.ToStringDemystified())
             : string.Format(FmtMethod, prefix, method, ex.Message));
         return this;
     }

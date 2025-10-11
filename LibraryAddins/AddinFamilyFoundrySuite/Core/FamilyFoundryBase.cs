@@ -13,17 +13,14 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
     public TProfile _profile { get; private set; }
 
     protected bool IsInitialized { get; private set; }
-    protected ILoadAndSaveOptions LoadAndSaveOptions { get; private set; }
 
 
-    public void Init(ILoadAndSaveOptions loadAndSaveOptions, Action? customInit = null) {
+    public void Init(Action? customInit = null) {
         var storageName = "FamilyFoundry";
 
         this.storage = new Storage(storageName);
         this._settings = this.storage.Settings().Json<TSettings>().Read();
         this._profile = this._settings.GetProfile();
-
-        this.LoadAndSaveOptions = loadAndSaveOptions;
 
         customInit?.Invoke();
         this.IsInitialized = true;
@@ -41,7 +38,7 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
         var familyActions = enqueuer.ToFamilyActions();
 
         if (doc.IsFamilyDocument) {
-            var saveLocation = this.GetSaveLocation(doc, this.LoadAndSaveOptions);
+            var saveLocation = this.GetSaveLocations(doc, this._settings);
 
             _ = doc
                 .ProcessFamily(familyActions)
@@ -56,31 +53,31 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
 
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, null, $"Processing family: {family.Name} (ID: {family.Id})");
-                var saveLocation = this.GetSaveLocation(doc, this.LoadAndSaveOptions);
+                var saveLocation = this.GetSaveLocations(doc, this._settings);
                 _ = doc
                     .EditFamily(family)
                     .ProcessFamily(familyActions)
                     .SaveFamily(saveLocation)
                     .LoadAndCloseFamily(doc, new EditAndLoadFamilyOptions());
-
             }
         }
 
         balloon.Show();
     }
 
-    private string GetSaveLocation(Document famDoc, ILoadAndSaveOptions options) {
+    private List<string> GetSaveLocations(Document famDoc, ILoadAndSaveOptions options) {
+        var saveLocations = new List<string>();
         if (options.SaveFamilyToInternalPath) {
             var saveLocation = this.storage.Output().GetFolderPath();
-            return saveLocation;
+            saveLocations.Add(saveLocation);
         }
 
         if (options.SaveFamilyToOutputDir) {
             var saveLocation = famDoc.PathName;
-            return saveLocation;
+            saveLocations.Add(saveLocation);
         }
 
-        return null;
+        return saveLocations;
     }
 }
 
