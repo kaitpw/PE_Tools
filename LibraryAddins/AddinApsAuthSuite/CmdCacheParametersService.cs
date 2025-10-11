@@ -10,15 +10,13 @@ public class CmdCacheParametersService : IExternalCommand {
         ExternalCommandData commandData,
         ref string message,
         ElementSet elements) {
-
-
         var cacheFilename = "parameters-service-cache.json";
         var apsParamsCache = Storage.GlobalState(cacheFilename).Json<ParametersApi.Parameters>();
 
         var svcAps = new Aps(new CacheParametersService());
         var _ = Task.Run(async () =>
             await svcAps.Parameters(new CacheParametersService()).GetParameters(
-                apsParamsCache, true)
+                apsParamsCache)
         ).Result;
 
         return Result.Succeeded;

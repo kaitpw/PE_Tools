@@ -1,12 +1,12 @@
 using AddinFamilyFoundrySuite.Core;
+using AddinFamilyFoundrySuite.Core.Operations.Doc;
+using AddinFamilyFoundrySuite.Core.Operations.Type;
 using AddinFamilyFoundrySuite.Core.Settings;
-using PeRevit.Families;
 using PeRevit.Ui;
 using PeServices.Aps.Models;
+using PeServices.Storage;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using PeServices.Storage;
-
 
 namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
@@ -23,7 +23,9 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            this.Init(() => {
+            var options = new LoadAndSaveOptionsClass();
+
+            this.Init(options, () => {
                 // test if the cache exists, if not throw error to prompt user to run command to generate cache
                 var tmpParams = this._settings.GetAPSParams();
                 if (tmpParams.Results == null) {
@@ -42,10 +44,9 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
                     Debug.WriteLine($"Types: {famDoc.FamilyManager.Types.Size}");
                     Debug.WriteLine($"Parameters: {famDoc.FamilyManager.Parameters.Size}");
                 })
-                .DocOperation(famDoc =>
-                    AddParams.ParamService(famDoc, this._apsParams, this._profile.ParamsAddPS.Filter))
-                .DocOperation(this.HydrateElectricalConnector)
-                .TypeOperation(famDoc => this.RemapParameters(famDoc, this._profile.ParamsRemap.RemapData));
+                .DocOperation(famDoc => famDoc.AddApsParams(this._apsParams, this._profile.ParamsAddPS.Filter))
+                .DocOperation(famDoc => famDoc.HydrateElectricalConnector())
+                .TypeOperation(famDoc => famDoc.RemapParameters(this._profile.ParamsRemap.RemapData));
 
             this.ProcessQueue(queue);
 
@@ -55,74 +56,23 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
             return Result.Cancelled;
         }
     }
+}
 
+public class LoadAndSaveOptionsClass : ILoadAndSaveOptions {
+    /// <summary>
+    ///     Load the family into the main model document
+    /// </summary>
+    public bool LoadFamily { get; set; } = true;
 
     /// <summary>
-    ///     Per-type remap method for use with the new fluent API
+    ///     Save the family to the internal path of the family document
     /// </summary>
-    private void RemapParameters(Document famDoc, List<ParamsRemap.RemapDataRecord> paramRemaps) {
-        foreach (var p in paramRemaps) {
-            try {
-                _ = famDoc.MapValue(p.CurrNameOrId, p.NewNameOrId, p.MappingPolicy);
-            } catch (Exception ex) {
-                Debug.WriteLine(ex.Message);
-            }
-        }
-    }
+    public bool SaveFamilyToInternalPath { get; set; } = false;
 
-    public void HydrateElectricalConnector(Document doc) {
-        var apparentPower = doc.FamilyManager.Parameters
-            .OfType<FamilyParameter>()
-            .FirstOrDefault(fp => fp.Definition.Name == "PE_E___ApparentPower");
-
-        doc.FamilyManager.SetFormula(apparentPower, "PE_E___Voltage * PE_E___MCA");
-
-        // Get all connector elements in the family
-        var connectorElements = new FilteredElementCollector(doc)
-            .OfClass(typeof(ConnectorElement))
-            .Cast<ConnectorElement>()
-            .Where(ce => ce.Domain == Domain.DomainElectrical)
-            .ToList();
-
-        if (!connectorElements.Any()) {
-            Console.WriteLine("No electrical connector elements found in family");
-            return;
-        }
-
-        foreach (var connectorElement in connectorElements) {
-            var voltageParam = connectorElement.get_Parameter(BuiltInParameter.RBS_ELEC_VOLTAGE);
-            if (voltageParam != null) {
-                // Find the PE_E___Voltage family parameter
-                var targetFamilyParam = doc.FamilyManager.Parameters
-                    .Cast<FamilyParameter>()
-                    .FirstOrDefault(fp => fp.Definition.Name == "PE_E___Voltage");
-                try {
-                    if (targetFamilyParam != null) {
-                        // Associate the connector voltage parameter with the family parameter
-                        doc.FamilyManager.AssociateElementParameterToFamilyParameter(voltageParam, targetFamilyParam);
-                    }
-                } catch (Exception ex) {
-                    Debug.WriteLine($"{voltageParam.Definition.Name} can't be assigned to " +
-                                    $"{targetFamilyParam?.Definition.Name} because {ex.Message}");
-                }
-            }
-
-            // Try to set apparent power parameter (5000VA)
-            var powerParam = connectorElement.get_Parameter(BuiltInParameter.RBS_ELEC_APPARENT_LOAD);
-            if (powerParam != null && !powerParam.IsReadOnly) {
-                var targetFamilyParam = doc.FamilyManager.Parameters
-                    .Cast<FamilyParameter>()
-                    .FirstOrDefault(fp => fp.Definition.Name == "PE_E___ApparentPower");
-                try {
-                    if (targetFamilyParam != null)
-                        doc.FamilyManager.AssociateElementParameterToFamilyParameter(powerParam, targetFamilyParam);
-                } catch (Exception ex) {
-                    Debug.WriteLine($"{powerParam.Definition.Name} can't be assigned to " +
-                                    $"{targetFamilyParam?.Definition.Name} because {ex.Message}");
-                }
-            }
-        }
-    }
+    /// <summary>
+    ///     Save the family to the output directory of the command
+    /// </summary>
+    public bool SaveFamilyToOutputDir { get; set; } = false;
 }
 
 public class SettingsRemap : BaseSettings<ProfileRemap> {

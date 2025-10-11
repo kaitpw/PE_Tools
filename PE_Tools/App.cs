@@ -30,7 +30,7 @@ internal class App : IExternalApplication {
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
         ButtonDataHydrator.AddButtonData([
             manageStackButton.AddPushButton<CmdApsAuthPKCE>("OAuth PKCE"),
-            manageStackButton.AddPushButton<CmdApsAuthNormal>("OAuth Normal"),
+            manageStackButton.AddPushButton<CmdApsAuthNormal>("OAuth Normal")
         ]);
 #endif
 

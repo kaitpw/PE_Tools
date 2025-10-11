@@ -50,7 +50,6 @@ public class GlobalLoggingManager {
     }
 }
 
-
 public class GlobalSettingsManager {
     private readonly string _basePath;
     private readonly string _settingsFilePath;

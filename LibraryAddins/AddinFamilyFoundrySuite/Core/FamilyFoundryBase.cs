@@ -1,9 +1,6 @@
 using AddinFamilyFoundrySuite.Core.Settings;
-using PeRevit.Families;
 using PeRevit.Ui;
-using PeServices.Aps.Models;
 using PeServices.Storage;
-using PeServices.Storage.Core;
 
 namespace AddinFamilyFoundrySuite.Core;
 
@@ -16,13 +13,17 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
     public TProfile _profile { get; private set; }
 
     protected bool IsInitialized { get; private set; }
+    protected ILoadAndSaveOptions LoadAndSaveOptions { get; private set; }
 
-    public void Init(Action? customInit = null) {
+
+    public void Init(ILoadAndSaveOptions loadAndSaveOptions, Action? customInit = null) {
         var storageName = "FamilyFoundry";
 
         this.storage = new Storage(storageName);
         this._settings = this.storage.Settings().Json<TSettings>().Read();
         this._profile = this._settings.GetProfile();
+
+        this.LoadAndSaveOptions = loadAndSaveOptions;
 
         customInit?.Invoke();
         this.IsInitialized = true;
@@ -39,9 +40,13 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
         var doc = enqueuer.doc;
         var familyActions = enqueuer.ToFamilyActions();
 
-        if (doc.IsFamilyDocument)
-            _ = FamUtils.EditOpenFamily(doc, familyActions);
-        else {
+        if (doc.IsFamilyDocument) {
+            var saveLocation = this.GetSaveLocation(doc, this.LoadAndSaveOptions);
+
+            var family = doc.ProcessFamily(familyActions)
+                .SaveFamily(saveLocation)
+                .Close(false);
+        } else {
             var families = new FilteredElementCollector(doc)
                 .OfClass(typeof(Family))
                 .Cast<Family>()
@@ -49,14 +54,66 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
                 .ToList();
 
             foreach (var family in families) {
+                var saveLocation = this.GetSaveLocation(doc, this.LoadAndSaveOptions);
+                var famDoc = DocumentProcessFamily.LoadFamily(doc.EditFamily(family)
+                        .ProcessFamily(familyActions)
+                        .SaveFamily(saveLocation)
+                    , doc, new EditAndLoadFamilyOptions());
+
                 _ = balloon.Add(Log.TEST, null, $"Processed family: {family.Name} (ID: {family.Id})");
-                // _ = FamUtils.EditAndLoad(doc, family, familyActions);  // Future: could be EditAndLoadAndSave, etc.
-                var savePath = this.storage.Output().GetFolderPath();
-                _ = FamUtils.EditAndLoadAndSave(doc, family, savePath,
-                    familyActions); // Future: could be EditAndLoadAndSave, etc.
             }
         }
 
         balloon.Show();
+    }
+
+    private string GetSaveLocation(Document famDoc, ILoadAndSaveOptions options) {
+        if (options.SaveFamilyToInternalPath) {
+            var saveLocation = this.storage.Output().GetFolderPath();
+            return saveLocation;
+        }
+
+        if (options.SaveFamilyToOutputDir) {
+            var saveLocation = famDoc.PathName;
+            return saveLocation;
+        }
+
+        return null;
+    }
+}
+
+public interface ILoadAndSaveOptions {
+    /// <summary>
+    ///     Load the family into the main model document
+    /// </summary>
+    bool LoadFamily { get; set; }
+
+    /// <summary>
+    ///     Save the family to the internal path of the family document
+    /// </summary>
+    bool SaveFamilyToInternalPath { get; set; }
+
+    /// <summary>
+    ///     Save the family to the output directory of the command
+    /// </summary>
+    bool SaveFamilyToOutputDir { get; set; }
+}
+
+internal class EditAndLoadFamilyOptions : IFamilyLoadOptions {
+    public bool OnFamilyFound(
+        bool familyInUse,
+        out bool overwriteParameterValues) {
+        overwriteParameterValues = true;
+        return true;
+    }
+
+    public bool OnSharedFamilyFound(
+        Family sharedFamily,
+        bool familyInUse,
+        out FamilySource source,
+        out bool overwriteParameterValues) {
+        source = FamilySource.Project;
+        overwriteParameterValues = true;
+        return true;
     }
 }

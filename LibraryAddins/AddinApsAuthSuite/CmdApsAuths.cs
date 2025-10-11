@@ -24,7 +24,6 @@ public class CmdApsAuthNormal : IExternalCommand {
     }
 }
 
-
 public class CmdApsAuthPKCE : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
@@ -43,7 +42,6 @@ public class CmdApsAuthPKCE : IExternalCommand {
         }
     }
 }
-
 
 public class ApsAuthNormal : Aps.IOAuthTokenProvider {
     public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsWebClientId1;
