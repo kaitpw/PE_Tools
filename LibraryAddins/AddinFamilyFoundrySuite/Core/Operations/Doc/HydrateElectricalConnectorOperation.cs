@@ -1,11 +1,18 @@
+using Autodesk.Revit.DB.Electrical;
+
 namespace AddinFamilyFoundrySuite.Core.Operations.Doc;
 
 public static class HydrateElectricalConnectorOperation {
     public static void HydrateElectricalConnector(this Document doc) {
+
+        var numberOfPoles = doc.FamilyManager.Parameters
+            .OfType<FamilyParameter>()
+            .FirstOrDefault(fp => fp.Definition.Name == "PE_E___NumberOfPoles");
+        _ = doc.FamilyManager.SetValueStrict(numberOfPoles, 2);
+
         var apparentPower = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
             .FirstOrDefault(fp => fp.Definition.Name == "PE_E___ApparentPower");
-
         doc.FamilyManager.SetFormula(apparentPower, "PE_E___Voltage * PE_E___MCA");
 
         // Get all connector elements in the family
@@ -16,8 +23,7 @@ public static class HydrateElectricalConnectorOperation {
             .ToList();
 
         if (!connectorElements.Any()) {
-            Console.WriteLine("No electrical connector elements found in family");
-            return;
+            connectorElements.Add(MakeElectricalConnector(doc));
         }
 
         foreach (var connectorElement in connectorElements) {
@@ -52,6 +58,48 @@ public static class HydrateElectricalConnectorOperation {
                                     $"{targetFamilyParam?.Definition.Name} because {ex.Message}");
                 }
             }
+
+            var polesParam = connectorElement.get_Parameter(BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES);
+            if (polesParam != null && !polesParam.IsReadOnly) {
+                var targetFamilyParam = doc.FamilyManager.Parameters
+                    .Cast<FamilyParameter>()
+                    .FirstOrDefault(fp => fp.Definition.Name == "PE_E___NumberOfPoles");
+                try {
+                    if (targetFamilyParam != null)
+                        doc.FamilyManager.AssociateElementParameterToFamilyParameter(polesParam, targetFamilyParam);
+                } catch (Exception ex) {
+                    Debug.WriteLine($"{polesParam.Definition.Name} can't be assigned to " +
+                                    $"{targetFamilyParam?.Definition.Name} because {ex.Message}");
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Make an electrical connector on the family at the origin
+    /// </summary>
+    private static ConnectorElement MakeElectricalConnector(this Document doc) {
+        var referenceCollector = new FilteredElementCollector(doc)
+            .OfClass(typeof(ReferencePlane))
+            .Cast<ReferencePlane>()
+            .FirstOrDefault(rp => rp.Name is "Center (Left/Right)" or "CenterLR");
+
+        Reference faceReference = null;
+
+        faceReference = new Reference(referenceCollector);
+
+        if (faceReference == null) {
+            throw new InvalidOperationException("Could not find a suitable planar face or reference plane to place the electrical connector on.");
+        }
+
+        try {
+            // Create the electrical connector using PowerCircuit system type
+            return ConnectorElement.CreateElectricalConnector(
+                doc,
+                ElectricalSystemType.PowerBalanced,
+                faceReference);
+        } catch (Exception ex) {
+            throw new InvalidOperationException($"Failed to create electrical connector: {ex.Message}", ex);
         }
     }
 }
