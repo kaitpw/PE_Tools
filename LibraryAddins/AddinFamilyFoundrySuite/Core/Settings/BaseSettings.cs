@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Settings;
 
-public class BaseSettings<T> where T : BaseProfileSettings, new() {
+public class BaseSettings<T> : ILoadAndSaveOptions where T : BaseProfileSettings, new() {
     [Description(
         "Use cached Parameters Service data instead of downloading from APS on every run. " +
         "Only set to true if you are sure no one has changed the param definitions since the last time you opened Revit " +

@@ -23,20 +23,10 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            var options = new LoadAndSaveOptionsClass();
-
             this.Init(
-                options,
-                () => {
-                    var tmpParams = this._settings.GetAPSParams();
-                    if (tmpParams.Results == null) {
-                        throw new InvalidOperationException(
-                            $"This Family Foundry command requires cached parameters data, but no cached data exists. " +
-                            $"Run the \"Cache Parameters Service\" command on a Revit version above 2024 to generate the cache.");
-                    }
-
-                    this._apsParams = tmpParams;
-                });
+                this._settings,
+                () => this._apsParams = this._settings.GetAPSParams()
+            );
 
             var queue = new OperationEnqueuer(doc)
                 .DocOperation(famDoc => {
@@ -59,26 +49,15 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
     }
 }
 
-public class LoadAndSaveOptionsClass : ILoadAndSaveOptions {
-    /// <summary>
-    ///     Load the family into the main model document
-    /// </summary>
-    public bool LoadFamily { get; set; } = true;
-
-    /// <summary>
-    ///     Save the family to the internal path of the family document
-    /// </summary>
-    public bool SaveFamilyToInternalPath { get; set; } = false;
-
-    /// <summary>
-    ///     Save the family to the output directory of the command
-    /// </summary>
-    public bool SaveFamilyToOutputDir { get; set; } = false;
-}
-
 public class SettingsRemap : BaseSettings<ProfileRemap> {
-    public ParametersApi.Parameters GetAPSParams() =>
-        Storage.GlobalState("parameters-service-cache.json").Json<ParametersApi.Parameters>().Read();
+    public ParametersApi.Parameters GetAPSParams() {
+        var apsParams = Storage.GlobalState("parameters-service-cache.json").Json<ParametersApi.Parameters>().Read();
+        if (apsParams.Results != null) return apsParams;
+
+        throw new InvalidOperationException(
+            $"This Family Foundry command requires cached parameters data, but no cached data exists. " +
+            $"Run the \"Cache Parameters Service\" command on a Revit version above 2024 to generate the cache.");
+    }
 }
 
 public class ProfileRemap : BaseProfileSettings {
