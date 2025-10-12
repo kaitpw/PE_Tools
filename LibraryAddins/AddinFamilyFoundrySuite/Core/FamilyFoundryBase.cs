@@ -40,10 +40,10 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
         if (doc.IsFamilyDocument) {
             var saveLocation = this.GetSaveLocations(doc, this._settings);
 
+
             _ = doc
                 .ProcessFamily(familyActions)
-                .SaveFamily(saveLocation)
-                .Close(false);
+                .SaveFamily(saveLocation);
         } else {
             var families = new FilteredElementCollector(doc)
                 .OfClass(typeof(Family))

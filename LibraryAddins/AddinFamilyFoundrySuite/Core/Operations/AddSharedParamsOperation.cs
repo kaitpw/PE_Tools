@@ -1,4 +1,4 @@
-namespace AddinFamilyFoundrySuite.Core.Operations.Doc;
+namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public static class AddSharedParamsOperation {
     public static List<Result<FamilyParameter>> AddSharedParams(

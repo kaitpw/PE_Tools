@@ -1,6 +1,5 @@
 using AddinFamilyFoundrySuite.Core;
-using AddinFamilyFoundrySuite.Core.Operations.Doc;
-using AddinFamilyFoundrySuite.Core.Operations.Type;
+using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.Settings;
 using PeRevit.Ui;
 using PeServices.Aps.Models;
@@ -23,20 +22,21 @@ public class CmdFamilyFoundryRemap : FamilyFoundryBase<SettingsRemap, ProfileRem
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            this.Init(
-                () => this._apsParams = this._settings.GetAPSParams()
+            this.Init(() => this._apsParams = this._settings.GetAPSParams()
             );
 
-            var queue = new OperationEnqueuer(doc)
-                .DocOperation(famDoc => {
-                    var familyName = famDoc.OwnerFamily?.Name ?? "Unknown";
-                    Debug.WriteLine($"\nProcessing family: {familyName}");
-                    Debug.WriteLine($"Types: {famDoc.FamilyManager.Types.Size}");
-                    Debug.WriteLine($"Parameters: {famDoc.FamilyManager.Parameters.Size}");
-                })
-                .DocOperation(famDoc => famDoc.AddApsParams(this._apsParams, this._profile.ParamsAddPS.Filter))
-                .DocOperation(famDoc => famDoc.HydrateElectricalConnector())
-                .TypeOperation(famDoc => famDoc.RemapParameters(this._profile.ParamsRemap.RemapData));
+            // Prepare settings for operations
+            this._profile.AddApsParams.ApsParams = this._apsParams;
+
+            var queue = new OperationEnqueuer(doc, this._profile)
+                .Add(new AddApsParamsOperationTyped())
+                .Add(new HydrateElectricalConnectorOperationTyped())
+                .Add(new RemapParamsOperationTyped());
+
+            // Get metadata for debugging/logging
+            var metadata = queue.GetOperationMetadata();
+            foreach (var op in metadata)
+                Debug.WriteLine($"[Batch {op.BatchGroup}] {op.Type}: {op.Name} - {op.Description}");
 
             this.ProcessQueue(queue);
 
@@ -60,11 +60,12 @@ public class SettingsRemap : BaseSettings<ProfileRemap> {
 }
 
 public class ProfileRemap : BaseProfileSettings {
-    [Description("Parameters adding settings")]
+    // New typed operation settings (automatically discovered)
+    [Description("Settings for adding APS parameters")]
     [Required]
-    public ParamsAddPS ParamsAddPS { get; init; } = new();
+    public AddApsParamsSettings AddApsParams { get; init; } = new();
 
-    [Description("Parameters remap settings")]
+    [Description("Settings for remapping parameters")]
     [Required]
-    public ParamsRemap ParamsRemap { get; init; } = new();
+    public RemapParamsSettings RemapParams { get; init; } = new();
 }

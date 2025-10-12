@@ -1,12 +1,17 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
+namespace AddinFamilyFoundrySuite.Core.Operations;
 
-namespace AddinFamilyFoundrySuite.Core.Settings;
+public class AddApsParamsSettings : IOperationSettings {
+    [Description("APS Parameters data")] public ParamModel ApsParams { get; set; }
 
-public class ParamsAddPS {
-    [Required] public List<string> IncludeNamesEqualing { get; init; } = [];
+    [Description("Filter function for APS parameters")]
+    [Required]
+    public List<string> IncludeNamesEqualing { get; init; } = [];
+
     [Required] public List<string> ExcludeNamesEqualing { get; init; } = [];
     [Required] public List<string> IncludeNamesContaining { get; init; } = [];
     [Required] public List<string> ExcludeNamesContaining { get; init; } = [];
@@ -34,14 +39,11 @@ public class ParamsAddPS {
     }
 }
 
-public class AddParamsFP {
-    [Description(
-        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
-    [Required]
-    public bool OverrideExistingValues { get; set; } = true;
-    // public FpRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
-    //
-    // public class FpRecoverFromErrorSettings {
-    //     public bool DangerouslyReplaceParameterWithMatchingName;
-    // }
+public class AddApsParamsOperationTyped : Operation<AddApsParamsSettings> {
+    public override OperationType Type => OperationType.Doc;
+    public override string Name => "Add APS Parameters";
+    public override string Description => "Download and add shared parameters from Autodesk Parameters Service";
+
+    protected override void ExecuteCore(Document doc, AddApsParamsSettings settings) =>
+        _ = doc.AddApsParams(settings.ApsParams, settings.Filter);
 }

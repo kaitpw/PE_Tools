@@ -1,4 +1,9 @@
-namespace AddinFamilyFoundrySuite.Core.Operations.Doc;
+// TODO: Migrate this!!!!!!!!!!
+
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
+namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public static class AddFamilyParamsOperation {
     public static List<Result<FamilyParameter>> AddFamilyParams(
@@ -33,4 +38,16 @@ public static class AddFamilyParamsOperation {
         public bool IsInstance { get; init; } = true;
         public object Value { get; init; }
     }
+}
+
+public class AddParamsFP {
+    [Description(
+        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
+    [Required]
+    public bool OverrideExistingValues { get; set; } = true;
+    // public FpRecoverFromErrorSettings RecoverFromErrorSettings { get; init; } = new();
+    //
+    // public class FpRecoverFromErrorSettings {
+    //     public bool DangerouslyReplaceParameterWithMatchingName;
+    // }
 }

@@ -1,7 +1,7 @@
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
-namespace AddinFamilyFoundrySuite.Core.Operations.Doc;
+namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public static class AddApsParamsOperation {
     public static List<Result<SharedParameterElement>> AddApsParams(

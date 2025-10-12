@@ -1,10 +1,9 @@
 using Autodesk.Revit.DB.Electrical;
 
-namespace AddinFamilyFoundrySuite.Core.Operations.Doc;
+namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public static class HydrateElectricalConnectorOperation {
     public static void HydrateElectricalConnector(this Document doc) {
-
         var numberOfPoles = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
             .FirstOrDefault(fp => fp.Definition.Name == "PE_E___NumberOfPoles");
@@ -22,9 +21,7 @@ public static class HydrateElectricalConnectorOperation {
             .Where(ce => ce.Domain == Domain.DomainElectrical)
             .ToList();
 
-        if (!connectorElements.Any()) {
-            connectorElements.Add(MakeElectricalConnector(doc));
-        }
+        if (!connectorElements.Any()) connectorElements.Add(MakeElectricalConnector(doc));
 
         foreach (var connectorElement in connectorElements) {
             var voltageParam = connectorElement.get_Parameter(BuiltInParameter.RBS_ELEC_VOLTAGE);
@@ -76,7 +73,7 @@ public static class HydrateElectricalConnectorOperation {
     }
 
     /// <summary>
-    /// Make an electrical connector on the family at the origin
+    ///     Make an electrical connector on the family at the origin
     /// </summary>
     private static ConnectorElement MakeElectricalConnector(this Document doc) {
         var referenceCollector = new FilteredElementCollector(doc)
@@ -89,7 +86,8 @@ public static class HydrateElectricalConnectorOperation {
         faceReference = new Reference(referenceCollector);
 
         if (faceReference == null) {
-            throw new InvalidOperationException("Could not find a suitable planar face or reference plane to place the electrical connector on.");
+            throw new InvalidOperationException(
+                "Could not find a suitable planar face or reference plane to place the electrical connector on.");
         }
 
         try {
