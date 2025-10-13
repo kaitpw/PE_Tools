@@ -17,9 +17,8 @@ public class MapParams : IOperation<MapParamsSettings> {
             try {
                 var targetParam = doc.FamilyManager.FindParameter(p.NewNameOrId);
                 var sourceParam = doc.FamilyManager.FindParameter(p.CurrNameOrId);
-                var sourceValue = doc.GetValue(sourceParam);
 
-                _ = doc.SetValue(targetParam, sourceValue, p.MappingPolicy);
+                _ = doc.SetValue(targetParam, sourceParam, p.MappingPolicy);
             } catch (Exception ex) {
                 Debug.WriteLine(ex.Message);
             }
@@ -37,7 +36,7 @@ public class MapParamsSettings {
         public string NewNameOrId { get; set; }
 
         [Description("Mapping policy to use for the remapping. Strict will be used when none is specified.")]
-        [EnumConstraint("Strict", "AllowStorageTypeCoercion", "PeElectrical")]
-        public string MappingPolicy { get; set; } = "AllowStorageTypeCoercion"; // Default policy
+        [EnumConstraint("CoerceByStorageType", "CoerceElectrical")]
+        public string MappingPolicy { get; set; } = "CoerceByStorageType"; // Default policy
     }
 }

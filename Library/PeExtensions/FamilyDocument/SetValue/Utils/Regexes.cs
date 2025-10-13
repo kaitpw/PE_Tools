@@ -11,7 +11,7 @@ public static class Regexes {
         var firstChar = trimmed[0];
         if (!char.IsDigit(firstChar) && firstChar != '-') return false;
 
-        var numericString = CanExtractIntRegexCompiled.Match(trimmed).Value;
+        var numericString = Regex.Match(trimmed, @"^-?\d+").Value;
         return !string.IsNullOrWhiteSpace(numericString)
                && int.TryParse(
                    numericString,
@@ -29,7 +29,7 @@ public static class Regexes {
         var firstChar = trimmed[0];
         if (!char.IsDigit(firstChar) && firstChar != '-' && firstChar != '.') return false;
 
-        var numericString = CanExtractDoubleRegexCompiled.Match(trimmed).Value;
+        var numericString = Regex.Match(trimmed, @"^-?\d*\.?\d+").Value;
         return !string.IsNullOrWhiteSpace(numericString)
                && double.TryParse(
                    numericString,
@@ -41,7 +41,7 @@ public static class Regexes {
 
     public static int ExtractInteger(string input) {
         var trimmed = input.Trim();
-        var match = ExtractIntRegexCompiled.Match(trimmed);
+        var match = Regex.Match(trimmed, @"^-?\d+");
 
         return !match.Success
             ? throw new ArgumentException(
@@ -53,7 +53,7 @@ public static class Regexes {
 
     public static double ExtractDouble(string input) {
         var trimmed = input.Trim();
-        var match = ExtractDoubleRegexCompiled.Match(trimmed);
+        var match = Regex.Match(trimmed, @"^-?\d*\.?\d+");
 
         return !match.Success
             ? throw new ArgumentException(
@@ -62,13 +62,4 @@ public static class Regexes {
             )
             : double.Parse(match.Value, CultureInfo.InvariantCulture);
     }
-#pragma warning disable SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
-    private static readonly Regex CanExtractDoubleRegexCompiled = new(@"^-?\d*\.?\d+", RegexOptions.Compiled);
-
-    private static readonly Regex ExtractIntRegexCompiled = new(@"^-?\d+", RegexOptions.Compiled);
-
-    private static readonly Regex ExtractDoubleRegexCompiled = new(@"^-?\d*\.?\d+", RegexOptions.Compiled);
-
-    private static readonly Regex CanExtractIntRegexCompiled = new(@"^-?\d+", RegexOptions.Compiled);
-#pragma warning restore SYSLIB1045 // Convert to 'GeneratedRegexAttribute'.
 }

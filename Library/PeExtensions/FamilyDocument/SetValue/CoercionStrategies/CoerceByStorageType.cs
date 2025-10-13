@@ -6,13 +6,9 @@ namespace PeExtensions.FamDocument.SetValue.CoercionStrategies;
 ///     Storage type coercion strategy - handles cases where storage types differ but data types are compatible.
 ///     Implements comprehensive storage type conversions based on Revit's parameter system.
 /// </summary>
-public class CoerceByStorageType : BaseCoercionStrategy {
+public class CoerceByStorageType : BaseParamCoercionStrategy {
     public CoerceByStorageType(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
         base(famDoc, sourceParam, targetParam) {
-    }
-
-    public CoerceByStorageType(Document famDoc, object sourceValue, FamilyParameter targetParam) :
-        base(famDoc, sourceValue, targetParam) {
     }
 
 

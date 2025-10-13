@@ -5,22 +5,15 @@ namespace PeExtensions.FamDocument.SetValue.CoercionStrategies;
 /// <summary>
 ///     Electrical coercion strategy - converts numeric/string values to electrical parameters with unit conversion.
 /// </summary>
-public class CoerceElectrical : BaseCoercionStrategy {
+public class CoerceElectrical : BaseParamCoercionStrategy {
     public CoerceElectrical(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
         base(famDoc, sourceParam, targetParam) {
     }
 
-    public CoerceElectrical(Document famDoc, object sourceValue, FamilyParameter targetParam) :
-        base(famDoc, sourceValue, targetParam) {
-    }
-
     public override bool CanMap() {
         var isTargetElectrical = this.TargetDataType?.TypeId.Contains(".electrical:") == true;
-
-        var isSourceSpecTypeValid = new[] { SpecTypeId.String.Text, SpecTypeId.Number, SpecTypeId.Int.Integer }
-            .Contains(this.SourceDataType);
-
-        return isTargetElectrical && isSourceSpecTypeValid;
+        var canExtractDouble = Regexes.CanExtractDouble(this.SourceValue.ToString());
+        return isTargetElectrical && canExtractDouble;
     }
 
     public override Result<FamilyParameter> Map() {

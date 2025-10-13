@@ -2,23 +2,23 @@ using PeExtensions.FamDocument.SetValue.CoercionStrategies;
 
 namespace PeExtensions.FamDocument.SetValue;
 
-public static class CoercionStrategyRegistry {
-    private static readonly Dictionary<string, Func<Document, object, FamilyParameter, ICoercionStrategy>>
+public static class ParamCoercionStrategyRegistry {
+    private static readonly Dictionary<string, Func<Document, FamilyParameter, FamilyParameter, IBaseCoercionStrategy>>
         _factories = new(StringComparer.OrdinalIgnoreCase) {
-            ["AllowStorageTypeCoercion"] = (doc, value, target) => new CoerceByStorageType(doc, value, target),
-            ["PeElectrical"] = (doc, value, target) => new CoerceElectrical(doc, value, target)
+            [nameof(CoerceByStorageType)] = (doc, source, target) => new CoerceByStorageType(doc, source, target),
+            [nameof(CoerceElectrical)] = (doc, source, target) => new CoerceElectrical(doc, source, target)
         };
 
     /// <summary>
     ///     Gets the strategy for a given policy name when coercing from source value to target parameter.
     /// </summary>
-    public static ICoercionStrategy GetStrategy(
+    public static IBaseCoercionStrategy GetStrategy(
         string strategyName,
         Document document,
-        object sourceValue,
+        FamilyParameter sourceParam,
         FamilyParameter targetParam
     ) => _factories.TryGetValue(strategyName, out var factory)
-        ? factory(document, sourceValue, targetParam)
+        ? factory(document, sourceParam, targetParam)
         : throw new ArgumentException(
             $"Unknown coercion strategy: {strategyName}. Available strategies: {string.Join(", ", _factories.Keys)}");
 
@@ -28,10 +28,10 @@ public static class CoercionStrategyRegistry {
 /// <summary>
 ///     Strategy that chains multiple strategies together. Tries each in order until one can handle the coercion.
 /// </summary>
-public class ChainedMappingStrategy : ICoercionStrategy {
-    private readonly ICoercionStrategy[] _strategies;
+public class ChainedMappingStrategy : IBaseCoercionStrategy {
+    private readonly IBaseCoercionStrategy[] _strategies;
 
-    public ChainedMappingStrategy(params ICoercionStrategy[] strategies) {
+    public ChainedMappingStrategy(params IBaseCoercionStrategy[] strategies) {
         this._strategies = strategies ?? throw new ArgumentNullException(nameof(strategies));
         if (this._strategies.Length == 0)
             throw new ArgumentException("At least one strategy must be provided", nameof(strategies));

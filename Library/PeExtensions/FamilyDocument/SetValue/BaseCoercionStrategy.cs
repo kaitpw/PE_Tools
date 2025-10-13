@@ -5,9 +5,10 @@ namespace PeExtensions.FamDocument.SetValue;
 ///     Interface for parameter mapping strategies.
 ///     Each strategy decides if it can handle a mapping and executes the mapping.
 /// </summary>
-public interface ICoercionStrategy {
+public interface IBaseCoercionStrategy {
     bool CanMap();
     Result<FamilyParameter> Map();
+
 }
 
 /// <summary>
@@ -15,17 +16,18 @@ public interface ICoercionStrategy {
 ///     Implements the IMappingStrategy interface and predefines useful properties.
 ///     If the strategy is simple, implement the IMappingStrategy interface directly to reduce per overhead.
 /// </summary>
-public abstract class BaseCoercionStrategy : ICoercionStrategy {
+public abstract class BaseParamCoercionStrategy : IBaseCoercionStrategy {
+
     /// <summary>
-    ///     Constructor for mapping from direct value to target parameter
+    ///     Constructor for mapping from source parameter to target parameter
     /// </summary>
-    protected BaseCoercionStrategy(Document famDoc, object sourceValue, FamilyParameter targetParam) {
+    protected BaseParamCoercionStrategy(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) {
         this.FamilyDocument = famDoc;
         this.FamilyManager = famDoc.FamilyManager;
 
-        this.SourceValue = sourceValue;
-        this.SourceValueString = null;
-        this.SourceDataType = null;
+        this.SourceValue = famDoc.GetValue(sourceParam);
+        this.SourceValueString = this.FamilyManager.CurrentType.AsValueString(sourceParam);
+        this.SourceDataType = sourceParam.Definition.GetDataType();
 
         this.TargetParam = targetParam;
         this.TargetDataType = targetParam.Definition.GetDataType();
@@ -35,6 +37,27 @@ public abstract class BaseCoercionStrategy : ICoercionStrategy {
         } catch {
         } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
     }
+
+    // MOVE TO SEPARATE BASE CLASS
+    // /// <summary>
+    // ///     Constructor for mapping from direct value to target parameter
+    // /// </summary>
+    // protected BaseCoercionStrategy(Document famDoc, object sourceValue, FamilyParameter targetParam) {
+    //     this.FamilyDocument = famDoc;
+    //     this.FamilyManager = famDoc.FamilyManager;
+
+    //     this.SourceValue = sourceValue;
+    //     this.SourceValueString = null;
+    //     this.SourceDataType = null;
+
+    //     this.TargetParam = targetParam;
+    //     this.TargetDataType = targetParam.Definition.GetDataType();
+    //     this.TargetStorageType = targetParam.StorageType;
+    //     try {
+    //         this.TargetUnitType = famDoc.GetUnits().GetFormatOptions(this.TargetDataType).GetUnitTypeId();
+    //     } catch {
+    //     } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
+    // }
 
     public Document FamilyDocument { get; protected init; }
     public FamilyManager FamilyManager { get; protected init; }
@@ -111,3 +134,4 @@ public abstract class BaseCoercionStrategy : ICoercionStrategy {
     /// </summary>
     public abstract Result<FamilyParameter> Map();
 }
+

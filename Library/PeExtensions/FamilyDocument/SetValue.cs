@@ -60,20 +60,49 @@ public static class FamilyDocumentSetValue {
     /// </remarks>
     public static FamilyParameter SetValue(this Document famDoc,
         FamilyParameter targetParam,
-        object sourceValue,
+        FamilyParameter sourceParam,
         string strategyName = null
     ) {
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
-        if (strategyName is null) return SetValueStrict(famDoc, targetParam, sourceValue);
-        var strategy = CoercionStrategyRegistry.GetStrategy(strategyName, famDoc, sourceValue, targetParam);
+        if (strategyName is null) return SetValueStrict(famDoc, targetParam, famDoc.GetValue(sourceParam));
+        var strategy = ParamCoercionStrategyRegistry.GetStrategy(strategyName, famDoc, sourceParam, targetParam);
         if (!strategy.CanMap()) {
             var targetDataType = targetParam?.Definition.GetDataType();
             throw new Exception(
-                $"Cannot map value '{sourceValue}' to {targetParam.Definition.Name} ({targetDataType}) using policy '{strategyName ?? "default"}'");
+                $"Cannot map '{sourceParam.Definition.Name}' to '{targetParam.Definition.Name}' ({targetDataType}) using policy '{strategyName ?? "default"}'");
         }
 
         var (param, err) = strategy.Map();
         if (err is not null) throw err;
         return param;
     }
+
+    // add support for value mapping strategies later
+    // /// <summary>
+    // ///     Set a family's parameter value on the <c>FamilyManager.CurrentType</c> using the specified strategy.
+    // ///     If no strategy is specified, the value will be set using the <c>SetValueStrict</c> method.
+    // /// </summary>
+    // /// <remarks>
+    // ///     YOU MUST set FamilyManager.CurrentType BEFORE using this method. Both getting and setting CurrentType
+    // ///     are VERY expensive operations, thus it is not done inside this method. Do it at the highest-level possible
+    // ///     in your loop/s.
+    // /// </remarks>
+    // public static FamilyParameter SetValue(this Document famDoc,
+    //     FamilyParameter targetParam,
+    //     object sourceValue,
+    //     string strategyName = null
+    // ) {
+    //     if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
+    //     if (strategyName is null) return SetValueStrict(famDoc, targetParam, sourceValue);
+    //     var strategy = ParamCoercionStrategyRegistry.GetStrategy(strategyName, famDoc, sourceValue, targetParam);
+    //     if (!strategy.CanMap()) {
+    //         var targetDataType = targetParam?.Definition.GetDataType();
+    //         throw new Exception(
+    //             $"Cannot map value '{sourceValue}' to {targetParam.Definition.Name} ({targetDataType}) using policy '{strategyName ?? "default"}'");
+    //     }
+
+    //     var (param, err) = strategy.Map();
+    //     if (err is not null) throw err;
+    //     return param;
+    // }
 }
