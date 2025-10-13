@@ -1,10 +1,12 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace AddinFamilyFoundrySuite.Core.MapValue;
+namespace AddinFamilyFoundrySuite.Core.Utils;
 
-public static class Regexes {
-    public static bool CanExtractInteger(string input) {
+public static class Regexes
+{
+    public static bool CanExtractInteger(string input)
+    {
         if (string.IsNullOrWhiteSpace(input)) return false;
         var trimmed = input.Trim();
         if (string.IsNullOrWhiteSpace(trimmed)) return false;
@@ -22,7 +24,8 @@ public static class Regexes {
     }
 
     // Check if string can be converted to double (similar rules)
-    public static bool CanExtractDouble(string input) {
+    public static bool CanExtractDouble(string input)
+    {
         if (string.IsNullOrWhiteSpace(input)) return false;
         var trimmed = input.Trim();
         if (string.IsNullOrWhiteSpace(trimmed)) return false;
@@ -39,7 +42,8 @@ public static class Regexes {
                );
     }
 
-    public static int ExtractInteger(string input) {
+    public static int ExtractInteger(string input)
+    {
         var trimmed = input.Trim();
         var match = ExtractIntRegexCompiled.Match(trimmed);
 
@@ -51,7 +55,8 @@ public static class Regexes {
             : int.Parse(match.Value, CultureInfo.InvariantCulture);
     }
 
-    public static double ExtractDouble(string input) {
+    public static double ExtractDouble(string input)
+    {
         var trimmed = input.Trim();
         var match = ExtractDoubleRegexCompiled.Match(trimmed);
 

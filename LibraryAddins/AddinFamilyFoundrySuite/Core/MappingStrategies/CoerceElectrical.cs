@@ -1,14 +1,16 @@
-namespace AddinFamilyFoundrySuite.Core.MapValue;
+using AddinFamilyFoundrySuite.Core.Utils;
+
+namespace AddinFamilyFoundrySuite.Core.MappingStrategies;
 
 /// <summary>
 ///     Electrical coercion strategy - converts numeric/string values to electrical parameters with unit conversion.
 /// </summary>
-public class ElectricalCoercionStrategy : MappingStrategyBase {
-    public ElectricalCoercionStrategy(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
+public class CoerceElectrical : MappingStrategyBase {
+    public CoerceElectrical(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
         base(famDoc, sourceParam, targetParam) {
     }
 
-    public ElectricalCoercionStrategy(Document famDoc, object sourceValue, FamilyParameter targetParam) :
+    public CoerceElectrical(Document famDoc, object sourceValue, FamilyParameter targetParam) :
         base(famDoc, sourceValue, targetParam) {
     }
 

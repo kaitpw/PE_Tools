@@ -1,18 +1,20 @@
-namespace AddinFamilyFoundrySuite.Core.MapValue;
+using AddinFamilyFoundrySuite.Core.MappingStrategies;
+
+namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
-///     Registry for mapping policies. Maps policy names to strategy factory functions.
+///     Registry for mapping strategies. Maps strategy names to strategy factory functions.
 ///     Keeps things simple without heavy DI frameworks.
 /// </summary>
-public static class MappingPolicyRegistry {
+public static class MappingStrategyRegistry {
     private static readonly Dictionary<string, Func<Document, FamilyParameter, FamilyParameter, IMappingStrategy>>
         _strategyFactories = new(StringComparer.OrdinalIgnoreCase) {
-            ["Strict"] = (doc, source, target) => new StrictMappingStrategy(doc, source, target),
+            ["Strict"] = (doc, source, target) => new Strict(doc, source, target),
             ["AllowStorageTypeCoercion"] =
-                (doc, source, target) => new StorageTypeCoercionStrategy(doc, source, target),
+                (doc, source, target) => new CoerceByStorageType(doc, source, target),
             ["PeElectrical"] = (doc, source, target) => new ChainedMappingStrategy(
-                new StrictMappingStrategy(doc, source, target),
-                new ElectricalCoercionStrategy(doc, source, target)
+                new Strict(doc, source, target),
+                new CoerceElectrical(doc, source, target)
             )
             // ["AllowAllCoercion"] = (doc, source, target) => new ChainedMappingStrategy(
             //     new ElectricalCoercionStrategy(doc, source, target),
@@ -22,11 +24,11 @@ public static class MappingPolicyRegistry {
 
     private static readonly Dictionary<string, Func<Document, object, FamilyParameter, IMappingStrategy>>
         _valueStrategyFactories = new(StringComparer.OrdinalIgnoreCase) {
-            ["Strict"] = (doc, value, target) => new StrictMappingStrategy(doc, value, target),
-            ["AllowStorageTypeCoercion"] = (doc, value, target) => new StorageTypeCoercionStrategy(doc, value, target),
+            ["Strict"] = (doc, value, target) => new Strict(doc, value, target),
+            ["AllowStorageTypeCoercion"] = (doc, value, target) => new CoerceByStorageType(doc, value, target),
             ["PeElectrical"] = (doc, value, target) => new ChainedMappingStrategy(
-                new StrictMappingStrategy(doc, value, target),
-                new ElectricalCoercionStrategy(doc, value, target)
+                new Strict(doc, value, target),
+                new CoerceElectrical(doc, value, target)
             )
             // ["AllowAllCoercion"] = (doc, value, target) => new ChainedMappingStrategy(
             //     new ElectricalCoercionStrategy(doc, value, target),

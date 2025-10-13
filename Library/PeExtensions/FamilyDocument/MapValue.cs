@@ -1,4 +1,4 @@
-using AddinFamilyFoundrySuite.Core.MapValue;
+using AddinFamilyFoundrySuite.Core;
 
 namespace PeExtensions;
 
@@ -22,7 +22,7 @@ public static class FamilyDocumentMapValue {
         var targetParam = famDoc.FamilyManager.FindParameter(targetName);
         if (sourceParam == null) return new Exception($"Source parameter {sourceName} not found");
         if (targetParam == null) return new Exception($"Target parameter {targetName} not found");
-        var strategy = MappingPolicyRegistry.GetStrategy(policy, famDoc, sourceParam, targetParam);
+        var strategy = MappingStrategyRegistry.GetStrategy(policy, famDoc, sourceParam, targetParam);
 
         if (!strategy.CanMap()) {
             var sourceDataType = sourceParam?.Definition.GetDataType();
@@ -50,7 +50,7 @@ public static class FamilyDocumentMapValue {
 
         var targetParam = famDoc.FamilyManager.FindParameter(targetName);
         if (targetParam == null) return new Exception($"Target parameter {targetName} not found");
-        var strategy = MappingPolicyRegistry.GetStrategy(policy, famDoc, sourceValue, targetParam);
+        var strategy = MappingStrategyRegistry.GetStrategy(policy, famDoc, sourceValue, targetParam);
 
         if (!strategy.CanMap()) {
             var targetDataType = targetParam?.Definition.GetDataType();

@@ -1,11 +1,13 @@
-namespace AddinFamilyFoundrySuite.Core.MapValue;
+using AddinFamilyFoundrySuite.Core.Utils;
+
+namespace AddinFamilyFoundrySuite.Core.MappingStrategies;
 
 /// <summary>
 ///     Strict mapping strategy - only maps when data types are identical.
 ///     Implemented as an IMappingStrategy interface for perf reasons.
 /// </summary>
-public class StrictMappingStrategy : IMappingStrategy {
-    public StrictMappingStrategy(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) {
+public class Strict : IMappingStrategy {
+    public Strict(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) {
         this.FamilyManager = famDoc.FamilyManager;
         this.SourceValue = this.FamilyManager.GetValue(sourceParam);
         this.SourceDataType = sourceParam.Definition.GetDataType();
@@ -13,7 +15,7 @@ public class StrictMappingStrategy : IMappingStrategy {
         this.TargetParam = targetParam;
     }
 
-    public StrictMappingStrategy(Document famDoc, object sourceValue, FamilyParameter targetParam) {
+    public Strict(Document famDoc, object sourceValue, FamilyParameter targetParam) {
         this.FamilyManager = famDoc.FamilyManager;
         this.SourceValue = sourceValue;
         this.SourceDataType = null; // No source parameter, so no data type available

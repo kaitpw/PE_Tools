@@ -4,8 +4,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class RemapParams : IOperation<RemapParamsSettings> {
-    public RemapParamsSettings Settings { get; set; }
+public class MapParams : IOperation<MapParamsSettings> {
+    public MapParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Type;
     public string Name => "Remap Parameters";
     public string Description => "Remap parameter values between parameters for each family type";
@@ -21,7 +21,7 @@ public class RemapParams : IOperation<RemapParamsSettings> {
     }
 }
 
-public class RemapParamsSettings {
+public class MapParamsSettings {
     [Description("List of parameter remapping rules")]
     [Required]
     public List<RemapDataRecord> RemapData { get; set; } = [];

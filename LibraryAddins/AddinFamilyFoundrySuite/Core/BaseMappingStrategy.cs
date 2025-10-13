@@ -1,5 +1,5 @@
 #nullable enable
-namespace AddinFamilyFoundrySuite.Core.MapValue;
+namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
 ///     Interface for parameter mapping strategies.

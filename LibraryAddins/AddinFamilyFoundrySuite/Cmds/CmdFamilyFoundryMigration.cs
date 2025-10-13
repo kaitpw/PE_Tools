@@ -36,7 +36,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 .Add(new DeleteUnusedParams(), profile => profile.DeleteUnusedParams)
                 .Add(new AddApsParams(), profile => profile.AddApsParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
-                .Add(new RemapParams(), profile => profile.RemapParams)
+                .Add(new MapParams(), profile => profile.RemapParams)
                 .Add(new AddAndGlobalSetFamilyParams(), addFamilyParams);
 
             // Get metadata for debugging/logging
@@ -77,5 +77,5 @@ public class ProfileRemap : BaseProfileSettings {
 
     [Description("Settings for remapping parameters")]
     [Required]
-    public RemapParamsSettings RemapParams { get; init; } = new();
+    public MapParamsSettings RemapParams { get; init; } = new();
 }
