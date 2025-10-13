@@ -35,7 +35,7 @@ internal class App : IExternalApplication {
 #endif
 
         ButtonDataHydrator.AddButtonData([
-            panelMigration.AddPushButton<CmdFamilyFoundryRemap>("Family Foundry Remap"),
+            panelMigration.AddPushButton<CmdFamilyFoundryMigration>("Migrator"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
 
@@ -110,7 +110,7 @@ public static class ButtonDataHydrator {
                     """
             }
         }, {
-            nameof(CmdFamilyFoundryRemap),
+            nameof(CmdFamilyFoundryMigration),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",

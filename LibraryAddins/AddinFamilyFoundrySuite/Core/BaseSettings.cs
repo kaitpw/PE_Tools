@@ -1,9 +1,10 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
-namespace AddinFamilyFoundrySuite.Core.Settings;
+namespace AddinFamilyFoundrySuite.Core;
 
-public class BaseSettings<T> : ILoadAndSaveOptions where T : BaseProfileSettings, new() {
+public class BaseSettings<TProfile> : ILoadAndSaveOptions where TProfile : BaseProfileSettings, new()
+{
     [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
     [Required]
     public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
@@ -16,7 +17,7 @@ public class BaseSettings<T> : ILoadAndSaveOptions where T : BaseProfileSettings
     [Description(
         "Profiles for the command. The profile that a command uses is determined by the `CurrentProfile` property.")]
     [Required]
-    public Dictionary<string, T> Profiles { get; set; } = new() { { "Default", new T() } };
+    public Dictionary<string, TProfile> Profiles { get; set; } = new() { { "Default", new TProfile() } };
 
     [Description(
         "Load processed family(ies) into the main model document (if the command is run on a main model document)")]
@@ -31,5 +32,5 @@ public class BaseSettings<T> : ILoadAndSaveOptions where T : BaseProfileSettings
     [Required]
     public bool SaveFamilyToOutputDir { get; set; } = false;
 
-    public T GetProfile() => this.Profiles[this.CurrentProfile];
+    public TProfile GetProfile() => this.Profiles[this.CurrentProfile];
 }

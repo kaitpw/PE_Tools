@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class RemapParamsSettings : IOperationSettings {
+public class RemapParamsSettings {
     [Description("List of parameter remapping rules")]
     [Required]
     public List<RemapDataRecord> RemapData { get; set; } = [];
@@ -19,13 +19,14 @@ public class RemapParamsSettings : IOperationSettings {
     }
 }
 
-public class RemapParamsOperationTyped : Operation<RemapParamsSettings> {
-    public override OperationType Type => OperationType.Type;
-    public override string Name => "Remap Parameters";
-    public override string Description => "Remap parameter values between parameters for each family type";
+public class RemapParamsOperation : IOperation<RemapParamsSettings> {
+    public RemapParamsSettings Settings { get; set; }
+    public OperationType Type => OperationType.Type;
+    public string Name => "Remap Parameters";
+    public string Description => "Remap parameter values between parameters for each family type";
 
-    protected override void ExecuteCore(Document doc, RemapParamsSettings settings) {
-        foreach (var p in settings.RemapData) {
+    public void Execute(Document doc) {
+        foreach (var p in this.Settings.RemapData) {
             try {
                 _ = doc.MapValue(p.CurrNameOrId, p.NewNameOrId, p.MappingPolicy);
             } catch (Exception ex) {

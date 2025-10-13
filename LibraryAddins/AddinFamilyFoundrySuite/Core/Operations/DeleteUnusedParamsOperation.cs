@@ -1,19 +1,36 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class DeleteUnusedParamsOperation : Operation<NoSettings> {
-    public override OperationType Type => OperationType.Doc;
-    public override string Name => "Delete Unused Parameters";
-    public override string Description => "Recursively delete unused parameters from the family";
+public class DeleteUnusedParamsSettings {
+    [Required] public List<string> ExcludeNamesEqualing { get; init; } = [];
+    [Required] public List<string> ExcludeNamesContaining { get; init; } = [];
+    [Required] public List<string> ExcludeNamesStartingWith { get; init; } = [];
 
-    protected override void ExecuteCore(Document doc, NoSettings settings) =>
-        this.RecursiveDeleteUnusedParameters(doc, new List<List<string>>());
 
-    private List<List<string>> RecursiveDeleteUnusedParameters(Document doc, List<List<string>> results) {
+    public bool Filter(FamilyParameter p) =>
+        Exclude(this.ExcludeNamesEqualing, p.Definition.Name.Equals)
+        && Exclude(this.ExcludeNamesContaining, p.Definition.Name.Contains)
+        && Exclude(this.ExcludeNamesStartingWith, p.Definition.Name.StartsWith);
+    private static bool Exclude<T>(List<T> list, Func<T, bool> predicate) =>
+        list.Count == 0 || !list.Any(predicate); // Pass if empty OR condition NOT met
+}
+public class DeleteUnusedParamsOperation : IOperation<DeleteUnusedParamsSettings> {
+    public DeleteUnusedParamsSettings Settings { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name => "Delete Unused Parameters";
+    public string Description => "Recursively delete unused parameters from the family";
+
+    public void Execute(Document doc) =>
+        this.RecursiveDelete(doc, new List<List<string>>());
+
+    private List<List<string>> RecursiveDelete(Document doc, List<List<string>> results) {
         var deleteCount = 0;
 
         var parameters = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
-            .Where(p => !p.Definition.Name.StartsWith("PE_"))
+            .Where(this.Settings.Filter)
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
 
@@ -36,7 +53,7 @@ public class DeleteUnusedParamsOperation : Operation<NoSettings> {
         results.Add(iterationResults);
 
         return deleteCount > 0
-            ? this.RecursiveDeleteUnusedParameters(doc, results)
+            ? this.RecursiveDelete(doc, results)
             : results;
     }
 }

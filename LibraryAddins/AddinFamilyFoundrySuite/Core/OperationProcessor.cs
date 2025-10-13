@@ -1,46 +1,30 @@
-using AddinFamilyFoundrySuite.Core.Settings;
-using PeRevit.Ui;
 using PeServices.Storage;
-
+using PeRevit.Ui;
 namespace AddinFamilyFoundrySuite.Core;
 
-[Transaction(TransactionMode.Manual)]
-public abstract class FamilyFoundryBase<TSettings, TProfile>
-    where TSettings : BaseSettings<TProfile>, new()
+public class OperationProcessor<TProfile>
     where TProfile : BaseProfileSettings, new() {
     public Storage storage { get; private set; }
-    public TSettings _settings { get; private set; }
-    public TProfile _profile { get; private set; }
+    public BaseSettings<TProfile> settings { get; private set; }
+    public TProfile profile { get; private set; }
 
-    protected bool IsInitialized { get; private set; }
-
-
-    public void Init(Action? customInit = null) {
-        var storageName = "FamilyFoundry";
-
-        this.storage = new Storage(storageName);
-        this._settings = this.storage.Settings().Json<TSettings>().Read();
-        this._profile = this._settings.GetProfile();
-
-        customInit?.Invoke();
-        this.IsInitialized = true;
+    public OperationProcessor(Storage storage) {
+        this.storage = storage;
+        this.settings = this.storage.Settings().Json<BaseSettings<TProfile>>().Read();
+        this.profile = this.settings.GetProfile();
     }
+
+    public OperationQueue<TProfile> CreateQueue() => new OperationQueue<TProfile>(this.profile);
 
     /// <summary>
     ///     Execute a configured processor with full initialization and document handling
     /// </summary>
-    protected void ProcessQueue(OperationEnqueuer enqueuer) {
-        if (!this.IsInitialized)
-            throw new InvalidOperationException("Must call Init() before ProcessQueue()");
-
+    public void ProcessQueue(Document doc, OperationQueue<TProfile> enqueuer) {
         var balloon = new Ballogger();
-        var doc = enqueuer.doc;
         var familyActions = enqueuer.ToFamilyActions();
 
         if (doc.IsFamilyDocument) {
-            var saveLocation = this.GetSaveLocations(doc, this._settings);
-
-
+            var saveLocation = this.GetSaveLocations(doc, this.settings);
             _ = doc
                 .ProcessFamily(familyActions)
                 .SaveFamily(saveLocation);
@@ -48,12 +32,12 @@ public abstract class FamilyFoundryBase<TSettings, TProfile>
             var families = new FilteredElementCollector(doc)
                 .OfClass(typeof(Family))
                 .Cast<Family>()
-                .Where(this._profile.FilterFamilies.Filter)
+                .Where(this.profile.FilterFamilies.Filter)
                 .ToList();
 
             foreach (var family in families) {
                 _ = balloon.Add(Log.TEST, null, $"Processing family: {family.Name} (ID: {family.Id})");
-                var saveLocation = this.GetSaveLocations(doc, this._settings);
+                var saveLocation = this.GetSaveLocations(doc, this.settings);
                 _ = doc
                     .EditFamily(family)
                     .ProcessFamily(familyActions)

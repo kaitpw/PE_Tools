@@ -5,22 +5,50 @@ namespace AddinFamilyFoundrySuite.Core;
 /// <summary>
 ///     Fluent processor that batches document and type operations for optimal execution
 /// </summary>
-public class OperationEnqueuer {
+public class OperationQueue<TProfile> where TProfile : new() {
     private readonly List<IOperation> _operations = new();
-    private readonly object _profile;
-    public readonly Document doc;
+    private readonly TProfile _profile;
 
-    public OperationEnqueuer(Document document, object profile) {
-        this.doc = document;
-        this._profile = profile;
+    public OperationQueue(TProfile profile) => this._profile = profile;
+
+    /// <summary>
+    ///     Add an operation to the queue with explicit settings from the profile.
+    /// </summary>
+    public OperationQueue<TProfile> Add<TOpSettings>(
+        IOperation<TOpSettings> operation,
+        Func<TProfile, TOpSettings> settingsSelector)
+        where TOpSettings : class, new() {
+
+        // Extract settings from profile using the selector
+        operation.Settings = settingsSelector(this._profile);
+
+        if (operation.Settings == null) {
+            throw new InvalidOperationException(
+                $"Operation '{operation.Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
+                $"but the settings selector returned null.");
+        }
+
+        this._operations.Add(operation);
+        return this;
     }
 
     /// <summary>
-    ///     Add a typed operation to the queue. Settings are automatically extracted from the profile.
+    ///     Add an operation to the queue with explicit settings from the profile.
     /// </summary>
-    public OperationEnqueuer Add<TSettings>(Operation<TSettings> operation)
-        where TSettings : class, new() {
-        operation.Settings = this.ExtractSettings<TSettings>();
+    public OperationQueue<TProfile> Add<TOpSettings>(
+        IOperation<TOpSettings> operation,
+        TOpSettings settings)
+        where TOpSettings : class, new() {
+
+        // Extract settings from profile using the selector
+        operation.Settings = settings;
+
+        if (operation.Settings == null) {
+            throw new InvalidOperationException(
+                $"Operation '{operation.Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
+                $"but the settings selector returned null.");
+        }
+
         this._operations.Add(operation);
         return this;
     }
@@ -95,25 +123,6 @@ public class OperationEnqueuer {
             batches.Add(new OperationBatch(currentType.Value, currentBatch));
 
         return batches;
-    }
-
-    private TSettings ExtractSettings<TSettings>()
-        where TSettings : class, new() {
-        // Special case: NoSettings means no configuration needed
-        if (typeof(TSettings) == typeof(NoSettings)) return new TSettings();
-
-        // Find property in profile by type
-        var property = this._profile.GetType()
-                           .GetProperties()
-                           .FirstOrDefault(p => p.PropertyType == typeof(TSettings))
-                       ?? throw new InvalidOperationException(
-                           $"Settings type '{typeof(TSettings).Name}' not found in profile '{this._profile.GetType().Name}'.\n\n" +
-                           $"Add this property to {this._profile.GetType().Name}:\n" +
-                           $"    [Required]\n" +
-                           $"    public {typeof(TSettings).Name} {typeof(TSettings).Name.Replace("Settings", "")} {{ get; init; }} = new();"
-                       );
-
-        return (TSettings)property.GetValue(this._profile)!;
     }
 }
 
