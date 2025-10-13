@@ -34,8 +34,9 @@ internal class Ballogger {
     /// <summary>Add an error message (with an optional stack trace)</summary>
     public Ballogger Add(Log log, StackFrame sf, Exception ex, bool trace = false) {
         var method = sf.GetMethod()?.Name ?? StrNoMethod;
+        var exDemystified = ex.ToStringDemystified();
         this._messages.Add(trace
-            ? string.Format(FmtMethod, log, method, ex.ToStringDemystified())
+            ? string.Format(FmtMethod, log, method, exDemystified)
             : string.Format(FmtMethod, log, method, ex.Message));
         return this;
     }

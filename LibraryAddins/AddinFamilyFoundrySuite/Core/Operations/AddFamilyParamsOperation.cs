@@ -7,14 +7,16 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class AddFamilyParamsOperation : IOperation<AddFamilyParamsSettings> {
     public AddFamilyParamsSettings Settings { get; set; }
+
     // change this to type later probably after seeing if looping through the types isa ctually necessary
-    public OperationType Type => OperationType.Doc;
+    public OperationType Type => OperationType.Type;
     public string Name => "Add Family Parameters";
 
     public string Description => "Add Family Parameters to the family";
 
     public void Execute(Document doc) => AddFamilyParams(doc, this.Settings.FamilyParamData);
-    public static List<Result<FamilyParameter>> AddFamilyParams(
+
+    public static void AddFamilyParams(
         Document famDoc,
         List<FamilyParamDataRecord> parameters
     ) {
@@ -22,21 +24,16 @@ public class AddFamilyParamsOperation : IOperation<AddFamilyParamsSettings> {
         if (parameters is null) throw new ArgumentNullException(nameof(parameters));
 
         var fm = famDoc.FamilyManager;
-        var results = new List<Result<FamilyParameter>>();
-        foreach (FamilyType type in fm.Types) {
-            fm.CurrentType = type;
-            foreach (var param in parameters) {
-                try {
-                    var parameter = fm.FindParameter(param.Name);
-                    parameter ??= fm.AddParameter(param.Name, param.PropertiesGroup, param.DataType, param.IsInstance);
-                    results.Add(parameter);
-                } catch (Exception ex) {
-                    results.Add(ex);
-                }
+
+        foreach (var param in parameters) {
+            try {
+                var parameter = fm.FindParameter(param.Name);
+                parameter ??= fm.AddParameter(param.Name, param.PropertiesGroup, param.DataType, param.IsInstance);
+                _ = fm.SetValueStrict(parameter, param.Value); // add null check?
+            } catch (Exception ex) {
+                Debug.WriteLine(ex.Message);
             }
         }
-
-        return results;
     }
 }
 

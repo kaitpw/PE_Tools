@@ -1,33 +1,38 @@
 using PeServices.Storage;
-using PeRevit.Ui;
+
 namespace AddinFamilyFoundrySuite.Core;
 
 public class OperationProcessor<TProfile>
     where TProfile : BaseProfileSettings, new() {
-    public Storage storage { get; private set; }
-    public BaseSettings<TProfile> settings { get; private set; }
-    public TProfile profile { get; private set; }
-
     public OperationProcessor(Storage storage) {
         this.storage = storage;
         this.settings = this.storage.Settings().Json<BaseSettings<TProfile>>().Read();
         this.profile = this.settings.GetProfile();
     }
 
-    public OperationQueue<TProfile> CreateQueue() => new OperationQueue<TProfile>(this.profile);
+    public Storage storage { get; }
+    public BaseSettings<TProfile> settings { get; }
+    public TProfile profile { get; }
+
+    public OperationQueue<TProfile> CreateQueue() => new(this.profile);
 
     /// <summary>
     ///     Execute a configured processor with full initialization and document handling
     /// </summary>
-    public void ProcessQueue(Document doc, OperationQueue<TProfile> enqueuer) {
-        var balloon = new Ballogger();
+    public List<(string Name, Exception Error)> ProcessQueue(Document doc, OperationQueue<TProfile> enqueuer) {
+        var results = new List<(string Name, Exception Error)>();
         var familyActions = enqueuer.ToFamilyActions();
 
         if (doc.IsFamilyDocument) {
-            var saveLocation = this.GetSaveLocations(doc, this.settings);
-            _ = doc
-                .ProcessFamily(familyActions)
-                .SaveFamily(saveLocation);
+            try {
+                var saveLocation = this.GetSaveLocations(doc, this.settings);
+                _ = doc
+                    .ProcessFamily(familyActions)
+                    .SaveFamily(saveLocation);
+                results.Add((doc.Title, null));
+            } catch (Exception ex) {
+                results.Add((doc.OwnerFamily.Name, ex));
+            }
         } else {
             var families = new FilteredElementCollector(doc)
                 .OfClass(typeof(Family))
@@ -36,17 +41,21 @@ public class OperationProcessor<TProfile>
                 .ToList();
 
             foreach (var family in families) {
-                _ = balloon.Add(Log.TEST, null, $"Processing family: {family.Name} (ID: {family.Id})");
-                var saveLocation = this.GetSaveLocations(doc, this.settings);
-                _ = doc
-                    .EditFamily(family)
-                    .ProcessFamily(familyActions)
-                    .SaveFamily(saveLocation)
-                    .LoadAndCloseFamily(doc, new EditAndLoadFamilyOptions());
+                try {
+                    var saveLocation = this.GetSaveLocations(doc, this.settings);
+                    _ = doc
+                        .EditFamily(family)
+                        .ProcessFamily(familyActions)
+                        .SaveFamily(saveLocation)
+                        .LoadAndCloseFamily(doc, new EditAndLoadFamilyOptions());
+                    results.Add((family.Name, null));
+                } catch (Exception ex) {
+                    results.Add((family.Name, ex));
+                }
             }
         }
 
-        balloon.Show();
+        return results;
     }
 
     private List<string> GetSaveLocations(Document famDoc, ILoadAndSaveOptions options) {

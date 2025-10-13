@@ -1,7 +1,6 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
 using PeRevit.Ui;
-using PeServices.Aps.Models;
 using PeServices.Storage;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -11,7 +10,6 @@ namespace AddinFamilyFoundrySuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdFamilyFoundryMigration : IExternalCommand {
-
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -21,28 +19,40 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
 
         try {
             var addFamilyParams = new AddFamilyParamsSettings {
-                FamilyParamData = [new FamilyParamDataRecord {
-                    Name = "Test",
-                    PropertiesGroup = new ForgeTypeId("General"),
-                    DataType = SpecTypeId.,
-                    IsInstance = true,
-                    Value = "Test"
-                }]
+                FamilyParamData = [
+                    new FamilyParamDataRecord {
+                        Name = "_DATE LAST PROCESSED",
+                        PropertiesGroup = GroupTypeId.General,
+                        DataType = SpecTypeId.String.Text,
+                        IsInstance = false,
+                        Value = DateTime.Now.ToString("yyyy-MM-dd")
+                    }
+                ]
             };
+
             var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
 
             var queue = processor.CreateQueue()
+                .Add(new DeleteUnusedParamsOperation(), profile => profile.DeleteUnusedParams)
                 .Add(new AddApsParamsOperationTyped(), profile => profile.AddApsParams)
                 .Add(new HydrateElectricalConnectorOperationTyped(), profile => profile.HydrateElectricalConnector)
                 .Add(new RemapParamsOperation(), profile => profile.RemapParams)
-                .Add(new AddFamilyParamsOperation(), profile => profile.AddFamilyParams);
+                .Add(new AddFamilyParamsOperation(), addFamilyParams);
 
             // Get metadata for debugging/logging
             var metadata = queue.GetOperationMetadata();
             foreach (var op in metadata)
                 Debug.WriteLine($"[Batch {op.BatchGroup}] {op.Type}: {op.Name} - {op.Description}");
 
-            processor.ProcessQueue(doc, queue);
+            var results = processor.ProcessQueue(doc, queue);
+            var balloon = new Ballogger();
+            foreach (var result in results) {
+                _ = result.Error is not null
+                    ? balloon.Add(Log.INFO, new StackFrame(), result.Error, true)
+                    : balloon.Add(Log.INFO, new StackFrame(), result.Name);
+            }
+
+            balloon.Show();
 
             return Result.Succeeded;
         } catch (Exception ex) {
@@ -53,6 +63,10 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
 }
 
 public class ProfileRemap : BaseProfileSettings {
+    [Description("Settings for deleting unused parameters")]
+    [Required]
+    public DeleteUnusedParamsSettings DeleteUnusedParams { get; init; } = new();
+
     [Description("Settings for adding APS parameters")]
     [Required]
     public AddApsParamsSettings AddApsParams { get; init; } = new();
