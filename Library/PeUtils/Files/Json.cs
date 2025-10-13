@@ -16,7 +16,8 @@ public class Json<T> where T : class, new() {
         this.FilePath = filePath;
         this._instanceCreationTime = DateTime.Now;
         this._serializerSettings = new JsonSerializerSettings {
-            Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore
+            Formatting = Formatting.Indented,
+            NullValueHandling = NullValueHandling.Ignore
         };
 
         var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings {
@@ -40,6 +41,21 @@ public class Json<T> where T : class, new() {
         }
     }
 
+    /// <summary> Recursively checks if any validation error is a PropertyRequired error </summary>
+    private static bool HasPropertyRequiredError(ICollection<NJsonSchema.Validation.ValidationError> errors) {
+        foreach (var error in errors) {
+            if (error.Kind == NJsonSchema.Validation.ValidationErrorKind.PropertyRequired) return true;
+
+            // Check nested errors in ChildSchemaValidationError
+            if (error is NJsonSchema.Validation.ChildSchemaValidationError childError) {
+                foreach (var nestedErrors in childError.Errors.Values) {
+                    if (HasPropertyRequiredError(nestedErrors)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     /// <summary> Reads JSON object from the specified file, validating against schema </summary>
     /// <returns>Deserialized object</returns>
     /// <exception cref="System.IO.FileNotFoundException">Thrown when the file doesn't exist</exception>
@@ -50,6 +66,20 @@ public class Json<T> where T : class, new() {
         var jsonContent = File.ReadAllText(this.FilePath);
         var validationErrors = this._schema.Validate(jsonContent);
         if (validationErrors.Any()) {
+            var hasPropertyRequiredErrors = HasPropertyRequiredError(validationErrors);
+
+            if (hasPropertyRequiredErrors) {
+                try {
+                    var partialContent = JsonConvert.DeserializeObject<T>(jsonContent, this._serializerSettings);
+                    this.Write(partialContent ?? new T(), skipValidation: true);
+                    throw new CrashProgramException($"JSON file {this.FilePath} was missing required properties and has been updated with defaults. Please review and configure the new settings before running again.");
+                } catch (CrashProgramException) {
+                    throw;
+                } catch {
+                    // If recovery fails, fall through to throw the original validation error
+                }
+            }
+
             var errors = validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}").ToList();
             throw new JsonValidationException(this.FilePath, errors);
         }
@@ -61,12 +91,16 @@ public class Json<T> where T : class, new() {
 
     /// <summary> Writes object to JSON file after validation </summary>
     /// <param name="content">Object to save</param>
-    public void Write(T content) {
+    /// <param name="skipValidation">Skip validation when writing (used for recovery scenarios)</param>
+    public void Write(T content, bool skipValidation = false) {
         var jsonContent = JsonConvert.SerializeObject(content, this._serializerSettings);
-        var validationErrors = this._schema.Validate(jsonContent);
-        if (validationErrors.Any()) {
-            var errors = validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}").ToList();
-            throw new JsonValidationException(this.FilePath, errors);
+
+        if (!skipValidation) {
+            var validationErrors = this._schema.Validate(jsonContent);
+            if (validationErrors.Any()) {
+                var errors = validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}").ToList();
+                throw new JsonValidationException(this.FilePath, errors);
+            }
         }
 
         File.WriteAllText(this.FilePath, jsonContent);
