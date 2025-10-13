@@ -1,11 +1,12 @@
-using PeExtensions.FamManager.SetValue.Utils;
-namespace PeExtensions.FamManager.SetValue.CoercionStrategies;
+using PeExtensions.FamDocument.SetValue.Utils;
+
+namespace PeExtensions.FamDocument.SetValue.CoercionStrategies;
 
 /// <summary>
 ///     Storage type coercion strategy - handles cases where storage types differ but data types are compatible.
 ///     Implements comprehensive storage type conversions based on Revit's parameter system.
 /// </summary>
-public class CoerceByStorageType : MappingStrategyBase {
+public class CoerceByStorageType : BaseCoercionStrategy {
     public CoerceByStorageType(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
         base(famDoc, sourceParam, targetParam) {
     }
@@ -16,18 +17,18 @@ public class CoerceByStorageType : MappingStrategyBase {
 
 
     public override bool CanMap() =>
-    this.SourceStorageType == this.TargetStorageType
-                                     || (this.SourceStorageType, this.TargetStorageType) switch {
-                                         (StorageType.Integer, StorageType.String) => true,
-                                         (StorageType.Integer, StorageType.Double) => true,
-                                         (StorageType.Double, StorageType.String) => true,
-                                         (StorageType.Double, StorageType.Integer) => true,
-                                         (StorageType.String, StorageType.Integer) => Regexes.CanExtractInteger(
-                                             this.SourceValue.ToString()),
-                                         (StorageType.String, StorageType.Double) => Regexes.CanExtractDouble(
-                                             this.SourceValue.ToString()),
-                                         _ => false
-                                     };
+        this.SourceStorageType == this.TargetStorageType
+        || (this.SourceStorageType, this.TargetStorageType) switch {
+            (StorageType.Integer, StorageType.String) => true,
+            (StorageType.Integer, StorageType.Double) => true,
+            (StorageType.Double, StorageType.String) => true,
+            (StorageType.Double, StorageType.Integer) => true,
+            (StorageType.String, StorageType.Integer) => Regexes.CanExtractInteger(
+                this.SourceValue.ToString()),
+            (StorageType.String, StorageType.Double) => Regexes.CanExtractDouble(
+                this.SourceValue.ToString()),
+            _ => false
+        };
 
     public override Result<FamilyParameter> Map() {
         var convertedValue = (this.SourceStorageType, this.TargetStorageType) switch {
@@ -59,6 +60,6 @@ public class CoerceByStorageType : MappingStrategyBase {
                 $"Unsupported storage type conversion from {this.SourceStorageType} to {this.TargetStorageType}")
         };
 
-        return this.FamilyManager.SetValueStrict(this.TargetParam, convertedValue);
+        return this.FamilyDocument.SetValueStrict(this.TargetParam, convertedValue);
     }
 }

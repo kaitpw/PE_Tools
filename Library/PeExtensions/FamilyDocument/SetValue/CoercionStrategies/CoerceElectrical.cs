@@ -1,11 +1,11 @@
-using PeExtensions.FamManager.SetValue.Utils;
+using PeExtensions.FamDocument.SetValue.Utils;
 
-namespace PeExtensions.FamManager.SetValue.CoercionStrategies;
+namespace PeExtensions.FamDocument.SetValue.CoercionStrategies;
 
 /// <summary>
 ///     Electrical coercion strategy - converts numeric/string values to electrical parameters with unit conversion.
 /// </summary>
-public class CoerceElectrical : MappingStrategyBase {
+public class CoerceElectrical : BaseCoercionStrategy {
     public CoerceElectrical(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
         base(famDoc, sourceParam, targetParam) {
     }
@@ -33,7 +33,7 @@ public class CoerceElectrical : MappingStrategyBase {
 
         var convertedVal = UnitUtils.ConvertToInternalUnits(currVal, this.TargetUnitType);
 
-        return this.FamilyManager.SetValueStrict(this.TargetParam, convertedVal);
+        return this.FamilyDocument.SetValueStrict(this.TargetParam, convertedVal);
     }
 
     public double ExtractDouble(string sourceValue) {

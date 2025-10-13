@@ -1,8 +1,8 @@
+using PeExtensions.FamDocument;
+using PeExtensions.FamManager;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using PeExtensions.FamDocument;
-using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -15,7 +15,11 @@ public class MapParams : IOperation<MapParamsSettings> {
     public void Execute(Document doc) {
         foreach (var p in this.Settings.RemapData) {
             try {
-                _ = doc.MapValue(p.CurrNameOrId, p.NewNameOrId, p.MappingPolicy);
+                var targetParam = doc.FamilyManager.FindParameter(p.NewNameOrId);
+                var sourceParam = doc.FamilyManager.FindParameter(p.CurrNameOrId);
+                var sourceValue = doc.GetValue(sourceParam);
+
+                _ = doc.SetValue(targetParam, sourceValue, p.MappingPolicy);
             } catch (Exception ex) {
                 Debug.WriteLine(ex.Message);
             }

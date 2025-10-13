@@ -1,11 +1,11 @@
 #nullable enable
-namespace PeExtensions.FamManager.SetValue;
+namespace PeExtensions.FamDocument.SetValue;
 
 /// <summary>
 ///     Interface for parameter mapping strategies.
 ///     Each strategy decides if it can handle a mapping and executes the mapping.
 /// </summary>
-public interface IMappingStrategy {
+public interface ICoercionStrategy {
     bool CanMap();
     Result<FamilyParameter> Map();
 }
@@ -15,30 +15,12 @@ public interface IMappingStrategy {
 ///     Implements the IMappingStrategy interface and predefines useful properties.
 ///     If the strategy is simple, implement the IMappingStrategy interface directly to reduce per overhead.
 /// </summary>
-public abstract class MappingStrategyBase : IMappingStrategy {
-    /// <summary>
-    ///     Constructor for mapping from source parameter to target parameter
-    /// </summary>
-    protected MappingStrategyBase(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) {
-        this.FamilyManager = famDoc.FamilyManager;
-
-        this.SourceValue = this.FamilyManager.GetValue(sourceParam);
-        this.SourceValueString = this.FamilyManager.CurrentType.AsValueString(sourceParam);
-        this.SourceDataType = sourceParam.Definition.GetDataType();
-
-        this.TargetParam = targetParam;
-        this.TargetDataType = targetParam.Definition.GetDataType();
-        this.TargetStorageType = targetParam.StorageType;
-        try {
-            this.TargetUnitType = famDoc.GetUnits().GetFormatOptions(this.TargetDataType).GetUnitTypeId();
-        } catch {
-        } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
-    }
-
+public abstract class BaseCoercionStrategy : ICoercionStrategy {
     /// <summary>
     ///     Constructor for mapping from direct value to target parameter
     /// </summary>
-    protected MappingStrategyBase(Document famDoc, object sourceValue, FamilyParameter targetParam) {
+    protected BaseCoercionStrategy(Document famDoc, object sourceValue, FamilyParameter targetParam) {
+        this.FamilyDocument = famDoc;
         this.FamilyManager = famDoc.FamilyManager;
 
         this.SourceValue = sourceValue;
@@ -54,6 +36,7 @@ public abstract class MappingStrategyBase : IMappingStrategy {
         } // ignore "specTypeId is not a measurable spec identifier. See UnitUtils.IsMeasurableSpec(ForgeTypeId)"
     }
 
+    public Document FamilyDocument { get; protected init; }
     public FamilyManager FamilyManager { get; protected init; }
 
     /// <summary>
@@ -113,7 +96,7 @@ public abstract class MappingStrategyBase : IMappingStrategy {
     ///     Use this to convert the source value to the target parameter's internal storage type.
     ///     <code>
     /// var convertedVal = UnitUtils.ConvertToInternalUnits(sourceValue, this.TargetUnitType);
-    /// this.FamilyManager.SetValueStrict(this.TargetParam, convertedVal);
+    /// this.FamilyDocument.SetValueStrict(this.TargetParam, convertedVal);
     /// </code>
     /// </summary>
     public ForgeTypeId? TargetUnitType { get; protected init; }

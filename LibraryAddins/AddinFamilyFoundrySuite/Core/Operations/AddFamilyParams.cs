@@ -1,9 +1,8 @@
 // TODO: Migrate this!!!!!!!!!!
 
+using PeExtensions.FamDocument;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using PeExtensions.FamDocument;
-using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -31,11 +30,10 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
         foreach (var p in parameters) {
             var parameter = famDoc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
             if (p.GlobalValue is not null)
-                _ = fm.SetValueStrict(parameter, p.GlobalValue);
+                _ = famDoc.SetValueStrict(parameter, p.GlobalValue);
         }
     }
 }
-
 
 public class AddAndGlobalSetFamilyParamsSettings {
     [Description(

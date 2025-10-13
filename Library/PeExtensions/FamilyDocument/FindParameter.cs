@@ -1,7 +1,6 @@
 namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentFindParameter {
-
     /// <summary>
     ///     Find a shared parameter by ParameterTypeId identifier recieved from Parameters Service
     /// </summary>

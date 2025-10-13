@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchema.NewtonsoftJson.Generation;
+using NJsonSchema.Validation;
 
 namespace PeUtils.Files;
 
@@ -16,8 +17,7 @@ public class Json<T> where T : class, new() {
         this.FilePath = filePath;
         this._instanceCreationTime = DateTime.Now;
         this._serializerSettings = new JsonSerializerSettings {
-            Formatting = Formatting.Indented,
-            NullValueHandling = NullValueHandling.Ignore
+            Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore
         };
 
         var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings {
@@ -42,17 +42,18 @@ public class Json<T> where T : class, new() {
     }
 
     /// <summary> Recursively checks if any validation error is a PropertyRequired error </summary>
-    private static bool HasPropertyRequiredError(ICollection<NJsonSchema.Validation.ValidationError> errors) {
+    private static bool HasPropertyRequiredError(ICollection<ValidationError> errors) {
         foreach (var error in errors) {
-            if (error.Kind == NJsonSchema.Validation.ValidationErrorKind.PropertyRequired) return true;
+            if (error.Kind == ValidationErrorKind.PropertyRequired) return true;
 
             // Check nested errors in ChildSchemaValidationError
-            if (error is NJsonSchema.Validation.ChildSchemaValidationError childError) {
-                foreach (var nestedErrors in childError.Errors.Values) {
-                    if (HasPropertyRequiredError(nestedErrors)) return true;
-                }
+            if (error is ChildSchemaValidationError childError) {
+                foreach (var nestedErrors in childError.Errors.Values)
+                    if (HasPropertyRequiredError(nestedErrors))
+                        return true;
             }
         }
+
         return false;
     }
 
@@ -71,8 +72,9 @@ public class Json<T> where T : class, new() {
             if (hasPropertyRequiredErrors) {
                 try {
                     var partialContent = JsonConvert.DeserializeObject<T>(jsonContent, this._serializerSettings);
-                    this.Write(partialContent ?? new T(), skipValidation: true);
-                    throw new CrashProgramException($"JSON file {this.FilePath} was missing required properties and has been updated with defaults. Please review and configure the new settings before running again.");
+                    this.Write(partialContent ?? new T(), true);
+                    throw new CrashProgramException(
+                        $"JSON file {this.FilePath} was missing required properties and has been updated with defaults. Please review and configure the new settings before running again.");
                 } catch (CrashProgramException) {
                     throw;
                 } catch {

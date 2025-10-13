@@ -1,7 +1,6 @@
 using Autodesk.Revit.DB.Electrical;
-using System.ComponentModel.DataAnnotations;
 using PeExtensions.FamDocument;
-using PeExtensions.FamManager;
+using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -21,15 +20,17 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
             (
                 polesParamName,
                 BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-                (doc, numberOfPoles) => doc.FamilyManager.SetValueStrict(numberOfPoles, 2)
-            ), (
+                (doc, numberOfPoles) => doc.SetValueStrict(numberOfPoles, 2)
+            ),
+            (
                 appPowerParamName,
                 BuiltInParameter.RBS_ELEC_APPARENT_LOAD,
                 (doc, apparentPower) => {
                     if (string.IsNullOrEmpty(voltageParamName) || string.IsNullOrEmpty(mcaParamName)) return;
                     doc.FamilyManager.SetFormula(apparentPower, $"{voltageParamName} * {mcaParamName}");
-                    }
-            ), (
+                }
+            ),
+            (
                 voltageParamName,
                 BuiltInParameter.RBS_ELEC_VOLTAGE,
                 null)
@@ -47,9 +48,9 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
         foreach (var (source, target, action) in mappings) {
             if (string.IsNullOrEmpty(source)) continue;
             var sourceParam = doc.FamilyManager.Parameters
-                .OfType<FamilyParameter>()
-                .FirstOrDefault(fp => fp.Definition.Name == source)
-                ?? throw new Exception($"Parameter {source} not found");
+                                  .OfType<FamilyParameter>()
+                                  .FirstOrDefault(fp => fp.Definition.Name == source)
+                              ?? throw new Exception($"Parameter {source} not found");
 
             foreach (var connectorElement in connectorElements) {
                 var targetParam = connectorElement.get_Parameter(target);
@@ -61,6 +62,7 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
                                     $"{sourceParam?.Definition.Name} because {ex.Message}");
                 }
             }
+
             action?.Invoke(doc, sourceParam);
         }
     }

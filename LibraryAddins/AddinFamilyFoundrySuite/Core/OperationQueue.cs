@@ -1,5 +1,3 @@
-using AddinFamilyFoundrySuite.Core.Operations;
-
 namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
@@ -18,7 +16,6 @@ public class OperationQueue<TProfile> where TProfile : new() {
         IOperation<TOpSettings> operation,
         Func<TProfile, TOpSettings> settingsSelector)
         where TOpSettings : class, new() {
-
         // Extract settings from profile using the selector
         operation.Settings = settingsSelector(this._profile);
 
@@ -39,7 +36,6 @@ public class OperationQueue<TProfile> where TProfile : new() {
         IOperation<TOpSettings> operation,
         TOpSettings settings)
         where TOpSettings : class, new() {
-
         // Extract settings from profile using the selector
         operation.Settings = settings;
 

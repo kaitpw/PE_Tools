@@ -2,12 +2,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core;
 
-public class BaseProfileSettings
-{
+public class BaseProfileSettings {
     [Required] public FilterFamiliesSettings FilterFamilies { get; init; } = new();
 
-    public class FilterFamiliesSettings
-    {
+    public class FilterFamiliesSettings {
         [Required] public List<string> IncludeCategoriesEqualing { get; init; } = [];
         [Required] public List<string> ExcludeCategoriesEqualing { get; init; } = [];
         [Required] public List<string> IncludeNamesEqualing { get; init; } = [];
@@ -17,8 +15,7 @@ public class BaseProfileSettings
         [Required] public List<string> IncludeNamesStartingWith { get; init; } = [];
         [Required] public List<string> ExcludeNamesStartingWith { get; init; } = [];
 
-        public bool Filter(Family f)
-        {
+        public bool Filter(Family f) {
             var categoryName = f.Category?.Name;
             var familyName = f.Name;
 

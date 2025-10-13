@@ -1,8 +1,7 @@
-using ApsParamModel = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 using PeExtensions.FamManager;
+using ApsParamModel = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
 namespace PeExtensions.FamDocument;
-
 
 public static class FamilyDocumentAddParameter {
     /// <summary>
@@ -25,7 +24,8 @@ public static class FamilyDocumentAddParameter {
     }
 
 
-    public static Result<SharedParameterElement> AddApsParameterSlow(this Document famDoc, ApsParamModel apsParamModel) {
+    public static Result<SharedParameterElement>
+        AddApsParameterSlow(this Document famDoc, ApsParamModel apsParamModel) {
         var parameterTypeId = apsParamModel.DownloadOptions.ParameterTypeId;
         var dlOpts = new ParameterDownloadOptions(
             new HashSet<ElementId>(),
@@ -104,11 +104,10 @@ public static class FamilyDocumentAddParameter {
 
             // If we can't find the SharedParameterElement, the FamilyParameter creation succeeded
             // which is what we care about for the family, so this isn't necessarily an error
-            return new Exception($"Parameter {apsParamModel.Name} added to family but SharedParameterElement not found");
+            return new Exception(
+                $"Parameter {apsParamModel.Name} added to family but SharedParameterElement not found");
         } catch (Exception ex) {
             return ex;
         }
     }
 }
-
-

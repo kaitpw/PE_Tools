@@ -3,8 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core;
 
-public class BaseSettings<TProfile> : ILoadAndSaveOptions where TProfile : BaseProfileSettings, new()
-{
+public class BaseSettings<TProfile> : ILoadAndSaveOptions where TProfile : BaseProfileSettings, new() {
     [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
     [Required]
     public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
