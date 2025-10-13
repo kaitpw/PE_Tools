@@ -1,5 +1,7 @@
 using Autodesk.Revit.DB.Electrical;
 using System.ComponentModel.DataAnnotations;
+using PeExtensions.FamDocument;
+using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -46,8 +48,9 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
             if (string.IsNullOrEmpty(source)) continue;
             var sourceParam = doc.FamilyManager.Parameters
                 .OfType<FamilyParameter>()
-                .FirstOrDefault(fp => fp.Definition.Name == source);
-            if  (sourceParam is null) throw new Exception($"Parameter {source} not found");
+                .FirstOrDefault(fp => fp.Definition.Name == source)
+                ?? throw new Exception($"Parameter {source} not found");
+
             foreach (var connectorElement in connectorElements) {
                 var targetParam = connectorElement.get_Parameter(target);
                 try {

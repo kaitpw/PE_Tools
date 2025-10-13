@@ -1,6 +1,8 @@
 using ApsParamModel = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
+using PeExtensions.FamManager;
 
-namespace PeExtensions;
+namespace PeExtensions.FamDocument;
+
 
 public static class FamilyDocumentAddParameter {
     /// <summary>

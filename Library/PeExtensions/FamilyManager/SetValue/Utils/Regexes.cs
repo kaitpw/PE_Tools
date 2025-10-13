@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 
-namespace AddinFamilyFoundrySuite.Core.Utils;
+namespace PeExtensions.FamManager.SetValue.Utils;
 
 public static class Regexes
 {

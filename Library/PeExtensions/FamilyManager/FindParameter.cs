@@ -1,4 +1,4 @@
-namespace PeExtensions;
+namespace PeExtensions.FamManager;
 
 public static class FamilyManagerFindParameter {
     /// <summary>

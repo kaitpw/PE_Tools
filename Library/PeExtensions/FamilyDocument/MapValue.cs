@@ -1,6 +1,7 @@
-using AddinFamilyFoundrySuite.Core;
+using PeExtensions.FamManager;
+using PeExtensions.FamManager.SetValue;
 
-namespace PeExtensions;
+namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentMapValue {
     /// <summary>
@@ -14,7 +15,7 @@ public static class FamilyDocumentMapValue {
     public static Result<FamilyParameter> MapValue(this Document famDoc,
         string sourceName,
         string targetName,
-        string policy = null
+        string strategyName = null
     ) {
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
 
@@ -22,13 +23,13 @@ public static class FamilyDocumentMapValue {
         var targetParam = famDoc.FamilyManager.FindParameter(targetName);
         if (sourceParam == null) return new Exception($"Source parameter {sourceName} not found");
         if (targetParam == null) return new Exception($"Target parameter {targetName} not found");
-        var strategy = MappingStrategyRegistry.GetStrategy(policy, famDoc, sourceParam, targetParam);
+        var strategy = MappingStrategyRegistry.GetStrategy(strategyName, famDoc, sourceParam, targetParam);
 
         if (!strategy.CanMap()) {
             var sourceDataType = sourceParam?.Definition.GetDataType();
             var targetDataType = targetParam?.Definition.GetDataType();
             return new Exception(
-                $"Cannot map value from {sourceName} ({sourceDataType}) to {targetName} ({targetDataType}) using policy '{policy ?? "default"}'");
+                $"Cannot map value from {sourceName} ({sourceDataType}) to {targetName} ({targetDataType}) using policy '{strategyName ?? "default"}'");
         }
 
         return strategy.Map();
@@ -45,17 +46,17 @@ public static class FamilyDocumentMapValue {
     public static Result<FamilyParameter> MapValue(this Document famDoc,
         object sourceValue,
         string targetName,
-        string policy = null) {
+        string strategyName = null) {
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
 
         var targetParam = famDoc.FamilyManager.FindParameter(targetName);
         if (targetParam == null) return new Exception($"Target parameter {targetName} not found");
-        var strategy = MappingStrategyRegistry.GetStrategy(policy, famDoc, sourceValue, targetParam);
+        var strategy = MappingStrategyRegistry.GetStrategy(strategyName, famDoc, sourceValue, targetParam);
 
         if (!strategy.CanMap()) {
             var targetDataType = targetParam?.Definition.GetDataType();
             return new Exception(
-                $"Cannot map value '{sourceValue}' to {targetName} ({targetDataType}) using policy '{policy ?? "default"}'");
+                $"Cannot map value '{sourceValue}' to {targetName} ({targetDataType}) using policy '{strategyName ?? "default"}'");
         }
 
         return strategy.Map();

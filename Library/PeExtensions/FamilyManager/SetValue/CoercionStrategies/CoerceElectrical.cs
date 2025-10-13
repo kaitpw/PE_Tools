@@ -1,6 +1,6 @@
-using AddinFamilyFoundrySuite.Core.Utils;
+using PeExtensions.FamManager.SetValue.Utils;
 
-namespace AddinFamilyFoundrySuite.Core.MappingStrategies;
+namespace PeExtensions.FamManager.SetValue.CoercionStrategies;
 
 /// <summary>
 ///     Electrical coercion strategy - converts numeric/string values to electrical parameters with unit conversion.

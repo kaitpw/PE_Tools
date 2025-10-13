@@ -1,5 +1,5 @@
 #nullable enable
-namespace AddinFamilyFoundrySuite.Core;
+namespace PeExtensions.FamManager.SetValue;
 
 /// <summary>
 ///     Interface for parameter mapping strategies.

@@ -1,3 +1,5 @@
+namespace PeExtensions.FamDocument;
+
 public static class FamilyDocumentProcessFamily {
     public static Document ProcessFamily(this Document famDoc, params Action<Document>[] callbacks) {
         if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");

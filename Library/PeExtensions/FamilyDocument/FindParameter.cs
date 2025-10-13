@@ -1,4 +1,4 @@
-namespace PeExtensions;
+namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentFindParameter {
 

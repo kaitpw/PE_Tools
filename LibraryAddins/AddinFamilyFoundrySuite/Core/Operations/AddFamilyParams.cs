@@ -2,6 +2,8 @@
 
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using PeExtensions.FamDocument;
+using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 

@@ -1,5 +1,5 @@
-using AddinFamilyFoundrySuite.Core.Utils;
-namespace AddinFamilyFoundrySuite.Core.MappingStrategies;
+using PeExtensions.FamManager.SetValue.Utils;
+namespace PeExtensions.FamManager.SetValue.CoercionStrategies;
 
 /// <summary>
 ///     Storage type coercion strategy - handles cases where storage types differ but data types are compatible.

@@ -1,6 +1,6 @@
-using AddinFamilyFoundrySuite.Core.MappingStrategies;
+using PeExtensions.FamManager.SetValue.CoercionStrategies;
 
-namespace AddinFamilyFoundrySuite.Core;
+namespace PeExtensions.FamManager.SetValue;
 
 /// <summary>
 ///     Registry for mapping strategies. Maps strategy names to strategy factory functions.

@@ -1,6 +1,6 @@
-using AddinFamilyFoundrySuite.Core.Utils;
+using PeExtensions.FamManager.SetValue.Utils;
 
-namespace AddinFamilyFoundrySuite.Core.MappingStrategies;
+namespace PeExtensions.FamManager.SetValue.CoercionStrategies;
 
 /// <summary>
 ///     Strict mapping strategy - only maps when data types are identical.
