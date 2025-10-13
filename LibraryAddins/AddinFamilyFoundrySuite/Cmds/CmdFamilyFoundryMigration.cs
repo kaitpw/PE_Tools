@@ -18,14 +18,14 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            var addFamilyParams = new AddFamilyParamsSettings {
+            var addFamilyParams = new AddAndGlobalSetFamilyParamsSettings {
                 FamilyParamData = [
-                    new FamilyParamDataRecord {
-                        Name = "_DATE LAST PROCESSED",
+                    new FamilyParamModel {
+                        Name = "_FOUNDRY LAST PROCESSED AT",
                         PropertiesGroup = GroupTypeId.General,
                         DataType = SpecTypeId.String.Text,
                         IsInstance = false,
-                        Value = DateTime.Now.ToString("yyyy-MM-dd")
+                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                     }
                 ]
             };
@@ -33,11 +33,11 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
 
             var queue = processor.CreateQueue()
-                .Add(new DeleteUnusedParamsOperation(), profile => profile.DeleteUnusedParams)
-                .Add(new AddApsParamsOperationTyped(), profile => profile.AddApsParams)
-                .Add(new HydrateElectricalConnectorOperationTyped(), profile => profile.HydrateElectricalConnector)
-                .Add(new RemapParamsOperation(), profile => profile.RemapParams)
-                .Add(new AddFamilyParamsOperation(), addFamilyParams);
+                .Add(new DeleteUnusedParams(), profile => profile.DeleteUnusedParams)
+                .Add(new AddApsParams(), profile => profile.AddApsParams)
+                .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
+                .Add(new RemapParams(), profile => profile.RemapParams)
+                .Add(new AddAndGlobalSetFamilyParams(), addFamilyParams);
 
             // Get metadata for debugging/logging
             var metadata = queue.GetOperationMetadata();
@@ -48,7 +48,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             var balloon = new Ballogger();
             foreach (var result in results) {
                 _ = result.Error is not null
-                    ? balloon.Add(Log.INFO, new StackFrame(), result.Error, true)
+                    ? balloon.Add(Log.ERR, new StackFrame(), result.Error, true)
                     : balloon.Add(Log.INFO, new StackFrame(), result.Name);
             }
 

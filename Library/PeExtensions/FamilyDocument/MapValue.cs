@@ -2,7 +2,7 @@ using AddinFamilyFoundrySuite.Core.MapValue;
 
 namespace PeExtensions;
 
-public static class FamilyManagerMapValue {
+public static class FamilyDocumentMapValue {
     /// <summary>
     ///     Maps a value from source parameter to target parameter using the specified policy.
     /// </summary>

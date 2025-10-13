@@ -4,22 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class RemapParamsSettings {
-    [Description("List of parameter remapping rules")]
-    [Required]
-    public List<RemapDataRecord> RemapData { get; set; } = [];
-
-    public record RemapDataRecord {
-        public string CurrNameOrId { get; set; }
-        public string NewNameOrId { get; set; }
-
-        [Description("Mapping policy to use for the remapping. Strict will be used when none is specified.")]
-        [EnumConstraint("Strict", "AllowStorageTypeCoercion", "PeElectrical")]
-        public string MappingPolicy { get; set; } = "AllowStorageTypeCoercion"; // Default policy
-    }
-}
-
-public class RemapParamsOperation : IOperation<RemapParamsSettings> {
+public class RemapParams : IOperation<RemapParamsSettings> {
     public RemapParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Type;
     public string Name => "Remap Parameters";
@@ -33,5 +18,20 @@ public class RemapParamsOperation : IOperation<RemapParamsSettings> {
                 Debug.WriteLine(ex.Message);
             }
         }
+    }
+}
+
+public class RemapParamsSettings {
+    [Description("List of parameter remapping rules")]
+    [Required]
+    public List<RemapDataRecord> RemapData { get; set; } = [];
+
+    public record RemapDataRecord {
+        public string CurrNameOrId { get; set; }
+        public string NewNameOrId { get; set; }
+
+        [Description("Mapping policy to use for the remapping. Strict will be used when none is specified.")]
+        [EnumConstraint("Strict", "AllowStorageTypeCoercion", "PeElectrical")]
+        public string MappingPolicy { get; set; } = "AllowStorageTypeCoercion"; // Default policy
     }
 }

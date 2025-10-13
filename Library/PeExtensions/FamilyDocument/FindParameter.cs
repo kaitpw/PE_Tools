@@ -1,6 +1,13 @@
 namespace PeExtensions;
 
-public static class DocumentFindParameter {
+public static class FamilyDocumentFindParameter {
+
+    /// <summary>
+    ///     Find a shared parameter by ParameterTypeId identifier recieved from Parameters Service
+    /// </summary>
+    /// <param name="famDoc">The family document</param>
+    /// <param name="parameterTypeId">The ForgeTypeId identifier of the parameter</param>
+    /// <returns>The shared parameter element, or null if the parameter is not found</returns>
     public static SharedParameterElement? FindParameter(this Document famDoc, ForgeTypeId parameterTypeId) {
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
 

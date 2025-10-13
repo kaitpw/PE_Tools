@@ -1,22 +1,9 @@
-using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class DeleteUnusedParamsSettings {
-    [Required] public List<string> ExcludeNamesEqualing { get; init; } = [];
-    [Required] public List<string> ExcludeNamesContaining { get; init; } = [];
-    [Required] public List<string> ExcludeNamesStartingWith { get; init; } = [];
 
-
-    public bool Filter(FamilyParameter p) =>
-        Exclude(this.ExcludeNamesEqualing, p.Definition.Name.Equals)
-        && Exclude(this.ExcludeNamesContaining, p.Definition.Name.Contains)
-        && Exclude(this.ExcludeNamesStartingWith, p.Definition.Name.StartsWith);
-    private static bool Exclude<T>(List<T> list, Func<T, bool> predicate) =>
-        list.Count == 0 || !list.Any(predicate); // Pass if empty OR condition NOT met
-}
-public class DeleteUnusedParamsOperation : IOperation<DeleteUnusedParamsSettings> {
+public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
     public DeleteUnusedParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
     public string Name => "Delete Unused Parameters";
@@ -56,4 +43,17 @@ public class DeleteUnusedParamsOperation : IOperation<DeleteUnusedParamsSettings
             ? this.RecursiveDelete(doc, results)
             : results;
     }
+}
+
+public class DeleteUnusedParamsSettings {
+    [Required] public List<string> ExcludeNamesEqualing { get; init; } = [];
+    [Required] public List<string> ExcludeNamesContaining { get; init; } = [];
+    [Required] public List<string> ExcludeNamesStartingWith { get; init; } = [];
+
+    public bool Filter(FamilyParameter p) =>
+        Exclude(this.ExcludeNamesEqualing, p.Definition.Name.Equals)
+        && Exclude(this.ExcludeNamesContaining, p.Definition.Name.Contains)
+        && Exclude(this.ExcludeNamesStartingWith, p.Definition.Name.StartsWith);
+    private static bool Exclude<T>(List<T> list, Func<T, bool> predicate) =>
+        list.Count == 0 || !list.Any(predicate); // Pass if empty OR condition NOT met
 }

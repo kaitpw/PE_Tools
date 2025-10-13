@@ -1,24 +1,72 @@
 using PeServices.Storage;
-using System.ComponentModel;
+using PeExtensions;
 using System.ComponentModel.DataAnnotations;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddApsParamsOperationTyped : IOperation<AddApsParamsSettings> {
+public class AddApsParams : IOperation<AddApsParamsSettings> {
     public AddApsParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
     public string Name => "Add APS Parameters";
     public string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
     public void Execute(Document doc) =>
-        _ = doc.AddApsParams(this.Settings.ApsParams, this.Settings.Filter);
+        _ = this.AddParams(doc);
+
+    public List<Result<SharedParameterElement>> AddParams(
+       Document famDoc
+   ) {
+        if (famDoc is null) throw new ArgumentNullException(nameof(famDoc));
+        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
+        var fm = famDoc.FamilyManager;
+
+        var finalDownloadResults = new List<Result<SharedParameterElement>>();
+
+        var filteredResults = this.Settings.Filter != null
+            ? AddApsParamsSettings.GetAPSParams().Results.Where(this.Settings.Filter).ToList()
+            : AddApsParamsSettings.GetAPSParams().Results;
+
+        var defFile = MakeTempSharedParamTxt(famDoc);
+        var group = defFile.Groups.get_Item("Parameters") ?? defFile.Groups.Create("Parameters");
+
+        foreach (var psParamInfo in filteredResults) {
+            if (psParamInfo.TypedMetadata.IsArchived) continue;
+
+            var (sharedParam, sharedParamErr) = famDoc.AddApsParameter(fm, group, psParamInfo);
+            if (sharedParamErr is not null) {
+                finalDownloadResults.Add(famDoc.AddApsParameterSlow(psParamInfo));
+                continue;
+            }
+
+            finalDownloadResults.Add(sharedParam);
+        }
+
+        try {
+            if (File.Exists(defFile.Filename)) File.Delete(defFile.Filename);
+        } catch {
+            Debug.WriteLine("Failed to delete temporary shared param file.");
+        }
+
+        return finalDownloadResults;
+    }
+
+    private static DefinitionFile MakeTempSharedParamTxt(Document famDoc) {
+        var app = famDoc.Application;
+        var tempSharedParamFile = Path.GetTempFileName() + ".txt";
+        using (File.Create(tempSharedParamFile)) { } // Create empty file
+
+        app.SharedParametersFilename = tempSharedParamFile;
+        try {
+            return app.OpenSharedParameterFile();
+        } catch (Exception ex) {
+            throw new Exception($"Failed to create temp shared parameter file: {ex.Message}");
+        }
+    }
 }
 
 public class AddApsParamsSettings {
-    public ParamModel ApsParams => GetAPSParams();
-
     [Required] public List<string> IncludeNamesEqualing { get; init; } = [];
     [Required] public List<string> ExcludeNamesEqualing { get; init; } = [];
     [Required] public List<string> IncludeNamesContaining { get; init; } = [];
