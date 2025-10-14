@@ -17,6 +17,7 @@ public class MapParams : IOperation<MapParamsSettings> {
             try {
                 var targetParam = doc.FamilyManager.FindParameter(p.NewNameOrId);
                 var sourceParam = doc.FamilyManager.FindParameter(p.CurrNameOrId);
+                if (targetParam is null || sourceParam is null) continue;
 
                 _ = doc.SetValue(targetParam, sourceParam, p.MappingStrategy);
             } catch (Exception ex) {

@@ -3,13 +3,16 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
+    public DeleteUnusedParams(List<string> ExcludeNamesEqualing) =>
+        this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
+
+    public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public DeleteUnusedParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
     public string Name => "Delete Unused Parameters";
     public string Description => "Recursively delete unused parameters from the family";
 
-    public void Execute(Document doc) =>
-        this.RecursiveDelete(doc, new List<List<string>>());
+    public void Execute(Document doc) => this.RecursiveDelete(doc, new List<List<string>>());
 
     private List<List<string>> RecursiveDelete(Document doc, List<List<string>> results) {
         var deleteCount = 0;
@@ -41,6 +44,23 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
         return deleteCount > 0
             ? this.RecursiveDelete(doc, results)
             : results;
+    }
+
+    private void LogDeletionSummary(List<List<string>> results) {
+        Debug.WriteLine("\n=== DELETION SUMMARY ===");
+        var totalDeleted = results.Sum(r => r.Count);
+        Debug.WriteLine($"Total iterations: {results.Count}");
+        Debug.WriteLine($"Total parameters deleted: {totalDeleted}");
+
+        for (var i = 0; i < results.Count; i++) {
+            var iterationResults = results[i];
+            Debug.WriteLine($"\nIteration {i + 1}:");
+            Debug.WriteLine($"  Parameters deleted: {iterationResults.Count}");
+            if (iterationResults.Any()) {
+                Debug.WriteLine("  Deleted parameters:");
+                foreach (var param in iterationResults) Debug.WriteLine($"    - {param}");
+            }
+        }
     }
 }
 

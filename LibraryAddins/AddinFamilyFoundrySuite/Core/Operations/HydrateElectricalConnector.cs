@@ -98,8 +98,6 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
 }
 
 public class HydrateElectricalConnectorSettings {
-    // Currently no configurable settings for this operation
-    // [Required] public string TargetParameters = "Center (Left/Right)"; // do this later
     [Required] public Parameters SourceParameterNames = new();
 
     public class Parameters {

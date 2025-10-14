@@ -33,7 +33,9 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
 
             var queue = processor.CreateQueue()
-                .Add(new DeleteUnusedParams(), profile => profile.DeleteUnusedParams)
+                .Add(new DeleteUnusedParams(
+                    processor.profile.MapParams.MappingData.Select(m => m.CurrNameOrId).ToList()
+                ), profile => profile.DeleteUnusedParams)
                 .Add(new AddApsParams(), profile => profile.AddApsParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
                 .Add(new MapParams(), profile => profile.MapParams)

@@ -40,13 +40,16 @@ public class CoerceByStorageType : ICoercionStrategy {
             (StorageType.Double, StorageType.String) => context.SourceValueString ?? context.SourceValue.ToString(),
 
             // Set to integer by extracting integer from the doubleParam's "value string"
-            (StorageType.Double, StorageType.Integer) => Regexes.ExtractInteger(context.SourceValueString ?? string.Empty),
+            (StorageType.Double, StorageType.Integer) =>
+                Regexes.ExtractInteger(context.SourceValueString ?? string.Empty),
 
             // Set to integer by extracting integer from the stringParam's value
-            (StorageType.String, StorageType.Integer) => Regexes.ExtractInteger(context.SourceValue.ToString() ?? string.Empty),
+            (StorageType.String, StorageType.Integer) =>
+                Regexes.ExtractInteger(context.SourceValue.ToString() ?? string.Empty),
 
             // Set to double by extracting double from the stringParam's value
-            (StorageType.String, StorageType.Double) => Regexes.ExtractDouble(context.SourceValue.ToString() ?? string.Empty),
+            (StorageType.String, StorageType.Double) =>
+                Regexes.ExtractDouble(context.SourceValue.ToString() ?? string.Empty),
 
             _ => throw new ArgumentException(
                 $"Unsupported storage type conversion from {context.SourceStorageType} to {context.TargetStorageType}")
