@@ -48,9 +48,10 @@ public class Json<T> where T : class, new() {
 
             // Check nested errors in ChildSchemaValidationError
             if (error is ChildSchemaValidationError childError) {
-                foreach (var nestedErrors in childError.Errors.Values)
+                foreach (var nestedErrors in childError.Errors.Values) {
                     if (HasPropertyRequiredError(nestedErrors))
                         return true;
+                }
             }
         }
 

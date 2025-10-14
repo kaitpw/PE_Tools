@@ -30,7 +30,7 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
         foreach (var p in parameters) {
             var parameter = famDoc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
             if (p.GlobalValue is not null)
-                _ = famDoc.SetValueStrict(parameter, p.GlobalValue);
+                _ = famDoc.SetValue(parameter, p.GlobalValue);
         }
     }
 }

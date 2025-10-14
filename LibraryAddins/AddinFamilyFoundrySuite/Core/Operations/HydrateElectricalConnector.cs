@@ -20,7 +20,7 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
             (
                 polesParamName,
                 BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-                (doc, numberOfPoles) => doc.SetValueStrict(numberOfPoles, 2)
+                (doc, numberOfPoles) => doc.SetValue(numberOfPoles, 2)
             ),
             (
                 appPowerParamName,

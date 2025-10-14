@@ -1,3 +1,4 @@
+#nullable enable
 using PeExtensions.FamDocument.SetValue.Utils;
 
 namespace PeExtensions.FamDocument.SetValue.CoercionStrategies;
@@ -5,32 +6,30 @@ namespace PeExtensions.FamDocument.SetValue.CoercionStrategies;
 /// <summary>
 ///     Electrical coercion strategy - converts numeric/string values to electrical parameters with unit conversion.
 /// </summary>
-public class CoerceElectrical : BaseParamCoercionStrategy {
-    public CoerceElectrical(Document famDoc, FamilyParameter sourceParam, FamilyParameter targetParam) :
-        base(famDoc, sourceParam, targetParam) {
-    }
-
-    public override bool CanMap() {
-        var isTargetElectrical = this.TargetDataType?.TypeId.Contains(".electrical:") == true;
-        var canExtractDouble = Regexes.CanExtractDouble(this.SourceValue.ToString());
+public class CoerceElectrical : ICoercionStrategy {
+    public bool CanMap(CoercionContext context) {
+        var isTargetElectrical = context.TargetDataType?.TypeId.Contains(".electrical:") == true;
+        var canExtractDouble = Regexes.TryExtractDouble(context.SourceValue.ToString(), out _);
         return isTargetElectrical && canExtractDouble;
     }
 
-    public override Result<FamilyParameter> Map() {
-        var currVal = this.SourceDataType switch {
-            var t when t == SpecTypeId.String.Text => this.ExtractDouble(this.SourceValue.ToString()),
-            var t when t == SpecTypeId.Number => this.SourceValue as double? ?? 0,
-            var t when t == SpecTypeId.Int.Integer => this.SourceValue as int? ?? 0,
-            _ => throw new ArgumentException($"Unsupported source type {this.SourceDataType} for electrical coercion")
+    public Result<FamilyParameter> Map(CoercionContext context) {
+        var currVal = context.SourceDataType switch {
+            var t when t == SpecTypeId.String.Text => this.ExtractDouble(context.SourceValue.ToString() ?? string.Empty,
+                context.TargetParam),
+            var t when t == SpecTypeId.Number => context.SourceValue as double? ?? 0,
+            var t when t == SpecTypeId.Int.Integer => context.SourceValue as int? ?? 0,
+            _ => throw new ArgumentException(
+                $"Unsupported source type {context.SourceDataType} for electrical coercion")
         };
 
-        var convertedVal = UnitUtils.ConvertToInternalUnits(currVal, this.TargetUnitType);
+        var convertedVal = UnitUtils.ConvertToInternalUnits(currVal, context.TargetUnitType);
 
-        return this.FamilyDocument.SetValueStrict(this.TargetParam, convertedVal);
+        return context.FamilyDocument.SetValue(context.TargetParam, convertedVal);
     }
 
-    public double ExtractDouble(string sourceValue) {
-        if (this.TargetParam.Definition.Name.Contains("Voltage", StringComparison.OrdinalIgnoreCase)) {
+    private double ExtractDouble(string sourceValue, FamilyParameter targetParam) {
+        if (targetParam.Definition.Name.Contains("Voltage", StringComparison.OrdinalIgnoreCase)) {
             // somewhat arbitrary ranges. 240 must account for 230. 120 must account for 110 or 115.
             var voltRange240 = Enumerable.Range(225, 21).Select(x => (double)x).ToList();
             voltRange240.Add(208);
