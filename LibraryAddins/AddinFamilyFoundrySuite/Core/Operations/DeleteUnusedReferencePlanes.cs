@@ -89,7 +89,8 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
     }
 }
 
-public class DeleteUnusedReferencePlanesSettings {
+public class DeleteUnusedReferencePlanesSettings : IOperationSettings {
+    public bool Enabled { get; init; } = true;
     [Description("If false, the check for unusedness is relaxed: unused means that an RP does not have a dimension with a parameter associated to it.")]
-    public bool SafeDelete { get; set; } = false;
+    public bool SafeDelete { get; init; } = false;
 }

@@ -35,13 +35,14 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
     }
 }
 
-public class AddAndGlobalSetFamilyParamsSettings {
+public class AddAndGlobalSetFamilyParamsSettings : IOperationSettings {
+    public bool Enabled { get; init; } = true;
     [Description(
         "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
     [Required]
-    public bool OverrideExistingValues { get; set; } = true;
+    public bool OverrideExistingValues { get; init; } = true;
 
-    public List<FamilyParamModel> FamilyParamData { get; set; } = [];
+    public List<FamilyParamModel> FamilyParamData { get; init; } = [];
 }
 
 public record FamilyParamModel {

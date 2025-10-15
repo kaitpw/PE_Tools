@@ -67,7 +67,8 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
     }
 }
 
-public class AddApsParamsSettings {
+public class AddApsParamsSettings : IOperationSettings {
+    public bool Enabled { get; init; } = true;
     [Required] public Include IncludeNames { get; init; } = new();
     [Required] public Exclude ExcludeNames { get; init; } = new();
 

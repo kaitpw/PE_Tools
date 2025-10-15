@@ -28,8 +28,12 @@ public interface IOperation {
     void Execute(Document doc);
 }
 
-public interface IOperation<TSettings> : IOperation {
+public interface IOperation<TSettings> : IOperation where TSettings : IOperationSettings {
     TSettings Settings { get; set; }
+}
+
+public interface IOperationSettings {
+    bool Enabled { get; init; }
 }
 
 public enum OperationType {

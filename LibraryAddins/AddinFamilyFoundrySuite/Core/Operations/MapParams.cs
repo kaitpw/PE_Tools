@@ -27,10 +27,11 @@ public class MapParams : IOperation<MapParamsSettings> {
     }
 }
 
-public class MapParamsSettings {
+public class MapParamsSettings : IOperationSettings {
+    public bool Enabled { get; init; } = true;
     [Description("List of parameter remapping rules")]
     [Required]
-    public List<MappingDataRecord> MappingData { get; set; } = [];
+    public List<MappingDataRecord> MappingData { get; init; } = [];
 
     public record MappingDataRecord {
         public string CurrNameOrId { get; set; }
