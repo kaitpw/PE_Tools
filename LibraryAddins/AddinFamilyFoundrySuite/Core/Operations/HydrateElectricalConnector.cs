@@ -98,13 +98,14 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
     }
 }
 
-public class HydrateElectricalConnectorSettings {
-    [Required] public Parameters SourceParameterNames = new();
+public class HydrateElectricalConnectorSettings : IOperationSettings {
+    public bool Enabled { get; init; } = true;
+    [Required] public Parameters SourceParameterNames { get; init; } = new();
 
     public class Parameters {
-        [Required] public string NumberOfPoles { get; set; } = "";
-        [Required] public string ApparentPower { get; set; } = "";
-        [Required] public string MinimumCurrentAmpacity { get; set; } = "";
-        [Required] public string Voltage { get; set; } = "";
+        [Required] public string NumberOfPoles { get; init; } = "";
+        [Required] public string ApparentPower { get; init; } = "";
+        [Required] public string MinimumCurrentAmpacity { get; init; } = "";
+        [Required] public string Voltage { get; init; } = "";
     }
 }

@@ -15,4 +15,9 @@
   <PropertyGroup>
     <UseWPF>true</UseWPF>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference the PeAnalyzers project as an analyzer -->
+    <ProjectReference Include="$(MSBuildThisFileDirectory)\..\LibraryAnalyzers\PeAnalyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
 </Project>
