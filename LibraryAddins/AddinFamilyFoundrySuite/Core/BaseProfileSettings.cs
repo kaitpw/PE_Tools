@@ -1,3 +1,4 @@
+using AddinFamilyFoundrySuite.Core.Operations.Settings;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core;
@@ -7,33 +8,29 @@ public class BaseProfileSettings {
 
     public class FilterFamiliesSettings {
         [Required] public List<string> IncludeCategoriesEqualing { get; init; } = [];
-        [Required] public List<string> ExcludeCategoriesEqualing { get; init; } = [];
-        [Required] public List<string> IncludeNamesEqualing { get; init; } = [];
-        [Required] public List<string> ExcludeNamesEqualing { get; init; } = [];
-        [Required] public List<string> IncludeNamesContaining { get; init; } = [];
-        [Required] public List<string> ExcludeNamesContaining { get; init; } = [];
-        [Required] public List<string> IncludeNamesStartingWith { get; init; } = [];
-        [Required] public List<string> ExcludeNamesStartingWith { get; init; } = [];
+        [Required] public Include IncludeNames { get; init; } = new();
+        [Required] public Exclude ExcludeNames { get; init; } = new();
 
         public bool Filter(Family f) {
-            var categoryName = f.Category?.Name;
             var familyName = f.Name;
+            var categoryName = f.Category?.Name;
 
-            // must check for null because of category-less families like Mullions
-            return (categoryName == null || Include(this.IncludeCategoriesEqualing, categoryName.Equals))
-                   && (categoryName == null || Exclude(this.ExcludeCategoriesEqualing, categoryName.Equals))
-                   && Include(this.IncludeNamesEqualing, familyName.Equals)
-                   && Exclude(this.ExcludeNamesEqualing, familyName.Equals)
-                   && Include(this.IncludeNamesContaining, familyName.Contains)
-                   && Exclude(this.ExcludeNamesContaining, familyName.Contains)
-                   && Include(this.IncludeNamesStartingWith, familyName.StartsWith)
-                   && Exclude(this.ExcludeNamesStartingWith, familyName.StartsWith);
+            var namePasses = this.IsNameIncluded(familyName) || !this.IsNameExcluded(familyName);
+            // Category filter: must check for null because of category-less families like Mullions
+            var categoryPasses = categoryName == null ||
+                this.IncludeCategoriesEqualing.Any(categoryName.Equals);
+
+            return namePasses && categoryPasses;
         }
 
-        private static bool Include<T>(List<T> list, Func<T, bool> predicate) =>
-            list.Count == 0 || list.Any(predicate); // Pass if empty OR condition met
+        private bool IsNameIncluded(string familyName) =>
+            this.IncludeNames.Equaling.Any(familyName.Equals) ||
+            this.IncludeNames.Containing.Any(familyName.Contains) ||
+            this.IncludeNames.StartingWith.Any(familyName.StartsWith);
 
-        private static bool Exclude<T>(List<T> list, Func<T, bool> predicate) =>
-            list.Count == 0 || !list.Any(predicate); // Pass if empty OR condition NOT met
+        private bool IsNameExcluded(string familyName) =>
+            this.ExcludeNames.Equaling.Any(familyName.Equals) ||
+            this.ExcludeNames.Containing.Any(familyName.Contains) ||
+            this.ExcludeNames.StartingWith.Any(familyName.StartsWith);
     }
 }

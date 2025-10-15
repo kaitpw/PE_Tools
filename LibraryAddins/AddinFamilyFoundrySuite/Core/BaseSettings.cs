@@ -3,10 +3,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core;
 
-public class BaseSettings<TProfile> : ILoadAndSaveOptions where TProfile : BaseProfileSettings, new() {
-    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
-    [Required]
-    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
+public class BaseSettings<TProfile> where TProfile : BaseProfileSettings, new() {
+    [Required] public OnProcessingFinishSettings OnProcessingFinish { get; set; } = new();
 
     [Description(
         "Current profile to use for the command. This determines which profile is used in the next launch of a command.")]
@@ -18,8 +16,15 @@ public class BaseSettings<TProfile> : ILoadAndSaveOptions where TProfile : BaseP
     [Required]
     public Dictionary<string, TProfile> Profiles { get; set; } = new() { { "Default", new TProfile() } };
 
+    public TProfile GetProfile() => this.Profiles[this.CurrentProfile];
+}
+
+public class OnProcessingFinishSettings : ILoadAndSaveOptions {
+    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
+    [Required]
+    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
     [Description(
-        "Load processed family(ies) into the main model document (if the command is run on a main model document)")]
+       "Load processed family(ies) into the main model document (if the command is run on a main model document)")]
     [Required]
     public bool LoadFamily { get; set; } = true;
 
@@ -30,6 +35,4 @@ public class BaseSettings<TProfile> : ILoadAndSaveOptions where TProfile : BaseP
     [Description("Save processed family(ies) to the output directory of the command")]
     [Required]
     public bool SaveFamilyToOutputDir { get; set; } = false;
-
-    public TProfile GetProfile() => this.Profiles[this.CurrentProfile];
 }

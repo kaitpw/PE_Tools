@@ -15,9 +15,9 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
 
     public string Description => "Add Family Parameters to the family";
 
-    public void Execute(Document doc) => AddFamilyParams(doc, this.Settings.FamilyParamData);
+    public void Execute(Document doc) => this.AddFamilyParams(doc, this.Settings.FamilyParamData);
 
-    public static void AddFamilyParams(
+    public void AddFamilyParams(
         Document famDoc,
         List<FamilyParamModel> parameters
     ) {
@@ -29,7 +29,7 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
 
         foreach (var p in parameters) {
             var parameter = famDoc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
-            if (p.GlobalValue is not null)
+            if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
                 _ = famDoc.SetValue(parameter, p.GlobalValue);
         }
     }

@@ -26,7 +26,7 @@ public class OperationProcessor<TProfile>
 
         if (doc.IsFamilyDocument) {
             try {
-                var saveLocation = this.GetSaveLocations(doc, this.settings);
+                var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
                 _ = doc
                     .ProcessFamily(familyActions)
                     .SaveFamily(saveLocation);
@@ -43,7 +43,7 @@ public class OperationProcessor<TProfile>
 
             foreach (var family in families) {
                 try {
-                    var saveLocation = this.GetSaveLocations(doc, this.settings);
+                    var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
                     _ = doc
                         .EditFamily(family)
                         .ProcessFamily(familyActions)

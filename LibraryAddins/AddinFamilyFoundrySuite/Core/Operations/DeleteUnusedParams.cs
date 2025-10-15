@@ -1,3 +1,4 @@
+using AddinFamilyFoundrySuite.Core.Operations.Settings;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
@@ -19,6 +20,7 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
 
         var parameters = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
+            .Where(p => !this.ExternalExcludeNamesEqualing.Contains(p.Definition.Name))
             .Where(this.Settings.Filter)
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
@@ -65,15 +67,12 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
 }
 
 public class DeleteUnusedParamsSettings {
-    [Required] public List<string> ExcludeNamesEqualing { get; init; } = [];
-    [Required] public List<string> ExcludeNamesContaining { get; init; } = [];
-    [Required] public List<string> ExcludeNamesStartingWith { get; init; } = [];
+    [Required] public Exclude ExcludeNames { get; init; } = new();
 
-    public bool Filter(FamilyParameter p) =>
-        Exclude(this.ExcludeNamesEqualing, p.Definition.Name.Equals)
-        && Exclude(this.ExcludeNamesContaining, p.Definition.Name.Contains)
-        && Exclude(this.ExcludeNamesStartingWith, p.Definition.Name.StartsWith);
+    public bool Filter(FamilyParameter p) => !this.IsExcluded(p);
 
-    private static bool Exclude<T>(List<T> list, Func<T, bool> predicate) =>
-        list.Count == 0 || !list.Any(predicate); // Pass if empty OR condition NOT met
+    private bool IsExcluded(FamilyParameter p) =>
+        this.ExcludeNames.Equaling.Any(p.Definition.Name.Equals) ||
+        this.ExcludeNames.Containing.Any(p.Definition.Name.Contains) ||
+        this.ExcludeNames.StartingWith.Any(p.Definition.Name.StartsWith);
 }
