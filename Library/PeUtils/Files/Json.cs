@@ -1,10 +1,45 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchema.NewtonsoftJson.Generation;
 using NJsonSchema.Validation;
 
 namespace PeUtils.Files;
+
+/// <summary> Contract resolver that orders properties by declaration order, respecting inheritance hierarchy </summary>
+file class OrderedContractResolver : DefaultContractResolver {
+    protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization) {
+        var properties = base.CreateProperties(type, memberSerialization);
+
+        // Build inheritance chain from base to derived
+        var typeHierarchy = new List<Type>();
+        var currentType = type;
+        while (currentType != null && currentType != typeof(object)) {
+            typeHierarchy.Insert(0, currentType);
+            currentType = currentType.BaseType;
+        }
+
+        // Create ordered list: base class properties first, then derived class properties
+        var orderedProperties = new List<JsonProperty>();
+        foreach (var t in typeHierarchy) {
+            var declaredProps = t.GetProperties(System.Reflection.BindingFlags.Public |
+                                                System.Reflection.BindingFlags.Instance |
+                                                System.Reflection.BindingFlags.DeclaredOnly);
+
+            foreach (var declaredProp in declaredProps) {
+                var jsonProp = properties.FirstOrDefault(p => p.UnderlyingName == declaredProp.Name);
+                if (jsonProp != null && !orderedProperties.Contains(jsonProp)) {
+                    orderedProperties.Add(jsonProp);
+                }
+            }
+        }
+
+        return orderedProperties;
+    }
+}
 
 public class Json<T> where T : class, new() {
     private readonly DateTime _instanceCreationTime;
@@ -17,7 +52,9 @@ public class Json<T> where T : class, new() {
         this.FilePath = filePath;
         this._instanceCreationTime = DateTime.Now;
         this._serializerSettings = new JsonSerializerSettings {
-            Formatting = Formatting.Indented, NullValueHandling = NullValueHandling.Ignore
+            Formatting = Formatting.Indented,
+            Converters = new List<JsonConverter> { new StringEnumConverter() },
+            ContractResolver = new OrderedContractResolver()
         };
 
         var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings {
@@ -58,6 +95,33 @@ public class Json<T> where T : class, new() {
         return false;
     }
 
+    /// <summary> Gets all property paths from a JSON object </summary>
+    private static List<string> GetAllPropertyPaths(JObject obj, string prefix = "") {
+        var paths = new List<string>();
+        foreach (var prop in obj.Properties()) {
+            var path = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
+            paths.Add(path);
+            if (prop.Value is JObject nestedObj) {
+                paths.AddRange(GetAllPropertyPaths(nestedObj, path));
+            }
+        }
+        return paths;
+    }
+
+    /// <summary> Gets properties that were added (exist in updated but not in original) </summary>
+    private static List<string> GetAddedProperties(JObject original, JObject updated) {
+        var originalPaths = GetAllPropertyPaths(original);
+        var updatedPaths = GetAllPropertyPaths(updated);
+        return updatedPaths.Except(originalPaths).ToList();
+    }
+
+    /// <summary> Gets properties that were removed (exist in original but not in updated) </summary>
+    private static List<string> GetRemovedProperties(JObject original, JObject updated) {
+        var originalPaths = GetAllPropertyPaths(original);
+        var updatedPaths = GetAllPropertyPaths(updated);
+        return originalPaths.Except(updatedPaths).ToList();
+    }
+
     /// <summary> Reads JSON object from the specified file, validating against schema </summary>
     /// <returns>Deserialized object</returns>
     /// <exception cref="System.IO.FileNotFoundException">Thrown when the file doesn't exist</exception>
@@ -69,18 +133,23 @@ public class Json<T> where T : class, new() {
         var validationErrors = this._schema.Validate(jsonContent);
         if (validationErrors.Any()) {
             var hasPropertyRequiredErrors = HasPropertyRequiredError(validationErrors);
+            var hasAdditionalPropertiesErrors = validationErrors.Any(e => e.Kind == ValidationErrorKind.NoAdditionalPropertiesAllowed);
 
-            if (hasPropertyRequiredErrors) {
-                try {
-                    var partialContent = JsonConvert.DeserializeObject<T>(jsonContent, this._serializerSettings);
-                    this.Write(partialContent ?? new T(), true);
-                    throw new CrashProgramException(
-                        $"JSON file {this.FilePath} was missing required properties and has been updated with defaults. Please review and configure the new settings before running again.");
-                } catch (CrashProgramException) {
-                    throw;
-                } catch {
-                    // If recovery fails, fall through to throw the original validation error
-                }
+            if (hasPropertyRequiredErrors || hasAdditionalPropertiesErrors) {
+                var originalJson = JObject.Parse(jsonContent);
+                var partialContent = JsonConvert.DeserializeObject<T>(jsonContent, this._serializerSettings);
+                this.Write(partialContent ?? new T(), true);
+
+                var updatedJson = JObject.Parse(File.ReadAllText(this.FilePath));
+                var addedProps = GetAddedProperties(originalJson, updatedJson);
+                var removedProps = GetRemovedProperties(originalJson, updatedJson);
+
+                var message = $"JSON file {this.FilePath} had schema validation errors and has been updated.";
+                if (addedProps.Any()) message += $"\nAdded properties: {string.Join("\n\t-", addedProps)}";
+                if (removedProps.Any()) message += $"\nRemoved properties: {string.Join("\n\t-", removedProps)}";
+                message += "\nPlease review the settings before running again.";
+
+                throw new CrashProgramException(message);
             }
 
             var errors = validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}").ToList();
