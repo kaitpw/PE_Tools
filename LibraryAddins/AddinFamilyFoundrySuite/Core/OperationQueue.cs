@@ -14,8 +14,8 @@ public class OperationQueue<TProfile> where TProfile : new() {
     /// </summary>
     public OperationQueue<TProfile> Add<TOpSettings>(
         IOperation<TOpSettings> operation,
-        Func<TProfile, TOpSettings> settingsSelector)
-        where TOpSettings : class, new() {
+        Func<TProfile, TOpSettings> settingsSelector
+    ) where TOpSettings : class, IOperationSettings, new() {
         // Extract settings from profile using the selector
         operation.Settings = settingsSelector(this._profile);
 
@@ -34,8 +34,8 @@ public class OperationQueue<TProfile> where TProfile : new() {
     /// </summary>
     public OperationQueue<TProfile> Add<TOpSettings>(
         IOperation<TOpSettings> operation,
-        TOpSettings settings)
-        where TOpSettings : class, new() {
+        TOpSettings settings
+    ) where TOpSettings : class, IOperationSettings, new() {
         // Extract settings from profile using the selector
         operation.Settings = settings;
 
