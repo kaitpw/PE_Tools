@@ -1,5 +1,6 @@
 using Autodesk.Revit.DB.Electrical;
 using PeExtensions.FamDocument;
+using PeExtensions.FamDocument.SetValue;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
@@ -20,14 +21,14 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
             (
                 polesParamName,
                 BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-                (doc, numberOfPoles) => doc.SetValue(numberOfPoles, 2)
+                (doc, numberOfPoles) => doc.SetValue(numberOfPoles, 2, ValueCoercionStrategy.CoerceSimple)
             ),
             (
                 appPowerParamName,
                 BuiltInParameter.RBS_ELEC_APPARENT_LOAD,
                 (doc, apparentPower) => {
                     if (string.IsNullOrEmpty(voltageParamName) || string.IsNullOrEmpty(mcaParamName)) return;
-                    doc.FamilyManager.SetFormula(apparentPower, $"{voltageParamName} * {mcaParamName}");
+                    doc.FamilyManager.SetFormula(apparentPower, $"{voltageParamName} * {mcaParamName} * 0.8 * if({polesParamName} = 3, sqrt(3), 1)");
                 }
             ),
             (
