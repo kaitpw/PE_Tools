@@ -20,9 +20,8 @@ public class OperationProcessor<TProfile>
     /// <summary>
     ///     Execute a configured processor with full initialization and document handling
     /// </summary>
-    public List<(string Name, Exception Error)> ProcessQueue(Document doc, OperationQueue<TProfile> enqueuer) {
-        var results = new List<(string Name, Exception Error)>();
-        var familyActions = enqueuer.ToFamilyActions();
+    public List<OperationLog> ProcessQueue(Document doc, OperationQueue<TProfile> enqueuer) {
+        var (familyActions, getLogs) = enqueuer.ToFamilyActions();
 
         if (doc.IsFamilyDocument) {
             try {
@@ -30,9 +29,8 @@ public class OperationProcessor<TProfile>
                 _ = doc
                     .ProcessFamily(familyActions)
                     .SaveFamily(saveLocation);
-                results.Add((doc.Title, null));
             } catch (Exception ex) {
-                results.Add((doc.OwnerFamily.Name, ex));
+                Debug.WriteLine($"Failed to process family {doc.Title}: {ex.Message}");
             }
         } else {
             var families = new FilteredElementCollector(doc)
@@ -49,14 +47,41 @@ public class OperationProcessor<TProfile>
                         .ProcessFamily(familyActions)
                         .SaveFamily(saveLocation)
                         .LoadAndCloseFamily(doc, new EditAndLoadFamilyOptions());
-                    results.Add((family.Name, null));
                 } catch (Exception ex) {
-                    results.Add((family.Name, ex));
+                    Debug.WriteLine($"Failed to process family {family.Name}: {ex.Message}");
                 }
             }
         }
 
-        return results;
+        var logs = getLogs();
+        this.WriteLogs(logs);
+        return logs;
+    }
+
+    private void WriteLogs(List<OperationLog> logs) {
+        var logData = new {
+            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            Operations = logs.Select(log => {
+                var result = new Dictionary<string, object> {
+                    ["OperationName"] = log.OperationName,
+                    ["SuccessCount"] = log.SuccessCount,
+                    ["FailedCount"] = log.FailedCount,
+                    ["Errors"] = log.Entries
+                        .Where(e => e.Error != null)
+                        .Select(e => e.Context != null ? $"[{e.Context.Name}] {e.Item}: {e.Error}" : $"{e.Item}: {e.Error}")
+                        .ToList(),
+                    ["SecondsTotalElapsed"] = Math.Round(log.MsTotalElapsed / 1000.0, 3),
+                };
+
+                if (log.MsAvgPerType.HasValue) {
+                    result["SecondsAvgPerType"] = Math.Round(log.MsAvgPerType.Value / 1000.0, 3);
+                }
+
+                return result;
+            }).ToList()
+        };
+
+        this.storage.Output().Json<object>().Write(logData);
     }
 
     private List<string> GetSaveLocations(Document famDoc, ILoadAndSaveOptions options) {

@@ -46,12 +46,19 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             foreach (var op in metadata)
                 Debug.WriteLine($"[Batch {op.BatchGroup}] {op.Type}: {op.Name} - {op.Description}");
 
-            var results = processor.ProcessQueue(doc, queue);
+            var logs = processor.ProcessQueue(doc, queue);
             var balloon = new Ballogger();
-            foreach (var result in results) {
-                _ = result.Error is not null
-                    ? balloon.Add(Log.ERR, new StackFrame(), result.Error, true)
-                    : balloon.Add(Log.INFO, new StackFrame(), result.Name);
+
+            foreach (var log in logs) {
+                var successCount = log.SuccessCount;
+                var failedCount = log.FailedCount;
+                var summary = $"{log.OperationName}: {successCount} succeeded, {failedCount} failed";
+
+                if (failedCount > 0) {
+                    _ = balloon.Add(Log.WARN, new StackFrame(), summary);
+                } else {
+                    _ = balloon.Add(Log.INFO, new StackFrame(), summary);
+                }
             }
 
             balloon.Show();

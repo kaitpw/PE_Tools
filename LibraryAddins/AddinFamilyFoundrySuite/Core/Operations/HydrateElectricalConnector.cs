@@ -11,7 +11,9 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
     public string Name => "Hydrate Electrical Connector";
     public string Description => "Configure electrical connector parameters and associate them with family parameters";
 
-    public void Execute(Document doc) {
+    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
+        var log = new OperationLog { OperationName = nameof(HydrateElectricalConnector) };
+
         var polesParamName = this.Settings.SourceParameterNames.NumberOfPoles;
         var appPowerParamName = this.Settings.SourceParameterNames.ApparentPower;
         var voltageParamName = this.Settings.SourceParameterNames.Voltage;
@@ -37,35 +39,58 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
                 null)
         };
 
-        // Get all connector elements in the family
-        var connectorElements = new FilteredElementCollector(doc)
-            .OfClass(typeof(ConnectorElement))
-            .Cast<ConnectorElement>()
-            .Where(ce => ce.Domain == Domain.DomainElectrical)
-            .ToList();
+        try {
+            var connectorElements = new FilteredElementCollector(doc)
+                .OfClass(typeof(ConnectorElement))
+                .Cast<ConnectorElement>()
+                .Where(ce => ce.Domain == Domain.DomainElectrical)
+                .ToList();
 
-        if (!connectorElements.Any()) connectorElements.Add(MakeElectricalConnector(doc));
-
-        foreach (var (source, target, action) in mappings) {
-            if (string.IsNullOrEmpty(source)) continue;
-            var sourceParam = doc.FamilyManager.Parameters
-                                  .OfType<FamilyParameter>()
-                                  .FirstOrDefault(fp => fp.Definition.Name == source)
-                              ?? throw new Exception($"Parameter {source} not found");
-
-            foreach (var connectorElement in connectorElements) {
-                var targetParam = connectorElement.get_Parameter(target);
-                try {
-                    if (source != null && targetParam != null)
-                        doc.FamilyManager.AssociateElementParameterToFamilyParameter(targetParam, sourceParam);
-                } catch (Exception ex) {
-                    Debug.WriteLine($"{targetParam.Definition.Name} can't be assigned to " +
-                                    $"{sourceParam?.Definition.Name} because {ex.Message}");
-                }
+            if (!connectorElements.Any()) {
+                connectorElements.Add(MakeElectricalConnector(doc));
+                log.Entries.Add(new LogEntry { Item = "Create connector" });
             }
 
-            action?.Invoke(doc, sourceParam);
+            foreach (var (source, target, action) in mappings) {
+                if (string.IsNullOrEmpty(source)) continue;
+
+                try {
+                    var sourceParam = doc.FamilyManager.Parameters
+                                          .OfType<FamilyParameter>()
+                                          .FirstOrDefault(fp => fp.Definition.Name == source);
+
+                    if (sourceParam == null) {
+                        log.Entries.Add(new LogEntry {
+                            Item = $"Map {source}",
+                            Error = "Parameter not found"
+                        });
+                        continue;
+                    }
+
+                    foreach (var connectorElement in connectorElements) {
+                        var targetParam = connectorElement.get_Parameter(target);
+                        if (targetParam != null) {
+                            doc.FamilyManager.AssociateElementParameterToFamilyParameter(targetParam, sourceParam);
+                        }
+                    }
+
+                    action?.Invoke(doc, sourceParam);
+                    log.Entries.Add(new LogEntry { Item = $"Map {source}" });
+                } catch (Exception ex) {
+                    log.Entries.Add(new LogEntry {
+                        Item = $"Map {source}",
+                        Error = ex.Message
+                    });
+                }
+            }
+        } catch (Exception ex) {
+            log.Entries.Add(new LogEntry {
+                Item = "Hydrate connector",
+                Error = ex.Message
+            });
         }
+
+        return log;
     }
 
     /// <summary>

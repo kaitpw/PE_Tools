@@ -12,18 +12,40 @@ public class MapParams : IOperation<MapParamsSettings> {
     public string Name => "Remap Parameters";
     public string Description => "Remap parameter values between parameters for each family type";
 
-    public void Execute(Document doc) {
+    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
+        var log = new OperationLog { OperationName = nameof(MapParams) };
+
         foreach (var p in this.Settings.MappingData) {
+            var mappingDesc = $"{p.CurrNameOrId} → {p.NewNameOrId}";
+
             try {
                 var targetParam = doc.FamilyManager.FindParameter(p.NewNameOrId);
                 var sourceParam = doc.FamilyManager.FindParameter(p.CurrNameOrId);
-                if (targetParam is null || sourceParam is null) continue;
+
+                if (targetParam is null || sourceParam is null) {
+                    log.Entries.Add(new LogEntry {
+                        Item = mappingDesc,
+                        Context = typeContext,
+                        Error = "Parameter not found"
+                    });
+                    continue;
+                }
 
                 _ = doc.SetValue(targetParam, sourceParam, p.MappingStrategy);
+                log.Entries.Add(new LogEntry {
+                    Item = mappingDesc,
+                    Context = typeContext,
+                });
             } catch (Exception ex) {
-                Debug.WriteLine(ex.Message);
+                log.Entries.Add(new LogEntry {
+                    Item = mappingDesc,
+                    Context = typeContext,
+                    Error = ex.Message
+                });
             }
         }
+
+        return log;
     }
 }
 

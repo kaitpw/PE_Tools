@@ -69,15 +69,22 @@ public class OperationQueue<TProfile> where TProfile : new() {
     /// <summary>
     ///     Converts the queued operations into optimized family document callbacks
     /// </summary>
-    public Action<Document>[] ToFamilyActions() {
+    public (Action<Document>[] actions, Func<List<OperationLog>> getLogs) ToFamilyActions() {
         var batches = this.BatchOperations(this._operations);
         var familyActions = new List<Action<Document>>();
+        var allLogs = new List<OperationLog>();
 
         foreach (var batch in batches) {
             switch (batch.Type) {
             case OperationType.Doc:
                 familyActions.Add(famDoc => {
-                    foreach (var op in batch.Operations) op.Execute(famDoc);
+                    foreach (var op in batch.Operations) {
+                        var sw = System.Diagnostics.Stopwatch.StartNew();
+                        var log = op.Execute(famDoc, typeContext: null);
+                        sw.Stop();
+                        log.MsTotalElapsed = sw.Elapsed.TotalMilliseconds;
+                        allLogs.Add(log);
+                    }
                 });
                 break;
 
@@ -86,16 +93,28 @@ public class OperationQueue<TProfile> where TProfile : new() {
                     var fm = famDoc.FamilyManager;
                     var familyTypes = fm.Types.Cast<FamilyType>().ToList();
 
-                    foreach (var famType in familyTypes) {
-                        fm.CurrentType = famType;
-                        foreach (var op in batch.Operations) op.Execute(famDoc);
+                    // Create one log per operation that aggregates all type executions
+                    foreach (var op in batch.Operations) {
+                        var aggregatedLog = new OperationLog { OperationName = op.Name };
+                        var sw = System.Diagnostics.Stopwatch.StartNew();
+
+                        foreach (var famType in familyTypes) {
+                            fm.CurrentType = famType;
+                            var typeLog = op.Execute(famDoc, famType);
+                            aggregatedLog.Entries.AddRange(typeLog.Entries);
+                        }
+
+                        sw.Stop();
+                        aggregatedLog.MsTotalElapsed = sw.Elapsed.TotalMilliseconds;
+                        aggregatedLog.MsAvgPerType = aggregatedLog.MsTotalElapsed / familyTypes.Count;
+                        allLogs.Add(aggregatedLog);
                     }
                 });
                 break;
             }
         }
 
-        return familyActions.ToArray();
+        return (familyActions.ToArray(), () => allLogs);
     }
 
     private List<OperationBatch> BatchOperations(List<IOperation> operations) {

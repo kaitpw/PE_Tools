@@ -15,23 +15,26 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
 
     public string Description => "Add Family Parameters to the family";
 
-    public void Execute(Document doc) => this.AddFamilyParams(doc, this.Settings.FamilyParamData);
+    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
+        var log = new OperationLog { OperationName = nameof(AddAndGlobalSetFamilyParams) };
 
-    public void AddFamilyParams(
-        Document famDoc,
-        List<FamilyParamModel> parameters
-    ) {
-        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
-        if (parameters is null || parameters.Where(p => p is null).Any())
-            throw new ArgumentNullException(nameof(parameters));
-
-        var fm = famDoc.FamilyManager;
-
-        foreach (var p in parameters) {
-            var parameter = famDoc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
-            if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
-                _ = famDoc.SetValue(parameter, p.GlobalValue);
+        if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Where(p => p is null).Any()) {
+            log.Entries.Add(new LogEntry { Item = "Parameters", Error = "Invalid parameter data" });
+            return log;
         }
+
+        foreach (var p in this.Settings.FamilyParamData) {
+            try {
+                var parameter = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
+                if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
+                    _ = doc.SetValue(parameter, p.GlobalValue);
+                log.Entries.Add(new LogEntry { Item = p.Name, Context = typeContext });
+            } catch (Exception ex) {
+                log.Entries.Add(new LogEntry { Item = p.Name, Context = typeContext, Error = ex.Message });
+            }
+        }
+
+        return log;
     }
 }
 

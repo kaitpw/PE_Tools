@@ -13,9 +13,13 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
     public string Name => "Delete Unused Parameters";
     public string Description => "Recursively delete unused parameters from the family";
 
-    public void Execute(Document doc) => this.RecursiveDelete(doc, new List<List<string>>());
+    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
+        var log = new OperationLog { OperationName = nameof(DeleteUnusedParams) };
+        this.RecursiveDelete(doc, log);
+        return log;
+    }
 
-    private List<List<string>> RecursiveDelete(Document doc, List<List<string>> results) {
+    private void RecursiveDelete(Document doc, OperationLog log) {
         var deleteCount = 0;
 
         var parameters = doc.FamilyManager.Parameters
@@ -25,9 +29,8 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
 
-        var iterationResults = new List<string>();
-
         foreach (var param in parameters) {
+            if (ParameterUtils.IsBuiltInParameter(param.Id)) continue;
             if (param.AssociatedParameters.Cast<Parameter>().Any()) continue;
             if (param.AssociatedArrays(doc).Any()) continue;
             if (param.AssociatedDimensions(doc).Any()) continue;
@@ -36,32 +39,18 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
             try {
                 var paramName = param.Definition.Name;
                 doc.FamilyManager.RemoveParameter(param);
-                iterationResults.Add(paramName);
+                log.Entries.Add(new LogEntry { Item = paramName });
                 deleteCount++;
-            } catch { }
+            } catch (Exception ex) {
+                log.Entries.Add(new LogEntry {
+                    Item = param.Definition.Name,
+                    Error = ex.Message
+                });
+            }
         }
 
-        results.Add(iterationResults);
-
-        return deleteCount > 0
-            ? this.RecursiveDelete(doc, results)
-            : results;
-    }
-
-    private void LogDeletionSummary(List<List<string>> results) {
-        Debug.WriteLine("\n=== DELETION SUMMARY ===");
-        var totalDeleted = results.Sum(r => r.Count);
-        Debug.WriteLine($"Total iterations: {results.Count}");
-        Debug.WriteLine($"Total parameters deleted: {totalDeleted}");
-
-        for (var i = 0; i < results.Count; i++) {
-            var iterationResults = results[i];
-            Debug.WriteLine($"\nIteration {i + 1}:");
-            Debug.WriteLine($"  Parameters deleted: {iterationResults.Count}");
-            if (iterationResults.Any()) {
-                Debug.WriteLine("  Deleted parameters:");
-                foreach (var param in iterationResults) Debug.WriteLine($"    - {param}");
-            }
+        if (deleteCount > 0) {
+            this.RecursiveDelete(doc, log);
         }
     }
 }

@@ -25,7 +25,7 @@ public interface IOperation {
     /// <summary>
     ///     Execute the operation.
     /// </summary>
-    void Execute(Document doc);
+    OperationLog Execute(Document doc, FamilyType typeContext = null);
 }
 
 public interface IOperation<TSettings> : IOperation where TSettings : IOperationSettings {
@@ -50,3 +50,25 @@ public record OperationMetadata(
     OperationType Type,
     int BatchGroup
 );
+
+/// <summary>
+///     Log result from an operation execution
+/// </summary>
+public class OperationLog {
+    public string OperationName { get; init; }
+    public List<LogEntry> Entries { get; init; } = new();
+    public double MsTotalElapsed { get; set; }
+    public double? MsAvgPerType { get; set; } = null;
+
+    public int SuccessCount => this.Entries.Count(e => e.Error is null);
+    public int FailedCount => this.Entries.Count - this.SuccessCount;
+}
+
+/// <summary>
+///     Individual log entry for an operation
+/// </summary>
+public class LogEntry {
+    public string Item { get; init; }
+    public FamilyType Context { get; init; } = null;
+    public string Error { get; init; } = null;
+}

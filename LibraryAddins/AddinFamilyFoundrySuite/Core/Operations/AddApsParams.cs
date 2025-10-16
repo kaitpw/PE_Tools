@@ -13,35 +13,41 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
     public string Name => "Add APS Parameters";
     public string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
-    public void Execute(Document doc) =>
-        _ = this.AddParams(doc);
+    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
+        var log = new OperationLog { OperationName = nameof(AddApsParams) };
 
-    private List<Result<SharedParameterElement>> AddParams(
-        Document famDoc
-    ) {
-        if (famDoc is null) throw new ArgumentNullException(nameof(famDoc));
-        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
-        var fm = famDoc.FamilyManager;
-
-        var finalDownloadResults = new List<Result<SharedParameterElement>>();
-
+        var fm = doc.FamilyManager;
         var filteredResults = this.Settings.Filter != null
             ? AddApsParamsSettings.GetAPSParams().Results.Where(this.Settings.Filter).ToList()
             : AddApsParamsSettings.GetAPSParams().Results;
 
-        var defFile = MakeTempSharedParamTxt(famDoc);
+        var defFile = MakeTempSharedParamTxt(doc);
         var group = defFile.Groups.get_Item("Parameters") ?? defFile.Groups.Create("Parameters");
 
         foreach (var psParamInfo in filteredResults) {
             if (psParamInfo.TypedMetadata.IsArchived) continue;
 
-            var (sharedParam, sharedParamErr) = famDoc.AddApsParameter(fm, group, psParamInfo);
-            if (sharedParamErr is not null) {
-                finalDownloadResults.Add(famDoc.AddApsParameterSlow(psParamInfo));
-                continue;
+            try {
+                var (sharedParam, sharedParamErr) = doc.AddApsParameter(fm, group, psParamInfo);
+                if (sharedParamErr is not null) {
+                    var (slowParam, slowErr) = doc.AddApsParameterSlow(psParamInfo);
+                    if (slowErr != null) {
+                        log.Entries.Add(new LogEntry {
+                            Item = psParamInfo.Name,
+                            Error = slowErr.Message
+                        });
+                    } else {
+                        log.Entries.Add(new LogEntry { Item = slowParam.Name });
+                    }
+                } else {
+                    log.Entries.Add(new LogEntry { Item = sharedParam.Name });
+                }
+            } catch (Exception ex) {
+                log.Entries.Add(new LogEntry {
+                    Item = psParamInfo.Name,
+                    Error = ex.Message
+                });
             }
-
-            finalDownloadResults.Add(sharedParam);
         }
 
         try {
@@ -50,7 +56,7 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
             Debug.WriteLine("Failed to delete temporary shared param file.");
         }
 
-        return finalDownloadResults;
+        return log;
     }
 
     private static DefinitionFile MakeTempSharedParamTxt(Document famDoc) {
