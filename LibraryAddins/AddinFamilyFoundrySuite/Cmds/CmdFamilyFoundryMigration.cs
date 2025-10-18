@@ -37,7 +37,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                     processor.profile.MapParams.MappingData.Select(m => m.CurrNameOrId).ToList()
                 ), profile => profile.DeleteUnusedParams)
                 // .Add(new DeleteUnusedReferencePlanes(), profile => profile.DeleteUnusedReferencePlanes)
-                .Add(new AddApsParams(), profile => profile.AddApsParams)
+                .Add(new AddApsParams(processor.profile.GetAPSParams()), profile => profile.AddApsParams) // TESTING
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
                 .Add(new MapParams(), profile => profile.MapParams)
                 .Add(new AddAndGlobalSetFamilyParams(), addFamilyParams)

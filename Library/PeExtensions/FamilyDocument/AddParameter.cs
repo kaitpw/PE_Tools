@@ -1,5 +1,5 @@
 using PeExtensions.FamManager;
-using ApsParamModel = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
+using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
 namespace PeExtensions.FamDocument;
 
@@ -25,7 +25,7 @@ public static class FamilyDocumentAddParameter {
 
 
     public static Result<SharedParameterElement>
-        AddApsParameterSlow(this Document famDoc, ApsParamModel apsParamModel) {
+        AddApsParameterSlow(this Document famDoc, ParamModelRes apsParamModel) {
         var parameterTypeId = apsParamModel.DownloadOptions.ParameterTypeId;
         var dlOpts = new ParameterDownloadOptions(
             new HashSet<ElementId>(),
@@ -64,7 +64,7 @@ public static class FamilyDocumentAddParameter {
     public static Result<SharedParameterElement> AddApsParameter(this Document famDoc,
         FamilyManager fm,
         DefinitionGroup group,
-        ApsParamModel apsParamModel) {
+        ParamModelRes apsParamModel) {
         try {
             if (group is null) throw new ArgumentNullException(nameof(group));
 

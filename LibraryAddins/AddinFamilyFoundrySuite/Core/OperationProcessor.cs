@@ -36,11 +36,7 @@ public class OperationProcessor<TProfile>
                 Debug.WriteLine($"Failed to process family {doc.Title}: {ex.Message}");
             }
         } else {
-            var families = new FilteredElementCollector(doc)
-                .OfClass(typeof(Family))
-                .Cast<Family>()
-                .Where(this.profile.FilterFamilies.Filter)
-                .ToList();
+            var families = this.profile.GetFamilies(doc);
 
             foreach (var family in families) {
                 var familyName = family.Name; // Capture name before processing as family object becomes invalid after LoadAndCloseFamily
