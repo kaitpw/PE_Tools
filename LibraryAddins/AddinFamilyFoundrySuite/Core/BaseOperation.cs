@@ -25,7 +25,7 @@ public interface IOperation {
     /// <summary>
     ///     Execute the operation.
     /// </summary>
-    OperationLog Execute(Document doc, FamilyType typeContext = null);
+    OperationLog Execute(Document doc);
 }
 
 public interface IOperation<TSettings> : IOperation where TSettings : IOperationSettings {
@@ -55,7 +55,7 @@ public record OperationMetadata(
 ///     Log result from an operation execution
 /// </summary>
 public class OperationLog {
-    public string OperationName { get; init; }
+    public string OperationName { get; set; }
     public List<LogEntry> Entries { get; init; } = new();
     public double MsTotalElapsed { get; set; }
     public double? MsAvgPerType { get; set; } = null;
@@ -69,6 +69,6 @@ public class OperationLog {
 /// </summary>
 public class LogEntry {
     public string Item { get; init; }
-    public FamilyType Context { get; init; } = null;
+    public string Context { get; init; } = null;
     public string Error { get; init; } = null;
 }

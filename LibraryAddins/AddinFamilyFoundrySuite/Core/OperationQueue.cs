@@ -53,7 +53,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
     ///     Get metadata about all queued operations for frontend display
     /// </summary>
     public List<OperationMetadata> GetOperationMetadata() {
-        var batches = this.BatchOperations(this._operations);
+        var batches = this.OperationBatches(this._operations);
         var metadata = new List<OperationMetadata>();
         var batchIndex = 0;
 
@@ -70,7 +70,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
     ///     Converts the queued operations into optimized family document callbacks
     /// </summary>
     public (Action<Document>[] actions, Func<List<OperationLog>> getLogs) ToFamilyActions() {
-        var batches = this.BatchOperations(this._operations);
+        var batches = this.OperationBatches(this._operations);
         var familyActions = new List<Action<Document>>();
         var allLogs = new List<OperationLog>();
 
@@ -79,9 +79,10 @@ public class OperationQueue<TProfile> where TProfile : new() {
             case OperationType.Doc:
                 familyActions.Add(famDoc => {
                     foreach (var op in batch.Operations) {
-                        var sw = System.Diagnostics.Stopwatch.StartNew();
-                        var log = op.Execute(famDoc, typeContext: null);
+                        var sw = Stopwatch.StartNew();
+                        var log = op.Execute(famDoc);
                         sw.Stop();
+                        log.OperationName = op.GetType().Name;
                         log.MsTotalElapsed = sw.Elapsed.TotalMilliseconds;
                         allLogs.Add(log);
                     }
@@ -95,16 +96,26 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
                     // Create one log per operation that aggregates all type executions
                     foreach (var op in batch.Operations) {
-                        var aggregatedLog = new OperationLog { OperationName = op.Name };
-                        var sw = System.Diagnostics.Stopwatch.StartNew();
+                        var aggregatedLog = new OperationLog();
+                        var sw = Stopwatch.StartNew();
 
                         foreach (var famType in familyTypes) {
                             fm.CurrentType = famType;
-                            var typeLog = op.Execute(famDoc, famType);
-                            aggregatedLog.Entries.AddRange(typeLog.Entries);
+                            var typeLog = op.Execute(famDoc);
+
+                            // Extract type name immediately before adding to log
+                            var typeName = famType.Name;
+                            foreach (var entry in typeLog.Entries) {
+                                aggregatedLog.Entries.Add(new LogEntry {
+                                    Item = entry.Item,
+                                    Context = typeName,
+                                    Error = entry.Error
+                                });
+                            }
                         }
 
                         sw.Stop();
+                        aggregatedLog.OperationName = op.GetType().Name;
                         aggregatedLog.MsTotalElapsed = sw.Elapsed.TotalMilliseconds;
                         aggregatedLog.MsAvgPerType = aggregatedLog.MsTotalElapsed / familyTypes.Count;
                         allLogs.Add(aggregatedLog);
@@ -117,7 +128,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
         return (familyActions.ToArray(), () => allLogs);
     }
 
-    private List<OperationBatch> BatchOperations(List<IOperation> operations) {
+    private List<OperationBatch> OperationBatches(List<IOperation> operations) {
         var batches = new List<OperationBatch>();
         var currentBatch = new List<IOperation>();
         OperationType? currentType = null;

@@ -36,10 +36,14 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 .Add(new DeleteUnusedParams(
                     processor.profile.MapParams.MappingData.Select(m => m.CurrNameOrId).ToList()
                 ), profile => profile.DeleteUnusedParams)
+                // .Add(new DeleteUnusedReferencePlanes(), profile => profile.DeleteUnusedReferencePlanes)
                 .Add(new AddApsParams(), profile => profile.AddApsParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
                 .Add(new MapParams(), profile => profile.MapParams)
-                .Add(new AddAndGlobalSetFamilyParams(), addFamilyParams);
+                .Add(new AddAndGlobalSetFamilyParams(), addFamilyParams)
+                .Add(new DeleteParams(
+                    processor.profile.MapParams.MappingData.Select(m => m.CurrNameOrId).ToList()
+                ), new DeleteParamsSettings());
 
             // Get metadata for debugging/logging
             var metadata = queue.GetOperationMetadata();
@@ -54,11 +58,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 var failedCount = log.FailedCount;
                 var summary = $"{log.OperationName}: {successCount} succeeded, {failedCount} failed";
 
-                if (failedCount > 0) {
-                    _ = balloon.Add(Log.WARN, new StackFrame(), summary);
-                } else {
-                    _ = balloon.Add(Log.INFO, new StackFrame(), summary);
-                }
+                _ = failedCount > 0 ? balloon.Add(Log.WARN, new StackFrame(), summary) : balloon.Add(Log.INFO, new StackFrame(), summary);
             }
 
             balloon.Show();
@@ -75,6 +75,10 @@ public class ProfileRemap : BaseProfileSettings {
     [Description("Settings for deleting unused parameters")]
     [Required]
     public DeleteUnusedParamsSettings DeleteUnusedParams { get; init; } = new();
+
+    // [Description("Settings for deleting unused reference planes")]
+    // [Required]
+    // public DeleteUnusedReferencePlanesSettings DeleteUnusedReferencePlanes { get; init; } = new();
 
     [Description("Settings for adding APS parameters")]
     [Required]

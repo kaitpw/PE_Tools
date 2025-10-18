@@ -11,8 +11,8 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
     public string Name => "Hydrate Electrical Connector";
     public string Description => "Configure electrical connector parameters and associate them with family parameters";
 
-    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
-        var log = new OperationLog { OperationName = nameof(HydrateElectricalConnector) };
+    public OperationLog Execute(Document doc) {
+        var log = new OperationLog();
 
         var polesParamName = this.Settings.SourceParameterNames.NumberOfPoles;
         var appPowerParamName = this.Settings.SourceParameterNames.ApparentPower;

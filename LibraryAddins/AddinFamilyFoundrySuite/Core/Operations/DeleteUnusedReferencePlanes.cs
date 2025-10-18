@@ -1,15 +1,16 @@
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
-
+// TODO: this still needs alot of work!!!
 public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlanesSettings> {
     public DeleteUnusedReferencePlanesSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
     public string Name => "Delete Unused Reference Planes";
     public string Description => "Deletes reference planes in the Family which are not used by anything important";
 
-    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
-        var log = new OperationLog { OperationName = nameof(DeleteUnusedReferencePlanes) };
+    public OperationLog Execute(Document doc) {
+        var log = new OperationLog();
         this.RecursiveDeleteUnusedReferencePlanes(doc, log);
         return log;
     }
@@ -26,8 +27,8 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
             var planeName = refPlane.Name ?? $"RefPlane_{refPlane.Id}";
 
             if (this.IsImportantPlane(refPlane)) continue;
-            if (this.GetDependentElements(doc, refPlane, this.Settings.SafeDelete).Count != 0) continue;
             if (this.GetSketchedCurves(doc, refPlane).Count != 0) continue;
+            if (this.Settings.SafeDelete && this.GetDependentElements(doc, refPlane).Count != 0) continue;
 
             try {
                 _ = doc.Delete(refPlane.Id);
@@ -38,9 +39,7 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
             }
         }
 
-        if (deleteCount > 0) {
-            this.RecursiveDeleteUnusedReferencePlanes(doc, log);
-        }
+        if (deleteCount > 0) this.RecursiveDeleteUnusedReferencePlanes(doc, log);
     }
 
 
@@ -50,20 +49,41 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
             .Any(p => !new[] { "Not a Reference", "Weak Reference" }.Contains(p.AsValueString()));
 
 
-    private List<Element> GetDependentElements(Document doc, ReferencePlane refPlane, bool safe = false) =>
-        refPlane.GetDependentElements(null)?
-            .Where(id => id != refPlane.Id)
-            .Select(doc.GetElement)
-            .Where(e => {
-                if (safe) return true;
-                if (e is not Dimension dimension) return true;
-                if (this.DimensionIsDeletable(dimension)) return false;
-                return true;
-            }).ToList() ?? [];
+    private List<Element> GetDependentElements(Document doc, ReferencePlane refPlane) {
+        var dependentElements = refPlane.GetDependentElements(null)?
+            .Where(id => id != refPlane.Id);
+
+        // Apply dimension filters when safe mode is enabled
+        if (dependentElements != null) {
+            dependentElements = dependentElements.Where(id => {
+                var element = doc.GetElement(id);
+                if (element is not Dimension dimension) return true;
+
+                return !this.DimensionIsDeletable(dimension) ||
+                       !this.DimensionReferencesPlane(doc, dimension, refPlane);
+            });
+        }
+
+        if (dependentElements?.Any() == true) {
+            return [.. dependentElements.Select(doc.GetElement)];
+        }
+        return [];
+    }
 
     private bool DimensionIsDeletable(Dimension dimension) {
         try {
             return dimension.FamilyLabel != null && !dimension.AreSegmentsEqual;
+        } catch {
+            return false;
+        }
+    }
+
+    private bool DimensionReferencesPlane(Document doc, Dimension dimension, ReferencePlane refPlane) {
+        try {
+            return dimension.References
+                .Cast<Reference>()
+                .Select(doc.GetElement)
+                .Any(element => element?.Id == refPlane.Id);
         } catch {
             return false;
         }
@@ -91,7 +111,10 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
 }
 
 public class DeleteUnusedReferencePlanesSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
-    [Description("If false, the check for unusedness is relaxed: unused means that an RP does not have a dimension with a parameter associated to it.")]
+    [Description(
+        "If false, the check for unusedness is relaxed: unused means that an RP does not have a dimension with a parameter associated to it.")]
+    [Required]
     public bool SafeDelete { get; init; } = false;
+
+    public bool Enabled { get; init; } = true;
 }

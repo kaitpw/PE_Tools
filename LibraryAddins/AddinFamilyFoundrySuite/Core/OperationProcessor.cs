@@ -1,5 +1,6 @@
 using PeExtensions.FamDocument;
 using PeServices.Storage;
+using PeUtils.Files;
 
 namespace AddinFamilyFoundrySuite.Core;
 
@@ -21,14 +22,16 @@ public class OperationProcessor<TProfile>
     ///     Execute a configured processor with full initialization and document handling
     /// </summary>
     public List<OperationLog> ProcessQueue(Document doc, OperationQueue<TProfile> enqueuer) {
-        var (familyActions, getLogs) = enqueuer.ToFamilyActions();
+        var allFamilyLogs = new Dictionary<string, List<OperationLog>>();
 
         if (doc.IsFamilyDocument) {
+            var (familyActions, getLogs) = enqueuer.ToFamilyActions();
             try {
                 var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
                 _ = doc
                     .ProcessFamily(familyActions)
                     .SaveFamily(saveLocation);
+                allFamilyLogs.Add(doc.Title, getLogs());
             } catch (Exception ex) {
                 Debug.WriteLine($"Failed to process family {doc.Title}: {ex.Message}");
             }
@@ -40,6 +43,8 @@ public class OperationProcessor<TProfile>
                 .ToList();
 
             foreach (var family in families) {
+                var familyName = family.Name; // Capture name before processing as family object becomes invalid after LoadAndCloseFamily
+                var (familyActions, getLogs) = enqueuer.ToFamilyActions();
                 try {
                     var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
                     _ = doc
@@ -47,41 +52,49 @@ public class OperationProcessor<TProfile>
                         .ProcessFamily(familyActions)
                         .SaveFamily(saveLocation)
                         .LoadAndCloseFamily(doc, new EditAndLoadFamilyOptions());
+                    allFamilyLogs.Add(familyName, getLogs());
                 } catch (Exception ex) {
-                    Debug.WriteLine($"Failed to process family {family.Name}: {ex.Message}");
+                    Debug.WriteLine($"Failed to process family {familyName}: {ex.Message}");
                 }
             }
         }
 
-        var logs = getLogs();
-        this.WriteLogs(logs);
-        return logs;
+        var logPath = this.WriteLogs(allFamilyLogs);
+        if (this.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish) {
+            FileUtils.OpenInDefaultApp(logPath);
+        }
+        return allFamilyLogs.SelectMany(kvp => kvp.Value).ToList();
     }
 
-    private void WriteLogs(List<OperationLog> logs) {
+    private string WriteLogs(Dictionary<string, List<OperationLog>> familyLogs) {
         var logData = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            Operations = logs.Select(log => {
-                var result = new Dictionary<string, object> {
-                    ["OperationName"] = log.OperationName,
-                    ["SuccessCount"] = log.SuccessCount,
-                    ["FailedCount"] = log.FailedCount,
-                    ["Errors"] = log.Entries
-                        .Where(e => e.Error != null)
-                        .Select(e => e.Context != null ? $"[{e.Context.Name}] {e.Item}: {e.Error}" : $"{e.Item}: {e.Error}")
-                        .ToList(),
-                    ["SecondsTotalElapsed"] = Math.Round(log.MsTotalElapsed / 1000.0, 3),
-                };
+            ProcessedFamilies = familyLogs.Select(kvp => new {
+                FamilyName = kvp.Key,
+                Operations = kvp.Value.Select(log => {
+                    var result = new Dictionary<string, object> {
+                        ["OperationName"] = log.OperationName,
+                        ["SuccessCount"] = log.SuccessCount,
+                        ["FailedCount"] = log.FailedCount,
+                        ["Errors"] = log.Entries
+                            .Where(e => e.Error != null)
+                            .Select(e => e.Context != null ? $"[{e.Context}] {e.Item}: {e.Error}" : $"{e.Item}: {e.Error}")
+                            .ToList(),
+                        ["SecondsTotalElapsed"] = Math.Round(log.MsTotalElapsed / 1000.0, 3)
+                    };
 
-                if (log.MsAvgPerType.HasValue) {
-                    result["SecondsAvgPerType"] = Math.Round(log.MsAvgPerType.Value / 1000.0, 3);
-                }
+                    if (log.MsAvgPerType.HasValue) {
+                        result["SecondsAvgPerType"] = Math.Round(log.MsAvgPerType.Value / 1000.0, 3);
+                    }
 
-                return result;
+                    return result;
+                }).ToList()
             }).ToList()
         };
 
-        this.storage.Output().Json<object>().Write(logData);
+        var filename = $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json";
+        this.storage.Output().Json<object>(filename).Write(logData);
+        return Path.Combine(this.storage.Output().GetFolderPath(), filename);
     }
 
     private List<string> GetSaveLocations(Document famDoc, ILoadAndSaveOptions options) {

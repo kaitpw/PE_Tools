@@ -15,8 +15,8 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
 
     public string Description => "Add Family Parameters to the family";
 
-    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
-        var log = new OperationLog { OperationName = nameof(AddAndGlobalSetFamilyParams) };
+    public OperationLog Execute(Document doc) {
+        var log = new OperationLog();
 
         if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Where(p => p is null).Any()) {
             log.Entries.Add(new LogEntry { Item = "Parameters", Error = "Invalid parameter data" });
@@ -28,9 +28,9 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
                 var parameter = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
                 if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
                     _ = doc.SetValue(parameter, p.GlobalValue);
-                log.Entries.Add(new LogEntry { Item = p.Name, Context = typeContext });
+                log.Entries.Add(new LogEntry { Item = p.Name });
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = p.Name, Context = typeContext, Error = ex.Message });
+                log.Entries.Add(new LogEntry { Item = p.Name, Error = ex.Message });
             }
         }
 

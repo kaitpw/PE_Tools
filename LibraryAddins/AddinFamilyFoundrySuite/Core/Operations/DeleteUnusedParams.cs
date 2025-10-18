@@ -13,8 +13,8 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
     public string Name => "Delete Unused Parameters";
     public string Description => "Recursively delete unused parameters from the family";
 
-    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
-        var log = new OperationLog { OperationName = nameof(DeleteUnusedParams) };
+    public OperationLog Execute(Document doc) {
+        var log = new OperationLog();
         this.RecursiveDelete(doc, log);
         return log;
     }

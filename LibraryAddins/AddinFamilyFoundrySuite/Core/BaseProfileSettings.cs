@@ -15,9 +15,16 @@ public class BaseProfileSettings {
             var familyName = f.Name;
             var categoryName = f.Category?.Name;
 
-            var namePasses = this.IsNameIncluded(familyName) || !this.IsNameExcluded(familyName);
+            var anyIncludeNameFilters = this.IncludeNames.Equaling.Any() ||
+                                        this.IncludeNames.Containing.Any() ||
+                                        this.IncludeNames.StartingWith.Any();
+
+            var nameIncluded = !anyIncludeNameFilters || this.IsNameIncluded(familyName);
+            var namePasses = nameIncluded && !this.IsNameExcluded(familyName);
+
             // Category filter: must check for null because of category-less families like Mullions
             var categoryPasses = categoryName == null ||
+                !this.IncludeCategoriesEqualing.Any() ||
                 this.IncludeCategoriesEqualing.Any(categoryName.Equals);
 
             return namePasses && categoryPasses;

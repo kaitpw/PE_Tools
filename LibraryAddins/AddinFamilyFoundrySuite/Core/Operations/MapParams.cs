@@ -12,8 +12,8 @@ public class MapParams : IOperation<MapParamsSettings> {
     public string Name => "Remap Parameters";
     public string Description => "Remap parameter values between parameters for each family type";
 
-    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
-        var log = new OperationLog { OperationName = nameof(MapParams) };
+    public OperationLog Execute(Document doc) {
+        var log = new OperationLog();
 
         foreach (var p in this.Settings.MappingData) {
             var mappingDesc = $"{p.CurrNameOrId} → {p.NewNameOrId}";
@@ -25,7 +25,6 @@ public class MapParams : IOperation<MapParamsSettings> {
                 if (targetParam is null || sourceParam is null) {
                     log.Entries.Add(new LogEntry {
                         Item = mappingDesc,
-                        Context = typeContext,
                         Error = "Parameter not found"
                     });
                     continue;
@@ -34,12 +33,10 @@ public class MapParams : IOperation<MapParamsSettings> {
                 _ = doc.SetValue(targetParam, sourceParam, p.MappingStrategy);
                 log.Entries.Add(new LogEntry {
                     Item = mappingDesc,
-                    Context = typeContext,
                 });
             } catch (Exception ex) {
                 log.Entries.Add(new LogEntry {
                     Item = mappingDesc,
-                    Context = typeContext,
                     Error = ex.Message
                 });
             }

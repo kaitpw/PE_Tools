@@ -13,8 +13,8 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
     public string Name => "Add APS Parameters";
     public string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
-    public OperationLog Execute(Document doc, FamilyType typeContext = null) {
-        var log = new OperationLog { OperationName = nameof(AddApsParams) };
+    public OperationLog Execute(Document doc) {
+        var log = new OperationLog();
 
         var fm = doc.FamilyManager;
         var filteredResults = this.Settings.Filter != null
