@@ -1,4 +1,3 @@
-using AddinFamilyFoundrySuite.Core.Operations.Settings;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
@@ -19,6 +18,7 @@ public class AddUnmappedApsParams : IOperation<MapParamsSettings> {
 
     public AddUnmappedApsParams(List<ParamModelRes> apsParams) =>
         this._apsParams = apsParams;
+
     public MapParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
 
@@ -31,9 +31,7 @@ public class AddUnmappedApsParams : IOperation<MapParamsSettings> {
             .Select(m => m.NewName)
             .ToList();
 
-        var addApsParams = new AddApsParams(this._apsParams, apsParamsToSkip) {
-            Settings = new AddApsParamsSettings()
-        };
+        var addApsParams = new AddApsParams(this._apsParams, apsParamsToSkip) { Settings = new AddApsParamsSettings() };
         return addApsParams.Execute(doc);
     }
 }

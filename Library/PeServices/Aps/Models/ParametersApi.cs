@@ -58,7 +58,7 @@ public class ParametersApi {
             [UsedImplicitly] public string CreatedBy { get; init; }
             [UsedImplicitly] public string CreatedAt { get; init; }
 
-            [UsedImplicitly][JsonIgnore] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
+            [UsedImplicitly] [JsonIgnore] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
 
             [JsonIgnore] public ParameterDownloadOpts DownloadOptions => new(this.Id, this.TypedMetadata);
 

@@ -1,7 +1,4 @@
-using AddinFamilyFoundrySuite.Core.Operations.Settings;
-using System.ComponentModel.DataAnnotations;
 using PeExtensions.FamManager;
-
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -24,6 +21,7 @@ public class DeleteParams : IOperation<DeleteParamsSettings> {
                     log.Entries.Add(new LogEntry { Item = name, Error = "Parameter not found" });
                     continue;
                 }
+
                 if (ParameterUtils.IsBuiltInParameter(param.Id)) continue;
 
 
@@ -33,6 +31,7 @@ public class DeleteParams : IOperation<DeleteParamsSettings> {
                 log.Entries.Add(new LogEntry { Item = name, Error = ex.Message });
             }
         }
+
         return log;
     }
 }

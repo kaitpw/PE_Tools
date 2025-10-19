@@ -1,12 +1,10 @@
 using Autodesk.Revit.DB.Electrical;
-using PeExtensions.FamDocument;
-using PeExtensions.FamDocument.SetValue;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorSettings> {
-    public HydrateElectricalConnectorSettings Settings { get; set; } 
+    public HydrateElectricalConnectorSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
 
     public string Description => "Configure electrical connector parameters and associate them with family parameters";
@@ -30,7 +28,8 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
                 BuiltInParameter.RBS_ELEC_APPARENT_LOAD,
                 (doc, apparentPower) => {
                     if (string.IsNullOrEmpty(voltageParamName) || string.IsNullOrEmpty(mcaParamName)) return;
-                    doc.FamilyManager.SetFormula(apparentPower, $"{voltageParamName} * {mcaParamName} * 0.8 * if({polesParamName} = 3, sqrt(3), 1)");
+                    doc.FamilyManager.SetFormula(apparentPower,
+                        $"{voltageParamName} * {mcaParamName} * 0.8 * if({polesParamName} = 3, sqrt(3), 1)");
                 }
             ),
             (
@@ -56,38 +55,28 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
 
                 try {
                     var sourceParam = doc.FamilyManager.Parameters
-                                          .OfType<FamilyParameter>()
-                                          .FirstOrDefault(fp => fp.Definition.Name == source);
+                        .OfType<FamilyParameter>()
+                        .FirstOrDefault(fp => fp.Definition.Name == source);
 
                     if (sourceParam == null) {
-                        log.Entries.Add(new LogEntry {
-                            Item = $"Map {source}",
-                            Error = "Parameter not found"
-                        });
+                        log.Entries.Add(new LogEntry { Item = $"Map {source}", Error = "Parameter not found" });
                         continue;
                     }
 
                     foreach (var connectorElement in connectorElements) {
                         var targetParam = connectorElement.get_Parameter(target);
-                        if (targetParam != null) {
+                        if (targetParam != null)
                             doc.FamilyManager.AssociateElementParameterToFamilyParameter(targetParam, sourceParam);
-                        }
                     }
 
                     action?.Invoke(doc, sourceParam);
                     log.Entries.Add(new LogEntry { Item = $"Map {source}" });
                 } catch (Exception ex) {
-                    log.Entries.Add(new LogEntry {
-                        Item = $"Map {source}",
-                        Error = ex.Message
-                    });
+                    log.Entries.Add(new LogEntry { Item = $"Map {source}", Error = ex.Message });
                 }
             }
         } catch (Exception ex) {
-            log.Entries.Add(new LogEntry {
-                Item = "Hydrate connector",
-                Error = ex.Message
-            });
+            log.Entries.Add(new LogEntry { Item = "Hydrate connector", Error = ex.Message });
         }
 
         return log;
@@ -124,8 +113,8 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
 }
 
 public class HydrateElectricalConnectorSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
     [Required] public Parameters SourceParameterNames { get; init; } = new();
+    public bool Enabled { get; init; } = true;
 
     public class Parameters {
         [Required] public string NumberOfPoles { get; init; } = "";

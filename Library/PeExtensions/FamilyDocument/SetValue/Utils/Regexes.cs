@@ -13,7 +13,7 @@ public static class Regexes {
         var match = Regex.Match(trimmed, @"^-?\d+");
 
         return match.Success
-            && int.TryParse(match.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
+               && int.TryParse(match.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
     }
 
     public static bool TryExtractDouble(string? input, out double result) {
@@ -24,7 +24,8 @@ public static class Regexes {
         var match = Regex.Match(trimmed, @"^-?\d*\.?\d+");
 
         return match.Success
-            && double.TryParse(match.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out result);
+               && double.TryParse(match.Value, NumberStyles.Float | NumberStyles.AllowLeadingSign,
+                   CultureInfo.InvariantCulture, out result);
     }
 
     public static int ExtractInteger(string input) =>

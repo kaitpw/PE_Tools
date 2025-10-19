@@ -23,8 +23,9 @@ public class OnProcessingFinishSettings : ILoadAndSaveOptions {
     [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
     [Required]
     public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
+
     [Description(
-       "Load processed family(ies) into the main model document (if the command is run on a main model document)")]
+        "Load processed family(ies) into the main model document (if the command is run on a main model document)")]
     [Required]
     public bool LoadFamily { get; set; } = true;
 

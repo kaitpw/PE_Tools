@@ -1,9 +1,8 @@
 using AddinFamilyFoundrySuite.Core.Operations.Settings;
+using PeServices.Storage;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
-using PeServices.Storage;
-using PeRevit.Utils;
 
 
 namespace AddinFamilyFoundrySuite.Core;
@@ -21,10 +20,12 @@ public class BaseProfileSettings {
 
     public List<ParamModelRes> GetAPSParams() {
         var apsParams = Storage.GlobalState("parameters-service-cache.json").Json<ParamModel>().Read();
-        if (apsParams.Results != null) return apsParams.Results
-            .Where(this.FilterApsParams.Filter)
-            .Where(p => !p.TypedMetadata.IsArchived)
-            .ToList();
+        if (apsParams.Results != null) {
+            return apsParams.Results
+                .Where(this.FilterApsParams.Filter)
+                .Where(p => !p.TypedMetadata.IsArchived)
+                .ToList();
+        }
 
         throw new InvalidOperationException(
             $"This Family Foundry command requires cached parameters data, but no cached data exists. " +
@@ -49,8 +50,8 @@ public class BaseProfileSettings {
 
             // Category filter: must check for null because of category-less families like Mullions
             var categoryPasses = categoryName == null ||
-                !this.IncludeCategoriesEqualing.Any() ||
-                this.IncludeCategoriesEqualing.Any(categoryName.Equals);
+                                 !this.IncludeCategoriesEqualing.Any() ||
+                                 this.IncludeCategoriesEqualing.Any(categoryName.Equals);
 
             return namePasses && categoryPasses;
         }
@@ -64,7 +65,6 @@ public class BaseProfileSettings {
             this.ExcludeNames.Equaling.Any(familyName.Equals) ||
             this.ExcludeNames.Containing.Any(familyName.Contains) ||
             this.ExcludeNames.StartingWith.Any(familyName.StartsWith);
-
     }
 
     public class FilterApsParamsSettings {

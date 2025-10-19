@@ -1,10 +1,6 @@
 using PeExtensions.FamDocument;
-using PeServices.Storage;
 using PeRevit.Utils;
-using System.ComponentModel.DataAnnotations;
-using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
-using AddinFamilyFoundrySuite.Core.Operations.Settings;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -13,8 +9,9 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
         this._apsParams = apsParams;
         this._apsParamsToSkip = apsParamsToSkip;
     }
-    private List<ParamModelRes> _apsParams { get; init; }
-    private List<string> _apsParamsToSkip { get; init; }
+
+    private List<ParamModelRes> _apsParams { get; }
+    private List<string> _apsParamsToSkip { get; }
 
     public AddApsParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
@@ -39,21 +36,13 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
                     // Do Not port this code block to the new combined method
                     var (slowParam, slowErr) = doc.AddApsParameterSlow(apsParam);
                     if (slowErr != null) {
-                        log.Entries.Add(new LogEntry {
-                            Item = apsParam.Name,
-                            Error = slowErr.Message
-                        });
-                    } else {
+                        log.Entries.Add(new LogEntry { Item = apsParam.Name, Error = slowErr.Message });
+                    } else
                         log.Entries.Add(new LogEntry { Item = slowParam.Name });
-                    }
-                } else {
+                } else
                     log.Entries.Add(new LogEntry { Item = sharedParam.Name });
-                }
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry {
-                    Item = apsParam.Name,
-                    Error = ex.Message
-                });
+                log.Entries.Add(new LogEntry { Item = apsParam.Name, Error = ex.Message });
             }
         }
 

@@ -3,7 +3,6 @@ using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeServices.Storage.Core;
-using System.Text;
 
 namespace AddinCmdPalette.Helpers;
 

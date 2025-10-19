@@ -1,6 +1,5 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
-using AddinFamilyFoundrySuite.Core.Operations.Settings;
 using PeRevit.Ui;
 using PeServices.Storage;
 using System.ComponentModel;
@@ -60,7 +59,9 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 var failedCount = log.FailedCount;
                 var summary = $"{log.OperationName}: {successCount} succeeded, {failedCount} failed";
 
-                _ = failedCount > 0 ? balloon.Add(Log.WARN, new StackFrame(), summary) : balloon.Add(Log.INFO, new StackFrame(), summary);
+                _ = failedCount > 0
+                    ? balloon.Add(Log.WARN, new StackFrame(), summary)
+                    : balloon.Add(Log.INFO, new StackFrame(), summary);
             }
 
             balloon.Show();

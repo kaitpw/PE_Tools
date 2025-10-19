@@ -1,6 +1,5 @@
 using PeRevit.Ui;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace PeUtils.Files;
 

@@ -14,7 +14,7 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
     public string Description => "Recursively delete unused parameters from the family";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name); 
+        var log = new OperationLog(this.GetType().Name);
         this.RecursiveDelete(doc, log);
         return log;
     }
@@ -42,22 +42,17 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
                 log.Entries.Add(new LogEntry { Item = paramName });
                 deleteCount++;
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry {
-                    Item = param.Definition.Name,
-                    Error = ex.Message
-                });
+                log.Entries.Add(new LogEntry { Item = param.Definition.Name, Error = ex.Message });
             }
         }
 
-        if (deleteCount > 0) {
-            this.RecursiveDelete(doc, log);
-        }
+        if (deleteCount > 0) this.RecursiveDelete(doc, log);
     }
 }
 
 public class DeleteUnusedParamsSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
     [Required] public Exclude ExcludeNames { get; init; } = new();
+    public bool Enabled { get; init; } = true;
 
     public bool Filter(FamilyParameter p) => !this.IsExcluded(p);
 

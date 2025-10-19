@@ -1,4 +1,4 @@
-using AddinFamilyFoundrySuite.Core.Operations.Settings;
+using Newtonsoft.Json;
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamManager;
@@ -26,21 +26,15 @@ public class MapParams : IOperation<MapParamsSettings> {
                 if (sourceParam is null || targetParam is null) {
                     var notFoundParam = sourceParam is null ? p.CurrName : p.NewName;
                     log.Entries.Add(new LogEntry {
-                        Item = mappingDesc,
-                        Error = $"{notFoundParam} not found in the family"
+                        Item = mappingDesc, Error = $"{notFoundParam} not found in the family"
                     });
                     continue;
                 }
 
                 _ = doc.SetValue(targetParam, sourceParam, p.MappingStrategy);
-                log.Entries.Add(new LogEntry {
-                    Item = mappingDesc,
-                });
+                log.Entries.Add(new LogEntry { Item = mappingDesc });
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry {
-                    Item = mappingDesc,
-                    Error = ex.Message
-                });
+                log.Entries.Add(new LogEntry { Item = mappingDesc, Error = ex.Message });
             }
         }
 
@@ -49,22 +43,25 @@ public class MapParams : IOperation<MapParamsSettings> {
 }
 
 public class MapParamsSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
     [Description("List of parameter remapping rules")]
     [Required]
     public List<MappingDataRecord> MappingData { get; init; } = [];
 
+    public bool Enabled { get; init; } = true;
+
     public record MappingDataRecord {
         [Description("Current parameter name to map from")]
-        [Required] public string CurrName { get; init; }
+        [Required]
+        public string CurrName { get; init; }
 
         [Description("New parameter name to map to")]
-        [Required] public string NewName { get; init; }
+        [Required]
+        public string NewName { get; init; }
 
-        [Description("Coercion strategy to use for the remapping. CoerceByStorageType will be used when none is specified.")]
+        [Description(
+            "Coercion strategy to use for the remapping. CoerceByStorageType will be used when none is specified.")]
         public ParamCoercionStrategy MappingStrategy { get; init; } = ParamCoercionStrategy.CoerceByStorageType;
 
-        [Newtonsoft.Json.JsonIgnore]
-        public bool isProcessed { get; set; } = false;
+        [JsonIgnore] public bool isProcessed { get; set; } = false;
     }
 }

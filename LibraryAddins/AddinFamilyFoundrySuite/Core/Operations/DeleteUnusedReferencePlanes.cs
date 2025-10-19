@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
+
 // TODO: this still needs alot of work!!!
 public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlanesSettings> {
     public DeleteUnusedReferencePlanesSettings Settings { get; set; }
@@ -64,9 +65,7 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
             });
         }
 
-        if (dependentElements?.Any() == true) {
-            return [.. dependentElements.Select(doc.GetElement)];
-        }
+        if (dependentElements?.Any() == true) return [.. dependentElements.Select(doc.GetElement)];
         return [];
     }
 

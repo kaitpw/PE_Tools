@@ -39,18 +39,18 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
 }
 
 public class AddAndGlobalSetFamilyParamsSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
     [Description(
         "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
     [Required]
     public bool OverrideExistingValues { get; init; } = true;
 
     public List<FamilyParamModel> FamilyParamData { get; init; } = [];
+    public bool Enabled { get; init; } = true;
 }
 
 public record FamilyParamModel {
     public string Name { get; init; }
-    public ForgeTypeId PropertiesGroup { get; init; } = new ForgeTypeId("");
+    public ForgeTypeId PropertiesGroup { get; init; } = new("");
     public ForgeTypeId DataType { get; init; }
     public bool IsInstance { get; init; } = true;
     public object GlobalValue { get; init; }

@@ -6,8 +6,9 @@ using NJsonSchema;
 using NJsonSchema.Generation;
 using NJsonSchema.NewtonsoftJson.Generation;
 using NJsonSchema.Validation;
+using PeUtils.Files;
 
-namespace PeUtils.Files;
+namespace PeServices.Storage.Core;
 
 /// <summary> Contract resolver that orders properties by declaration order, respecting inheritance hierarchy </summary>
 file class OrderedContractResolver : DefaultContractResolver {

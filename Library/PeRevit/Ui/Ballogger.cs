@@ -1,7 +1,6 @@
 ﻿using Autodesk.Internal.InfoCenter;
 using Autodesk.Windows;
 using PeServices.Storage;
-using System.Text;
 using System.Windows;
 
 namespace PeRevit.Ui;

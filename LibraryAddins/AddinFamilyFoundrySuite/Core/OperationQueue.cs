@@ -47,6 +47,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
             // Wrap operation to prefix log name with parent compound operation
             this._operations.Add(new CompoundOperationChild<TOpSettings>(op, parentName));
         }
+
         return this;
     }
 
@@ -129,16 +130,13 @@ public class OperationQueue<TProfile> where TProfile : new() {
                             var typeName = famType.Name;
                             aggregatedEntries.AddRange(
                                 typeLog.Entries.Select(entry => new LogEntry {
-                                    Item = entry.Item,
-                                    Context = typeName,
-                                    Error = entry.Error
+                                    Item = entry.Item, Context = typeName, Error = entry.Error
                                 }));
                         }
 
                         sw.Stop();
                         var aggregatedLog = new OperationLog(operationName) {
-                            Entries = aggregatedEntries,
-                            MsElapsed = sw.Elapsed.TotalMilliseconds,
+                            Entries = aggregatedEntries, MsElapsed = sw.Elapsed.TotalMilliseconds
                         };
                         allLogs.Add(aggregatedLog);
                     }
@@ -200,8 +198,7 @@ internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where T
         var innerLog = this._innerOperation.Execute(doc);
         // Create new log with prefixed name
         var log = new OperationLog($"{this._parentName}: {this._innerOperation.GetType().Name}") {
-            Entries = innerLog.Entries,
-            MsElapsed = innerLog.MsElapsed,
+            Entries = innerLog.Entries, MsElapsed = innerLog.MsElapsed
         };
         return log;
     }
