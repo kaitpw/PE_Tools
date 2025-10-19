@@ -115,31 +115,44 @@ public class OperationQueue<TProfile> where TProfile : new() {
                     var fm = famDoc.FamilyManager;
                     var familyTypes = fm.Types.Cast<FamilyType>().ToList();
 
-                    // Create one log per operation that aggregates all type executions
-                    foreach (var op in batch.Operations) {
-                        var sw = Stopwatch.StartNew();
-                        string operationName = null;
-                        var aggregatedEntries = new List<LogEntry>();
+                    // Initialize logs for each operation upfront
+                    var operationLogs = batch.Operations
+                        .Select(op => new OperationLog(op.GetType().Name))
+                        .ToList();
 
-                        foreach (var famType in familyTypes) {
-                            fm.CurrentType = famType;
+                    // Switch types once, executing all operations per type
+                    foreach (var famType in familyTypes) {
+                        var typeSwitchSw = Stopwatch.StartNew();
+                        fm.CurrentType = famType;
+                        typeSwitchSw.Stop();
+                        var typeSwitchMs = typeSwitchSw.Elapsed.TotalMilliseconds;
+
+                        var typeName = famType.Name;
+                        Debug.WriteLine(typeName); // TODO: Remove this
+
+                        // Execute all operations for this type
+                        for (var i = 0; i < batch.Operations.Count; i++) {
+                            var op = batch.Operations[i];
+                            var opSw = Stopwatch.StartNew();
                             var typeLog = op.Execute(famDoc);
-                            operationName = typeLog.OperationName;
+                            opSw.Stop();
 
-                            // Extract type name and add entries with context
-                            var typeName = famType.Name;
-                            aggregatedEntries.AddRange(
+                            // Amortize type switch cost across all operations
+                            var amortizedSwitchMs = typeSwitchMs / batch.Operations.Count;
+                            var opLog = operationLogs[i];
+                            opLog.MsElapsed += opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
+
+                            // Add entries with type context
+                            opLog.Entries.AddRange(
                                 typeLog.Entries.Select(entry => new LogEntry {
-                                    Item = entry.Item, Context = typeName, Error = entry.Error
+                                    Item = entry.Item,
+                                    Context = typeName,
+                                    Error = entry.Error
                                 }));
                         }
-
-                        sw.Stop();
-                        var aggregatedLog = new OperationLog(operationName) {
-                            Entries = aggregatedEntries, MsElapsed = sw.Elapsed.TotalMilliseconds
-                        };
-                        allLogs.Add(aggregatedLog);
                     }
+
+                    allLogs.AddRange(operationLogs);
                 });
                 break;
             }
@@ -198,7 +211,8 @@ internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where T
         var innerLog = this._innerOperation.Execute(doc);
         // Create new log with prefixed name
         var log = new OperationLog($"{this._parentName}: {this._innerOperation.GetType().Name}") {
-            Entries = innerLog.Entries, MsElapsed = innerLog.MsElapsed
+            Entries = innerLog.Entries,
+            MsElapsed = innerLog.MsElapsed
         };
         return log;
     }
