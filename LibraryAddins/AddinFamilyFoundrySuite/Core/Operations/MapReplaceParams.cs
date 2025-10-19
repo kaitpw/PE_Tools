@@ -31,13 +31,16 @@ public class MapReplaceParams : IOperation<MapParamsSettings> {
             try {
                 var currentParam = fm.FindParameter(mapping.CurrName);
                 if (currentParam == null) continue; // skip silently, errors will show in MapParams operation
+                if (ParameterUtils.IsBuiltInParameter(currentParam.Id))
+                    continue; // skip silently, MapParams will handle
 
-
-                if (ParameterUtils.IsBuiltInParameter(currentParam.Id)) continue; // skip silently, MapParams will handle
+                var newParam = apsParam.GetExternalDefinition(group);
+                if (currentParam.Definition.GetDataType() != newParam.GetDataType())
+                    continue; // skip silently, MapParams will handle
 
                 var replaced = fm.ReplaceParameter(
                     currentParam,
-                    apsParam.GetExternalDefinition(group),
+                    newParam,
                     apsParam.DownloadOptions.GroupTypeId,
                     apsParam.DownloadOptions.IsInstance
                 );

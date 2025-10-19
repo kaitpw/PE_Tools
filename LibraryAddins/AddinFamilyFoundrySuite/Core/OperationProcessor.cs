@@ -39,7 +39,8 @@ public class OperationProcessor<TProfile>
             var families = this.profile.GetFamilies(doc);
 
             foreach (var family in families) {
-                var familyName = family.Name; // Capture name before processing as family object becomes invalid after LoadAndCloseFamily
+                var familyName =
+                    family.Name; // Capture name before processing as family object becomes invalid after LoadAndCloseFamily
                 var (familyActions, getLogs) = enqueuer.ToFamilyActions();
                 try {
                     var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
@@ -56,9 +57,7 @@ public class OperationProcessor<TProfile>
         }
 
         var logPath = this.WriteLogs(allFamilyLogs);
-        if (this.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish) {
-            FileUtils.OpenInDefaultApp(logPath);
-        }
+        if (this.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish) FileUtils.OpenInDefaultApp(logPath);
         return allFamilyLogs.SelectMany(kvp => kvp.Value).ToList();
     }
 
@@ -68,17 +67,26 @@ public class OperationProcessor<TProfile>
             ProcessedFamilies = familyLogs.Select(kvp => new {
                 FamilyName = kvp.Key,
                 TotalSecondsElapsed = Math.Round(kvp.Value.Sum(log => log.MsElapsed) / 1000.0, 3),
-                Operations = kvp.Value.Select(log =>
-                    new Dictionary<string, object> {
+                Operations = kvp.Value.Select(log => {
+                    // Group errors by item and error message, collecting contexts
+                    var groupedErrors = log.Entries
+                        .Where(e => e.Error != null)
+                        .GroupBy(e => new { e.Item, e.Error })
+                        .Select(g => {
+                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
+                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
+                            return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
+                        })
+                        .ToList();
+
+                    return new Dictionary<string, object> {
                         ["OperationName"] = log.OperationName,
                         ["SuccessCount"] = log.SuccessCount,
                         ["FailedCount"] = log.FailedCount,
-                        ["Errors"] = log.Entries
-                                .Where(e => e.Error != null)
-                                .Select(e => e.Context != null ? $"[{e.Context}] {e.Item}: {e.Error}" : $"{e.Item}: {e.Error}")
-                                .ToList(),
+                        ["Errors"] = groupedErrors,
                         ["SecondsElapsed"] = Math.Round(log.MsElapsed / 1000.0, 3)
-                    }).ToList()
+                    };
+                }).ToList()
             }).ToList()
         };
 
