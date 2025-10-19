@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorSettings> {
-    public HydrateElectricalConnectorSettings Settings { get; set; }
+    public HydrateElectricalConnectorSettings Settings { get; set; } 
     public OperationType Type => OperationType.Doc;
 
     public string Description => "Configure electrical connector parameters and associate them with family parameters";
@@ -23,7 +23,7 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
             (
                 polesParamName,
                 BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-                (doc, numberOfPoles) => doc.SetValue(numberOfPoles, 2, ValueCoercionStrategy.CoerceSimple)
+                (doc, numberOfPoles) => doc.FamilyManager.SetFormula(numberOfPoles, "2")
             ),
             (
                 appPowerParamName,

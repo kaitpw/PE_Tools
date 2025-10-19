@@ -32,11 +32,13 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             };
 
             var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
+            var excludeFromDeletion = processor.profile.AddAndMapApsParams.MappingData
+                .Select(m => m.CurrName)
+                .Concat(processor.profile.GetAPSParams().Select(p => p.Name))
+                .ToList();
 
             var queue = processor.CreateQueue()
-                .Add(new DeleteUnusedParams(
-                    processor.profile.AddAndMapApsParams.MappingData.Select(m => m.CurrName).ToList()
-                ), profile => profile.DeleteUnusedParams)
+                .Add(new DeleteUnusedParams(excludeFromDeletion), profile => profile.DeleteUnusedParams)
                 // .Add(new DeleteUnusedReferencePlanes(), profile => profile.DeleteUnusedReferencePlanes)
                 .Add(new MapAndAddApsParams(processor.profile.GetAPSParams()), profile => profile.AddAndMapApsParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
