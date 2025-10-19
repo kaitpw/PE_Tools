@@ -50,7 +50,7 @@ public class AddAndGlobalSetFamilyParamsSettings : IOperationSettings {
 
 public record FamilyParamModel {
     public string Name { get; init; }
-    public ForgeTypeId PropertiesGroup { get; init; } // must find how to default to other
+    public ForgeTypeId PropertiesGroup { get; init; } = new ForgeTypeId("");
     public ForgeTypeId DataType { get; init; }
     public bool IsInstance { get; init; } = true;
     public object GlobalValue { get; init; }

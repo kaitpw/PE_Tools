@@ -16,6 +16,8 @@ public static class FamilyDocumentAddParameter {
         bool isInstance
     ) {
         if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
+        if (dataType == null) throw new ArgumentNullException(nameof(dataType));
+        if (propertiesGroup == null) propertiesGroup = new ForgeTypeId("");
 
         var fm = famDoc.FamilyManager;
 
