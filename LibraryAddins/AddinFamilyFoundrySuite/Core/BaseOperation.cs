@@ -57,9 +57,7 @@ public class OperationLog {
     public OperationLog(string operationName) => this.OperationName = operationName;
     public string OperationName { get; init; }
     public List<LogEntry> Entries { get; init; } = new();
-    public double MsTotalElapsed { get; set; }
-    public double? MsAvgPerType { get; set; } = null;
-
+    public double MsElapsed { get; set; }
     public int SuccessCount => this.Entries.Count(e => e.Error is null);
     public int FailedCount => this.Entries.Count - this.SuccessCount;
 }

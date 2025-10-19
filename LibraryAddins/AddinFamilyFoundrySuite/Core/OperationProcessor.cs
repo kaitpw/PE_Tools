@@ -67,24 +67,18 @@ public class OperationProcessor<TProfile>
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             ProcessedFamilies = familyLogs.Select(kvp => new {
                 FamilyName = kvp.Key,
-                Operations = kvp.Value.Select(log => {
-                    var result = new Dictionary<string, object> {
+                TotalSecondsElapsed = Math.Round(kvp.Value.Sum(log => log.MsElapsed) / 1000.0, 3),
+                Operations = kvp.Value.Select(log =>
+                    new Dictionary<string, object> {
                         ["OperationName"] = log.OperationName,
                         ["SuccessCount"] = log.SuccessCount,
                         ["FailedCount"] = log.FailedCount,
                         ["Errors"] = log.Entries
-                            .Where(e => e.Error != null)
-                            .Select(e => e.Context != null ? $"[{e.Context}] {e.Item}: {e.Error}" : $"{e.Item}: {e.Error}")
-                            .ToList(),
-                        ["SecondsTotalElapsed"] = Math.Round(log.MsTotalElapsed / 1000.0, 3)
-                    };
-
-                    if (log.MsAvgPerType.HasValue) {
-                        result["SecondsAvgPerType"] = Math.Round(log.MsAvgPerType.Value / 1000.0, 3);
-                    }
-
-                    return result;
-                }).ToList()
+                                .Where(e => e.Error != null)
+                                .Select(e => e.Context != null ? $"[{e.Context}] {e.Item}: {e.Error}" : $"{e.Item}: {e.Error}")
+                                .ToList(),
+                        ["SecondsElapsed"] = Math.Round(log.MsElapsed / 1000.0, 3)
+                    }).ToList()
             }).ToList()
         };
 

@@ -103,7 +103,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
                         var sw = Stopwatch.StartNew();
                         var log = op.Execute(famDoc);
                         sw.Stop();
-                        log.MsTotalElapsed = sw.Elapsed.TotalMilliseconds;
+                        log.MsElapsed = sw.Elapsed.TotalMilliseconds;
                         allLogs.Add(log);
                     }
                 });
@@ -116,9 +116,9 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
                     // Create one log per operation that aggregates all type executions
                     foreach (var op in batch.Operations) {
+                        var sw = Stopwatch.StartNew();
                         string operationName = null;
                         var aggregatedEntries = new List<LogEntry>();
-                        var sw = Stopwatch.StartNew();
 
                         foreach (var famType in familyTypes) {
                             fm.CurrentType = famType;
@@ -138,8 +138,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
                         sw.Stop();
                         var aggregatedLog = new OperationLog(operationName) {
                             Entries = aggregatedEntries,
-                            MsTotalElapsed = sw.Elapsed.TotalMilliseconds,
-                            MsAvgPerType = sw.Elapsed.TotalMilliseconds / familyTypes.Count
+                            MsElapsed = sw.Elapsed.TotalMilliseconds,
                         };
                         allLogs.Add(aggregatedLog);
                     }
@@ -202,8 +201,7 @@ internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where T
         // Create new log with prefixed name
         var log = new OperationLog($"{this._parentName}: {this._innerOperation.GetType().Name}") {
             Entries = innerLog.Entries,
-            MsTotalElapsed = innerLog.MsTotalElapsed,
-            MsAvgPerType = innerLog.MsAvgPerType
+            MsElapsed = innerLog.MsElapsed,
         };
         return log;
     }
