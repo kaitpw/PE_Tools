@@ -26,15 +26,13 @@ file class OrderedContractResolver : DefaultContractResolver {
         // Create ordered list: base class properties first, then derived class properties
         var orderedProperties = new List<JsonProperty>();
         foreach (var t in typeHierarchy) {
-            var declaredProps = t.GetProperties(System.Reflection.BindingFlags.Public |
-                                                System.Reflection.BindingFlags.Instance |
-                                                System.Reflection.BindingFlags.DeclaredOnly);
+            var declaredProps = t.GetProperties(BindingFlags.Public |
+                                                BindingFlags.Instance |
+                                                BindingFlags.DeclaredOnly);
 
             foreach (var declaredProp in declaredProps) {
                 var jsonProp = properties.FirstOrDefault(p => p.UnderlyingName == declaredProp.Name);
-                if (jsonProp != null && !orderedProperties.Contains(jsonProp)) {
-                    orderedProperties.Add(jsonProp);
-                }
+                if (jsonProp != null && !orderedProperties.Contains(jsonProp)) orderedProperties.Add(jsonProp);
             }
         }
 
@@ -102,10 +100,9 @@ public class Json<T> where T : class, new() {
         foreach (var prop in obj.Properties()) {
             var path = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
             paths.Add(path);
-            if (prop.Value is JObject nestedObj) {
-                paths.AddRange(GetAllPropertyPaths(nestedObj, path));
-            }
+            if (prop.Value is JObject nestedObj) paths.AddRange(GetAllPropertyPaths(nestedObj, path));
         }
+
         return paths;
     }
 
@@ -134,7 +131,8 @@ public class Json<T> where T : class, new() {
         var validationErrors = this._schema.Validate(jsonContent);
         if (validationErrors.Any()) {
             var hasPropertyRequiredErrors = HasPropertyRequiredError(validationErrors);
-            var hasAdditionalPropertiesErrors = validationErrors.Any(e => e.Kind == ValidationErrorKind.NoAdditionalPropertiesAllowed);
+            var hasAdditionalPropertiesErrors =
+                validationErrors.Any(e => e.Kind == ValidationErrorKind.NoAdditionalPropertiesAllowed);
 
             if (hasPropertyRequiredErrors || hasAdditionalPropertiesErrors) {
                 var originalJson = JObject.Parse(jsonContent);

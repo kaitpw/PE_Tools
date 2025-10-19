@@ -35,9 +35,9 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
                 if (sharedParamErr is not null) {
                     // Do Not port this code block to the new combined method
                     var (slowParam, slowErr) = doc.AddApsParameterSlow(apsParam);
-                    if (slowErr != null) {
+                    if (slowErr != null)
                         log.Entries.Add(new LogEntry { Item = apsParam.Name, Error = slowErr.Message });
-                    } else
+                    else
                         log.Entries.Add(new LogEntry { Item = slowParam.Name });
                 } else
                     log.Entries.Add(new LogEntry { Item = sharedParam.Name });
