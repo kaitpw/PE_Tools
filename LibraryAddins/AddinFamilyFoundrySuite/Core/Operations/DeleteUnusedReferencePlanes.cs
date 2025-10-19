@@ -60,8 +60,7 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
                 var element = doc.GetElement(id);
                 if (element is not Dimension dimension) return true;
 
-                return !this.DimensionIsDeletable(dimension) ||
-                       !this.DimensionReferencesPlane(doc, dimension, refPlane);
+                return !this.DimensionIsDeletable(dimension);
             });
         }
 
@@ -72,17 +71,6 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
     private bool DimensionIsDeletable(Dimension dimension) {
         try {
             return dimension.FamilyLabel != null && !dimension.AreSegmentsEqual;
-        } catch {
-            return false;
-        }
-    }
-
-    private bool DimensionReferencesPlane(Document doc, Dimension dimension, ReferencePlane refPlane) {
-        try {
-            return dimension.References
-                .Cast<Reference>()
-                .Select(doc.GetElement)
-                .Any(element => element?.Id == refPlane.Id);
         } catch {
             return false;
         }

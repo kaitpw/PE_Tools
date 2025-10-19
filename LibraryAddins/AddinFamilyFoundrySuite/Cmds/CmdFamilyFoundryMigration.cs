@@ -26,76 +26,6 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                         DataType = SpecTypeId.String.Text,
                         IsInstance = false,
                         GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test1",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test2",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test3",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test4",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test5",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test6",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test7",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test8",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test9",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
-                    },
-                     new FamilyParamModel {
-                        Name = "_test10",
-                        PropertiesGroup = new ForgeTypeId(""),
-                        DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                     }
                 ]
             };
@@ -108,13 +38,10 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
 
             var queue = processor.CreateQueue()
                 .Add(new DeleteUnusedParams(excludeFromDeletion), profile => profile.DeleteUnusedParams)
-                // .Add(new DeleteUnusedReferencePlanes(), profile => profile.DeleteUnusedReferencePlanes)
+                .Add(new DeleteUnusedNestedFamilies(), profile => profile.DeleteUnusedNestedFamilies)
                 .Add(new MapAndAddApsParams(processor.profile.GetAPSParams()), profile => profile.AddAndMapApsParams)
                 .Add(new AddAndGlobalSetFamilyParams(), addFamilyParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector);
-            // .Add(new DeleteParams(
-            //     processor.profile.AddAndMapApsParams.MappingData.Select(m => m.CurrName).ToList()
-            // ), new DeleteParamsSettings());
 
             // Get metadata for debugging/logging
             var metadata = queue.GetOperationMetadata();
@@ -149,6 +76,9 @@ public class ProfileRemap : BaseProfileSettings {
     [Required]
     public DeleteUnusedParamsSettings DeleteUnusedParams { get; init; } = new();
 
+    [Description("Settings for deleting unused nested families")]
+    [Required]
+    public DeleteUnusedNestedFamiliesSettings DeleteUnusedNestedFamilies { get; init; } = new();
 
     [Description("Settings for parameter mapping (add/replace and remap)")]
     [Required]
