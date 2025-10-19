@@ -22,16 +22,20 @@ public class OperationProcessor<TProfile>
     ///     Execute a configured processor with full initialization and document handling
     /// </summary>
     public List<OperationLog> ProcessQueue(Document doc, OperationQueue<TProfile> enqueuer) {
-        var allFamilyLogs = new Dictionary<string, List<OperationLog>>();
+        var familyResults = new Dictionary<string, (List<OperationLog> logs, double totalMs)>();
+
+        var totalSw = Stopwatch.StartNew();
 
         if (doc.IsFamilyDocument) {
             var (familyActions, getLogs) = enqueuer.ToFamilyActions();
             try {
+                var familySw = Stopwatch.StartNew();
                 var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
                 _ = doc
                     .ProcessFamily(familyActions)
                     .SaveFamily(saveLocation);
-                allFamilyLogs.Add(doc.Title, getLogs());
+                familySw.Stop();
+                familyResults.Add(doc.Title, (getLogs(), familySw.Elapsed.TotalMilliseconds));
             } catch (Exception ex) {
                 Debug.WriteLine($"Failed to process family {doc.Title}: {ex.Message}");
             }
@@ -43,31 +47,36 @@ public class OperationProcessor<TProfile>
                     family.Name; // Capture name before processing as family object becomes invalid after LoadAndCloseFamily
                 var (familyActions, getLogs) = enqueuer.ToFamilyActions();
                 try {
+                    var familySw = Stopwatch.StartNew();
                     var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
                     _ = doc
                         .EditFamily(family)
                         .ProcessFamily(familyActions)
                         .SaveFamily(saveLocation)
                         .LoadAndCloseFamily(doc, new EditAndLoadFamilyOptions());
-                    allFamilyLogs.Add(familyName, getLogs());
+                    familySw.Stop();
+                    familyResults.Add(familyName, (getLogs(), familySw.Elapsed.TotalMilliseconds));
                 } catch (Exception ex) {
                     Debug.WriteLine($"Failed to process family {familyName}: {ex.Message}");
                 }
             }
         }
 
-        var logPath = this.WriteLogs(allFamilyLogs);
+        totalSw.Stop();
+
+        var logPath = this.WriteLogs(familyResults, totalSw.Elapsed.TotalMilliseconds);
         if (this.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish) FileUtils.OpenInDefaultApp(logPath);
-        return allFamilyLogs.SelectMany(kvp => kvp.Value).ToList();
+        return familyResults.SelectMany(kvp => kvp.Value.logs).ToList();
     }
 
-    private string WriteLogs(Dictionary<string, List<OperationLog>> familyLogs) {
+    private string WriteLogs(Dictionary<string, (List<OperationLog> logs, double totalMs)> familyResults, double totalMs) {
         var logData = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            ProcessedFamilies = familyLogs.Select(kvp => new {
+            TotalSecondsElapsed = Math.Round(totalMs / 1000.0, 3),
+            ProcessedFamilies = familyResults.Select(kvp => new {
                 FamilyName = kvp.Key,
-                TotalSecondsElapsed = Math.Round(kvp.Value.Sum(log => log.MsElapsed) / 1000.0, 3),
-                Operations = kvp.Value.Select(log => {
+                TotalSecondsElapsed = Math.Round(kvp.Value.totalMs / 1000.0, 3),
+                Operations = kvp.Value.logs.Select(log => {
                     // Group errors by item and error message, collecting contexts
                     var groupedErrors = log.Entries
                         .Where(e => e.Error != null)

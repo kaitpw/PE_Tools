@@ -18,7 +18,7 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
     public OperationLog Execute(Document doc) {
         var log = new OperationLog(this.GetType().Name);
 
-        if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Where(p => p is null).Any()) {
+        if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Any(p => p is null)) {
             log.Entries.Add(new LogEntry { Item = "Parameters", Error = "Invalid parameter data" });
             return log;
         }
