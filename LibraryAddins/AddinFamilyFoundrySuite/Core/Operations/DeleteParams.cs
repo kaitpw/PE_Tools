@@ -12,11 +12,11 @@ public class DeleteParams : IOperation<DeleteParamsSettings> {
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public DeleteParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
-    public string Name => "Delete Parameters";
+
     public string Description => "Recursively delete parameters from the family by name";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog();
+        var log = new OperationLog(this.GetType().Name);
         foreach (var name in this.ExternalExcludeNamesEqualing) {
             try {
                 var param = doc.FamilyManager.FindParameter(name);

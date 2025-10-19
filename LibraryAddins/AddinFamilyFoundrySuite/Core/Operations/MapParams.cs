@@ -1,3 +1,4 @@
+using AddinFamilyFoundrySuite.Core.Operations.Settings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamManager;
@@ -9,23 +10,24 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 public class MapParams : IOperation<MapParamsSettings> {
     public MapParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Type;
-    public string Name => "Remap Parameters";
-    public string Description => "Remap parameter values between parameters for each family type";
+
+    public string Description => "Map an old parameter's value to a new parameter for each family type";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog();
+        var log = new OperationLog(this.GetType().Name);
 
-        foreach (var p in this.Settings.MappingData) {
-            var mappingDesc = $"{p.CurrNameOrId} → {p.NewNameOrId}";
+        foreach (var p in this.Settings.MappingData.Where(m => !m.isProcessed)) {
+            var mappingDesc = $"{p.CurrName} → {p.NewName}";
 
             try {
-                var targetParam = doc.FamilyManager.FindParameter(p.NewNameOrId);
-                var sourceParam = doc.FamilyManager.FindParameter(p.CurrNameOrId);
+                var sourceParam = doc.FamilyManager.FindParameter(p.CurrName);
+                var targetParam = doc.FamilyManager.FindParameter(p.NewName);
 
-                if (targetParam is null || sourceParam is null) {
+                if (sourceParam is null || targetParam is null) {
+                    var notFoundParam = sourceParam is null ? p.CurrName : p.NewName;
                     log.Entries.Add(new LogEntry {
                         Item = mappingDesc,
-                        Error = "Parameter not found"
+                        Error = $"{notFoundParam} not found in the family"
                     });
                     continue;
                 }
@@ -53,11 +55,16 @@ public class MapParamsSettings : IOperationSettings {
     public List<MappingDataRecord> MappingData { get; init; } = [];
 
     public record MappingDataRecord {
-        public string CurrNameOrId { get; set; }
-        public string NewNameOrId { get; set; }
+        [Description("Current parameter name to map from")]
+        [Required] public string CurrName { get; init; }
 
-        [Description(
-            "Coercion strategy to use for the remapping. CoerceByStorageType will be used when none is specified.")]
-        public ParamCoercionStrategy MappingStrategy { get; set; } = ParamCoercionStrategy.CoerceByStorageType;
+        [Description("New parameter name to map to")]
+        [Required] public string NewName { get; init; }
+
+        [Description("Coercion strategy to use for the remapping. CoerceByStorageType will be used when none is specified.")]
+        public ParamCoercionStrategy MappingStrategy { get; init; } = ParamCoercionStrategy.CoerceByStorageType;
+
+        [Newtonsoft.Json.JsonIgnore]
+        public bool isProcessed { get; set; } = false;
     }
 }

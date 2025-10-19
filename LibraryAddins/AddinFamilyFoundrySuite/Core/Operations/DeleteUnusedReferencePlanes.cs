@@ -6,11 +6,11 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlanesSettings> {
     public DeleteUnusedReferencePlanesSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
-    public string Name => "Delete Unused Reference Planes";
+
     public string Description => "Deletes reference planes in the Family which are not used by anything important";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog();
+        var log = new OperationLog(this.GetType().Name);
         this.RecursiveDeleteUnusedReferencePlanes(doc, log);
         return log;
     }

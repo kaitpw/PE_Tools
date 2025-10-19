@@ -21,11 +21,32 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
         if (operation.Settings == null) {
             throw new InvalidOperationException(
-                $"Operation '{operation.Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
+                $"Operation '{operation.GetType().Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
                 $"but the settings selector returned null.");
         }
 
         this._operations.Add(operation);
+        return this;
+    }
+
+    public OperationQueue<TProfile> Add<TOpSettings>(
+        ICompoundOperation<TOpSettings> operation,
+        Func<TProfile, TOpSettings> settingsSelector
+    ) where TOpSettings : class, IOperationSettings, new() {
+        var parentName = operation.GetType().Name;
+
+        foreach (var op in operation.Operations) {
+            op.Settings = settingsSelector(this._profile);
+
+            if (op.Settings == null) {
+                throw new InvalidOperationException(
+                    $"Operation '{op.GetType().Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
+                    $"but the settings selector returned null.");
+            }
+
+            // Wrap operation to prefix log name with parent compound operation
+            this._operations.Add(new CompoundOperationChild<TOpSettings>(op, parentName));
+        }
         return this;
     }
 
@@ -41,7 +62,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
         if (operation.Settings == null) {
             throw new InvalidOperationException(
-                $"Operation '{operation.Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
+                $"Operation '{operation.GetType().Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
                 $"but the settings selector returned null.");
         }
 
@@ -59,7 +80,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
         foreach (var batch in batches) {
             foreach (var op in batch.Operations)
-                metadata.Add(new OperationMetadata(op.Name, op.Description, op.Type, batchIndex));
+                metadata.Add(new OperationMetadata(op.GetType().Name, op.Description, op.Type, batchIndex));
             batchIndex++;
         }
 
@@ -82,7 +103,6 @@ public class OperationQueue<TProfile> where TProfile : new() {
                         var sw = Stopwatch.StartNew();
                         var log = op.Execute(famDoc);
                         sw.Stop();
-                        log.OperationName = op.GetType().Name;
                         log.MsTotalElapsed = sw.Elapsed.TotalMilliseconds;
                         allLogs.Add(log);
                     }
@@ -96,28 +116,31 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
                     // Create one log per operation that aggregates all type executions
                     foreach (var op in batch.Operations) {
-                        var aggregatedLog = new OperationLog();
+                        string operationName = null;
+                        var aggregatedEntries = new List<LogEntry>();
                         var sw = Stopwatch.StartNew();
 
                         foreach (var famType in familyTypes) {
                             fm.CurrentType = famType;
                             var typeLog = op.Execute(famDoc);
+                            operationName = typeLog.OperationName;
 
-                            // Extract type name immediately before adding to log
+                            // Extract type name and add entries with context
                             var typeName = famType.Name;
-                            foreach (var entry in typeLog.Entries) {
-                                aggregatedLog.Entries.Add(new LogEntry {
+                            aggregatedEntries.AddRange(
+                                typeLog.Entries.Select(entry => new LogEntry {
                                     Item = entry.Item,
                                     Context = typeName,
                                     Error = entry.Error
-                                });
-                            }
+                                }));
                         }
 
                         sw.Stop();
-                        aggregatedLog.OperationName = op.GetType().Name;
-                        aggregatedLog.MsTotalElapsed = sw.Elapsed.TotalMilliseconds;
-                        aggregatedLog.MsAvgPerType = aggregatedLog.MsTotalElapsed / familyTypes.Count;
+                        var aggregatedLog = new OperationLog(operationName) {
+                            Entries = aggregatedEntries,
+                            MsTotalElapsed = sw.Elapsed.TotalMilliseconds,
+                            MsAvgPerType = sw.Elapsed.TotalMilliseconds / familyTypes.Count
+                        };
                         allLogs.Add(aggregatedLog);
                     }
                 });
@@ -153,3 +176,35 @@ public class OperationQueue<TProfile> where TProfile : new() {
 }
 
 internal record OperationBatch(OperationType Type, List<IOperation> Operations);
+
+/// <summary>
+///     Wrapper that prefixes log operation names with a parent name (for compound operations)
+/// </summary>
+internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where TSettings : IOperationSettings {
+    private readonly IOperation<TSettings> _innerOperation;
+    private readonly string _parentName;
+
+    public CompoundOperationChild(IOperation<TSettings> innerOperation, string parentName) {
+        this._innerOperation = innerOperation;
+        this._parentName = parentName;
+    }
+
+    public TSettings Settings {
+        get => this._innerOperation.Settings;
+        set => this._innerOperation.Settings = value;
+    }
+
+    public OperationType Type => this._innerOperation.Type;
+    public string Description => this._innerOperation.Description;
+
+    public OperationLog Execute(Document doc) {
+        var innerLog = this._innerOperation.Execute(doc);
+        // Create new log with prefixed name
+        var log = new OperationLog($"{this._parentName}: {this._innerOperation.GetType().Name}") {
+            Entries = innerLog.Entries,
+            MsTotalElapsed = innerLog.MsTotalElapsed,
+            MsAvgPerType = innerLog.MsAvgPerType
+        };
+        return log;
+    }
+}

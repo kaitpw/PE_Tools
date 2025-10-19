@@ -11,12 +11,12 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
 
     // change this to type later probably after seeing if looping through the types isa ctually necessary
     public OperationType Type => OperationType.Type;
-    public string Name => "Add Family Parameters";
+
 
     public string Description => "Add Family Parameters to the family";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog();
+        var log = new OperationLog(this.GetType().Name);
 
         if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Where(p => p is null).Any()) {
             log.Entries.Add(new LogEntry { Item = "Parameters", Error = "Invalid parameter data" });

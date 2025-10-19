@@ -13,11 +13,6 @@ public interface IOperation {
     OperationType Type { get; }
 
     /// <summary>
-    ///     The name of the operation to perform.
-    /// </summary>
-    string Name { get; }
-
-    /// <summary>
     ///     The description of the operation to perform.
     /// </summary>
     string Description { get; }
@@ -26,6 +21,10 @@ public interface IOperation {
     ///     Execute the operation.
     /// </summary>
     OperationLog Execute(Document doc);
+}
+
+public interface ICompoundOperation<TSettings> where TSettings : IOperationSettings {
+    List<IOperation<TSettings>> Operations { get; set; }
 }
 
 public interface IOperation<TSettings> : IOperation where TSettings : IOperationSettings {
@@ -55,7 +54,8 @@ public record OperationMetadata(
 ///     Log result from an operation execution
 /// </summary>
 public class OperationLog {
-    public string OperationName { get; set; }
+    public OperationLog(string operationName) => this.OperationName = operationName;
+    public string OperationName { get; init; }
     public List<LogEntry> Entries { get; init; } = new();
     public double MsTotalElapsed { get; set; }
     public double? MsAvgPerType { get; set; } = null;

@@ -10,11 +10,11 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public DeleteUnusedParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
-    public string Name => "Delete Unused Parameters";
+
     public string Description => "Recursively delete unused parameters from the family";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog();
+        var log = new OperationLog(this.GetType().Name);
         this.RecursiveDelete(doc, log);
         return log;
     }
