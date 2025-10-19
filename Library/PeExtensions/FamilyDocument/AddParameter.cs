@@ -24,8 +24,10 @@ public static class FamilyDocumentAddParameter {
     }
 
 
-    public static Result<SharedParameterElement>
-        AddApsParameterSlow(this Document famDoc, ParamModelRes apsParamModel) {
+    public static Result<SharedParameterElement> AddApsParameterSlow(
+        this Document famDoc,
+        ParamModelRes apsParamModel
+    ) {
         var parameterTypeId = apsParamModel.DownloadOptions.ParameterTypeId;
         var dlOpts = new ParameterDownloadOptions(
             new HashSet<ElementId>(),
@@ -64,34 +66,10 @@ public static class FamilyDocumentAddParameter {
     public static Result<SharedParameterElement> AddApsParameter(this Document famDoc,
         FamilyManager fm,
         DefinitionGroup group,
-        ParamModelRes apsParamModel) {
+        ParamModelRes apsParamModel
+    ) {
         try {
-            if (group is null) throw new ArgumentNullException(nameof(group));
-
-            // Extract the actual GUID from Parameters Service ID (similar to your FindParameter method)
-            var parameterTypeId = apsParamModel.DownloadOptions.ParameterTypeId;
-            var typeId = parameterTypeId.TypeId;
-            var typeIdParts = typeId?.Split(':');
-            if (typeIdParts == null || typeIdParts.Length < 2)
-                throw new ArgumentException($"ParameterTypeId is not of the Parameters Service format: {typeId}");
-
-            var parameterPart = typeIdParts[1];
-            var dashIndex = parameterPart.IndexOf('-');
-            var guidText = dashIndex > 0 ? parameterPart[..dashIndex] : parameterPart;
-
-            if (!Guid.TryParse(guidText, out var guid))
-                throw new ArgumentException($"Could not extract GUID from parameterTypeId: {typeId}");
-
-            // Use the correct data type from Parameters Service
-            var dataTypeId = new ForgeTypeId(apsParamModel.SpecId);
-            var options = new ExternalDefinitionCreationOptions(apsParamModel.Name, dataTypeId) {
-                GUID = guid, // Use the actual Parameters Service GUID
-                Visible = apsParamModel.DownloadOptions.Visible,
-                UserModifiable = !apsParamModel.ReadOnly,
-                Description = apsParamModel.Description ?? ""
-            };
-
-            var externalDef = group.Definitions.Create(options) as ExternalDefinition;
+            var externalDef = apsParamModel.GetExternalDefinition(group);
 
             // Add parameter to family using FamilyManager
             var familyParam = fm.AddParameter(externalDef,
@@ -99,7 +77,7 @@ public static class FamilyDocumentAddParameter {
                 apsParamModel.DownloadOptions.IsInstance);
 
             // Find the SharedParameterElement that was created using the original Parameters Service ID
-            var sharedParamElement = famDoc.FindParameter(parameterTypeId);
+            var sharedParamElement = famDoc.FindParameter(apsParamModel.DownloadOptions.ParameterTypeId);
             if (sharedParamElement != null) return sharedParamElement;
 
             // If we can't find the SharedParameterElement, the FamilyParameter creation succeeded

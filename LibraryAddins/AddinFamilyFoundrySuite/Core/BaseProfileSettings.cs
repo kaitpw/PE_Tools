@@ -83,41 +83,4 @@ public class BaseProfileSettings {
             this.ExcludeNames.Containing.Any(p.Name.Contains) ||
             this.ExcludeNames.StartingWith.Any(p.Name.StartsWith);
     }
-
-    // TODO: maybe move this intot he library somewhere
-    private Result<ExternalDefinition> GetApsParameterDefinition(
-        DefinitionGroup group,
-        ParamModelRes apsParamModel) {
-        try {
-            if (group is null) throw new ArgumentNullException(nameof(group));
-
-            // Extract the actual GUID from Parameters Service ID (similar to your FindParameter method)
-            var parameterTypeId = apsParamModel.DownloadOptions.ParameterTypeId;
-            var typeId = parameterTypeId.TypeId;
-            var typeIdParts = typeId?.Split(':');
-            if (typeIdParts == null || typeIdParts.Length < 2)
-                throw new ArgumentException($"ParameterTypeId is not of the Parameters Service format: {typeId}");
-
-            var parameterPart = typeIdParts[1];
-            var dashIndex = parameterPart.IndexOf('-');
-            var guidText = dashIndex > 0 ? parameterPart[..dashIndex] : parameterPart;
-
-            if (!Guid.TryParse(guidText, out var guid))
-                throw new ArgumentException($"Could not extract GUID from parameterTypeId: {typeId}");
-
-            // Use the correct data type from Parameters Service
-            var dataTypeId = new ForgeTypeId(apsParamModel.SpecId);
-            var options = new ExternalDefinitionCreationOptions(apsParamModel.Name, dataTypeId) {
-                GUID = guid, // Use the actual Parameters Service GUID
-                Visible = apsParamModel.DownloadOptions.Visible,
-                UserModifiable = !apsParamModel.ReadOnly,
-                Description = apsParamModel.Description ?? ""
-            };
-
-            return group.Definitions.Create(options) as ExternalDefinition;
-
-        } catch (Exception ex) {
-            return ex;
-        }
-    }
 }

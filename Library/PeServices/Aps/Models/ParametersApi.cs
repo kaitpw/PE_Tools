@@ -58,9 +58,40 @@ public class ParametersApi {
             [UsedImplicitly] public string CreatedBy { get; init; }
             [UsedImplicitly] public string CreatedAt { get; init; }
 
-            [UsedImplicitly] [JsonIgnore] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
+            [UsedImplicitly][JsonIgnore] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
 
             [JsonIgnore] public ParameterDownloadOpts DownloadOptions => new(this.Id, this.TypedMetadata);
+
+            // TODO: evaluate is this is the best place for this to be
+            public ExternalDefinition GetExternalDefinition(DefinitionGroup group) {
+                if (group is null) throw new ArgumentNullException(nameof(group));
+
+                // TODO: move this into a utility class for ForgeTypeId's at some point
+                // Extract the actual GUID from Parameters Service ID (similar to your FindParameter method)
+                var parameterTypeId = this.DownloadOptions.ParameterTypeId;
+                var typeId = parameterTypeId.TypeId;
+                var typeIdParts = typeId?.Split(':');
+                if (typeIdParts == null || typeIdParts.Length < 2)
+                    throw new ArgumentException($"ParameterTypeId is not of the Parameters Service format: {typeId}");
+
+                var parameterPart = typeIdParts[1];
+                var dashIndex = parameterPart.IndexOf('-');
+                var guidText = dashIndex > 0 ? parameterPart[..dashIndex] : parameterPart;
+
+                if (!Guid.TryParse(guidText, out var guid))
+                    throw new ArgumentException($"Could not extract GUID from parameterTypeId: {typeId}");
+
+                // Use the correct data type from Parameters Service
+                var dataTypeId = new ForgeTypeId(this.SpecId);
+                var options = new ExternalDefinitionCreationOptions(this.Name, dataTypeId) {
+                    GUID = guid, // Use the actual Parameters Service GUID
+                    Visible = this.DownloadOptions.Visible,
+                    UserModifiable = !this.ReadOnly,
+                    Description = this.Description ?? ""
+                };
+
+                return group.Definitions.Create(options) as ExternalDefinition;
+            }
 
             public class RawMetadataValue {
                 [UsedImplicitly] public string Id { get; init; }
