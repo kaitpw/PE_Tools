@@ -5,7 +5,8 @@ namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentAddParameter {
     /// <summary>
-    ///     Add a family parameter. PropertiesGroup must be a <c>GroupTypeId</c> and DataType must be a <c>SpecTypeId</c>.
+    ///     Add a family parameter. PropertiesGroup must be a <c>GroupTypeId</c> and DataType must be a <c>SpecTypeId</c>. 
+    ///     NOTE: To get a groupTypeId for "Other", use <c> new ForgeTypeId("")</c>
     /// </summary>
     public static FamilyParameter AddFamilyParameter(
         this Document famDoc,
@@ -33,7 +34,7 @@ public static class FamilyDocumentAddParameter {
             new HashSet<ElementId>(),
             apsParamModel.DownloadOptions.IsInstance,
             apsParamModel.DownloadOptions.Visible,
-            GroupTypeId.General);
+            apsParamModel.DownloadOptions.GroupTypeId);
 
         try {
             return ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId);

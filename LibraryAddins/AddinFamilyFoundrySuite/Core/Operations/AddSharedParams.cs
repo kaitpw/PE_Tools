@@ -19,7 +19,7 @@ public static class AddSharedParamsOperation {
                     .FirstOrDefault(def => def.GUID == sharedParam.GuidValue);
 
                 if (externalDefinition != null)
-                    results.Add(fm.AddParameter(externalDefinition, GroupTypeId.General, true));
+                    results.Add(fm.AddParameter(externalDefinition, new ForgeTypeId(""), true));
             } catch (Exception ex) {
                 throw new Exception($"Failed to add parameter service parameter {sharedParam.Name}: {ex.Message}");
             }

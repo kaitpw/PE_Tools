@@ -134,7 +134,7 @@ public class ParametersApi {
                 public ForgeTypeId GroupTypeId => // check this logic in testing
                     metadata.Group?.Id != null
                         ? new ForgeTypeId(metadata.Group.Id)
-                        : new ForgeTypeId("autodesk.parameter:group-1.0.0");
+                        : new ForgeTypeId("");
 
                 public bool IsInstance =>
                     metadata.InstanceTypeAssociation?.Equals("INSTANCE", StringComparison.OrdinalIgnoreCase) ?? true;

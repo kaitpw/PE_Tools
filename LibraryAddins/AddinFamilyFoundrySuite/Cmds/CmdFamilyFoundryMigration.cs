@@ -23,7 +23,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 FamilyParamData = [
                     new FamilyParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
-                        PropertiesGroup = GroupTypeId.General,
+                        PropertiesGroup = new ForgeTypeId(""),
                         DataType = SpecTypeId.String.Text,
                         IsInstance = false,
                         GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
