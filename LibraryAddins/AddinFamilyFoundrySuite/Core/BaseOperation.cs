@@ -46,16 +46,6 @@ public enum OperationType {
 }
 
 /// <summary>
-///     Metadata about an operation for frontend display and debugging.
-/// </summary>
-public record OperationMetadata(
-    string Name,
-    string Description,
-    OperationType Type,
-    int BatchGroup
-);
-
-/// <summary>
 ///     Log result from an operation execution
 /// </summary>
 public class OperationLog {

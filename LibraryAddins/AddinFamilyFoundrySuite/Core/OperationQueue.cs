@@ -79,9 +79,9 @@ public class OperationQueue<TProfile> where TProfile : new() {
     /// <summary>
     ///     Get metadata about all queued operations for frontend display
     /// </summary>
-    public List<OperationMetadata> GetOperationMetadata() {
+    public List<(string Name, string Description, OperationType Type, int BatchGroup)> GetOperationMetadata() {
         var batches = this.OperationBatches(this._operations);
-        var metadata = new List<OperationMetadata>();
+        var metadata = new List<(string Name, string Description, OperationType Type, int BatchGroup)>();
         var batchIndex = 0;
 
         foreach (var batch in batches) {
@@ -89,7 +89,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
                 // Use the concrete type's Name property if it explicitly implements it, 
                 // otherwise fall back to GetType().Name
                 var name = GetOperationName(op);
-                metadata.Add(new OperationMetadata(name, op.Description, op.Type, batchIndex));
+                metadata.Add((name, op.Description, op.Type, batchIndex));
             }
             batchIndex++;
         }
