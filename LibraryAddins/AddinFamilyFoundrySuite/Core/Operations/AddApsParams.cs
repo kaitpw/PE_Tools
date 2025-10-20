@@ -21,8 +21,6 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
     public OperationLog Execute(Document doc) {
         var log = new OperationLog(this.GetType().Name);
 
-        var fm = doc.FamilyManager;
-
         var defFile = Utils.MakeTempSharedParamTxt(doc);
         var group = defFile.Groups.get_Item("Parameters") ?? defFile.Groups.Create("Parameters");
 
@@ -31,16 +29,8 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
                 && this._apsParamsToSkip.Contains(apsParam.Name)) continue;
 
             try {
-                var (sharedParam, sharedParamErr) = doc.AddApsParameter(fm, group, apsParam);
-                if (sharedParamErr is not null) {
-                    // Do Not port this code block to the new combined method
-                    var (slowParam, slowErr) = doc.AddApsParameterSlow(apsParam);
-                    if (slowErr != null)
-                        log.Entries.Add(new LogEntry { Item = apsParam.Name, Error = slowErr.Message });
-                    else
-                        log.Entries.Add(new LogEntry { Item = slowParam.Name });
-                } else
-                    log.Entries.Add(new LogEntry { Item = sharedParam.Name });
+                var addedParam = doc.AddApsParameter(apsParam, group);
+                log.Entries.Add(new LogEntry { Item = addedParam.Definition.Name });
             } catch (Exception ex) {
                 log.Entries.Add(new LogEntry { Item = apsParam.Name, Error = ex.Message });
             }

@@ -58,14 +58,11 @@ public class ParametersApi {
             [UsedImplicitly] public string CreatedBy { get; init; }
             [UsedImplicitly] public string CreatedAt { get; init; }
 
-            [UsedImplicitly] [JsonIgnore] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
+            [UsedImplicitly][JsonIgnore] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
 
             [JsonIgnore] public ParameterDownloadOpts DownloadOptions => new(this.Id, this.TypedMetadata);
 
-            // TODO: evaluate is this is the best place for this to be
-            public ExternalDefinition GetExternalDefinition(DefinitionGroup group) {
-                if (group is null) throw new ArgumentNullException(nameof(group));
-
+            public Guid GetGuid() {
                 // TODO: move this into a utility class for ForgeTypeId's at some point
                 // Extract the actual GUID from Parameters Service ID (similar to your FindParameter method)
                 var parameterTypeId = this.DownloadOptions.ParameterTypeId;
@@ -80,11 +77,15 @@ public class ParametersApi {
 
                 if (!Guid.TryParse(guidText, out var guid))
                     throw new ArgumentException($"Could not extract GUID from parameterTypeId: {typeId}");
+                return guid;
+            }
 
-                // Use the correct data type from Parameters Service
+            public ExternalDefinition GetExternalDefinition(DefinitionGroup group) {
+                if (group is null) throw new ArgumentNullException(nameof(group));
+
                 var dataTypeId = new ForgeTypeId(this.SpecId);
                 var options = new ExternalDefinitionCreationOptions(this.Name, dataTypeId) {
-                    GUID = guid, // Use the actual Parameters Service GUID
+                    GUID = this.GetGuid(),
                     Visible = this.DownloadOptions.Visible,
                     UserModifiable = !this.ReadOnly,
                     Description = this.Description ?? ""

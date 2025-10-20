@@ -66,29 +66,21 @@ public static class FamilyDocumentAddParameter {
         }
     }
 
-    public static Result<SharedParameterElement> AddApsParameter(this Document famDoc,
-        FamilyManager fm,
-        DefinitionGroup group,
-        ParamModelRes apsParamModel
+    public static FamilyParameter AddApsParameter(
+        this Document famDoc,
+        ParamModelRes apsParamModel,
+        DefinitionGroup group
     ) {
-        try {
-            var externalDef = apsParamModel.GetExternalDefinition(group);
 
-            // Add parameter to family using FamilyManager
-            var familyParam = fm.AddParameter(externalDef,
-                apsParamModel.DownloadOptions.GroupTypeId,
-                apsParamModel.DownloadOptions.IsInstance);
+        var sharedParamElement = famDoc.FamilyManager.FindParameter(apsParamModel.GetGuid());
+        if (sharedParamElement != null) return sharedParamElement;
 
-            // Find the SharedParameterElement that was created using the original Parameters Service ID
-            var sharedParamElement = famDoc.FindParameter(apsParamModel.DownloadOptions.ParameterTypeId);
-            if (sharedParamElement != null) return sharedParamElement;
+        // Add parameter to family using FamilyManager
+        var familyParam = famDoc.FamilyManager.AddParameter(
+            apsParamModel.GetExternalDefinition(group),
+            apsParamModel.DownloadOptions.GroupTypeId,
+            apsParamModel.DownloadOptions.IsInstance);
 
-            // If we can't find the SharedParameterElement, the FamilyParameter creation succeeded
-            // which is what we care about for the family, so this isn't necessarily an error
-            return new Exception(
-                $"Parameter {apsParamModel.Name} added to family but SharedParameterElement not found");
-        } catch (Exception ex) {
-            return ex;
-        }
+        return familyParam;
     }
 }
