@@ -68,9 +68,9 @@ public class Json<T> where T : class, new() {
         var generator = new JsonSchemaGenerator(schemaSettings);
         this._schema = generator.Generate(typeof(T));
 
-        this.SaveSchema();
         var fileDidntExist = !File.Exists(this.FilePath);
         this.SaveJson(); // Always create the file
+        this.SaveSchema();
         if (throwIfNotExists && fileDidntExist) {
             throw new CrashProgramException(
                 $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
@@ -122,11 +122,7 @@ public class Json<T> where T : class, new() {
 
     /// <summary> Reads JSON object from the specified file, validating against schema </summary>
     /// <returns>Deserialized object</returns>
-    /// <exception cref="System.IO.FileNotFoundException">Thrown when the file doesn't exist</exception>
     public T Read() {
-        if (!File.Exists(this.FilePath))
-            throw new FileNotFoundException($"JSON file not found: {this.FilePath}");
-
         var jsonContent = File.ReadAllText(this.FilePath);
         var validationErrors = this._schema.Validate(jsonContent);
         if (validationErrors.Any()) {
@@ -207,7 +203,7 @@ public class Json<T> where T : class, new() {
     private void SaveJson() {
         if (!File.Exists(this.FilePath)) {
             var defaultContent = new T();
-            this.Write(defaultContent);
+            this.Write(defaultContent, true);
         }
     }
 

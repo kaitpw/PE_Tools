@@ -25,6 +25,8 @@ public class OperationQueue<TProfile> where TProfile : new() {
                 $"but the settings selector returned null.");
         }
 
+        if (!operation.Settings.Enabled) return this;
+
         this._operations.Add(operation);
         return this;
     }
@@ -43,6 +45,8 @@ public class OperationQueue<TProfile> where TProfile : new() {
                     $"Operation '{op.GetType().Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
                     $"but the settings selector returned null.");
             }
+            if (!op.Settings.Enabled) continue;
+
 
             // Wrap operation to prefix log name with parent compound operation
             this._operations.Add(new CompoundOperationChild<TOpSettings>(op, parentName));
@@ -66,6 +70,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
                 $"Operation '{operation.GetType().Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
                 $"but the settings selector returned null.");
         }
+        if (!operation.Settings.Enabled) return this;
 
         this._operations.Add(operation);
         return this;
@@ -113,46 +118,37 @@ public class OperationQueue<TProfile> where TProfile : new() {
             case OperationType.Type:
                 familyActions.Add(famDoc => {
                     var fm = famDoc.FamilyManager;
-                    var familyTypes = fm.Types.Cast<FamilyType>().ToList();
-
-                    // Initialize logs for each operation upfront
-                    var operationLogs = batch.Operations
-                        .Select(op => new OperationLog(op.GetType().Name))
-                        .ToList();
+                    var operationLogs = new List<OperationLog>();
 
                     // Switch types once, executing all operations per type
-                    foreach (var famType in familyTypes) {
+                    foreach (FamilyType famType in fm.Types) {
                         var typeSwitchSw = Stopwatch.StartNew();
                         fm.CurrentType = famType;
                         typeSwitchSw.Stop();
-                        var typeSwitchMs = typeSwitchSw.Elapsed.TotalMilliseconds;
-
-                        var typeName = famType.Name;
-                        Debug.WriteLine(typeName); // TODO: Remove this
+                        var amortizedSwitchMs = typeSwitchSw.Elapsed.TotalMilliseconds / batch.Operations.Count;
 
                         // Execute all operations for this type
-                        for (var i = 0; i < batch.Operations.Count; i++) {
-                            var op = batch.Operations[i];
+                        foreach (var op in batch.Operations) {
                             var opSw = Stopwatch.StartNew();
-                            var typeLog = op.Execute(famDoc);
+                            var log = op.Execute(famDoc);
                             opSw.Stop();
 
-                            // Amortize type switch cost across all operations
-                            var amortizedSwitchMs = typeSwitchMs / batch.Operations.Count;
-                            var opLog = operationLogs[i];
-                            opLog.MsElapsed += opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
+                            log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
+                            foreach (var entry in log.Entries) entry.Context = famType.Name;
 
-                            // Add entries with type context
-                            opLog.Entries.AddRange(
-                                typeLog.Entries.Select(entry => new LogEntry {
-                                    Item = entry.Item,
-                                    Context = typeName,
-                                    Error = entry.Error
-                                }));
+                            operationLogs.Add(log);
                         }
                     }
 
-                    allLogs.AddRange(operationLogs);
+                    // Combine logs by operation name
+                    var combinedLogs = operationLogs
+                        .GroupBy(log => log.OperationName)
+                        .Select(group => new OperationLog(group.Key) {
+                            Entries = group.SelectMany(log => log.Entries).ToList(),
+                            MsElapsed = group.Sum(log => log.MsElapsed)
+                        });
+
+                    allLogs.AddRange(combinedLogs);
                 });
                 break;
             }
@@ -210,9 +206,8 @@ internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where T
     public OperationLog Execute(Document doc) {
         var innerLog = this._innerOperation.Execute(doc);
         // Create new log with prefixed name
-        var log = new OperationLog($"{this._parentName}: {this._innerOperation.GetType().Name}") {
-            Entries = innerLog.Entries,
-            MsElapsed = innerLog.MsElapsed
+        var log = new OperationLog($"{this._parentName}: {innerLog.OperationName}") {
+            Entries = innerLog.Entries
         };
         return log;
     }

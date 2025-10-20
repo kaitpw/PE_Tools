@@ -67,6 +67,6 @@ public class OperationLog {
 /// </summary>
 public class LogEntry {
     public string Item { get; init; }
-    public string Context { get; init; } = null;
+    public string Context { get; set; } = null;
     public string Error { get; init; } = null;
 }

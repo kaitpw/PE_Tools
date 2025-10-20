@@ -8,8 +8,9 @@ public class OperationProcessor<TProfile>
     where TProfile : BaseProfileSettings, new() {
     public OperationProcessor(Storage storage) {
         this.storage = storage;
-        this.settings = this.storage.Settings().Json<BaseSettings<TProfile>>().Read();
-        this.profile = this.settings.GetProfile();
+        var settingsManager = this.storage.Settings();
+        this.settings = settingsManager.Json<BaseSettings<TProfile>>().Read();
+        this.profile = this.settings.GetProfile(settingsManager);
     }
 
     public Storage storage { get; }

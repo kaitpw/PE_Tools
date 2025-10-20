@@ -6,7 +6,11 @@ This Service will be a simple wrapper over file read/write code within a predefi
 [assembly name]/
     ├── RevitAddin_A/
     │   ├── settings/
-    │   │   └── settings.json
+    │   │   ├── settings.json
+    │   │   └── profiles/
+    │   │       ├── Default.json
+    │   │       ├── Production.json
+    │   │       └── Testing.json
     │   ├── state/ 
     │   │   └── state.json
     │   ├── temp/ 
@@ -19,7 +23,9 @@ This Service will be a simple wrapper over file read/write code within a predefi
     │       └── state.json
     └── RevitAddin_C/
         ├── settings/
-        │   └── settings.json
+        │   ├── settings.json
+        │   └── profiles/
+        │       └── Default.json
         └── output/
             └── error_report_[datetime].csv
 ```
@@ -53,18 +59,58 @@ The purpose of this service is to standardize the way we access local file stora
 
 ## Default `settings/` schema
 
-The settings file schema should have 2 parts. The first is global settings, the second is an optional profile-based list of settings. For now the only service-level standardization I want on the settings JSON schema (besides the settings and profiles sections) is the three attributes listed below
+The main settings file contains global settings and a reference to the current profile. Profile data is stored in separate files within the `profiles/` subdirectory.
+
+**settings.json:**
 ```json
 {
-  "Settings": {
-    "EnableProfiles": true, // should default to false
+  "OnProcessingFinish": {
     "OpenOutputFilesOnCommandFinish": true,
-  }
-  "Profiles": [
-    ... 
-  ]
+    "LoadFamily": true,
+    "SaveFamilyToInternalPath": false,
+    "SaveFamilyToOutputDir": false
+  },
+  "CurrentProfile": "Default"
 }
 ```
+
+**profiles/Default.json:**
+```json
+{
+  "FilterFamilies": {
+    "IncludeCategoriesEqualing": [],
+    "IncludeNames": {
+      "Equaling": [],
+      "Containing": [],
+      "StartingWith": []
+    },
+    "ExcludeNames": {
+      "Equaling": [],
+      "Containing": [],
+      "StartingWith": []
+    }
+  },
+  "FilterApsParams": {
+    "IncludeNames": {
+      "Equaling": [],
+      "Containing": [],
+      "StartingWith": []
+    },
+    "ExcludeNames": {
+      "Equaling": [],
+      "Containing": [],
+      "StartingWith": []
+    }
+  }
+}
+```
+
+### Profile Management
+
+- Each profile is stored as a separate JSON file in `settings/profiles/{ProfileName}.json`
+- The `CurrentProfile` property in `settings.json` determines which profile is active
+- Profiles are loaded on-demand when accessed via `GetProfile(settingsManager)`
+- This structure enables easy version control, sharing, and management of individual profiles
 
 
 

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using PeServices.Storage.Core;
 
 namespace AddinFamilyFoundrySuite.Core;
 
@@ -11,12 +12,11 @@ public class BaseSettings<TProfile> where TProfile : BaseProfileSettings, new() 
     [Required]
     public string CurrentProfile { get; set; } = "Default";
 
-    [Description(
-        "Profiles for the command. The profile that a command uses is determined by the `CurrentProfile` property.")]
-    [Required]
-    public Dictionary<string, TProfile> Profiles { get; set; } = new() { { "Default", new TProfile() } };
-
-    public TProfile GetProfile() => this.Profiles[this.CurrentProfile];
+    public TProfile GetProfile(SettingsManager settingsManager) {
+        var profilePath = Path.Combine(
+            settingsManager.GetProfilesFolderPath(), $"{this.CurrentProfile}.json");
+        return settingsManager.Json<TProfile>(profilePath).Read();
+    }
 }
 
 public class OnProcessingFinishSettings : ILoadAndSaveOptions {

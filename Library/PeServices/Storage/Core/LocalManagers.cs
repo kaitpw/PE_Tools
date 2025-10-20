@@ -13,6 +13,10 @@ public class SettingsManager {
 
     public JsonReader<T> Json<T>(string filename, bool throwIfNotExists = true) where T : class, new() =>
         new(new Json<T>(Path.Combine(this._thisPath, filename), throwIfNotExists));
+
+    public string GetFolderPath() => this._thisPath;
+    public string GetProfilesFolderPath() =>
+        Directory.CreateDirectory(Path.Combine(this._thisPath, "profiles")).FullName;
 }
 
 public class StateManager {
