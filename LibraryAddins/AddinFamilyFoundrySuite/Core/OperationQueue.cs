@@ -16,61 +16,38 @@ public class OperationQueue<TProfile> where TProfile : new() {
         IOperation<TOpSettings> operation,
         Func<TProfile, TOpSettings> settingsSelector
     ) where TOpSettings : class, IOperationSettings, new() {
-        // Extract settings from profile using the selector
         operation.Settings = settingsSelector(this._profile);
-
-        if (operation.Settings == null) {
-            throw new InvalidOperationException(
-                $"Operation '{operation.GetType().Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
-                $"but the settings selector returned null.");
-        }
-
-        if (!operation.Settings.Enabled) return this;
+        if (operation.Settings == null || !operation.Settings.Enabled) return this;
 
         this._operations.Add(operation);
         return this;
     }
 
+    /// <summary>
+    ///     Add a compound operation to the queue with explicit settings from the profile.
+    /// </summary>
     public OperationQueue<TProfile> Add<TOpSettings>(
-        ICompoundOperation<TOpSettings> operation,
+        ICompoundOperation<TOpSettings> compoundOperation,
         Func<TProfile, TOpSettings> settingsSelector
     ) where TOpSettings : class, IOperationSettings, new() {
-        var parentName = operation.GetType().Name;
+        foreach (var operation in compoundOperation.Operations) {
+            operation.Settings = settingsSelector(this._profile);
+            if (operation.Settings == null || !operation.Settings.Enabled) continue;
 
-        foreach (var op in operation.Operations) {
-            op.Settings = settingsSelector(this._profile);
-
-            if (op.Settings == null) {
-                throw new InvalidOperationException(
-                    $"Operation '{op.GetType().Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
-                    $"but the settings selector returned null.");
-            }
-            if (!op.Settings.Enabled) continue;
-
-
-            // Wrap operation to prefix log name with parent compound operation
-            this._operations.Add(new CompoundOperationChild<TOpSettings>(op, parentName));
+            this._operations.Add(new CompoundOperationChild<TOpSettings>(operation, ((IOperation)compoundOperation).Name));
         }
-
         return this;
     }
 
     /// <summary>
-    ///     Add an operation to the queue with explicit settings from the profile.
+    ///     Add an operation to the queue with ad-hoc settings.
     /// </summary>
     public OperationQueue<TProfile> Add<TOpSettings>(
         IOperation<TOpSettings> operation,
         TOpSettings settings
     ) where TOpSettings : class, IOperationSettings, new() {
-        // Extract settings from profile using the selector
         operation.Settings = settings;
-
-        if (operation.Settings == null) {
-            throw new InvalidOperationException(
-                $"Operation '{operation.GetType().Name}' requires settings of type '{typeof(TOpSettings).Name}', " +
-                $"but the settings selector returned null.");
-        }
-        if (!operation.Settings.Enabled) return this;
+        if (operation.Settings == null || !operation.Settings.Enabled) return this;
 
         this._operations.Add(operation);
         return this;
@@ -86,8 +63,6 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
         foreach (var batch in batches) {
             foreach (var op in batch.Operations) {
-                // Use the concrete type's Name property if it explicitly implements it, 
-                // otherwise fall back to GetType().Name
                 var name = GetOperationName(op);
                 metadata.Add((name, op.Description, op.Type, batchIndex));
             }
@@ -139,7 +114,6 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
                             log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
                             foreach (var entry in log.Entries) entry.Context = famType.Name;
-
                             operationLogs.Add(log);
                         }
                     }
@@ -207,20 +181,16 @@ internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where T
         this._parentName = parentName;
     }
 
-    public string Name => $"{this._parentName}: {this._innerOperation.GetType().Name}";
-
     public TSettings Settings {
         get => this._innerOperation.Settings;
         set => this._innerOperation.Settings = value;
     }
-
     public OperationType Type => this._innerOperation.Type;
+    public string Name => $"{this._parentName}: {this._innerOperation.Name}";
     public string Description => this._innerOperation.Description;
 
     public OperationLog Execute(Document doc) {
         var innerLog = this._innerOperation.Execute(doc);
-        // Create new log with prefixed name
-        var log = new OperationLog($"{this._parentName}: {innerLog.OperationName}", innerLog.Entries);
-        return log;
+        return new OperationLog(this.Name, innerLog.Entries);
     }
 }

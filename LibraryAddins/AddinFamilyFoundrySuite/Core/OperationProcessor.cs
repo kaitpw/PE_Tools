@@ -22,12 +22,12 @@ public class OperationProcessor<TProfile>
     /// <summary>
     ///     Execute a configured processor with full initialization and document handling
     /// </summary>
-    public List<OperationLog> ProcessQueue(Document doc, OperationQueue<TProfile> enqueuer) {
+    public List<OperationLog> ProcessQueue(Document doc, OperationQueue<TProfile> queue) {
         var familyResults = new Dictionary<string, (List<OperationLog> logs, double totalMs)>();
 
         var totalSw = Stopwatch.StartNew();
 
-        var (familyActions, getLogs) = enqueuer.ToFamilyActions();
+        var (familyActions, getLogs) = queue.ToFamilyActions();
         if (doc.IsFamilyDocument) {
             try {
                 var familySw = Stopwatch.StartNew();
@@ -92,10 +92,10 @@ public class OperationProcessor<TProfile>
 
                     return new Dictionary<string, object> {
                         ["OperationName"] = log.OperationName,
+                        ["SecondsElapsed"] = Math.Round(log.MsElapsed / 1000.0, 3),
                         ["SuccessCount"] = log.SuccessCount,
                         ["FailedCount"] = log.FailedCount,
                         ["Errors"] = groupedErrors,
-                        ["SecondsElapsed"] = Math.Round(log.MsElapsed / 1000.0, 3)
                     };
                 }).ToList()
             }).ToList()
