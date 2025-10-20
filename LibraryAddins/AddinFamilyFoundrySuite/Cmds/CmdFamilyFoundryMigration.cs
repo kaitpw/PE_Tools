@@ -18,7 +18,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            var addFamilyParams = new AddAndGlobalSetFamilyParamsSettings {
+            var addFamilyParams = new AddAndSetFormulaFamilyParamsSettings {
                 FamilyParamData = [
                     new FamilyParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
@@ -40,8 +40,8 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 .Add(new DeleteUnusedParams(excludeFromDeletion), profile => profile.DeleteUnusedParams)
                 .Add(new DeleteUnusedNestedFamilies(), profile => profile.DeleteUnusedNestedFamilies)
                 .Add(new MapAndAddApsParams(processor.profile.GetAPSParams()), profile => profile.AddAndMapApsParams)
-                .Add(new AddAndGlobalSetFamilyParams(), addFamilyParams)
-                .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector);
+                .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
+                .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
 
             // Get metadata for debugging/logging
             var metadata = queue.GetOperationMetadata();
