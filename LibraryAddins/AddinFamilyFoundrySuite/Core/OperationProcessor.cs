@@ -27,8 +27,8 @@ public class OperationProcessor<TProfile>
 
         var totalSw = Stopwatch.StartNew();
 
+        var (familyActions, getLogs) = enqueuer.ToFamilyActions();
         if (doc.IsFamilyDocument) {
-            var (familyActions, getLogs) = enqueuer.ToFamilyActions();
             try {
                 var familySw = Stopwatch.StartNew();
                 var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
@@ -42,11 +42,8 @@ public class OperationProcessor<TProfile>
             }
         } else {
             var families = this.profile.GetFamilies(doc);
-
             foreach (var family in families) {
-                var familyName =
-                    family.Name; // Capture name before processing as family object becomes invalid after LoadAndCloseFamily
-                var (familyActions, getLogs) = enqueuer.ToFamilyActions();
+                var familyName = family.Name; // Capture name 
                 try {
                     var familySw = Stopwatch.StartNew();
                     var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);

@@ -3,10 +3,10 @@ using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersR
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MapAndAddApsParams : ICompoundOperation<MapParamsSettings> {
-    public MapAndAddApsParams(List<ParamModelRes> apsParams) =>
+    public MapAndAddApsParams(List<ParamModelRes> apsParams, DefinitionGroup group) =>
         this.Operations = [
-            new MapReplaceParams(apsParams),
-            new AddUnmappedApsParams(apsParams),
+            new MapReplaceParams(apsParams, group),
+            new AddUnmappedApsParams(apsParams, group),
             new MapParams()
         ];
 
@@ -15,9 +15,12 @@ public class MapAndAddApsParams : ICompoundOperation<MapParamsSettings> {
 
 public class AddUnmappedApsParams : IOperation<MapParamsSettings> {
     private readonly List<ParamModelRes> _apsParams;
+    private readonly DefinitionGroup _group;
 
-    public AddUnmappedApsParams(List<ParamModelRes> apsParams) =>
+    public AddUnmappedApsParams(List<ParamModelRes> apsParams, DefinitionGroup group) {
         this._apsParams = apsParams;
+        this._group = group;
+    }
 
     public MapParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
@@ -31,7 +34,7 @@ public class AddUnmappedApsParams : IOperation<MapParamsSettings> {
             .Select(m => m.NewName)
             .ToList();
 
-        var addApsParams = new AddApsParams(this._apsParams, apsParamsToSkip) { Settings = new AddApsParamsSettings() };
+        var addApsParams = new AddApsParams(this._apsParams, this._group, apsParamsToSkip) { Settings = new AddApsParamsSettings() };
         return addApsParams.Execute(doc);
     }
 }

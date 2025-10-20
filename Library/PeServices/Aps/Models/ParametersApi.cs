@@ -46,6 +46,7 @@ public class ParametersApi {
         [UsedImplicitly] public List<ParametersResult> Results { get; set; }
 
         public class ParametersResult {
+            private ParameterDownloadOpts _downloadOptions;
             [UsedImplicitly] public string Id { get; set; }
             [UsedImplicitly] public string Name { get; init; }
             [UsedImplicitly] public string Description { get; init; }
@@ -58,93 +59,99 @@ public class ParametersApi {
             [UsedImplicitly] public string CreatedBy { get; init; }
             [UsedImplicitly] public string CreatedAt { get; init; }
 
-            [UsedImplicitly][JsonIgnore] public ParametersResultMetadata TypedMetadata => new(this.Metadata);
+            [JsonIgnore]
+            public bool IsArchived =>
+                this.Metadata?.Any(m => m.Id == "isArchived" && m.Value is bool v && v) == true;
 
-            [JsonIgnore] public ParameterDownloadOpts DownloadOptions => new(this.Id, this.TypedMetadata);
-
-            public Guid GetGuid() {
-                // TODO: move this into a utility class for ForgeTypeId's at some point
-                // Extract the actual GUID from Parameters Service ID (similar to your FindParameter method)
-                var parameterTypeId = this.DownloadOptions.ParameterTypeId;
-                var typeId = parameterTypeId.TypeId;
-                var typeIdParts = typeId?.Split(':');
-                if (typeIdParts == null || typeIdParts.Length < 2)
-                    throw new ArgumentException($"ParameterTypeId is not of the Parameters Service format: {typeId}");
-
-                var parameterPart = typeIdParts[1];
-                var dashIndex = parameterPart.IndexOf('-');
-                var guidText = dashIndex > 0 ? parameterPart[..dashIndex] : parameterPart;
-
-                if (!Guid.TryParse(guidText, out var guid))
-                    throw new ArgumentException($"Could not extract GUID from parameterTypeId: {typeId}");
-                return guid;
-            }
-
-            public ExternalDefinition GetExternalDefinition(DefinitionGroup group) {
-                if (group is null) throw new ArgumentNullException(nameof(group));
-
-                var dataTypeId = new ForgeTypeId(this.SpecId);
-                var options = new ExternalDefinitionCreationOptions(this.Name, dataTypeId) {
-                    GUID = this.GetGuid(),
-                    Visible = this.DownloadOptions.Visible,
-                    UserModifiable = !this.ReadOnly,
-                    Description = this.Description ?? ""
-                };
-
-                return group.Definitions.Create(options) as ExternalDefinition;
-            }
+            [JsonIgnore]
+            public ParameterDownloadOpts DownloadOptions => this._downloadOptions ??= new ParameterDownloadOpts(this);
 
             public class RawMetadataValue {
                 [UsedImplicitly] public string Id { get; init; }
                 [UsedImplicitly] public object Value { get; init; }
             }
 
-            public class ParametersResultMetadata {
-                // NOTE: Intentionally uses default de/serialization settings inherent in JToken.ToObject
-                public ParametersResultMetadata(List<RawMetadataValue> metadata) {
-                    foreach (var item in metadata) {
+            public class ParameterDownloadOpts {
+                private readonly List<MetadataBinding> _categories;
+                private readonly string _groupId;
+                private readonly string _guidText;
+                private readonly ParametersResult _parent;
+                public readonly bool IsInstance;
+                public readonly bool Visible;
+
+                // Lazy-cached values
+                private ExternalDefinition _externalDefinition;
+                private DefinitionGroup _cachedDefinitionGroup;
+                private ForgeTypeId _groupTypeId;
+                private Guid? _guid;
+                private ForgeTypeId _parameterTypeId;
+                private ForgeTypeId _specTypeId;
+
+                public ParameterDownloadOpts(ParametersResult parent) {
+                    this._parent = parent;
+
+                    // Parse metadata once and cache all values
+                    foreach (var item in parent.Metadata) {
                         _ = item.Id switch {
-                            "isHidden" => this.IsHidden = item.Value is bool v && v,
-                            "isArchived" => this.IsArchived = item.Value is bool v && v,
-                            "instanceTypeAssociation" => this.InstanceTypeAssociation =
-                                item.Value is string v ? v : "NONE",
-                            "categories" => this.Categories = item.Value is List<Binding> v ? v : null,
-                            "labelIds" => this.LabelIds = item.Value is string[] v ? v.ToList() : null,
-                            "group" => this.Group = item.Value is Binding v ? v : null,
+                            "isHidden" => this.Visible = !(item.Value is bool v && v),
+                            "instanceTypeAssociation" => this.IsInstance =
+                                item.Value is not string s || s.Equals("INSTANCE", StringComparison.OrdinalIgnoreCase),
+                            "categories" => this._categories = item.Value as List<MetadataBinding>,
+                            "group" => this._groupId = (item.Value as MetadataBinding)?.Id,
                             _ => default(object)
                         };
                     }
+
+                    // Pre-extract GUID text from Parameters Service ID
+                    var typeIdParts = parent.Id?.Split(':');
+                    if (typeIdParts?.Length >= 2) {
+                        var parameterPart = typeIdParts[1];
+                        var dashIndex = parameterPart.IndexOf('-');
+                        this._guidText = dashIndex > 0 ? parameterPart[..dashIndex] : parameterPart;
+                    }
                 }
 
-                public bool IsHidden { get; }
-                public string InstanceTypeAssociation { get; }
-                public List<Binding> Categories { get; }
-                public Binding Group { get; }
-                public List<string> LabelIds { get; init; }
-                public bool IsArchived { get; init; }
+                public ForgeTypeId GetParameterTypeId() => this._parameterTypeId ??= new ForgeTypeId(this._parent.Id);
+                public ForgeTypeId GetGroupTypeId() => this._groupTypeId ??= new ForgeTypeId(this._groupId ?? "");
+                public ForgeTypeId GetSpecTypeId() => this._specTypeId ??= new ForgeTypeId(this._parent.SpecId);
 
-                public class Binding {
-                    [UsedImplicitly] public string BindingId { get; init; }
-                    [UsedImplicitly] public string Id { get; init; }
+                public Guid GetGuid() {
+                    if (this._guid.HasValue) return this._guid.Value;
+
+                    if (string.IsNullOrEmpty(this._guidText) || !Guid.TryParse(this._guidText, out var guid))
+                        throw new ArgumentException(
+                            $"Could not extract GUID from parameter ID: {this._parent.Id}");
+
+                    this._guid = guid;
+                    return guid;
                 }
-            }
 
-            public class ParameterDownloadOpts(string Id, ParametersResultMetadata metadata) {
-                public ForgeTypeId ParameterTypeId => new(Id);
+                public ExternalDefinition GetExternalDefinition(DefinitionGroup group) {
+                    // Return cached definition only if it's from the same group
+                    if (this._externalDefinition != null && this._cachedDefinitionGroup == group)
+                        return this._externalDefinition;
 
-                public ForgeTypeId GroupTypeId => // check this logic in testing
-                    metadata.Group?.Id != null
-                        ? new ForgeTypeId(metadata.Group.Id)
-                        : new ForgeTypeId("");
+                    try {
+                        this._externalDefinition = group.Definitions.Create(
+                            new ExternalDefinitionCreationOptions(this._parent.Name, this.GetSpecTypeId()) {
+                                GUID = this.GetGuid(),
+                                Visible = this.Visible,
+                                UserModifiable = !this._parent.ReadOnly,
+                                Description = this._parent.Description ?? ""
+                            }) as ExternalDefinition;
+                    } catch (Exception ex) {
+                        this._externalDefinition = group.Definitions.get_Item(this._parent.Name) as ExternalDefinition
+                            ?? throw new Exception(
+                                $"Failed to create external definition for parameter {this._parent.Name}: {ex.Message}");
+                    }
 
-                public bool IsInstance =>
-                    metadata.InstanceTypeAssociation?.Equals("INSTANCE", StringComparison.OrdinalIgnoreCase) ?? true;
-
-                public bool Visible => !metadata.IsHidden;
+                    this._cachedDefinitionGroup = group;
+                    return this._externalDefinition;
+                }
 
                 public ISet<ElementId> CategorySet(Document doc) => // check this logic in testing
-                    metadata.Categories?.Any() == true
-                        ? MapCategoriesToElementIds(doc, metadata.Categories)
+                    this._categories?.Any() == true
+                        ? MapCategoriesToElementIds(doc, this._categories)
                         : null;
 
                 /// <summary>
@@ -153,7 +160,7 @@ public class ParametersApi {
                 /// </summary>
                 private static ISet<ElementId> MapCategoriesToElementIds(
                     Document doc,
-                    List<ParametersResultMetadata.Binding> categories
+                    List<MetadataBinding> categories
                 ) {
                     var categorySet = new HashSet<ElementId>();
 
@@ -206,6 +213,11 @@ public class ParametersApi {
                     } catch (Exception ex) {
                         throw new Exception($"Failed to map category '{categoryName}' to Revit category: {ex.Message}");
                     }
+                }
+
+                public class MetadataBinding {
+                    [UsedImplicitly] public string BindingId { get; init; }
+                    [UsedImplicitly] public string Id { get; init; }
                 }
             }
         }

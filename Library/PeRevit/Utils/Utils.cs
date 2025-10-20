@@ -14,20 +14,7 @@ return "2024";
 #elif REVIT2026
 return "2026";
 #else
-                return null;
+        return null;
 #endif
-    }
-
-    public static DefinitionFile MakeTempSharedParamTxt(Document famDoc) {
-        var app = famDoc.Application;
-        var tempSharedParamFile = Path.GetTempFileName() + ".txt";
-        using (File.Create(tempSharedParamFile)) { } // Create empty file
-
-        app.SharedParametersFilename = tempSharedParamFile;
-        try {
-            return app.OpenSharedParameterFile();
-        } catch (Exception ex) {
-            throw new Exception($"Failed to create temp shared parameter file: {ex.Message}");
-        }
     }
 }

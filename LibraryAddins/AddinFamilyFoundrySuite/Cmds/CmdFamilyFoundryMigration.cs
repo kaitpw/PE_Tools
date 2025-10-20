@@ -4,6 +4,7 @@ using PeRevit.Ui;
 using PeServices.Storage;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using PeUtils.Files;
 
 namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
@@ -31,15 +32,19 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             };
 
             var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
+            var apsParamData = processor.profile.GetAPSParams();
             var excludeFromDeletion = processor.profile.AddAndMapApsParams.MappingData
                 .Select(m => m.CurrName)
-                .Concat(processor.profile.GetAPSParams().Select(p => p.Name))
+                .Concat(apsParamData.Select(p => p.Name))
                 .ToList();
+
+            // Create shared parameter file once for all operations
+            using var tempFile = new TempSharedParamFile(doc);
 
             var queue = processor.CreateQueue()
                 .Add(new DeleteUnusedParams(excludeFromDeletion), profile => profile.DeleteUnusedParams)
                 .Add(new DeleteUnusedNestedFamilies(), profile => profile.DeleteUnusedNestedFamilies)
-                .Add(new MapAndAddApsParams(processor.profile.GetAPSParams()), profile => profile.AddAndMapApsParams)
+                .Add(new MapAndAddApsParams(apsParamData, tempFile.TempGroup), profile => profile.AddAndMapApsParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
                 .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
 

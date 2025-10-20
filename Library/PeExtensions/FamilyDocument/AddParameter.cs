@@ -31,12 +31,13 @@ public static class FamilyDocumentAddParameter {
         this Document famDoc,
         ParamModelRes apsParamModel
     ) {
-        var parameterTypeId = apsParamModel.DownloadOptions.ParameterTypeId;
+        var dlOptsSource = apsParamModel.DownloadOptions;
+        var parameterTypeId = dlOptsSource.GetParameterTypeId();
         var dlOpts = new ParameterDownloadOptions(
             new HashSet<ElementId>(),
-            apsParamModel.DownloadOptions.IsInstance,
-            apsParamModel.DownloadOptions.Visible,
-            apsParamModel.DownloadOptions.GroupTypeId);
+            dlOptsSource.IsInstance,
+            dlOptsSource.Visible,
+            dlOptsSource.GetGroupTypeId());
 
         try {
             return ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId);
@@ -71,15 +72,16 @@ public static class FamilyDocumentAddParameter {
         ParamModelRes apsParamModel,
         DefinitionGroup group
     ) {
+        var dlOpts = apsParamModel.DownloadOptions;
 
-        var sharedParamElement = famDoc.FamilyManager.FindParameter(apsParamModel.GetGuid());
+        var sharedParamElement = famDoc.FamilyManager.FindParameter(dlOpts.GetGuid());
         if (sharedParamElement != null) return sharedParamElement;
 
         // Add parameter to family using FamilyManager
         var familyParam = famDoc.FamilyManager.AddParameter(
-            apsParamModel.GetExternalDefinition(group),
-            apsParamModel.DownloadOptions.GroupTypeId,
-            apsParamModel.DownloadOptions.IsInstance);
+            dlOpts.GetExternalDefinition(group),
+            dlOpts.GetGroupTypeId(),
+            dlOpts.IsInstance);
 
         return familyParam;
     }

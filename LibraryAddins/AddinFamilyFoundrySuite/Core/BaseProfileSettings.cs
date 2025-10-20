@@ -23,7 +23,7 @@ public class BaseProfileSettings {
         if (apsParams.Results != null) {
             return apsParams.Results
                 .Where(this.FilterApsParams.Filter)
-                .Where(p => !p.TypedMetadata.IsArchived)
+                .Where(p => !p.IsArchived)
                 .ToList();
         }
 
