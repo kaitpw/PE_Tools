@@ -1,30 +1,43 @@
+using PeExtensions.FamDocument;
+
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public static class AddSharedParamsOperation {
-    public static List<Result<FamilyParameter>> AddSharedParams(
-        Document famDoc,
-        List<SharedParameterElement> sharedParams
+public class AddSharedParams : IOperation<AddSharedParamsSettings> {
+    public AddSharedParams(
+        List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams,
+        List<string> sharedParamsToSkip = null
     ) {
-        if (famDoc is null) throw new ArgumentNullException(nameof(famDoc));
-        if (sharedParams is null) throw new ArgumentNullException(nameof(sharedParams));
-        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
-        var fm = famDoc.FamilyManager;
-        var results = new List<Result<FamilyParameter>>();
+        this._sharedParams = sharedParams;
+        this._sharedParamsToSkip = sharedParamsToSkip;
+    }
 
-        foreach (var sharedParam in sharedParams) {
+    private List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> _sharedParams { get; }
+    private List<string> _sharedParamsToSkip { get; }
+    public AddSharedParamsSettings Settings { get; set; }
+    public OperationType Type => OperationType.Doc;
+
+    public string Description => "Download and add shared parameters from Autodesk Parameters Service";
+
+    public OperationLog Execute(Document doc) {
+        var logs = new List<LogEntry>();
+
+        foreach (var sharedParam in this._sharedParams) {
+            var name = sharedParam.externalDefinition.Name;
+            if (this._sharedParamsToSkip != null
+                && this._sharedParamsToSkip.Contains(name)) continue;
+
             try {
-                var externalDefinition = famDoc.Application.OpenSharedParameterFile()?.Groups?
-                    .SelectMany(g => g.Definitions)
-                    .OfType<ExternalDefinition>()
-                    .FirstOrDefault(def => def.GUID == sharedParam.GuidValue);
-
-                if (externalDefinition != null)
-                    results.Add(fm.AddParameter(externalDefinition, new ForgeTypeId(""), true));
+                var addedParam = doc.AddSharedParameter(sharedParam);
+                logs.Add(new LogEntry { Item = addedParam.Definition.Name });
             } catch (Exception ex) {
-                throw new Exception($"Failed to add parameter service parameter {sharedParam.Name}: {ex.Message}");
+                logs.Add(new LogEntry { Item = name, Error = ex.Message });
             }
         }
 
-        return results;
+        return new OperationLog(((IOperation)this).Name, logs);
     }
+}
+
+public class AddSharedParamsSettings : IOperationSettings {
+    public bool Enabled { get; init; } = true;
 }

@@ -1,5 +1,6 @@
 using AddinFamilyFoundrySuite.Core.Operations.Settings;
 using PeServices.Storage;
+using PeUtils.Files;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
@@ -18,12 +19,19 @@ public class BaseProfileSettings {
             .Where(this.FilterFamilies.Filter)
             .ToList();
 
-    public List<ParamModelRes> GetAPSParams() {
+    public List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
+        GetAPSParams(TempSharedParamFile tempFile) {
         var apsParams = Storage.GlobalState("parameters-service-cache.json").Json<ParamModel>().Read();
         if (apsParams.Results != null) {
+
             return apsParams.Results
                 .Where(this.FilterApsParams.Filter)
                 .Where(p => !p.IsArchived)
+                .Select(p => {
+                    var dlOpts = p.DownloadOptions;
+                    return (dlOpts.GetExternalDefinition(tempFile.TempGroup), dlOpts.GetGroupTypeId(),
+                        dlOpts.IsInstance);
+                })
                 .ToList();
         }
 

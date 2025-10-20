@@ -32,21 +32,21 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             };
 
             var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
-            var apsParamData = processor.profile.GetAPSParams();
-            var apsParamNames = apsParamData.Select(p => p.Name).ToList();
-            var mappingDataAllNames = processor.profile.AddAndMapApsParams.MappingData
+            using var tempFile = new TempSharedParamFile(doc);
+            var apsParamData = processor.profile.GetAPSParams(tempFile);
+            var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
+            var mappingDataAllNames = processor.profile.AddAndMapSharedParams.MappingData
                 .Select(m => m.CurrName)
                 .Concat(apsParamNames)
                 .ToList();
 
 
             // Create shared parameter file once for all operations
-            using var tempFile = new TempSharedParamFile(doc);
 
             var queue = processor.CreateQueue()
                 .Add(new DeleteUnusedParams(mappingDataAllNames), profile => profile.DeleteUnusedParams)
                 .Add(new DeleteUnusedNestedFamilies(), profile => profile.DeleteUnusedNestedFamilies)
-                .Add(new MapAndAddApsParams(apsParamData, tempFile.TempGroup), profile => profile.AddAndMapApsParams)
+                .Add(new MapAndAddSharedParams(apsParamData), profile => profile.AddAndMapSharedParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
                 .Add(new DeleteUnusedParams(apsParamNames), profile => profile.DeleteUnusedParams)
                 .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
@@ -90,7 +90,7 @@ public class ProfileRemap : BaseProfileSettings {
 
     [Description("Settings for parameter mapping (add/replace and remap)")]
     [Required]
-    public MapParamsSettings AddAndMapApsParams { get; init; } = new();
+    public MapParamsSettings AddAndMapSharedParams { get; init; } = new();
 
     [Description("Settings for hydrating electrical connectors")]
     [Required]

@@ -67,22 +67,13 @@ public static class FamilyDocumentAddParameter {
         }
     }
 
-    public static FamilyParameter AddApsParameter(
+    public static FamilyParameter AddSharedParameter(
         this Document famDoc,
-        ParamModelRes apsParamModel,
-        DefinitionGroup group
+        (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance) sharedParam
     ) {
-        var dlOpts = apsParamModel.DownloadOptions;
-
-        var sharedParamElement = famDoc.FamilyManager.FindParameter(dlOpts.GetGuid());
+        var sharedParamElement = famDoc.FamilyManager.FindParameter(sharedParam.externalDefinition.GUID);
         if (sharedParamElement != null) return sharedParamElement;
 
-        // Add parameter to family using FamilyManager
-        var familyParam = famDoc.FamilyManager.AddParameter(
-            dlOpts.GetExternalDefinition(group),
-            dlOpts.GetGroupTypeId(),
-            dlOpts.IsInstance);
-
-        return familyParam;
+        return famDoc.FamilyManager.AddParameter(sharedParam.externalDefinition, sharedParam.groupTypeId, sharedParam.isInstance);
     }
 }
