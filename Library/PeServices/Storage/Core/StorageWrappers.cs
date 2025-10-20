@@ -7,15 +7,15 @@ public class JsonReader<T>(Json<T> json) where T : class, new() {
     public T Read() => json.Read();
 }
 
-public class JsonWriter<T>(Json<T> json) where T : class, new() {
+public class JsonWriter<T>(Json<T> json, bool skipValidation = false, bool skipSchemaSave = false) where T : class, new() {
     public string FilePath => json.FilePath;
-    public void Write(T data) => json.Write(data);
+    public void Write(T data) => json.Write(data, skipValidation, skipSchemaSave);
 }
 
-public class JsonReadWriter<T>(Json<T> json) where T : class, new() {
+public class JsonReadWriter<T>(Json<T> json, bool skipValidation = false, bool skipSchemaSave = false) where T : class, new() {
     public string FilePath => json.FilePath;
     public T Read() => json.Read();
-    public void Write(T data) => json.Write(data);
+    public void Write(T data) => json.Write(data, skipValidation, skipSchemaSave);
 
     public bool IsCacheValid(int maxAgeMinutes, Func<T, bool> contentValidator = null) =>
         json.IsCacheValid(maxAgeMinutes, contentValidator);

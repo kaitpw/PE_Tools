@@ -46,7 +46,7 @@ public class Json<T> where T : class, new() {
     private readonly JsonSerializerSettings _serializerSettings;
     public readonly string FilePath;
 
-    public Json(string filePath, bool throwIfNotExists) {
+    public Json(string filePath, bool throwIfNotExists, bool skipSchemaSave = false) {
         FileUtils.ValidateFileNameAndExtension(filePath, "json");
         this.FilePath = filePath;
         this._instanceCreationTime = DateTime.Now;
@@ -69,8 +69,7 @@ public class Json<T> where T : class, new() {
         this._schema = generator.Generate(typeof(T));
 
         var fileDidntExist = !File.Exists(this.FilePath);
-        this.SaveJson(); // Always create the file
-        this.SaveSchema();
+        this.SaveJson(skipSchemaSave); // Always create the file
         if (throwIfNotExists && fileDidntExist) {
             throw new CrashProgramException(
                 $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
@@ -159,7 +158,8 @@ public class Json<T> where T : class, new() {
     /// <summary> Writes object to JSON file after validation </summary>
     /// <param name="content">Object to save</param>
     /// <param name="skipValidation">Skip validation when writing (used for recovery scenarios)</param>
-    public void Write(T content, bool skipValidation = false) {
+    /// <param name="skipSchemaSave">Skip saving the schema file (used for output file writing scenarios)</param>
+    public void Write(T content, bool skipValidation = false, bool skipSchemaSave = false) {
         var jsonContent = JsonConvert.SerializeObject(content, this._serializerSettings);
 
         if (!skipValidation) {
@@ -171,6 +171,7 @@ public class Json<T> where T : class, new() {
         }
 
         File.WriteAllText(this.FilePath, jsonContent);
+        if (!skipSchemaSave) this.SaveSchema();
     }
 
     /// <summary>
@@ -200,10 +201,10 @@ public class Json<T> where T : class, new() {
         return true;
     }
 
-    private void SaveJson() {
+    private void SaveJson(bool skipSchemaSave = false) {
         if (!File.Exists(this.FilePath)) {
             var defaultContent = new T();
-            this.Write(defaultContent, true);
+            this.Write(defaultContent, true, skipSchemaSave);
         }
     }
 

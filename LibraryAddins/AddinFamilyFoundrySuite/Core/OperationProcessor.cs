@@ -67,7 +67,11 @@ public class OperationProcessor<TProfile>
         return familyResults.SelectMany(kvp => kvp.Value.logs).ToList();
     }
 
-    private string WriteLogs(Dictionary<string, (List<OperationLog> logs, double totalMs)> familyResults, double totalMs) {
+    private string WriteLogs(Dictionary<string, (List<OperationLog> logs, double totalMs)> familyResults,
+        double totalMs) {
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+
+        // Summary log with grouped errors
         var logData = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             TotalSecondsElapsed = Math.Round(totalMs / 1000.0, 3),
@@ -97,8 +101,38 @@ public class OperationProcessor<TProfile>
             }).ToList()
         };
 
-        var filename = $"{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.json";
+        // Detailed log with all entries
+        var detailedLogData = new {
+            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            ProcessedFamilies = familyResults.Select(kvp => new {
+                FamilyName = kvp.Key,
+                Operations = kvp.Value.logs.Select(log => new {
+                    log.OperationName,
+                    Successes = log.Entries.Where(e => e.Error == null)
+                        .GroupBy(e => new { e.Item, e.Error })
+                        .Select(g => {
+                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
+                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
+                            return $"{contextsStr}{g.Key.Item}";
+                        })
+                        .ToList(),
+                    Errors = log.Entries
+                        .Where(e => e.Error != null)
+                        .GroupBy(e => new { e.Item, e.Error })
+                        .Select(g => {
+                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
+                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
+                            return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
+                        })
+                        .ToList()
+                }).ToList()
+            }).ToList()
+        };
+
+        var filename = $"{timestamp}.json";
+        var detailedFilename = $"{timestamp}_detailed.json";
         this.storage.Output().Json<object>(filename).Write(logData);
+        this.storage.Output().Json<object>(detailedFilename).Write(detailedLogData);
         return Path.Combine(this.storage.Output().GetFolderPath(), filename);
     }
 

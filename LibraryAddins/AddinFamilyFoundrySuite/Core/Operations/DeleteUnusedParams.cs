@@ -34,7 +34,7 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
             if (param.AssociatedParameters.Cast<Parameter>().Any()) continue;
             if (param.AssociatedArrays(doc).Any()) continue;
             if (param.AssociatedDimensions(doc).Any()) continue;
-            if (param.AssociatedFamilyParameters(doc, excludeUnused: true).Any()) continue;
+            if (param.AssociatedFamilyParameters(doc, true).Any()) continue;
 
             try {
                 var paramName = param.Definition.Name;

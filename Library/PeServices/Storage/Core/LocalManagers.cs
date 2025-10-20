@@ -51,7 +51,7 @@ public class OutputManager {
     public string GetFolderPath() => this._thisPath;
 
     public JsonWriter<T> Json<T>(string filename) where T : class, new() =>
-        new(new Json<T>(Path.Combine(this._thisPath, filename), false));
+        new(new Json<T>(Path.Combine(this._thisPath, filename), false, true), true, true);
 
     public CsvWriter<T> Csv<T>(string filename) where T : class, new() =>
         new(new Csv<T>(Path.Combine(this._thisPath, filename)));
