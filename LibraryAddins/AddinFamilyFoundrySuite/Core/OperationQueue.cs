@@ -154,7 +154,12 @@ public class OperationQueue<TProfile> where TProfile : new() {
             }
         }
 
-        return (familyActions.ToArray(), () => allLogs);
+        return (familyActions.ToArray(), () => {
+            var logsCopy = allLogs.ToList();
+            allLogs.Clear();
+            return logsCopy;
+        }
+        );
     }
 
     private List<OperationBatch> OperationBatches(List<IOperation> operations) {

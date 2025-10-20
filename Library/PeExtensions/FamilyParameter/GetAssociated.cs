@@ -50,7 +50,8 @@ public static class FamilyParameterGetAssociated {
     /// </summary>
     /// <param name="param">The family parameter</param>
     /// <param name="doc">The family document</param>
-    public static IEnumerable<FamilyParameter> AssociatedFamilyParameters(this FamilyParameter param, Document doc) {
+    /// <param name="excludeUnused">If true, only return parameters that are actually being used (have direct associations like connectors, dimensions, or arrays - NOT formula usage)</param>
+    public static IEnumerable<FamilyParameter> AssociatedFamilyParameters(this FamilyParameter param, Document doc, bool excludeUnused = false) {
         if (!doc.IsFamilyDocument) throw new Exception("Document is not a family document");
 
         // Get the parameter name safely. Some built-in parameters throw invalid when accessing Definition properties
@@ -61,8 +62,9 @@ public static class FamilyParameterGetAssociated {
 
         if (string.IsNullOrEmpty(parameterName)) return [];
 
-        return doc.FamilyManager.Parameters
+        var candidateParams = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
+            .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
             .Where(p => {
                 try {
                     var formula = p.Formula?.Trim();
@@ -71,6 +73,18 @@ public static class FamilyParameterGetAssociated {
                     return false;
                 }
             });
+
+        if (!excludeUnused) return candidateParams;
+
+        // When excluding unused, only return parameters that have DIRECT associations (not formula usage)
+        // This prevents circular dependencies where A and B reference each other in formulas
+        return candidateParams.Where(p => {
+            // Check if parameter has any DIRECT associations (not formula usage)
+            if (p.AssociatedParameters.Cast<Parameter>().Any()) return true;
+            if (p.AssociatedArrays(doc).Any()) return true;
+            if (p.AssociatedDimensions(doc).Any()) return true;
+            return false;
+        });
     }
 
     /// <summary>

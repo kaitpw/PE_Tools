@@ -11,7 +11,7 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
     public DeleteUnusedParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
 
-    public string Description => "Recursively delete unused parameters from the family";
+    public string Description => "Recursively delete unused parameters from the family"; 
 
     public OperationLog Execute(Document doc) {
         var log = new OperationLog(this.GetType().Name);
@@ -25,16 +25,16 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
         var parameters = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
             .Where(p => !this.ExternalExcludeNamesEqualing.Contains(p.Definition.Name))
+            .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
             .Where(this.Settings.Filter)
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
 
         foreach (var param in parameters) {
-            if (ParameterUtils.IsBuiltInParameter(param.Id)) continue;
             if (param.AssociatedParameters.Cast<Parameter>().Any()) continue;
             if (param.AssociatedArrays(doc).Any()) continue;
             if (param.AssociatedDimensions(doc).Any()) continue;
-            if (param.AssociatedFamilyParameters(doc).Any()) continue;
+            if (param.AssociatedFamilyParameters(doc, excludeUnused: true).Any()) continue;
 
             try {
                 var paramName = param.Definition.Name;

@@ -50,29 +50,53 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
                 log.Entries.Add(new LogEntry { Item = "Create connector" });
             }
 
-            foreach (var (source, target, action) in mappings) {
-                if (string.IsNullOrEmpty(source)) continue;
+            var targetMappings = mappings
+                .Where(m => !string.IsNullOrEmpty(m.source))
+                .ToDictionary(
+                    m => m.target,
+                    m => (
+                        doc.FamilyManager.Parameters
+                            .OfType<FamilyParameter>()
+                            .FirstOrDefault(fp => fp.Definition.Name == m.source),
+                        m.action
+                    )
+                );
+
+            foreach (var connectorElement in connectorElements) {
+                foreach (Parameter connectorParam in connectorElement.Parameters) {
+                    try {
+                        var bip = (BuiltInParameter)connectorParam.Id.Value;
+                        var currentAssociation = doc.FamilyManager.GetAssociatedFamilyParameter(connectorParam);
+
+                        if (targetMappings.TryGetValue(bip, out var mapping)) {
+                            var (sourceParam, _) = mapping;
+                            if (sourceParam == null) {
+                                log.Entries.Add(new LogEntry { Item = $"Map {bip}", Error = "Parameter not found" });
+                                continue;
+                            }
+
+                            if (currentAssociation?.Id != sourceParam.Id) {
+                                doc.FamilyManager.AssociateElementParameterToFamilyParameter(connectorParam, sourceParam);
+                                log.Entries.Add(new LogEntry { Item = $"Map {sourceParam.Definition.Name}" });
+                            }
+                        } else if (currentAssociation != null) {
+                            doc.FamilyManager.AssociateElementParameterToFamilyParameter(connectorParam, null);
+                            log.Entries.Add(new LogEntry { Item = $"Disassociate {currentAssociation.Definition.Name}" });
+                        }
+                    } catch (Exception ex) {
+                        log.Entries.Add(new LogEntry { Item = $"Process {connectorParam.Definition.Name}", Error = ex.Message });
+                    }
+                }
+            }
+
+            foreach (var kvp in targetMappings) {
+                var (sourceParam, action) = kvp.Value;
+                if (sourceParam == null) continue;
 
                 try {
-                    var sourceParam = doc.FamilyManager.Parameters
-                        .OfType<FamilyParameter>()
-                        .FirstOrDefault(fp => fp.Definition.Name == source);
-
-                    if (sourceParam == null) {
-                        log.Entries.Add(new LogEntry { Item = $"Map {source}", Error = "Parameter not found" });
-                        continue;
-                    }
-
-                    foreach (var connectorElement in connectorElements) {
-                        var targetParam = connectorElement.get_Parameter(target);
-                        if (targetParam != null)
-                            doc.FamilyManager.AssociateElementParameterToFamilyParameter(targetParam, sourceParam);
-                    }
-
                     action?.Invoke(doc, sourceParam);
-                    log.Entries.Add(new LogEntry { Item = $"Map {source}" });
                 } catch (Exception ex) {
-                    log.Entries.Add(new LogEntry { Item = $"Map {source}", Error = ex.Message });
+                    log.Entries.Add(new LogEntry { Item = $"Action for {sourceParam.Definition.Name}", Error = ex.Message });
                 }
             }
         } catch (Exception ex) {

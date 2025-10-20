@@ -33,19 +33,22 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
 
             var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
             var apsParamData = processor.profile.GetAPSParams();
-            var excludeFromDeletion = processor.profile.AddAndMapApsParams.MappingData
+            var apsParamNames = apsParamData.Select(p => p.Name).ToList();
+            var mappingDataAllNames = processor.profile.AddAndMapApsParams.MappingData
                 .Select(m => m.CurrName)
-                .Concat(apsParamData.Select(p => p.Name))
+                .Concat(apsParamNames)
                 .ToList();
+
 
             // Create shared parameter file once for all operations
             using var tempFile = new TempSharedParamFile(doc);
 
             var queue = processor.CreateQueue()
-                .Add(new DeleteUnusedParams(excludeFromDeletion), profile => profile.DeleteUnusedParams)
+                .Add(new DeleteUnusedParams(mappingDataAllNames), profile => profile.DeleteUnusedParams)
                 .Add(new DeleteUnusedNestedFamilies(), profile => profile.DeleteUnusedNestedFamilies)
                 .Add(new MapAndAddApsParams(apsParamData, tempFile.TempGroup), profile => profile.AddAndMapApsParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
+                .Add(new DeleteUnusedParams(apsParamNames), profile => profile.DeleteUnusedParams)
                 .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
 
             // Get metadata for debugging/logging
