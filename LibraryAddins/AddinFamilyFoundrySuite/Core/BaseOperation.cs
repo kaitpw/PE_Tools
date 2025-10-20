@@ -13,6 +13,11 @@ public interface IOperation {
     OperationType Type { get; }
 
     /// <summary>
+    ///     The name of the operation, defaults to the implementing class name.
+    /// </summary>
+    string Name => GetType().Name;
+
+    /// <summary>
     ///     The description of the operation to perform.
     /// </summary>
     string Description { get; }

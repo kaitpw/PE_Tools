@@ -85,8 +85,12 @@ public class OperationQueue<TProfile> where TProfile : new() {
         var batchIndex = 0;
 
         foreach (var batch in batches) {
-            foreach (var op in batch.Operations)
-                metadata.Add(new OperationMetadata(op.GetType().Name, op.Description, op.Type, batchIndex));
+            foreach (var op in batch.Operations) {
+                // Use the concrete type's Name property if it explicitly implements it, 
+                // otherwise fall back to GetType().Name
+                var name = GetOperationName(op);
+                metadata.Add(new OperationMetadata(name, op.Description, op.Type, batchIndex));
+            }
             batchIndex++;
         }
 
@@ -162,6 +166,10 @@ public class OperationQueue<TProfile> where TProfile : new() {
         );
     }
 
+    // Check if the operation explicitly implements Name property, otherwise use type name
+    private static string GetOperationName(IOperation op) =>
+        op.GetType().GetProperty(nameof(IOperation.Name))?.GetValue(op) as string ?? op.GetType().Name;
+
     private List<OperationBatch> OperationBatches(List<IOperation> operations) {
         var batches = new List<OperationBatch>();
         var currentBatch = new List<IOperation>();
@@ -190,7 +198,7 @@ internal record OperationBatch(OperationType Type, List<IOperation> Operations);
 
 /// <summary>
 ///     Wrapper that prefixes log operation names with a parent name (for compound operations)
-/// </summary>
+/// </summary> 
 internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where TSettings : IOperationSettings {
     private readonly IOperation<TSettings> _innerOperation;
     private readonly string _parentName;
@@ -199,6 +207,8 @@ internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where T
         this._innerOperation = innerOperation;
         this._parentName = parentName;
     }
+
+    public string Name => $"{this._parentName}: {this._innerOperation.GetType().Name}";
 
     public TSettings Settings {
         get => this._innerOperation.Settings;
