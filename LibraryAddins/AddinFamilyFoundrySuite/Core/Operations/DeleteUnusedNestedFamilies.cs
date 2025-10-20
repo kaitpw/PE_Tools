@@ -6,7 +6,7 @@ public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesS
     public string Description => "Delete unused nested families from the family";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
+        var logs = new List<LogEntry>();
 
         var allFamilies = new FilteredElementCollector(doc)
             .OfClass(typeof(Family))
@@ -15,7 +15,7 @@ public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesS
             .Where(f => f.FamilyCategory?.BuiltInCategory != BuiltInCategory.OST_LevelHeads)
             .Where(f => f.FamilyCategory?.BuiltInCategory != BuiltInCategory.OST_SectionHeads)
             .ToList();
-        if (allFamilies.Count == 0) return log;
+        if (allFamilies.Count == 0) return new OperationLog(((IOperation)this).Name, logs);
 
         var usedFamilyNames = new FilteredElementCollector(doc)
             .OfClass(typeof(FamilyInstance))
@@ -25,7 +25,7 @@ public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesS
             .ToHashSet();
 
         var unusedFamilies = allFamilies.Where(f => !usedFamilyNames.Contains(f.Name)).ToList();
-        if (unusedFamilies.Count == 0) return log;
+        if (unusedFamilies.Count == 0) return new OperationLog(((IOperation)this).Name, logs);
 
         foreach (var family in unusedFamilies) {
             var familyName = family.Name?.Trim() ?? "";
@@ -34,13 +34,13 @@ public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesS
                 if (dependentCount > 100) continue; // skip anomalies
 
                 _ = doc.Delete(family.Id);
-                log.Entries.Add(new LogEntry { Item = familyName });
+                logs.Add(new LogEntry { Item = familyName });
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = familyName, Error = ex.Message });
+                logs.Add(new LogEntry { Item = familyName, Error = ex.Message });
             }
         }
 
-        return log;
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 }
 

@@ -147,8 +147,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
                     // Combine logs by operation name
                     var combinedLogs = operationLogs
                         .GroupBy(log => log.OperationName)
-                        .Select(group => new OperationLog(group.Key) {
-                            Entries = group.SelectMany(log => log.Entries).ToList(),
+                        .Select(group => new OperationLog(group.Key, group.SelectMany(log => log.Entries).ToList()) {
                             MsElapsed = group.Sum(log => log.MsElapsed)
                         });
 
@@ -221,9 +220,7 @@ internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where T
     public OperationLog Execute(Document doc) {
         var innerLog = this._innerOperation.Execute(doc);
         // Create new log with prefixed name
-        var log = new OperationLog($"{this._parentName}: {innerLog.OperationName}") {
-            Entries = innerLog.Entries
-        };
+        var log = new OperationLog($"{this._parentName}: {innerLog.OperationName}", innerLog.Entries);
         return log;
     }
 }

@@ -15,7 +15,7 @@ public interface IOperation {
     /// <summary>
     ///     The name of the operation, defaults to the implementing class name.
     /// </summary>
-    string Name => GetType().Name;
+    string Name => this.GetType().Name;
 
     /// <summary>
     ///     The description of the operation to perform.
@@ -48,10 +48,9 @@ public enum OperationType {
 /// <summary>
 ///     Log result from an operation execution
 /// </summary>
-public class OperationLog {
-    public OperationLog(string operationName) => this.OperationName = operationName;
-    public string OperationName { get; init; }
-    public List<LogEntry> Entries { get; init; } = new();
+public class OperationLog(string operationName, List<LogEntry> entries) {
+    public string OperationName { get; init; } = operationName;
+    public List<LogEntry> Entries { get; init; } = entries;
     public double MsElapsed { get; set; }
     public int SuccessCount => this.Entries.Count(e => e.Error is null);
     public int FailedCount => this.Entries.Count - this.SuccessCount;

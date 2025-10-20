@@ -14,7 +14,7 @@ public class MapParams : IOperation<MapParamsSettings> {
     public string Description => "Map an old parameter's value to a new parameter for each family type";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
+        var logs = new List<LogEntry>();
 
         foreach (var p in this.Settings.MappingData.Where(m => !m.isProcessed)) {
             var mappingDesc = $"{p.CurrName} → {p.NewName}";
@@ -25,20 +25,21 @@ public class MapParams : IOperation<MapParamsSettings> {
 
                 if (sourceParam is null || targetParam is null) {
                     var notFoundParam = sourceParam is null ? p.CurrName : p.NewName;
-                    log.Entries.Add(new LogEntry {
-                        Item = mappingDesc, Error = $"{notFoundParam} not found in the family"
+                    logs.Add(new LogEntry {
+                        Item = mappingDesc,
+                        Error = $"{notFoundParam} not found in the family"
                     });
                     continue;
                 }
 
                 _ = doc.SetValue(targetParam, sourceParam, p.MappingStrategy);
-                log.Entries.Add(new LogEntry { Item = mappingDesc });
+                logs.Add(new LogEntry { Item = mappingDesc });
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = mappingDesc, Error = ex.Message });
+                logs.Add(new LogEntry { Item = mappingDesc, Error = ex.Message });
             }
         }
 
-        return log;
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 }
 

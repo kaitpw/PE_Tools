@@ -13,12 +13,12 @@ public class DeleteParams : IOperation<DeleteParamsSettings> {
     public string Description => "Recursively delete parameters from the family by name";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
+        var logs = new List<LogEntry>();
         foreach (var name in this.ExternalExcludeNamesEqualing) {
             try {
                 var param = doc.FamilyManager.FindParameter(name);
                 if (param is null) {
-                    log.Entries.Add(new LogEntry { Item = name, Error = "Parameter not found" });
+                    logs.Add(new LogEntry { Item = name, Error = "Parameter not found" });
                     continue;
                 }
 
@@ -26,13 +26,13 @@ public class DeleteParams : IOperation<DeleteParamsSettings> {
 
 
                 doc.FamilyManager.RemoveParameter(param);
-                log.Entries.Add(new LogEntry { Item = name });
+                logs.Add(new LogEntry { Item = name });
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = name, Error = ex.Message });
+                logs.Add(new LogEntry { Item = name, Error = ex.Message });
             }
         }
 
-        return log;
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 }
 

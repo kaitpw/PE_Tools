@@ -21,7 +21,7 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
     public string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
+        var logs = new List<LogEntry>();
 
         foreach (var apsParam in this._apsParams) {
             if (this._apsParamsToSkip != null
@@ -29,13 +29,13 @@ public class AddApsParams : IOperation<AddApsParamsSettings> {
 
             try {
                 var addedParam = doc.AddApsParameter(apsParam, this._group);
-                log.Entries.Add(new LogEntry { Item = addedParam.Definition.Name });
+                logs.Add(new LogEntry { Item = addedParam.Definition.Name });
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = apsParam.Name, Error = ex.Message });
+                logs.Add(new LogEntry { Item = apsParam.Name, Error = ex.Message });
             }
         }
 
-        return log;
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 }
 

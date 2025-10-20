@@ -10,7 +10,7 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
     public string Description => "Configure electrical connector parameters and associate them with family parameters";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
+        var logs = new List<LogEntry>();
 
         var polesParamName = this.Settings.SourceParameterNames.NumberOfPoles;
         var appPowerParamName = this.Settings.SourceParameterNames.ApparentPower;
@@ -47,7 +47,7 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
 
             if (!connectorElements.Any()) {
                 connectorElements.Add(MakeElectricalConnector(doc));
-                log.Entries.Add(new LogEntry { Item = "Create connector" });
+                logs.Add(new LogEntry { Item = "Create connector" });
             }
 
             var targetMappings = mappings
@@ -71,20 +71,20 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
                         if (targetMappings.TryGetValue(bip, out var mapping)) {
                             var (sourceParam, _) = mapping;
                             if (sourceParam == null) {
-                                log.Entries.Add(new LogEntry { Item = $"Map {bip}", Error = "Parameter not found" });
+                                logs.Add(new LogEntry { Item = $"Map {bip}", Error = "Parameter not found" });
                                 continue;
                             }
 
                             if (currentAssociation?.Id != sourceParam.Id) {
                                 doc.FamilyManager.AssociateElementParameterToFamilyParameter(connectorParam, sourceParam);
-                                log.Entries.Add(new LogEntry { Item = $"Map {sourceParam.Definition.Name}" });
+                                logs.Add(new LogEntry { Item = $"Map {sourceParam.Definition.Name}" });
                             }
                         } else if (currentAssociation != null) {
                             doc.FamilyManager.AssociateElementParameterToFamilyParameter(connectorParam, null);
-                            log.Entries.Add(new LogEntry { Item = $"Disassociate {currentAssociation.Definition.Name}" });
+                            logs.Add(new LogEntry { Item = $"Disassociate {currentAssociation.Definition.Name}" });
                         }
                     } catch (Exception ex) {
-                        log.Entries.Add(new LogEntry { Item = $"Process {connectorParam.Definition.Name}", Error = ex.Message });
+                        logs.Add(new LogEntry { Item = $"Process {connectorParam.Definition.Name}", Error = ex.Message });
                     }
                 }
             }
@@ -96,14 +96,14 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
                 try {
                     action?.Invoke(doc, sourceParam);
                 } catch (Exception ex) {
-                    log.Entries.Add(new LogEntry { Item = $"Action for {sourceParam.Definition.Name}", Error = ex.Message });
+                    logs.Add(new LogEntry { Item = $"Action for {sourceParam.Definition.Name}", Error = ex.Message });
                 }
             }
         } catch (Exception ex) {
-            log.Entries.Add(new LogEntry { Item = "Hydrate connector", Error = ex.Message });
+            logs.Add(new LogEntry { Item = "Hydrate connector", Error = ex.Message });
         }
 
-        return log;
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 
     /// <summary>

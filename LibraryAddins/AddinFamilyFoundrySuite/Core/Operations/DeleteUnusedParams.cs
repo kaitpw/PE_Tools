@@ -11,15 +11,15 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
     public DeleteUnusedParamsSettings Settings { get; set; }
     public OperationType Type => OperationType.Doc;
 
-    public string Description => "Recursively delete unused parameters from the family"; 
+    public string Description => "Recursively delete unused parameters from the family";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
-        this.RecursiveDelete(doc, log);
-        return log;
+        var logs = new List<LogEntry>();
+        this.RecursiveDelete(doc, logs);
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 
-    private void RecursiveDelete(Document doc, OperationLog log) {
+    private void RecursiveDelete(Document doc, List<LogEntry> logs) {
         var deleteCount = 0;
 
         var parameters = doc.FamilyManager.Parameters
@@ -39,14 +39,14 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
             try {
                 var paramName = param.Definition.Name;
                 doc.FamilyManager.RemoveParameter(param);
-                log.Entries.Add(new LogEntry { Item = paramName });
+                logs.Add(new LogEntry { Item = paramName });
                 deleteCount++;
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = param.Definition.Name, Error = ex.Message });
+                logs.Add(new LogEntry { Item = param.Definition.Name, Error = ex.Message });
             }
         }
 
-        if (deleteCount > 0) this.RecursiveDelete(doc, log);
+        if (deleteCount > 0) this.RecursiveDelete(doc, logs);
     }
 }
 

@@ -11,12 +11,12 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
     public string Description => "Deletes reference planes in the Family which are not used by anything important";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
-        this.RecursiveDeleteUnusedReferencePlanes(doc, log);
-        return log;
+        var logs = new List<LogEntry>();
+        this.RecursiveDeleteUnusedReferencePlanes(doc, logs);
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 
-    private void RecursiveDeleteUnusedReferencePlanes(Document doc, OperationLog log) {
+    private void RecursiveDeleteUnusedReferencePlanes(Document doc, List<LogEntry> logs) {
         var deleteCount = 0;
 
         var referencePlanes = new FilteredElementCollector(doc)
@@ -33,14 +33,14 @@ public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlane
 
             try {
                 _ = doc.Delete(refPlane.Id);
-                log.Entries.Add(new LogEntry { Item = planeName });
+                logs.Add(new LogEntry { Item = planeName });
                 deleteCount++;
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = planeName, Error = ex.Message });
+                logs.Add(new LogEntry { Item = planeName, Error = ex.Message });
             }
         }
 
-        if (deleteCount > 0) this.RecursiveDeleteUnusedReferencePlanes(doc, log);
+        if (deleteCount > 0) this.RecursiveDeleteUnusedReferencePlanes(doc, logs);
     }
 
 

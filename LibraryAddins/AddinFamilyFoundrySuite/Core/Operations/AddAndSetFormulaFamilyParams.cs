@@ -16,11 +16,11 @@ public class AddAndSetFormulaFamilyParams : IOperation<AddAndSetFormulaFamilyPar
     public string Description => "Add Family Parameters to the family";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
+        var logs = new List<LogEntry>();
 
         if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Any(p => p is null)) {
-            log.Entries.Add(new LogEntry { Item = "Parameters", Error = "Invalid parameter data" });
-            return log;
+            logs.Add(new LogEntry { Item = "Parameters", Error = "Invalid parameter data" });
+            return new OperationLog(((IOperation)this).Name, logs);
         }
 
         foreach (var p in this.Settings.FamilyParamData) {
@@ -29,13 +29,13 @@ public class AddAndSetFormulaFamilyParams : IOperation<AddAndSetFormulaFamilyPar
                 // TODO: make this dependent on the p.DataType
                 if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
                     doc.FamilyManager.SetFormula(parameter, $"\"{p.GlobalValue}\"");
-                log.Entries.Add(new LogEntry { Item = p.Name });
+                logs.Add(new LogEntry { Item = p.Name });
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = p.Name, Error = ex.Message });
+                logs.Add(new LogEntry { Item = p.Name, Error = ex.Message });
             }
         }
 
-        return log;
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 }
 

@@ -19,12 +19,12 @@ public class MapReplaceParams : IOperation<MapParamsSettings> {
     public string Description => "Replace a family's existing parameters with APS shared parameters";
 
     public OperationLog Execute(Document doc) {
-        var log = new OperationLog(this.GetType().Name);
+        var logs = new List<LogEntry>();
         var fm = doc.FamilyManager;
 
         foreach (var mapping in this.Settings.MappingData) {
             if (!this._apsParamsByName.TryGetValue(mapping.NewName, out var apsParam)) {
-                log.Entries.Add(new LogEntry { Item = mapping.NewName, Error = "APS parameter not found in cache" });
+                logs.Add(new LogEntry { Item = mapping.NewName, Error = "APS parameter not found in cache" });
                 continue;
             }
 
@@ -44,12 +44,12 @@ public class MapReplaceParams : IOperation<MapParamsSettings> {
                     dlOpts.IsInstance
                 );
                 this.Settings.MappingData.First(m => m.NewName == mapping.NewName).isProcessed = true;
-                log.Entries.Add(new LogEntry { Item = $"{mapping.CurrName} → {replaced.Definition.Name}" });
+                logs.Add(new LogEntry { Item = $"{mapping.CurrName} → {replaced.Definition.Name}" });
             } catch (Exception ex) {
-                log.Entries.Add(new LogEntry { Item = mapping.NewName, Error = ex.Message });
+                logs.Add(new LogEntry { Item = mapping.NewName, Error = ex.Message });
             }
         }
 
-        return log;
+        return new OperationLog(((IOperation)this).Name, logs);
     }
 }
