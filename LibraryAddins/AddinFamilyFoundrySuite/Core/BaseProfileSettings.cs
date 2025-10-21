@@ -23,7 +23,6 @@ public class BaseProfileSettings {
         GetAPSParams(TempSharedParamFile tempFile) {
         var apsParams = Storage.GlobalState("parameters-service-cache.json").Json<ParamModel>().Read();
         if (apsParams.Results != null) {
-
             return apsParams.Results
                 .Where(this.FilterApsParams.Filter)
                 .Where(p => !p.IsArchived)

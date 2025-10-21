@@ -6,7 +6,8 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 // TODO: this still needs alot of work!!!
 public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlanesSettings> {
     public DeleteUnusedReferencePlanesSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
 
     public string Description => "Deletes reference planes in the Family which are not used by anything important";
 

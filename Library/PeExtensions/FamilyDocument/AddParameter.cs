@@ -74,6 +74,7 @@ public static class FamilyDocumentAddParameter {
         var sharedParamElement = famDoc.FamilyManager.FindParameter(sharedParam.externalDefinition.GUID);
         if (sharedParamElement != null) return sharedParamElement;
 
-        return famDoc.FamilyManager.AddParameter(sharedParam.externalDefinition, sharedParam.groupTypeId, sharedParam.isInstance);
+        return famDoc.FamilyManager.AddParameter(sharedParam.externalDefinition, sharedParam.groupTypeId,
+            sharedParam.isInstance);
     }
 }

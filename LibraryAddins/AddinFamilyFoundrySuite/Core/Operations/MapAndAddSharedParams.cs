@@ -1,4 +1,3 @@
-
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MapAndAddSharedParams : ICompoundOperation<MapParamsSettings> {
@@ -12,23 +11,25 @@ public class MapAndAddSharedParams : ICompoundOperation<MapParamsSettings> {
 
     public List<IOperation<MapParamsSettings>> Operations { get; set; }
 
-    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
     public string Description => "Map and add shared parameters (replace, add unmapped, and remap)";
 
-    public OperationLog Execute(Document doc) {
+    public OperationLog Execute(Document doc) =>
         throw new NotImplementedException("Compound operations should not be executed directly");
-    }
 }
 
 public class AddUnmappedSharedParams : IOperation<MapParamsSettings> {
-    private readonly List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> _sharedParams;
+    private readonly List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
+        _sharedParams;
 
     public AddUnmappedSharedParams(
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
     ) => this._sharedParams = sharedParams;
 
     public MapParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
 
     public string Description => "Add shared parameters that are not already processed by a previous operation";
 
@@ -39,7 +40,8 @@ public class AddUnmappedSharedParams : IOperation<MapParamsSettings> {
             .Select(m => m.NewName)
             .ToList();
 
-        var addsharedParams = new AddSharedParams(this._sharedParams, sharedParamsToSkip) { Settings = new AddSharedParamsSettings() };
+        var addsharedParams =
+            new AddSharedParams(this._sharedParams, sharedParamsToSkip) { Settings = new AddSharedParamsSettings() };
         return addsharedParams.Execute(doc);
     }
 }

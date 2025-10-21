@@ -2,7 +2,8 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesSettings> {
     public DeleteUnusedNestedFamiliesSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
     public string Description => "Delete unused nested families from the family";
 
     public OperationLog Execute(Document doc) {

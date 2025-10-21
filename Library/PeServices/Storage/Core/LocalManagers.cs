@@ -15,6 +15,7 @@ public class SettingsManager {
         new(new Json<T>(Path.Combine(this._thisPath, filename), throwIfNotExists));
 
     public string GetFolderPath() => this._thisPath;
+
     public string GetProfilesFolderPath() =>
         Directory.CreateDirectory(Path.Combine(this._thisPath, "profiles")).FullName;
 }

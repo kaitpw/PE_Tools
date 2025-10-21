@@ -10,7 +10,8 @@ public class AddAndSetFormulaFamilyParams : IOperation<AddAndSetFormulaFamilyPar
     public AddAndSetFormulaFamilyParamsSettings Settings { get; set; }
 
     // change this to type later probably after seeing if looping through the types isa ctually necessary
-    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
 
 
     public string Description => "Add Family Parameters to the family";

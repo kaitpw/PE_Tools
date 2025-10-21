@@ -18,10 +18,9 @@ public class OperationLogger {
         var summary = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             Profile = currentProfile,
-            Operations = operationMetadata.Select(op => new {
-                Operation = $"[Batch {op.BatchGroup}] {op.Type}: {op.Name}",
-                op.Description
-            }).ToList(),
+            Operations =
+                operationMetadata.Select(op =>
+                    new { Operation = $"[Batch {op.BatchGroup}] {op.Type}: {op.Name}", op.Description }).ToList(),
             ApsParameters = apsParams.Select(p => p.externalDefinition.Name).ToList(),
             Families = families.Select(f => f.Name).ToList(),
             Summary = new { TotalApsParameters = apsParams.Count, TotalFamilies = families.Count }
@@ -30,10 +29,9 @@ public class OperationLogger {
         var detailed = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             Profile = currentProfile,
-            Operations = operationMetadata.Select(op => new {
-                Operation = $"[Batch {op.BatchGroup}] {op.Type}: {op.Name}",
-                op.Description
-            }).ToList(),
+            Operations =
+                operationMetadata.Select(op =>
+                    new { Operation = $"[Batch {op.BatchGroup}] {op.Type}: {op.Name}", op.Description }).ToList(),
             ApsParameters = apsParams.Select(p => new {
                 p.externalDefinition.Name,
                 GUID = p.externalDefinition.GUID.ToString(),
@@ -139,7 +137,8 @@ public class OperationLogger {
         storage.Output().Json<object>(detailedFilename).Write(detailed);
 
         if (openOutputFiles)
-            FileUtils.OpenInDefaultApp(Path.Combine(storage.Output().GetFolderPath(), filename)); // TODO: change back to plain filename
+            FileUtils.OpenInDefaultApp(Path.Combine(storage.Output().GetFolderPath(),
+                filename)); // TODO: change back to plain filename
     }
 
     public static string OutputProcessingResults(

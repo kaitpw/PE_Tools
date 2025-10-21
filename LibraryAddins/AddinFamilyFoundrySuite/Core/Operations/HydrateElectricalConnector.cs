@@ -5,7 +5,8 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorSettings> {
     public HydrateElectricalConnectorSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
 
     public string Description => "Configure electrical connector parameters and associate them with family parameters";
 
@@ -76,7 +77,8 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
                             }
 
                             if (currentAssociation?.Id != sourceParam.Id) {
-                                doc.FamilyManager.AssociateElementParameterToFamilyParameter(connectorParam, sourceParam);
+                                doc.FamilyManager.AssociateElementParameterToFamilyParameter(connectorParam,
+                                    sourceParam);
                                 logs.Add(new LogEntry { Item = $"Map {sourceParam.Definition.Name}" });
                             }
                         } else if (currentAssociation != null) {
@@ -84,7 +86,8 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
                             logs.Add(new LogEntry { Item = $"Disassociate {currentAssociation.Definition.Name}" });
                         }
                     } catch (Exception ex) {
-                        logs.Add(new LogEntry { Item = $"Process {connectorParam.Definition.Name}", Error = ex.Message });
+                        logs.Add(
+                            new LogEntry { Item = $"Process {connectorParam.Definition.Name}", Error = ex.Message });
                     }
                 }
             }

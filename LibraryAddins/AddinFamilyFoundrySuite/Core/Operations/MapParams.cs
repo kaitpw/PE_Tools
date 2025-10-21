@@ -9,7 +9,8 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MapParams : IOperation<MapParamsSettings> {
     public MapParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Type; public string Name { get; set; }
+    public OperationType Type => OperationType.Type;
+    public string Name { get; set; }
 
     public string Description => "Map an old parameter's value to a new parameter for each family type";
 
@@ -25,10 +26,7 @@ public class MapParams : IOperation<MapParamsSettings> {
 
                 if (sourceParam is null || targetParam is null) {
                     var notFoundParam = sourceParam is null ? p.CurrName : p.NewName;
-                    logs.Add(new LogEntry {
-                        Item = mappingDesc,
-                        Error = $"{notFoundParam} not found in the family"
-                    });
+                    logs.Add(new LogEntry { Item = mappingDesc, Error = $"{notFoundParam} not found in the family" });
                     continue;
                 }
 

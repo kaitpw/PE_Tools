@@ -9,7 +9,8 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
 
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public DeleteUnusedParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
 
     public string Description => "Recursively delete unused parameters from the family";
 

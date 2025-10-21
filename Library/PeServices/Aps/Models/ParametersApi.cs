@@ -78,10 +78,10 @@ public class ParametersApi {
                 private readonly ParametersResult _parent;
                 public readonly bool IsInstance;
                 public readonly bool Visible;
+                private DefinitionGroup _cachedDefinitionGroup;
 
                 // Lazy-cached values
                 private ExternalDefinition _externalDefinition;
-                private DefinitionGroup _cachedDefinitionGroup;
                 private ForgeTypeId _groupTypeId;
                 private Guid? _guid;
                 private ForgeTypeId _parameterTypeId;
@@ -118,9 +118,10 @@ public class ParametersApi {
                 public Guid GetGuid() {
                     if (this._guid.HasValue) return this._guid.Value;
 
-                    if (string.IsNullOrEmpty(this._guidText) || !Guid.TryParse(this._guidText, out var guid))
+                    if (string.IsNullOrEmpty(this._guidText) || !Guid.TryParse(this._guidText, out var guid)) {
                         throw new ArgumentException(
                             $"Could not extract GUID from parameter ID: {this._parent.Id}");
+                    }
 
                     this._guid = guid;
                     return guid;
@@ -141,8 +142,8 @@ public class ParametersApi {
                             }) as ExternalDefinition;
                     } catch (Exception ex) {
                         this._externalDefinition = group.Definitions.get_Item(this._parent.Name) as ExternalDefinition
-                            ?? throw new Exception(
-                                $"Failed to create external definition for parameter {this._parent.Name}: {ex.Message}");
+                                                   ?? throw new Exception(
+                                                       $"Failed to create external definition for parameter {this._parent.Name}: {ex.Message}");
                     }
 
                     this._cachedDefinitionGroup = group;

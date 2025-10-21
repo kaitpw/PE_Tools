@@ -37,6 +37,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
             if (operation.Settings == null || !operation.Settings.Enabled) continue;
             this._operations.Add(new CompoundOperationChild<TOpSettings>(operation));
         }
+
         return this;
     }
 
@@ -68,6 +69,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
                 var name = GetOperationName(op);
                 metadata.Add((name, op.Description, op.Type, batchIndex));
             }
+
             batchIndex++;
         }
 
@@ -134,11 +136,11 @@ public class OperationQueue<TProfile> where TProfile : new() {
         }
 
         return (familyActions.ToArray(), () => {
-            var logsCopy = allLogs.ToList();
-            allLogs.Clear();
-            return logsCopy;
-        }
-        );
+                    var logsCopy = allLogs.ToList();
+                    allLogs.Clear();
+                    return logsCopy;
+                }
+            );
     }
 
     // Check if the operation explicitly implements Name property, otherwise use type name
@@ -173,7 +175,7 @@ internal record OperationBatch(OperationType Type, List<IOperation> Operations);
 
 /// <summary>
 ///     Wrapper that prefixes log operation names with a parent name (for compound operations)
-/// </summary> 
+/// </summary>
 internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where TSettings : IOperationSettings {
     private readonly IOperation<TSettings> _innerOperation;
 
@@ -183,10 +185,12 @@ internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where T
     }
 
     public string Name { get; set; }
+
     public TSettings Settings {
         get => this._innerOperation.Settings;
         set => this._innerOperation.Settings = value;
     }
+
     public OperationType Type => this._innerOperation.Type;
     public string Description => this._innerOperation.Description;
 

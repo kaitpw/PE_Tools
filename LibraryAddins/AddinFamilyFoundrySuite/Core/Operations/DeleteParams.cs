@@ -8,7 +8,8 @@ public class DeleteParams : IOperation<DeleteParamsSettings> {
 
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public DeleteParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
 
     public string Description => "Recursively delete parameters from the family by name";
 
