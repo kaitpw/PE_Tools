@@ -14,7 +14,7 @@ public class AddSharedParams : IOperation<AddSharedParamsSettings> {
     private List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> _sharedParams { get; }
     private List<string> _sharedParamsToSkip { get; }
     public AddSharedParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
+    public OperationType Type => OperationType.Doc; public string Name { get; set; }
 
     public string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
@@ -34,7 +34,7 @@ public class AddSharedParams : IOperation<AddSharedParamsSettings> {
             }
         }
 
-        return new OperationLog(((IOperation)this).Name, logs);
+        return new OperationLog(this.Name, logs);
     }
 }
 

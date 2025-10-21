@@ -10,7 +10,7 @@ public class MapReplaceParams : IOperation<MapParamsSettings> {
     ) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
 
     public MapParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
+    public OperationType Type => OperationType.Doc; public string Name { get; set; }
 
     public string Description => "Replace a family's existing parameters with APS shared parameters";
 
@@ -44,6 +44,6 @@ public class MapReplaceParams : IOperation<MapParamsSettings> {
             }
         }
 
-        return new OperationLog(((IOperation)this).Name, logs);
+        return new OperationLog(this.Name, logs);
     }
 }

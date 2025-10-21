@@ -10,7 +10,7 @@ namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
 
 [Transaction(TransactionMode.Manual)]
-public class CmdFamilyFoundryMigration : IExternalCommand {
+public class CmdFamilyFoundryMigration : IExternalCommand { 
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -19,6 +19,16 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
+
+            var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
+            using var tempFile = new TempSharedParamFile(doc);
+            var apsParamData = processor.profile.GetAPSParams(tempFile);
+            var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
+            var mappingDataAllNames = processor.profile.AddAndMapSharedParams.MappingData
+                .Select(m => m.CurrName)
+                .Concat(apsParamNames)
+                .ToList();
+
             var addFamilyParams = new AddAndSetFormulaFamilyParamsSettings {
                 FamilyParamData = [
                     new FamilyParamModel {
@@ -31,18 +41,6 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 ]
             };
 
-            var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
-            using var tempFile = new TempSharedParamFile(doc);
-            var apsParamData = processor.profile.GetAPSParams(tempFile);
-            var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
-            var mappingDataAllNames = processor.profile.AddAndMapSharedParams.MappingData
-                .Select(m => m.CurrName)
-                .Concat(apsParamNames)
-                .ToList();
-
-
-            // Create shared parameter file once for all operations
-
             var queue = processor.CreateQueue()
                 .Add(new DeleteUnusedParams(mappingDataAllNames), profile => profile.DeleteUnusedParams)
                 .Add(new DeleteUnusedNestedFamilies(), profile => profile.DeleteUnusedNestedFamilies)
@@ -51,7 +49,6 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 .Add(new DeleteUnusedParams(apsParamNames), profile => profile.DeleteUnusedParams)
                 .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
 
-            // Get metadata for debugging/logging
             var metadata = queue.GetOperationMetadata();
             foreach (var op in metadata)
                 Debug.WriteLine($"[Batch {op.BatchGroup}] {op.Type}: {op.Name} - {op.Description}");

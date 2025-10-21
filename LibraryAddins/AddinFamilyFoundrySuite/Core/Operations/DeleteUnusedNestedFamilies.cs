@@ -2,7 +2,7 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesSettings> {
     public DeleteUnusedNestedFamiliesSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
+    public OperationType Type => OperationType.Doc; public string Name { get; set; }
     public string Description => "Delete unused nested families from the family";
 
     public OperationLog Execute(Document doc) {
@@ -15,7 +15,7 @@ public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesS
             .Where(f => f.FamilyCategory?.BuiltInCategory != BuiltInCategory.OST_LevelHeads)
             .Where(f => f.FamilyCategory?.BuiltInCategory != BuiltInCategory.OST_SectionHeads)
             .ToList();
-        if (allFamilies.Count == 0) return new OperationLog(((IOperation)this).Name, logs);
+        if (allFamilies.Count == 0) return new OperationLog(this.Name, logs);
 
         var usedFamilyNames = new FilteredElementCollector(doc)
             .OfClass(typeof(FamilyInstance))
@@ -25,7 +25,7 @@ public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesS
             .ToHashSet();
 
         var unusedFamilies = allFamilies.Where(f => !usedFamilyNames.Contains(f.Name)).ToList();
-        if (unusedFamilies.Count == 0) return new OperationLog(((IOperation)this).Name, logs);
+        if (unusedFamilies.Count == 0) return new OperationLog(this.Name, logs);
 
         foreach (var family in unusedFamilies) {
             var familyName = family.Name?.Trim() ?? "";
@@ -40,7 +40,7 @@ public class DeleteUnusedNestedFamilies : IOperation<DeleteUnusedNestedFamiliesS
             }
         }
 
-        return new OperationLog(((IOperation)this).Name, logs);
+        return new OperationLog(this.Name, logs);
     }
 }
 

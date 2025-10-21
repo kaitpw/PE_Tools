@@ -9,7 +9,7 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MapParams : IOperation<MapParamsSettings> {
     public MapParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Type;
+    public OperationType Type => OperationType.Type; public string Name { get; set; }
 
     public string Description => "Map an old parameter's value to a new parameter for each family type";
 
@@ -39,7 +39,7 @@ public class MapParams : IOperation<MapParamsSettings> {
             }
         }
 
-        return new OperationLog(((IOperation)this).Name, logs);
+        return new OperationLog(this.Name, logs);
     }
 }
 

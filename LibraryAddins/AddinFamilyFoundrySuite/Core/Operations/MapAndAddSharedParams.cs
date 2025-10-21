@@ -11,6 +11,13 @@ public class MapAndAddSharedParams : ICompoundOperation<MapParamsSettings> {
         ];
 
     public List<IOperation<MapParamsSettings>> Operations { get; set; }
+
+    public OperationType Type => OperationType.Doc; public string Name { get; set; }
+    public string Description => "Map and add shared parameters (replace, add unmapped, and remap)";
+
+    public OperationLog Execute(Document doc) {
+        throw new NotImplementedException("Compound operations should not be executed directly");
+    }
 }
 
 public class AddUnmappedSharedParams : IOperation<MapParamsSettings> {
@@ -21,7 +28,7 @@ public class AddUnmappedSharedParams : IOperation<MapParamsSettings> {
     ) => this._sharedParams = sharedParams;
 
     public MapParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
+    public OperationType Type => OperationType.Doc; public string Name { get; set; }
 
     public string Description => "Add shared parameters that are not already processed by a previous operation";
 

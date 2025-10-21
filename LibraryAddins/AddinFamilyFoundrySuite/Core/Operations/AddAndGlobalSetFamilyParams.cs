@@ -7,12 +7,13 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParamsSettings> {
+    public AddAndGlobalSetFamilyParams() => this.Name = this.GetType().Name;
+
     public AddAndGlobalSetFamilyParamsSettings Settings { get; set; }
 
     // change this to type later probably after seeing if looping through the types isa ctually necessary
     public OperationType Type => OperationType.Type;
-
-
+    public string Name { get; set; }
     public string Description => "Add Family Parameters to the family";
 
     public OperationLog Execute(Document doc) {
@@ -20,7 +21,7 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
 
         if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Any(p => p is null)) {
             logs.Add(new LogEntry { Item = "Parameters", Error = "Invalid parameter data" });
-            return new OperationLog(((IOperation)this).Name, logs);
+            return new OperationLog(this.Name, logs);
         }
 
         foreach (var p in this.Settings.FamilyParamData) {
@@ -34,7 +35,7 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
             }
         }
 
-        return new OperationLog(((IOperation)this).Name, logs);
+        return new OperationLog(this.Name, logs);
     }
 }
 

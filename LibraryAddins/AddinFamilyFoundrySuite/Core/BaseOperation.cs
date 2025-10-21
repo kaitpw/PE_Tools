@@ -15,7 +15,7 @@ public interface IOperation {
     /// <summary>
     ///     The name of the operation, defaults to the implementing class name.
     /// </summary>
-    string Name => this.GetType().Name;
+    string Name { get; set; }
 
     /// <summary>
     ///     The description of the operation to perform.
@@ -28,7 +28,7 @@ public interface IOperation {
     OperationLog Execute(Document doc);
 }
 
-public interface ICompoundOperation<TSettings> where TSettings : IOperationSettings {
+public interface ICompoundOperation<TSettings> : IOperation where TSettings : IOperationSettings {
     List<IOperation<TSettings>> Operations { get; set; }
 }
 

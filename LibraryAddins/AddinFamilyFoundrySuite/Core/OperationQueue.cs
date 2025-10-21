@@ -16,6 +16,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
         IOperation<TOpSettings> operation,
         Func<TProfile, TOpSettings> settingsSelector
     ) where TOpSettings : class, IOperationSettings, new() {
+        operation.Name = operation.GetType().Name;
         operation.Settings = settingsSelector(this._profile);
         if (operation.Settings == null || !operation.Settings.Enabled) return this;
 
@@ -31,10 +32,10 @@ public class OperationQueue<TProfile> where TProfile : new() {
         Func<TProfile, TOpSettings> settingsSelector
     ) where TOpSettings : class, IOperationSettings, new() {
         foreach (var operation in compoundOperation.Operations) {
+            operation.Name = $"{compoundOperation.Name}: {operation.GetType().Name}";
             operation.Settings = settingsSelector(this._profile);
             if (operation.Settings == null || !operation.Settings.Enabled) continue;
-
-            this._operations.Add(new CompoundOperationChild<TOpSettings>(operation, ((IOperation)compoundOperation).Name));
+            this._operations.Add(new CompoundOperationChild<TOpSettings>(operation));
         }
         return this;
     }
@@ -46,6 +47,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
         IOperation<TOpSettings> operation,
         TOpSettings settings
     ) where TOpSettings : class, IOperationSettings, new() {
+        operation.Name = "Ad-hoc: " + operation.GetType().Name;
         operation.Settings = settings;
         if (operation.Settings == null || !operation.Settings.Enabled) return this;
 
@@ -174,19 +176,18 @@ internal record OperationBatch(OperationType Type, List<IOperation> Operations);
 /// </summary> 
 internal class CompoundOperationChild<TSettings> : IOperation<TSettings> where TSettings : IOperationSettings {
     private readonly IOperation<TSettings> _innerOperation;
-    private readonly string _parentName;
 
-    public CompoundOperationChild(IOperation<TSettings> innerOperation, string parentName) {
+    public CompoundOperationChild(IOperation<TSettings> innerOperation) {
         this._innerOperation = innerOperation;
-        this._parentName = parentName;
+        this.Name = innerOperation.Name;
     }
 
+    public string Name { get; set; }
     public TSettings Settings {
         get => this._innerOperation.Settings;
         set => this._innerOperation.Settings = value;
     }
     public OperationType Type => this._innerOperation.Type;
-    public string Name => $"{this._parentName}: {this._innerOperation.Name}";
     public string Description => this._innerOperation.Description;
 
     public OperationLog Execute(Document doc) {

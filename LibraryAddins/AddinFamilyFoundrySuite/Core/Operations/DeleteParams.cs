@@ -8,7 +8,7 @@ public class DeleteParams : IOperation<DeleteParamsSettings> {
 
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public DeleteParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
+    public OperationType Type => OperationType.Doc; public string Name { get; set; }
 
     public string Description => "Recursively delete parameters from the family by name";
 
@@ -32,7 +32,7 @@ public class DeleteParams : IOperation<DeleteParamsSettings> {
             }
         }
 
-        return new OperationLog(((IOperation)this).Name, logs);
+        return new OperationLog(this.Name, logs);
     }
 }
 

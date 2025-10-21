@@ -5,7 +5,7 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorSettings> {
     public HydrateElectricalConnectorSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
+    public OperationType Type => OperationType.Doc; public string Name { get; set; }
 
     public string Description => "Configure electrical connector parameters and associate them with family parameters";
 
@@ -103,7 +103,7 @@ public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorS
             logs.Add(new LogEntry { Item = "Hydrate connector", Error = ex.Message });
         }
 
-        return new OperationLog(((IOperation)this).Name, logs);
+        return new OperationLog(this.Name, logs);
     }
 
     /// <summary>

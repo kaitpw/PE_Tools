@@ -1,16 +1,22 @@
+using PeServices.Storage.Core;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using PeServices.Storage.Core;
 
 namespace AddinFamilyFoundrySuite.Core;
 
 public class BaseSettings<TProfile> where TProfile : BaseProfileSettings, new() {
-    [Required] public OnProcessingFinishSettings OnProcessingFinish { get; set; } = new();
-
     [Description(
         "Current profile to use for the command. This determines which profile is used in the next launch of a command.")]
     [Required]
     public string CurrentProfile { get; set; } = "Default";
+
+    [Description(
+        "When enabled, the command will output a JSON file with all APS parameters and families that would be processed, without actually processing them.")]
+    [Required]
+    public bool DryRun { get; set; } = false;
+
+    [Required] public OnProcessingFinishSettings OnProcessingFinish { get; set; } = new();
+
 
     public TProfile GetProfile(SettingsManager settingsManager) {
         var profilePath = Path.Combine(

@@ -9,14 +9,14 @@ public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
 
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public DeleteUnusedParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
+    public OperationType Type => OperationType.Doc; public string Name { get; set; }
 
     public string Description => "Recursively delete unused parameters from the family";
 
     public OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
         this.RecursiveDelete(doc, logs);
-        return new OperationLog(((IOperation)this).Name, logs);
+        return new OperationLog(this.Name, logs);
     }
 
     private void RecursiveDelete(Document doc, List<LogEntry> logs) {

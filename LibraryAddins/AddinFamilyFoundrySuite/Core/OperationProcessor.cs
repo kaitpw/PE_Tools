@@ -23,6 +23,11 @@ public class OperationProcessor<TProfile>
     ///     Execute a configured processor with full initialization and document handling
     /// </summary>
     public List<OperationLog> ProcessQueue(Document doc, OperationQueue<TProfile> queue) {
+        if (this.settings.DryRun) {
+            this.OutputDryRunResults(doc, queue);
+            return new List<OperationLog>();
+        }
+
         var familyResults = new Dictionary<string, (List<OperationLog> logs, double totalMs)>();
 
         var totalSw = Stopwatch.StartNew();
@@ -62,79 +67,22 @@ public class OperationProcessor<TProfile>
 
         totalSw.Stop();
 
-        var logPath = this.WriteLogs(familyResults, totalSw.Elapsed.TotalMilliseconds);
-        if (this.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish) FileUtils.OpenInDefaultApp(logPath);
+        _ = this.OutputProcessingResults(familyResults, totalSw.Elapsed.TotalMilliseconds);
         return familyResults.SelectMany(kvp => kvp.Value.logs).ToList();
     }
 
-    private string WriteLogs(Dictionary<string, (List<OperationLog> logs, double totalMs)> familyResults,
-        double totalMs) {
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+    private void OutputDryRunResults(Document doc, OperationQueue<TProfile> queue) =>
+        OperationLogger.OutputDryRunResults(
+            this.storage, this.profile, this.settings.CurrentProfile, doc, queue,
+            this.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish
+        );
 
-        // Summary log with grouped errors
-        var logData = new {
-            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            TotalSecondsElapsed = Math.Round(totalMs / 1000.0, 3),
-            ProcessedFamilies = familyResults.Select(kvp => new {
-                FamilyName = kvp.Key,
-                TotalSecondsElapsed = Math.Round(kvp.Value.totalMs / 1000.0, 3),
-                Operations = kvp.Value.logs.Select(log => {
-                    // Group errors by item and error message, collecting contexts
-                    var groupedErrors = log.Entries
-                        .Where(e => e.Error != null)
-                        .GroupBy(e => new { e.Item, e.Error })
-                        .Select(g => {
-                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
-                            return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
-                        })
-                        .ToList();
-
-                    return new Dictionary<string, object> {
-                        ["OperationName"] = log.OperationName,
-                        ["SecondsElapsed"] = Math.Round(log.MsElapsed / 1000.0, 3),
-                        ["SuccessCount"] = log.SuccessCount,
-                        ["FailedCount"] = log.FailedCount,
-                        ["Errors"] = groupedErrors,
-                    };
-                }).ToList()
-            }).ToList()
-        };
-
-        // Detailed log with all entries
-        var detailedLogData = new {
-            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            ProcessedFamilies = familyResults.Select(kvp => new {
-                FamilyName = kvp.Key,
-                Operations = kvp.Value.logs.Select(log => new {
-                    log.OperationName,
-                    Successes = log.Entries.Where(e => e.Error == null)
-                        .GroupBy(e => new { e.Item, e.Error })
-                        .Select(g => {
-                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
-                            return $"{contextsStr}{g.Key.Item}";
-                        })
-                        .ToList(),
-                    Errors = log.Entries
-                        .Where(e => e.Error != null)
-                        .GroupBy(e => new { e.Item, e.Error })
-                        .Select(g => {
-                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
-                            return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
-                        })
-                        .ToList()
-                }).ToList()
-            }).ToList()
-        };
-
-        var filename = $"{timestamp}.json";
-        var detailedFilename = $"{timestamp}_detailed.json";
-        this.storage.Output().Json<object>(filename).Write(logData);
-        this.storage.Output().Json<object>(detailedFilename).Write(detailedLogData);
-        return Path.Combine(this.storage.Output().GetFolderPath(), filename);
-    }
+    private string OutputProcessingResults(Dictionary<string, (List<OperationLog> logs, double totalMs)> familyResults,
+        double totalMs) =>
+        OperationLogger.OutputProcessingResults(
+            this.storage, familyResults, totalMs,
+            this.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish
+        );
 
     private List<string> GetSaveLocations(Document famDoc, ILoadAndSaveOptions options) {
         var saveLocations = new List<string>();

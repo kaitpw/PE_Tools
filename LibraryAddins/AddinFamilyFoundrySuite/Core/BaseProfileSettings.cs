@@ -47,7 +47,7 @@ public class BaseProfileSettings {
 
         public bool Filter(Family f) {
             var familyName = f.Name;
-            var categoryName = f.Category?.Name;
+            var categoryName = f.FamilyCategory?.Name;
 
             var anyIncludeNameFilters = this.IncludeNames.Equaling.Any() ||
                                         this.IncludeNames.Containing.Any() ||
@@ -56,10 +56,9 @@ public class BaseProfileSettings {
             var nameIncluded = !anyIncludeNameFilters || this.IsNameIncluded(familyName);
             var namePasses = nameIncluded && !this.IsNameExcluded(familyName);
 
-            // Category filter: must check for null because of category-less families like Mullions
-            var categoryPasses = categoryName == null ||
-                                 !this.IncludeCategoriesEqualing.Any() ||
-                                 this.IncludeCategoriesEqualing.Any(categoryName.Equals);
+            // Category filter: if no category filters specified, all pass; otherwise only matching categories pass
+            var categoryPasses = !this.IncludeCategoriesEqualing.Any() ||
+                                 (categoryName != null && this.IncludeCategoriesEqualing.Any(categoryName.Equals));
 
             return namePasses && categoryPasses;
         }

@@ -39,6 +39,7 @@ internal class Ballogger {
             : string.Format(FmtMethod, log, method, ex.Message));
         return this;
     }
+    
 
     /// <summary>Add a DEBUG build message</summary>
     public Ballogger AddDebug(Log log, StackFrame sf, string message) {
