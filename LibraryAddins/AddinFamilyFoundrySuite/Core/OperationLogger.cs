@@ -20,7 +20,7 @@ public class OperationLogger {
             Profile = currentProfile,
             Operations =
                 operationMetadata.Select(op =>
-                    new { Operation = $"[Batch {op.BatchGroup}] {op.Type}: {op.Name}", op.Description }).ToList(),
+                    new { Operation = $"[Batch {op.BatchGroup}] ({op.Type}) {op.Name}", op.Description }).ToList(),
             ApsParameters = apsParams.Select(p => p.externalDefinition.Name).ToList(),
             Families = families.Select(f => f.Name).ToList(),
             Summary = new { TotalApsParameters = apsParams.Count, TotalFamilies = families.Count }
@@ -31,7 +31,7 @@ public class OperationLogger {
             Profile = currentProfile,
             Operations =
                 operationMetadata.Select(op =>
-                    new { Operation = $"[Batch {op.BatchGroup}] {op.Type}: {op.Name}", op.Description }).ToList(),
+                    new { Operation = $"[Batch {op.BatchGroup}] ({op.Type}) {op.Name}", op.Description }).ToList(),
             ApsParameters = apsParams.Select(p => new {
                 p.externalDefinition.Name,
                 GUID = p.externalDefinition.GUID.ToString(),

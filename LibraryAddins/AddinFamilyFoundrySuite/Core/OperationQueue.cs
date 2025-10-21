@@ -32,7 +32,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
         Func<TProfile, TOpSettings> settingsSelector
     ) where TOpSettings : class, IOperationSettings, new() {
         foreach (var operation in compoundOperation.Operations) {
-            operation.Name = $"{compoundOperation.Name}: {operation.GetType().Name}";
+            operation.Name = $"{compoundOperation.GetType().Name}: {operation.GetType().Name}";
             operation.Settings = settingsSelector(this._profile);
             if (operation.Settings == null || !operation.Settings.Enabled) continue;
             this._operations.Add(new CompoundOperationChild<TOpSettings>(operation));
@@ -136,11 +136,11 @@ public class OperationQueue<TProfile> where TProfile : new() {
         }
 
         return (familyActions.ToArray(), () => {
-                    var logsCopy = allLogs.ToList();
-                    allLogs.Clear();
-                    return logsCopy;
-                }
-            );
+            var logsCopy = allLogs.ToList();
+            allLogs.Clear();
+            return logsCopy;
+        }
+        );
     }
 
     // Check if the operation explicitly implements Name property, otherwise use type name
