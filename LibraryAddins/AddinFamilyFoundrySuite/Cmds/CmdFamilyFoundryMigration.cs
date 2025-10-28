@@ -46,6 +46,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 .Add(new MapAndAddSharedParams(apsParamData), profile => profile.AddAndMapSharedParams)
                 .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
                 .Add(new DeleteUnusedParams(apsParamNames), profile => profile.DeleteUnusedParams)
+                .Add(new DebugLogAnnoInfo(), new DebugLogAnnoInfoSettings())
                 .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
 
             var metadata = queue.GetOperationMetadata();
@@ -73,6 +74,58 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             return Result.Cancelled;
         }
     }
+}
+
+public class DebugLogAnnoInfo : IOperation<DebugLogAnnoInfoSettings> {
+    public DebugLogAnnoInfoSettings Settings { get; set; }
+    public OperationType Type => OperationType.Doc;
+    public string Name { get; set; }
+    public string Description => "Log information about Generic Annotation family parameters";
+
+    public OperationLog Execute(Document doc) {
+        var logs = new List<LogEntry>();
+
+        try {
+            var category = doc.OwnerFamily?.FamilyCategory;
+            if (category == null) {
+                logs.Add(new LogEntry { Item = "Family Category", Error = "Could not retrieve family category" });
+                return new OperationLog(this.Name, logs);
+            }
+
+            var categoryName = category.Name;
+            logs.Add(new LogEntry { Item = $"Category: {categoryName}" });
+
+            if (categoryName != "Generic Annotations") {
+                logs.Add(new LogEntry {
+                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                });
+                return new OperationLog(this.Name, logs);
+            }
+
+            var parameters = doc.FamilyManager.Parameters.OfType<FamilyParameter>().ToList();
+            Debug.WriteLine($"Total Parameters: {parameters.Count}" );
+
+            foreach (var param in parameters) {
+                var paramName = param.Definition.Name;
+                var isInstance = param.IsInstance ? "Instance" : "Type";
+                var dataType = param.Definition.GetDataType()?.TypeId ?? "Unknown";
+                var formula = param.Formula ?? "(no formula)";
+                var group = param.Definition.GetGroupTypeId()?.TypeId ?? "Unknown";
+                var isBuiltIn = ParameterUtils.IsBuiltInParameter(param.Id) ? "Built-in" : "User";
+
+                var paramInfo = $"{paramName} [{isBuiltIn}, {isInstance}, {dataType}, Group: {group}] = {formula}";
+                Debug.WriteLine(paramInfo);
+            }
+        } catch (Exception ex) {
+            logs.Add(new LogEntry { Item = "Operation", Error = ex.Message });
+        }
+
+        return new OperationLog(this.Name, logs);
+    }
+}
+
+public class DebugLogAnnoInfoSettings : IOperationSettings {
+    public bool Enabled { get; init; } = true;
 }
 
 public class ProfileRemap : BaseProfileSettings {

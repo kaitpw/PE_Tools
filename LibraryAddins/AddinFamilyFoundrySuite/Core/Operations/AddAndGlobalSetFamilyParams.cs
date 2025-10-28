@@ -1,5 +1,6 @@
 // TODO: Migrate this!!!!!!!!!!
 
+using Newtonsoft.Json;
 using PeExtensions.FamDocument;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -27,7 +28,9 @@ public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParam
         foreach (var p in this.Settings.FamilyParamData) {
             try {
                 var parameter = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
-                if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
+                if (p.Formula is not null)
+                    doc.FamilyManager.SetFormula(parameter, p.Formula);
+                else if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
                     _ = doc.SetValue(parameter, p.GlobalValue);
                 logs.Add(new LogEntry { Item = p.Name });
             } catch (Exception ex) {
@@ -50,9 +53,12 @@ public class AddAndGlobalSetFamilyParamsSettings : IOperationSettings {
 }
 
 public record FamilyParamModel {
-    public string Name { get; init; }
+    [Required] public string Name { get; init; }
+    // make a JsonConverter for GroupTypeId later
     public ForgeTypeId PropertiesGroup { get; init; } = new("");
-    public ForgeTypeId DataType { get; init; }
+    [JsonConverter(typeof(ForgeTypeIdConverter))]
+    [Required] public ForgeTypeId DataType { get; init; }
     public bool IsInstance { get; init; } = true;
-    public object GlobalValue { get; init; }
+    public object GlobalValue { get; init; } = null;
+    public string Formula { get; init; } = null;
 }
