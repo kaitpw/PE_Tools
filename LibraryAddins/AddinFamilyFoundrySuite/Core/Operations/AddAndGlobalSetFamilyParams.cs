@@ -8,7 +8,6 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParamsSettings> {
-    public AddAndGlobalSetFamilyParams() => this.Name = this.GetType().Name;
 
     public AddAndGlobalSetFamilyParamsSettings Settings { get; set; }
 

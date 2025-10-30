@@ -39,20 +39,23 @@ public class CmdFamilyManager : IExternalCommand {
                 ]
             };
 
-            var printLog = storage.Settings().Json<BaseSettings<ProfileFamilyManager>>().Read().DryRun;
-
-            var queue = processor.CreateQueue()
-                .Add(new LogFamilyParamsState(storage.Output().GetFolderPath(), printLog),
-                    new LogFamilyParamsStateSettings())
-                .Add(new AddSharedParams(apsParamData), profile => profile.AddSharedParams)
-                .Add(new AddAndGlobalSetFamilyParams(), profile => profile.AddAndGlobalSetFamilyParams)
-                .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
+            OperationQueue<ProfileFamilyManager> queue;
+            var getState = processor.profile.GetState;
+            queue = getState
+                ? processor.CreateQueue()
+                    // .Add(new LogFamilyParamsState(storage.Output().GetFolderPath()), new LogFamilyParamsStateSettings())
+                    .Add(new LogRefPlaneAndDims(storage.Output().GetFolderPath()), new LogRefPlaneAndDimsSettings())
+                : processor.CreateQueue()
+                    .Add(new AddSharedParams(apsParamData), profile => profile.AddSharedParams)
+                    .Add(new MakeRefPlaneAndDims(), profile => profile.MakeRefPlaneAndDims)
+                    .Add(new AddAndGlobalSetFamilyParams(), profile => profile.AddAndGlobalSetFamilyParams)
+                    .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
 
             var metadata = queue.GetOperationMetadata();
             foreach (var op in metadata)
                 Debug.WriteLine($"[Batch {op.BatchGroup}] {op.Type}: {op.Name} - {op.Description}");
 
-            var logs = processor.ProcessQueue(doc, queue);
+            var logs = processor.ProcessQueue(doc, queue, singleTransaction: false);
             var balloon = new Ballogger();
 
             foreach (var log in logs) {
@@ -76,12 +79,7 @@ public class CmdFamilyManager : IExternalCommand {
 }
 
 public class LogFamilyParamsState : IOperation<LogFamilyParamsStateSettings> {
-    public LogFamilyParamsState(string outputDir, bool enable = false) {
-        this.OutputPath = outputDir;
-        this._enable = enable;
-    }
-
-    private bool _enable { get; }
+    public LogFamilyParamsState(string outputDir) => this.OutputPath = outputDir;
 
     public string OutputPath { get; }
 
@@ -91,7 +89,6 @@ public class LogFamilyParamsState : IOperation<LogFamilyParamsStateSettings> {
     public string Description => "Log the state of the family parameters to a JSON file";
 
     public OperationLog Execute(Document doc) {
-        if (!this._enable) return new OperationLog(this.Name, []);
         var familyManager = doc.FamilyManager;
         var familyParamDataList = new List<FamilyParamModel>();
 
@@ -118,7 +115,8 @@ public class LogFamilyParamsState : IOperation<LogFamilyParamsStateSettings> {
         var filePath = Path.Combine(this.OutputPath, filename);
 
         var serializerSettings = new JsonSerializerSettings {
-            Formatting = Formatting.Indented, Converters = new List<JsonConverter> { new ForgeTypeIdConverter() }
+            Formatting = Formatting.Indented,
+            Converters = new List<JsonConverter> { new ForgeTypeIdConverter() }
         };
 
         var json = JsonConvert.SerializeObject(familyParamDataList, serializerSettings);
@@ -134,9 +132,16 @@ public class LogFamilyParamsStateSettings : IOperationSettings {
 }
 
 public class ProfileFamilyManager : BaseProfileSettings {
+    [Required]
+    public bool GetState { get; init; }
+
     [Description("Settings for adding shared parameters")]
     [Required]
     public AddSharedParamsSettings AddSharedParams { get; init; } = new();
+
+    [Description("Settings for making reference planes and dimensions")]
+    [Required]
+    public MakeRefPlaneAndDimsSettings MakeRefPlaneAndDims { get; init; } = new();
 
     [Description("Settings for adding family parameters")]
     [Required]
