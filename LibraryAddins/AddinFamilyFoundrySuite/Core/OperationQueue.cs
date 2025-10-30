@@ -9,6 +9,8 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
     public OperationQueue(TProfile profile) => this._profile = profile;
 
+
+
     /// <summary>
     ///     Add an operation to the queue with explicit settings from the profile.
     /// </summary>
@@ -60,7 +62,7 @@ public class OperationQueue<TProfile> where TProfile : new() {
     ///     Get metadata about all queued operations for frontend display
     /// </summary>
     public List<(string Name, string Description, OperationType Type, int BatchGroup)> GetOperationMetadata() {
-        var batches = this.OperationBatches(this._operations);
+        var batches = this.GetOperationBatches();
         var metadata = new List<(string Name, string Description, OperationType Type, int BatchGroup)>();
         var batchIndex = 0;
 
@@ -76,83 +78,16 @@ public class OperationQueue<TProfile> where TProfile : new() {
         return metadata;
     }
 
-    /// <summary>
-    ///     Converts the queued operations into optimized family document callbacks
-    /// </summary>
-    public (Action<Document>[] actions, Func<List<OperationLog>> getLogs) ToFamilyActions() {
-        var batches = this.OperationBatches(this._operations);
-        var familyActions = new List<Action<Document>>();
-        var allLogs = new List<OperationLog>();
-
-        foreach (var batch in batches) {
-            switch (batch.Type) {
-            case OperationType.Doc:
-                familyActions.Add(famDoc => {
-                    foreach (var op in batch.Operations) {
-                        var sw = Stopwatch.StartNew();
-                        var log = op.Execute(famDoc);
-                        sw.Stop();
-                        log.MsElapsed = sw.Elapsed.TotalMilliseconds;
-                        allLogs.Add(log);
-                    }
-                });
-                break;
-
-            case OperationType.Type:
-                familyActions.Add(famDoc => {
-                    var fm = famDoc.FamilyManager;
-                    var operationLogs = new List<OperationLog>();
-
-                    // Switch types once, executing all operations per type
-                    foreach (FamilyType famType in fm.Types) {
-                        var typeSwitchSw = Stopwatch.StartNew();
-                        fm.CurrentType = famType;
-                        typeSwitchSw.Stop();
-                        var amortizedSwitchMs = typeSwitchSw.Elapsed.TotalMilliseconds / batch.Operations.Count;
-
-                        // Execute all operations for this type
-                        foreach (var op in batch.Operations) {
-                            var opSw = Stopwatch.StartNew();
-                            var log = op.Execute(famDoc);
-                            opSw.Stop();
-
-                            log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
-                            foreach (var entry in log.Entries) entry.Context = famType.Name;
-                            operationLogs.Add(log);
-                        }
-                    }
-
-                    // Combine logs by operation name
-                    var combinedLogs = operationLogs
-                        .GroupBy(log => log.OperationName)
-                        .Select(group => new OperationLog(group.Key, group.SelectMany(log => log.Entries).ToList()) {
-                            MsElapsed = group.Sum(log => log.MsElapsed)
-                        });
-
-                    allLogs.AddRange(combinedLogs);
-                });
-                break;
-            }
-        }
-
-        return (familyActions.ToArray(), () => {
-            var logsCopy = allLogs.ToList();
-            allLogs.Clear();
-            return logsCopy;
-        }
-        );
-    }
-
     // Check if the operation explicitly implements Name property, otherwise use type name
     private static string GetOperationName(IOperation op) =>
         op.GetType().GetProperty(nameof(IOperation.Name))?.GetValue(op) as string ?? op.GetType().Name;
 
-    private List<OperationBatch> OperationBatches(List<IOperation> operations) {
+    public List<OperationBatch> GetOperationBatches() {
         var batches = new List<OperationBatch>();
         var currentBatch = new List<IOperation>();
         OperationType? currentType = null;
 
-        foreach (var op in operations) {
+        foreach (var op in this._operations) {
             if (currentType != null && currentType != op.Type) {
                 // Flush current batch
                 batches.Add(new OperationBatch(currentType.Value, currentBatch));
@@ -169,9 +104,11 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
         return batches;
     }
+
+    public List<IOperation> GetOperations() => this._operations;
 }
 
-internal record OperationBatch(OperationType Type, List<IOperation> Operations);
+public record OperationBatch(OperationType Type, List<IOperation> Operations);
 
 /// <summary>
 ///     Wrapper that prefixes log operation names with a parent name (for compound operations)
