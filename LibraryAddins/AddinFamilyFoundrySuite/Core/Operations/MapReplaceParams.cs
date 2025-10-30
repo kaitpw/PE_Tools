@@ -2,7 +2,7 @@ using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapReplaceParams : IOperation<MapParamsSettings> {
+public class MapReplaceParams : DocOperation<MapParamsSettings> {
     private readonly
         Dictionary<string, (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
         _sharedParamsDict;
@@ -11,13 +11,9 @@ public class MapReplaceParams : IOperation<MapParamsSettings> {
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
     ) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
 
-    public MapParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
+    public override string Description => "Replace a family's existing parameters with APS shared parameters";
 
-    public string Description => "Replace a family's existing parameters with APS shared parameters";
-
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
         var fm = doc.FamilyManager;
 

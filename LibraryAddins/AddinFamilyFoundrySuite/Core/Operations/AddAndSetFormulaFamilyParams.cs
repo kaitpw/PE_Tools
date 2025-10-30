@@ -6,17 +6,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddAndSetFormulaFamilyParams : IOperation<AddAndSetFormulaFamilyParamsSettings> {
-    public AddAndSetFormulaFamilyParamsSettings Settings { get; set; }
-
+public class AddAndSetFormulaFamilyParams : DocOperation<AddAndSetFormulaFamilyParamsSettings> {
     // change this to type later probably after seeing if looping through the types isa ctually necessary
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
+    public override string Description => "Add Family Parameters to the family";
 
-
-    public string Description => "Add Family Parameters to the family";
-
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
 
         if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Any(p => p is null)) {

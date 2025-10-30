@@ -3,18 +3,14 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class DeleteUnusedParams : IOperation<DeleteUnusedParamsSettings> {
+public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
     public DeleteUnusedParams(List<string> ExcludeNamesEqualing) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
 
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
-    public DeleteUnusedParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
+    public override string Description => "Recursively delete unused parameters from the family";
 
-    public string Description => "Recursively delete unused parameters from the family";
-
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
         this.RecursiveDelete(doc, logs);
         return new OperationLog(this.Name, logs);

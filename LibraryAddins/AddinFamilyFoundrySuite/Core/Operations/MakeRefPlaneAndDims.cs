@@ -3,22 +3,20 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 
-public class MakeRefPlaneAndDims : ICompoundOperation<MakeRefPlaneAndDimsSettings> {
-    public MakeRefPlaneAndDims() {
+public class MakeRefPlaneAndDims : OperationGroup<MakeRefPlaneAndDimsSettings> {
+    public MakeRefPlaneAndDims() : base(
+        description: "Make reference planes and dimensions for the family",
+        operations: InitializeOperations()
+    ) {
+    }
+
+    private static List<IOperation<MakeRefPlaneAndDimsSettings>> InitializeOperations() {
         var sharedHelper = new SharedHelper();
-        this.Operations = [
+        return [
             new MakeRefPlanes(sharedHelper),
             new MakeDimensions(sharedHelper)
         ];
     }
-
-    public List<IOperation<MakeRefPlaneAndDimsSettings>> Operations { get; set; }
-
-    public OperationType Type => OperationType.Doc; // find a way to delete later
-    public string Name { get; set; }
-    public string Description => "Make reference planes and dimensions for the family";
-
-    public OperationLog Execute(Document doc) => throw new NotImplementedException("Compound operations should not be executed directly");
 }
 
 public class SharedHelper {
@@ -34,17 +32,14 @@ public class MakeRefPlaneAndDimsSettings : IOperationSettings {
     public List<RefPlaneSpec> Specs { get; init; } = [];
 }
 
-public class MakeRefPlanes : IOperation<MakeRefPlaneAndDimsSettings> {
+public class MakeRefPlanes : DocOperation<MakeRefPlaneAndDimsSettings> {
     private readonly SharedHelper _shared;
- 
+
     public MakeRefPlanes(SharedHelper shared) => this._shared = shared;
 
-    public MakeRefPlaneAndDimsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc; 
-    public string Name { get; set; }
-    public string Description => "Make reference planes for the family";
+    public override string Description => "Make reference planes for the family";
 
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         this._shared.Logs = new List<LogEntry>();
         this._shared.Query = new PlaneQuery(doc);
         this._shared.Helper = new RefPlaneAndDimHelper(doc, this._shared.Query, this._shared.Logs);
@@ -55,17 +50,14 @@ public class MakeRefPlanes : IOperation<MakeRefPlaneAndDimsSettings> {
     }
 }
 
-public class MakeDimensions : IOperation<MakeRefPlaneAndDimsSettings> {
+public class MakeDimensions : DocOperation<MakeRefPlaneAndDimsSettings> {
     private readonly SharedHelper _shared;
 
     public MakeDimensions(SharedHelper shared) => this._shared = shared;
 
-    public MakeRefPlaneAndDimsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
-    public string Description => "Make dimensions for the family";
+    public override string Description => "Make dimensions for the family";
 
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         foreach (var spec in this.Settings.Specs) this._shared.Helper.CreateDimension(spec);
 
         return new OperationLog(this.Name, this._shared.Logs);

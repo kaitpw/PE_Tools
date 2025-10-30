@@ -2,18 +2,14 @@ using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class DeleteParams : IOperation<DeleteParamsSettings> {
+public class DeleteParams : DocOperation<DeleteParamsSettings> {
     public DeleteParams(List<string> ExcludeNamesEqualing) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
 
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
-    public DeleteParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
+    public override string Description => "Recursively delete parameters from the family by name";
 
-    public string Description => "Recursively delete parameters from the family by name";
-
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
         foreach (var name in this.ExternalExcludeNamesEqualing) {
             try {

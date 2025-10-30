@@ -3,14 +3,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class HydrateElectricalConnector : IOperation<HydrateElectricalConnectorSettings> {
-    public HydrateElectricalConnectorSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
+public class HydrateElectricalConnector : DocOperation<HydrateElectricalConnectorSettings> {
+    public override string Description => "Configure electrical connector parameters and associate them with family parameters";
 
-    public string Description => "Configure electrical connector parameters and associate them with family parameters";
-
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
 
         var polesParamName = this.Settings.SourceParameterNames.NumberOfPoles;

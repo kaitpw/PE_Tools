@@ -14,17 +14,14 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     </code>
 ///     </para>
 /// </summary>
-public class LogRefPlaneAndDims : IOperation<LogRefPlaneAndDimsSettings> {
+public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
     public LogRefPlaneAndDims(string outputDir) => this.OutputPath = outputDir;
 
     public string OutputPath { get; }
 
-    public LogRefPlaneAndDimsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
-    public string Description => "Log existing reference planes and dimensions in profile JSON format";
+    public override string Description => "Log existing reference planes and dimensions in profile JSON format";
 
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var specs = new List<RefPlaneSpec>();
 
         // Get all reference planes

@@ -7,16 +7,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddAndGlobalSetFamilyParams : IOperation<AddAndGlobalSetFamilyParamsSettings> {
-
-    public AddAndGlobalSetFamilyParamsSettings Settings { get; set; }
+public class AddAndGlobalSetFamilyParams : TypeOperation<AddAndGlobalSetFamilyParamsSettings> {
 
     // change this to type later probably after seeing if looping through the types isa ctually necessary
-    public OperationType Type => OperationType.Type;
-    public string Name { get; set; }
-    public string Description => "Add Family Parameters to the family";
+    public override string Description => "Add Family Parameters to the family";
 
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
 
         if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Any(p => p is null)) {

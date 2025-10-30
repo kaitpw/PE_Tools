@@ -7,14 +7,10 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapParams : IOperation<MapParamsSettings> {
-    public MapParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Type;
-    public string Name { get; set; }
+public class MapParams : TypeOperation<MapParamsSettings> {
+    public override string Description => "Map an old parameter's value to a new parameter for each family type";
 
-    public string Description => "Map an old parameter's value to a new parameter for each family type";
-
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
 
         foreach (var p in this.Settings.MappingData.Where(m => !m.isProcessed)) {

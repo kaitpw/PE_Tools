@@ -2,7 +2,7 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddSharedParams : IOperation<AddSharedParamsSettings> {
+public class AddSharedParams : DocOperation<AddSharedParamsSettings> {
     public AddSharedParams(
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams,
         List<string> sharedParamsToSkip = null
@@ -16,13 +16,9 @@ public class AddSharedParams : IOperation<AddSharedParamsSettings> {
     }
 
     private List<string> _sharedParamsToSkip { get; }
-    public AddSharedParamsSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
+    public override string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
-    public string Description => "Download and add shared parameters from Autodesk Parameters Service";
-
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
 
         foreach (var sharedParam in this._sharedParams) {

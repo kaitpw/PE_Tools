@@ -76,13 +76,10 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
     }
 }
 
-public class DebugLogAnnoInfo : IOperation<DebugLogAnnoInfoSettings> {
-    public DebugLogAnnoInfoSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
-    public string Description => "Log information about Generic Annotation family parameters";
+public class DebugLogAnnoInfo : DocOperation<DebugLogAnnoInfoSettings> {
+    public override string Description => "Log information about Generic Annotation family parameters";
 
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
 
         try {
@@ -97,13 +94,14 @@ public class DebugLogAnnoInfo : IOperation<DebugLogAnnoInfoSettings> {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check",
+                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }
 
             var parameters = doc.FamilyManager.Parameters.OfType<FamilyParameter>().ToList();
-            Debug.WriteLine($"Total Parameters: {parameters.Count}" );
+            Debug.WriteLine($"Total Parameters: {parameters.Count}");
 
             foreach (var param in parameters) {
                 var paramName = param.Definition.Name;

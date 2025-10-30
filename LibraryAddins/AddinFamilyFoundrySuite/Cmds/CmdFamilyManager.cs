@@ -55,7 +55,7 @@ public class CmdFamilyManager : IExternalCommand {
             foreach (var op in metadata)
                 Debug.WriteLine($"[Batch {op.BatchGroup}] {op.Type}: {op.Name} - {op.Description}");
 
-            var logs = processor.ProcessQueue(doc, queue, singleTransaction: false);
+            var logs = processor.ProcessQueue(doc, queue, false);
             var balloon = new Ballogger();
 
             foreach (var log in logs) {
@@ -78,17 +78,14 @@ public class CmdFamilyManager : IExternalCommand {
     }
 }
 
-public class LogFamilyParamsState : IOperation<LogFamilyParamsStateSettings> {
+public class LogFamilyParamsState : DocOperation<LogFamilyParamsStateSettings> {
     public LogFamilyParamsState(string outputDir) => this.OutputPath = outputDir;
 
     public string OutputPath { get; }
 
-    public LogFamilyParamsStateSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
-    public string Description => "Log the state of the family parameters to a JSON file";
+    public override string Description => "Log the state of the family parameters to a JSON file";
 
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var familyManager = doc.FamilyManager;
         var familyParamDataList = new List<FamilyParamModel>();
 
@@ -132,8 +129,7 @@ public class LogFamilyParamsStateSettings : IOperationSettings {
 }
 
 public class ProfileFamilyManager : BaseProfileSettings {
-    [Required]
-    public bool GetState { get; init; }
+    [Required] public bool GetState { get; init; }
 
     [Description("Settings for adding shared parameters")]
     [Required]

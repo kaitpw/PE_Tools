@@ -4,14 +4,10 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 // TODO: this still needs alot of work!!!
-public class DeleteUnusedReferencePlanes : IOperation<DeleteUnusedReferencePlanesSettings> {
-    public DeleteUnusedReferencePlanesSettings Settings { get; set; }
-    public OperationType Type => OperationType.Doc;
-    public string Name { get; set; }
+public class DeleteUnusedReferencePlanes : DocOperation<DeleteUnusedReferencePlanesSettings> {
+    public override string Description => "Deletes reference planes in the Family which are not used by anything important";
 
-    public string Description => "Deletes reference planes in the Family which are not used by anything important";
-
-    public OperationLog Execute(Document doc) {
+    public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();
         this.RecursiveDeleteUnusedReferencePlanes(doc, logs);
         return new OperationLog(this.Name, logs);
