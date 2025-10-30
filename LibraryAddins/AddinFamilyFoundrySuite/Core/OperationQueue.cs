@@ -61,62 +61,60 @@ public class OperationQueue<TProfile> where TProfile : new() {
     /// <summary>
     ///     Get metadata about all queued operations for frontend display
     /// </summary>
-    public List<(string Name, string Description, OperationType Type, int BatchGroup)> GetOperationMetadata() {
-        var batches = this.GetOperationBatches();
-        var metadata = new List<(string Name, string Description, OperationType Type, int BatchGroup)>();
-        var batchIndex = 0;
-
-        foreach (var batch in batches) {
-            foreach (var op in batch.Operations) {
-                var name = GetOperationName(op);
-                metadata.Add((name, op.Description, GetOperationType(op), batchIndex));
+    public List<(string Name, string Description, string Type, string IsMerged)> GetOperationMetadata() {
+        var ops = this.ToTypeOptimizedList();
+        var result = new List<(string Name, string Description, string Type, string IsMerged)>();
+        foreach (var op in ops) {
+            switch (op) {
+            case MergedTypeOperation mergedOp:
+                result.AddRange(mergedOp.Operations.Select(o => (o.Name, o.Description, GetOperationType(o), "Merged")));
+                break;
+            case TypeOperation<IOperationSettings> typeOp:
+                result.Add((typeOp.Name, typeOp.Description, GetOperationType(typeOp), "Single"));
+                break;
+            case DocOperation<IOperationSettings> docOp:
+                result.Add((docOp.Name, docOp.Description, GetOperationType(docOp), "Single"));
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown operation type: {op.GetType().Name}");
             }
-
-            batchIndex++;
         }
-
-        return metadata;
+        return result;
     }
 
-    // Check if the operation explicitly implements Name property, otherwise use type name
-    private static string GetOperationName(IOperation op) =>
-        op is IOperation<IOperationSettings> opWithSettings
-            ? opWithSettings.Name
-            : op.GetType().Name;
 
-    private static OperationType GetOperationType(IOperation op) {
+
+    private static string GetOperationType(IOperation op) {
         var opType = op.GetType().BaseType.GetGenericTypeDefinition();
-        if (opType == typeof(DocOperation<>)) return OperationType.Doc;
-        if (opType == typeof(TypeOperation<>)) return OperationType.Type;
+        if (opType == typeof(DocOperation<>)) return "Doc";
+        if (opType == typeof(TypeOperation<>)) return "Type";
         throw new InvalidOperationException(
             $"Operation {op.GetType().Name} does not inherit from DocOperation or TypeOperation");
     }
 
-    public List<OperationBatch> GetOperationBatches() {
-        var batches = new List<OperationBatch>();
+    public List<IExecutable> ToTypeOptimizedList() {
+        var finalOps = new List<IExecutable>();
         var currentBatch = new List<IOperation>();
-        OperationType? currentType = null;
 
         foreach (var op in this._operations) {
-            var opType = GetOperationType(op);
-            if (currentType != null && currentType != opType) {
-                // Flush current batch
-                batches.Add(new OperationBatch(currentType.Value, currentBatch));
-                currentBatch = new List<IOperation>();
+            var opType = op.GetType().BaseType.GetGenericTypeDefinition();
+            if (opType == typeof(TypeOperation<>)) {
+                currentBatch.Add(op);
+            } else {
+                if (currentBatch.Count > 0) {
+                    finalOps.Add(new MergedTypeOperation(currentBatch));
+                    currentBatch = new List<IOperation>();
+                }
+                finalOps.Add(op as IExecutable);
             }
-
-            currentBatch.Add(op);
-            currentType = opType;
         }
 
         // Flush remaining
-        if (currentBatch.Count > 0 && currentType != null)
-            batches.Add(new OperationBatch(currentType.Value, currentBatch));
+        if (currentBatch.Count > 0)
+            finalOps.Add(new MergedTypeOperation(currentBatch));
 
-        return batches;
+        return finalOps;
     }
 
-    public List<IOperation> GetOperations() => this._operations;
+    public List<IOperation> ToList() => this._operations;
 }
-
-public record OperationBatch(OperationType Type, List<IOperation> Operations);

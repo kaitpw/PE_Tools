@@ -1,10 +1,16 @@
 namespace AddinFamilyFoundrySuite.Core;
 
+public interface IExecutable {
+    public Action<Document> ToAction(
+        List<OperationLog> allLogs
+    );
+}
+
 /// <summary>
 ///     Base interface for all operations. Provides metadata and execution.
 ///     This interface is necessary to enable abstractions like the OperationQueue and OperationProcessor.
 /// </summary>
-public interface IOperation {
+public interface IOperation : IExecutable {
     /// <summary>
     ///     The name of the operation, set by OperationProcessor.
     /// </summary>
@@ -44,7 +50,25 @@ public abstract class DocOperation<TSettings> : IOperation<TSettings> where TSet
     public TSettings Settings { get; set; }
     public abstract string Description { get; }
     public abstract OperationLog Execute(Document doc);
+    public Action<Document> ToAction(
+        List<OperationLog> allLogs
+    ) => famDoc => {
+        try {
+            var sw = Stopwatch.StartNew();
+            var log = this.Execute(famDoc);
+            sw.Stop();
+            log.MsElapsed = sw.Elapsed.TotalMilliseconds;
+            allLogs.Add(log);
+        } catch (Exception ex) {
+            allLogs.Add(
+                new OperationLog(
+                    $"{this.Name}: (FATAL ERROR)",
+                    [new LogEntry { Item = ex.GetType().Name, Error = ex.Message }])
+            );
+        }
+    };
 }
+
 
 /// <summary>
 ///     Base abstract class for type-level operations.
@@ -56,7 +80,95 @@ public abstract class TypeOperation<TSettings> : IOperation<TSettings> where TSe
     public TSettings Settings { get; set; }
     public abstract string Description { get; }
     public abstract OperationLog Execute(Document doc);
+
+    public Action<Document> ToAction(
+        List<OperationLog> allLogs
+    ) => famDoc => {
+        try {
+            var fm = famDoc.FamilyManager;
+            var typeLogs = new List<OperationLog>();
+
+            // Loop over types and execute the operation for each type
+            foreach (FamilyType famType in fm.Types) {
+                var swType = Stopwatch.StartNew();
+                fm.CurrentType = famType;
+                var typeLog = this.Execute(famDoc);
+                swType.Stop();
+
+                typeLog.MsElapsed = swType.Elapsed.TotalMilliseconds;
+                foreach (var entry in typeLog.Entries) entry.Context = famType.Name;
+                typeLogs.Add(typeLog);
+            }
+
+            allLogs.Add(new OperationLog(
+                this.Name,
+                typeLogs.SelectMany(log => log.Entries).ToList()
+            ) {
+                MsElapsed = typeLogs.Sum(log => log.MsElapsed)
+            });
+        } catch (Exception ex) {
+            allLogs.Add(new OperationLog(this.Name, [new LogEntry { Item = ex.GetType().Name, Error = ex.Message }]));
+        }
+    };
 }
+
+public class MergedTypeOperation : IExecutable {
+    public List<IOperation> Operations { get; set; }
+    public MergedTypeOperation(
+        List<IOperation> operations
+    ) {
+        this.Operations = operations;
+    }
+
+    public Action<Document> ToAction(
+        List<OperationLog> allLogs
+    ) => famDoc => {
+        string currFamTypeName = null;
+        string currOpName = null;
+        try {
+            var fm = famDoc.FamilyManager;
+            var operationLogs = new List<OperationLog>();
+
+            // Switch types once, executing all operations per type
+            foreach (FamilyType famType in fm.Types) {
+                currFamTypeName = famType.Name;
+                var typeSwitchSw = Stopwatch.StartNew();
+                fm.CurrentType = famType;
+                typeSwitchSw.Stop();
+                var amortizedSwitchMs = typeSwitchSw.Elapsed.TotalMilliseconds / this.Operations.Count;
+
+                // Execute all operations for this type
+                foreach (var op in this.Operations) {
+                    currOpName = op.Name;
+                    var opSw = Stopwatch.StartNew();
+                    var log = op.Execute(famDoc);
+                    opSw.Stop();
+
+                    log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
+                    foreach (var entry in log.Entries) entry.Context = currFamTypeName;
+                    operationLogs.Add(log);
+                }
+            }
+
+            // Combine logs by operation name
+            var combinedLogs = operationLogs
+                .GroupBy(log => log.OperationName)
+                .Select(group => new OperationLog(group.Key, group.SelectMany(log => log.Entries).ToList()) {
+                    MsElapsed = group.Sum(log => log.MsElapsed)
+                });
+
+            allLogs.AddRange(combinedLogs);
+        } catch (Exception ex) {
+            allLogs.Add(
+                new OperationLog(
+                    $"Operation {currOpName ?? "Unknown Operation"} (FATAL ERROR)",
+                    [new LogEntry { Item = currFamTypeName ?? "Unknown Family Type", Error = ex.Message }])
+            );
+        }
+    };
+}
+
+
 
 /// <summary>
 ///     Container for grouping related operations that share settings.

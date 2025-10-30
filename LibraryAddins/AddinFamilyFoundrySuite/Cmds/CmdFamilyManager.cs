@@ -53,7 +53,7 @@ public class CmdFamilyManager : IExternalCommand {
 
             var metadata = queue.GetOperationMetadata();
             foreach (var op in metadata)
-                Debug.WriteLine($"[Batch {op.BatchGroup}] {op.Type}: {op.Name} - {op.Description}");
+                Debug.WriteLine($"[Batch {op.IsMerged}] {op.Type}: {op.Name} - {op.Description}");
 
             var logs = processor.ProcessQueue(doc, queue, false);
             var balloon = new Ballogger();

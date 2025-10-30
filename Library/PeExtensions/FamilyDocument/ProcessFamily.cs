@@ -1,25 +1,17 @@
 namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentProcessFamily {
-    public static Document ProcessFamily(this Document famDoc, bool singleTransaction = true, params Action<Document>[] callbacks) {
+    public static Document ProcessFamily(this Document famDoc, params Action<Document>[] callbacks) {
         if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
         if (famDoc.FamilyManager is null)
             throw new InvalidOperationException("Family documents FamilyManager is null.");
 
-
-        if (singleTransaction) {
-            using var transFamily = new Transaction(famDoc, "Edit Family Document");
-            _ = transFamily.Start();
-            foreach (var callback in callbacks) callback(famDoc);
-            _ = transFamily.Commit();
-        } else {
-            foreach (var callback in callbacks) {
-                using var trans = new Transaction(famDoc, "Edit Family Document");
-                _ = trans.Start();
-                callback(famDoc);
-                _ = trans.Commit();
-                trans.Dispose();
-            }
+        foreach (var callback in callbacks) {
+            using var trans = new Transaction(famDoc, "Edit Family Document");
+            _ = trans.Start();
+            callback(famDoc);
+            _ = trans.Commit();
+            trans.Dispose();
         }
 
         return famDoc;
