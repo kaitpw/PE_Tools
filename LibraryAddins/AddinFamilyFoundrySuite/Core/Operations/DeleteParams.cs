@@ -3,7 +3,7 @@ using PeExtensions.FamManager;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class DeleteParams : DocOperation<DeleteParamsSettings> {
-    public DeleteParams(List<string> ExcludeNamesEqualing) =>
+    public DeleteParams(DeleteParamsSettings settings, List<string> ExcludeNamesEqualing) : base(settings) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
 
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];

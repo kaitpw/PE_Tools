@@ -3,23 +3,15 @@ namespace AddinFamilyFoundrySuite.Core;
 /// <summary>
 ///     Fluent processor that batches document and type operations for optimal execution
 /// </summary>
-public class OperationQueue<TProfile> where TProfile : new() {
+public class OperationQueue {
     private readonly List<IOperation> _operations = new();
-    private readonly TProfile _profile;
 
-    public OperationQueue(TProfile profile) => this._profile = profile;
-
-
-    /// <summary>
-    ///     Add an operation to the queue with explicit settings from the profile.
-    /// </summary>
-    public OperationQueue<TProfile> Add<TOpSettings>(
-        IOperation<TOpSettings> operation,
-        Func<TProfile, TOpSettings> settingsSelector
-    ) where TOpSettings : class, IOperationSettings, new() {
-        operation.Settings = settingsSelector(this._profile);
-        if (operation.Settings == null || !operation.Settings.Enabled) return this;
-
+    public OperationQueue Add<TOpSettings>(
+    IOperation<TOpSettings> operation,
+    bool internalOperation = false
+) where TOpSettings : class, IOperationSettings, new() {
+        if (operation.Settings?.Enabled == false) return this;
+        if (internalOperation) operation.Name = $"INTERNAL OPERATION: {operation.Name}";
         this._operations.Add(operation);
         return this;
     }
@@ -28,32 +20,15 @@ public class OperationQueue<TProfile> where TProfile : new() {
     ///     Add an operation group to the queue with explicit settings from the profile.
     ///     Groups are unwrapped into individual operations, with names prefixed by the group name.
     /// </summary>
-    public OperationQueue<TProfile> Add<TOpSettings>(
-        OperationGroup<TOpSettings> group,
-        Func<TProfile, TOpSettings> settingsSelector
+    public OperationQueue Add<TOpSettings>(
+        OperationGroup<TOpSettings> group
     ) where TOpSettings : class, IOperationSettings, new() {
         foreach (var operation in group.Operations) {
             operation.Name = $"{group.Name}: {operation.Name}";
-            operation.Settings = settingsSelector(this._profile);
-            if (operation.Settings == null || !operation.Settings.Enabled) continue;
+            if (operation.Settings?.Enabled == false) continue;
             this._operations.Add(operation);
         }
 
-        return this;
-    }
-
-    /// <summary>
-    ///     Add an operation to the queue with ad-hoc settings.
-    /// </summary>
-    public OperationQueue<TProfile> Add<TOpSettings>(
-        IOperation<TOpSettings> operation,
-        TOpSettings settings
-    ) where TOpSettings : class, IOperationSettings, new() {
-        operation.Name = "Ad-hoc: " + operation.Name;
-        operation.Settings = settings;
-        if (operation.Settings == null || !operation.Settings.Enabled) return this;
-
-        this._operations.Add(operation);
         return this;
     }
 
@@ -113,8 +88,6 @@ public class OperationQueue<TProfile> where TProfile : new() {
 
         return finalOps;
     }
-
-    public List<IOperation> ToList() => this._operations;
 
     /// <summary>
     ///     Converts the queued operations into family actions, optionally bundling them for single-transaction behavior.

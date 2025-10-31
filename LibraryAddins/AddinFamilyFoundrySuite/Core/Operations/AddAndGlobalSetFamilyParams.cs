@@ -8,6 +8,8 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class AddAndGlobalSetFamilyParams : TypeOperation<AddAndGlobalSetFamilyParamsSettings> {
+    public AddAndGlobalSetFamilyParams(AddAndGlobalSetFamilyParamsSettings settings) : base(settings) {
+    }
 
     // change this to type later probably after seeing if looping through the types isa ctually necessary
     public override string Description => "Add Family Parameters to the family";

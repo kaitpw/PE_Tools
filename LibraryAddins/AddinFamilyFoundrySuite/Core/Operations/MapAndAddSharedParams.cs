@@ -2,13 +2,14 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
     public MapAndAddSharedParams(
+        MapParamsSettings settings,
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
     ) : base(
         description: "Map and add shared parameters (replace, add unmapped, and remap)",
         operations: [
-            new MapReplaceParams(sharedParams),
-            new AddUnmappedSharedParams(sharedParams),
-            new MapParams()
+            new MapReplaceParams(settings, sharedParams),
+            new AddUnmappedSharedParams(settings, sharedParams),
+            new MapParams(settings)
         ]
     ) {
     }
@@ -19,8 +20,9 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
         _sharedParams;
 
     public AddUnmappedSharedParams(
+        MapParamsSettings settings,
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
-    ) => this._sharedParams = sharedParams;
+    ) : base(settings) => this._sharedParams = sharedParams;
 
     public override string Description => "Add shared parameters that are not already processed by a previous operation";
 
@@ -32,9 +34,8 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
             .ToList();
 
         var addsharedParams =
-            new AddSharedParams(this._sharedParams, sharedParamsToSkip) {
+            new AddSharedParams(new DefaultOperationSettings(), this._sharedParams, sharedParamsToSkip) {
                 Name = this.Name,
-                Settings = new AddSharedParamsSettings(),
             };
         return addsharedParams.Execute(doc);
     }

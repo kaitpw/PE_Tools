@@ -5,19 +5,16 @@ namespace AddinFamilyFoundrySuite.Core;
 
 public class OperationLogger {
     public static (object summary, object detailed) GenerateDryRunData<TProfile>(
-        TProfile profile,
-        string currentProfile,
-        Document doc,
-        OperationQueue<TProfile> queue
+        OperationProcessor<TProfile> processor,
+        OperationQueue queue
     ) where TProfile : BaseProfileSettings, new() {
-        using var tempFile = new TempSharedParamFile(doc);
-        var apsParams = profile.GetAPSParams(tempFile);
-        var families = profile.GetFamilies(doc);
+        var apsParams = processor.GetApsParams();
+        var families = processor.Profile.GetFamilies(processor.doc);
         var operationMetadata = queue.GetOperationMetadata();
 
         var summary = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            Profile = currentProfile,
+            Profile = processor.settings.CurrentProfile,
             Operations =
                 operationMetadata.Select(op =>
                     new { Operation = $"[Batch {op.IsMerged}] ({op.Type}) {op.Name}", op.Description }).ToList(),
@@ -28,7 +25,7 @@ public class OperationLogger {
 
         var detailed = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            Profile = currentProfile,
+            Profile = processor.settings.CurrentProfile,
             Operations =
                 operationMetadata.Select(op =>
                     new { Operation = $"[Batch {op.IsMerged}] ({op.Type}) {op.Name}", op.Description }).ToList(),
@@ -120,44 +117,38 @@ public class OperationLogger {
     }
 
     public static void OutputDryRunResults<TProfile>(
-        Storage storage,
-        TProfile profile,
-        string currentProfile,
-        Document doc,
-        OperationQueue<TProfile> queue,
-        bool openOutputFiles
+        OperationProcessor<TProfile> processor,
+        OperationQueue queue
     ) where TProfile : BaseProfileSettings, new() {
-        var (summary, detailed) = GenerateDryRunData(profile, currentProfile, doc, queue);
+        var (summary, detailed) = GenerateDryRunData(processor, queue);
 
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
         var filename = $"dry-run_{timestamp}.json";
         var detailedFilename = $"dry-run_{timestamp}_detailed.json";
 
-        storage.Output().Json<object>(filename).Write(summary);
-        storage.Output().Json<object>(detailedFilename).Write(detailed);
+        processor.storage.Output().Json<object>(filename).Write(summary);
+        processor.storage.Output().Json<object>(detailedFilename).Write(detailed);
 
-        if (openOutputFiles)
-            FileUtils.OpenInDefaultApp(Path.Combine(storage.Output().GetFolderPath(),
-                filename)); // TODO: change back to plain filename
+        if (processor.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish)
+            FileUtils.OpenInDefaultApp(Path.Combine(processor.storage.Output().GetFolderPath(), filename));
     }
 
-    public static string OutputProcessingResults(
-        Storage storage,
-        Dictionary<string, (List<OperationLog> logs, double totalMs)> familyResults,
-        double totalMs,
-        bool openOutputFiles
-    ) {
+    public static string OutputProcessingResults<TProfile>(
+        OperationProcessor<TProfile> processor,
+        Dictionary<string, (List<OperationLog>, double)> familyResults,
+        double totalMs
+    ) where TProfile : BaseProfileSettings, new() {
         var (summary, detailed) = GenerateLogData(familyResults, totalMs);
 
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
         var filename = $"{timestamp}.json";
         var detailedFilename = $"{timestamp}_detailed.json";
 
-        storage.Output().Json<object>(filename).Write(summary);
-        storage.Output().Json<object>(detailedFilename).Write(detailed);
+        processor.storage.Output().Json<object>(filename).Write(summary);
+        processor.storage.Output().Json<object>(detailedFilename).Write(detailed);
 
-        var logPath = Path.Combine(storage.Output().GetFolderPath(), filename);
-        if (openOutputFiles)
+        var logPath = Path.Combine(processor.storage.Output().GetFolderPath(), filename);
+        if (processor.settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish)
             FileUtils.OpenInDefaultApp(logPath);
 
         return logPath;

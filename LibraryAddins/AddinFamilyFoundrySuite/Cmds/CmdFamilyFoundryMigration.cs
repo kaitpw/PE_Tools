@@ -2,7 +2,6 @@ using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
 using PeRevit.Ui;
 using PeServices.Storage;
-using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -19,11 +18,11 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            var processor = new OperationProcessor<ProfileRemap>(new Storage("FamilyFoundry"));
-            using var tempFile = new TempSharedParamFile(doc);
-            var apsParamData = processor.profile.GetAPSParams(tempFile);
+            var storage = new Storage("FamilyFoundry");
+            using var processor = new OperationProcessor<ProfileRemap>(doc, storage);
+            var apsParamData = processor.GetApsParams();
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
-            var mappingDataAllNames = processor.profile.AddAndMapSharedParams.MappingData
+            var mappingDataAllNames = processor.Profile.AddAndMapSharedParams.MappingData
                 .Select(m => m.CurrName)
                 .Concat(apsParamNames)
                 .ToList();
@@ -41,32 +40,31 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
             };
 
             var queue = processor.CreateQueue()
-                .Add(new DeleteUnusedParams(mappingDataAllNames), profile => profile.DeleteUnusedParams)
-                .Add(new DeleteUnusedNestedFamilies(), profile => profile.DeleteUnusedNestedFamilies)
-                .Add(new MapAndAddSharedParams(apsParamData), profile => profile.AddAndMapSharedParams)
-                .Add(new HydrateElectricalConnector(), profile => profile.HydrateElectricalConnector)
-                .Add(new DeleteUnusedParams(apsParamNames), profile => profile.DeleteUnusedParams)
-                .Add(new DebugLogAnnoInfo(), new DebugLogAnnoInfoSettings())
-                .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
+                .Add(new DeleteUnusedParams(processor.Profile.DeleteUnusedParams, mappingDataAllNames))
+                .Add(new DeleteUnusedNestedFamilies(processor.Profile.DeleteUnusedNestedFamilies))
+                .Add(new MapAndAddSharedParams(processor.Profile.AddAndMapSharedParams, apsParamData))
+                .Add(new MakeElecConnector(processor.Profile.HydrateElectricalConnector))
+                .Add(new DeleteUnusedParams(processor.Profile.DeleteUnusedParams, apsParamNames))
+                .Add(new DebugLogAnnoInfo(new DebugLogAnnoInfoSettings()))
+                .Add(new AddAndSetFormulaFamilyParams(addFamilyParams));
 
             var metadata = queue.GetOperationMetadata();
             foreach (var op in metadata)
                 Debug.WriteLine($"[Batch {op.IsMerged}] {op.Type}: {op.Name} - {op.Description}");
 
-            var logs = processor.ProcessQueue(doc, queue);
-            var balloon = new Ballogger();
 
-            foreach (var log in logs) {
-                var successCount = log.SuccessCount;
-                var failedCount = log.FailedCount;
-                var summary = $"{log.OperationName}: {successCount} succeeded, {failedCount} failed";
+            if (processor.Profile.ExecutionOptions.PreviewRun) {
+                OperationLogger.OutputDryRunResults(processor, queue);
+            } else {
+                var logs = processor.ProcessQueue(queue);
+                var logPath = OperationLogger.OutputProcessingResults(processor, logs.familyResults, logs.totalMs);
+                var balloon = new Ballogger();
 
-                _ = failedCount > 0
-                    ? balloon.Add(Log.WARN, new StackFrame(), summary)
-                    : balloon.Add(Log.INFO, new StackFrame(), summary);
+                foreach (var (famName, (_, ms)) in logs.familyResults) {
+                    _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {famName} in {ms}ms");
+                }
+                balloon.Show();
             }
-
-            balloon.Show();
 
             return Result.Succeeded;
         } catch (Exception ex) {
@@ -77,6 +75,8 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
 }
 
 public class DebugLogAnnoInfo : DocOperation<DebugLogAnnoInfoSettings> {
+    public DebugLogAnnoInfo(DebugLogAnnoInfoSettings settings) : base(settings) {
+    }
     public override string Description => "Log information about Generic Annotation family parameters";
 
     public override OperationLog Execute(Document doc) {
@@ -141,5 +141,5 @@ public class ProfileRemap : BaseProfileSettings {
 
     [Description("Settings for hydrating electrical connectors")]
     [Required]
-    public HydrateElectricalConnectorSettings HydrateElectricalConnector { get; init; } = new();
+    public MakeElecConnectorSettings HydrateElectricalConnector { get; init; } = new();
 }

@@ -2,11 +2,12 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddSharedParams : DocOperation<AddSharedParamsSettings> {
+public class AddSharedParams : DocOperation<DefaultOperationSettings> {
     public AddSharedParams(
+        DefaultOperationSettings settings,
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams,
         List<string> sharedParamsToSkip = null
-    ) {
+    ) : base(settings) {
         this._sharedParams = sharedParams;
         this._sharedParamsToSkip = sharedParamsToSkip;
     }
@@ -36,8 +37,4 @@ public class AddSharedParams : DocOperation<AddSharedParamsSettings> {
 
         return new OperationLog(this.Name, logs);
     }
-}
-
-public class AddSharedParamsSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
 }

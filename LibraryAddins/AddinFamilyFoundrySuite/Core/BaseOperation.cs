@@ -1,15 +1,12 @@
 namespace AddinFamilyFoundrySuite.Core;
 
 public interface IActionable {
-    public Func<Document, List<OperationLog>> ToAction();
+    Func<Document, List<OperationLog>> ToAction();
 }
 
 public interface IOperation : IActionable {
     string Name { get; set; }
-    string Description { get; }
-    OperationLog Execute(Document doc);
 }
-
 
 /// <summary>
 ///     Base abstract class for document-level operations.
@@ -17,6 +14,8 @@ public interface IOperation : IActionable {
 /// </summary>
 public abstract class DocOperation : IOperation {
     private string _nameOverride;
+
+    public abstract string Description { get; }
 
     /// <summary>
     ///     Gets the operation name. Returns the type name by default, or the override value if set.
@@ -27,8 +26,6 @@ public abstract class DocOperation : IOperation {
         set => this._nameOverride = value;
     }
 
-    public abstract string Description { get; }
-    public abstract OperationLog Execute(Document doc);
     public Func<Document, List<OperationLog>> ToAction() => famDoc => {
         try {
             var sw = Stopwatch.StartNew();
@@ -44,8 +41,9 @@ public abstract class DocOperation : IOperation {
             ];
         }
     };
-}
 
+    public abstract OperationLog Execute(Document doc);
+}
 
 /// <summary>
 ///     Base abstract class for type-level operations.
@@ -54,6 +52,8 @@ public abstract class DocOperation : IOperation {
 /// </summary>
 public abstract class TypeOperation : IOperation {
     private string _nameOverride;
+
+    public abstract string Description { get; }
 
     /// <summary>
     ///     Gets the operation name. Returns the type name by default, or the override value if set.
@@ -64,8 +64,6 @@ public abstract class TypeOperation : IOperation {
         set => this._nameOverride = value;
     }
 
-    public abstract string Description { get; }
-    public abstract OperationLog Execute(Document doc);
     public Func<Document, List<OperationLog>> ToAction() => famDoc => {
         try {
             var fm = famDoc.FamilyManager;
@@ -83,22 +81,22 @@ public abstract class TypeOperation : IOperation {
                 typeLogs.Add(typeLog);
             }
 
-            return [new OperationLog(
-                this.Name,
-                typeLogs.SelectMany(log => log.Entries).ToList()
-            ) {
-                MsElapsed = typeLogs.Sum(log => log.MsElapsed)
-            }];
+            return [
+                new OperationLog(
+                    this.Name,
+                    typeLogs.SelectMany(log => log.Entries).ToList()
+                ) { MsElapsed = typeLogs.Sum(log => log.MsElapsed) }
+            ];
         } catch (Exception ex) {
             return [new OperationLog(this.Name, [new LogEntry { Item = ex.GetType().Name, Error = ex.Message }])];
         }
     };
+
+    public abstract OperationLog Execute(Document doc);
 }
 
-
-public class MergedTypeOperation : IActionable {
-    public MergedTypeOperation(List<TypeOperation> operations) => this.Operations = operations;
-    public List<TypeOperation> Operations { get; set; }
+public class MergedTypeOperation(List<TypeOperation> operations) : IActionable {
+    public List<TypeOperation> Operations { get; set; } = operations;
 
     public Func<Document, List<OperationLog>> ToAction() => famDoc => {
         string currFamTypeName = null;
@@ -149,6 +147,10 @@ public interface IOperationSettings {
     bool Enabled { get; init; }
 }
 
+public class DefaultOperationSettings : IOperationSettings {
+    public bool Enabled { get; init; } = true;
+}
+
 /// <summary>
 ///     Base interface for operations with settings. It is typed with the settings type.
 /// </summary>
@@ -159,15 +161,15 @@ public interface IOperation<TSettings> : IOperation where TSettings : IOperation
     TSettings Settings { get; set; }
 }
 
-
-public abstract class DocOperation<TSettings> : DocOperation, IOperation<TSettings> where TSettings : IOperationSettings {
-    public TSettings Settings { get; set; }
+public abstract class DocOperation<TOpSettings>(TOpSettings settings) : DocOperation, IOperation<TOpSettings>
+    where TOpSettings : IOperationSettings {
+    public TOpSettings Settings { get; set; } = settings;
 }
 
-public abstract class TypeOperation<TSettings> : TypeOperation, IOperation<TSettings> where TSettings : IOperationSettings {
-    public TSettings Settings { get; set; }
+public abstract class TypeOperation<TOpSettings>(TOpSettings settings) : TypeOperation, IOperation<TOpSettings>
+    where TOpSettings : IOperationSettings {
+    public TOpSettings Settings { get; set; } = settings;
 }
-
 
 /// <summary>
 ///     Container for grouping related operations that share settings.
@@ -175,10 +177,6 @@ public abstract class TypeOperation<TSettings> : TypeOperation, IOperation<TSett
 ///     The name is automatically derived from the type name.
 /// </summary>
 public class OperationGroup<TSettings> where TSettings : IOperationSettings {
-    public string Name => this.GetType().Name;
-    public string Description { get; init; }
-    public List<IOperation<TSettings>> Operations { get; init; }
-
     /// <summary>
     ///     Creates an operation group with the name automatically derived from the type name.
     /// </summary>
@@ -187,6 +185,10 @@ public class OperationGroup<TSettings> where TSettings : IOperationSettings {
         this.Description = description;
         this.Operations = operations;
     }
+
+    public string Name => this.GetType().Name;
+    public string Description { get; init; }
+    public List<IOperation<TSettings>> Operations { get; init; }
 }
 
 /// <summary>
@@ -205,6 +207,6 @@ public class OperationLog(string operationName, List<LogEntry> entries) {
 /// </summary>
 public class LogEntry {
     public string Item { get; init; }
-    public string Context { get; set; } = null;
-    public string Error { get; init; } = null;
+    public string Context { get; set; }
+    public string Error { get; init; }
 }

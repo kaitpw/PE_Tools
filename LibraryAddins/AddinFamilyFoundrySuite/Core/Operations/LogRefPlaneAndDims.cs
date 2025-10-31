@@ -15,7 +15,7 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     </para>
 /// </summary>
 public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
-    public LogRefPlaneAndDims(string outputDir) => this.OutputPath = outputDir;
+    public LogRefPlaneAndDims(LogRefPlaneAndDimsSettings settings, string outputDir) : base(settings) => this.OutputPath = outputDir;
 
     public string OutputPath { get; }
 

@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapParams : TypeOperation<MapParamsSettings> {
+public class MapParams(MapParamsSettings settings) : TypeOperation<MapParamsSettings>(settings) {
     public override string Description => "Map an old parameter's value to a new parameter for each family type";
 
     public override OperationLog Execute(Document doc) {

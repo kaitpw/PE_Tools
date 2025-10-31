@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class HydrateElectricalConnector : DocOperation<HydrateElectricalConnectorSettings> {
+public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperation<MakeElecConnectorSettings>(settings) {
     public override string Description => "Configure electrical connector parameters and associate them with family parameters";
 
     public override OperationLog Execute(Document doc) {
@@ -135,7 +135,7 @@ public class HydrateElectricalConnector : DocOperation<HydrateElectricalConnecto
     }
 }
 
-public class HydrateElectricalConnectorSettings : IOperationSettings {
+public class MakeElecConnectorSettings : IOperationSettings {
     [Required] public Parameters SourceParameterNames { get; init; } = new();
     public bool Enabled { get; init; } = true;
 

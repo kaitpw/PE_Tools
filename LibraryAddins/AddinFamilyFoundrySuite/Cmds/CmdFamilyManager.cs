@@ -22,10 +22,10 @@ public class CmdFamilyManager : IExternalCommand {
 
         try {
             var storage = new Storage("FF Manager");
-            var processor = new OperationProcessor<ProfileFamilyManager>(storage);
-            using var tempFile = new TempSharedParamFile(doc);
-            var apsParamData = processor.profile.GetAPSParams(tempFile);
-            var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
+            using var processor = new OperationProcessor<ProfileFamilyManager>(doc, storage);
+            // force this to never be singl transaction
+            processor.Profile.ExecutionOptions.SingleTransaction = false;
+            var apsParamData = processor.GetApsParams();
 
             var addFamilyParams = new AddAndSetFormulaFamilyParamsSettings {
                 FamilyParamData = [
@@ -38,38 +38,35 @@ public class CmdFamilyManager : IExternalCommand {
                     }
                 ]
             };
-
-            OperationQueue<ProfileFamilyManager> queue;
-            var getState = processor.profile.GetState;
-            queue = getState
-                ? processor.CreateQueue()
-                    // .Add(new LogFamilyParamsState(storage.Output().GetFolderPath()), new LogFamilyParamsStateSettings())
-                    .Add(new LogRefPlaneAndDims(storage.Output().GetFolderPath()), new LogRefPlaneAndDimsSettings())
-                : processor.CreateQueue()
-                    .Add(new AddSharedParams(apsParamData), profile => profile.AddSharedParams)
-                    .Add(new MakeRefPlaneAndDims(), profile => profile.MakeRefPlaneAndDims)
-                    .Add(new AddAndGlobalSetFamilyParams(), profile => profile.AddAndGlobalSetFamilyParams)
-                    .Add(new AddAndSetFormulaFamilyParams(), addFamilyParams);
-
+            var mode = processor.Profile.ExecutionOptions.Mode;
+            var queue = mode switch {
+                "snapshot" => processor.CreateQueue()
+                    .Add(new LogFamilyParamsState(new(), processor.storage.Output().GetFolderPath()))
+                    .Add(new LogRefPlaneAndDims(new(), processor.storage.Output().GetFolderPath())),
+                _ => processor.CreateQueue()
+                    .Add(new AddSharedParams(processor.Profile.AddSharedParams, apsParamData))
+                    .Add(new MakeRefPlaneAndDims(processor.Profile.MakeRefPlaneAndDims))
+                    .Add(new AddAndGlobalSetFamilyParams(processor.Profile.AddAndGlobalSetFamilyParams))
+                    .Add(new AddAndSetFormulaFamilyParams(addFamilyParams))
+            };
             var metadata = queue.GetOperationMetadata();
             foreach (var op in metadata)
                 Debug.WriteLine($"[Batch {op.IsMerged}] {op.Type}: {op.Name} - {op.Description}");
 
-            var logs = processor.ProcessQueue(doc, queue, false);
-            var balloon = new Ballogger();
 
-            foreach (var log in logs) {
-                var successCount = log.SuccessCount;
-                var failedCount = log.FailedCount;
-                var summary = $"{log.OperationName}: {successCount} succeeded, {failedCount} failed";
-
-                _ = failedCount > 0
-                    ? balloon.Add(Log.WARN, new StackFrame(), summary)
-                    : balloon.Add(Log.INFO, new StackFrame(), summary);
+            if (processor.Profile.ExecutionOptions.PreviewRun) {
+                OperationLogger.OutputDryRunResults(processor, queue);
+                return Result.Succeeded;
             }
 
-            balloon.Show();
+            var logs = processor.ProcessQueue(queue);
+            var logPath = OperationLogger.OutputProcessingResults(processor, logs.familyResults, logs.totalMs);
+            var balloon = new Ballogger();
 
+            foreach (var (famName, (_, ms)) in logs.familyResults) {
+                _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {famName} in {ms}ms");
+            }
+            balloon.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
             new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
@@ -78,12 +75,11 @@ public class CmdFamilyManager : IExternalCommand {
     }
 }
 
-public class LogFamilyParamsState : DocOperation<LogFamilyParamsStateSettings> {
-    public LogFamilyParamsState(string outputDir) => this.OutputPath = outputDir;
-
+public class LogFamilyParamsState : DocOperation<DefaultOperationSettings> {
+    public LogFamilyParamsState(DefaultOperationSettings settings, string outputDir) : base(settings) => this.OutputPath = outputDir;
     public string OutputPath { get; }
-
     public override string Description => "Log the state of the family parameters to a JSON file";
+
     public override OperationLog Execute(Document doc) {
         var familyManager = doc.FamilyManager;
         var familyParamDataList = new List<FamilyParamModel>();
@@ -123,16 +119,11 @@ public class LogFamilyParamsState : DocOperation<LogFamilyParamsStateSettings> {
     }
 }
 
-public class LogFamilyParamsStateSettings : IOperationSettings {
-    public bool Enabled { get; init; }
-}
-
 public class ProfileFamilyManager : BaseProfileSettings {
-    [Required] public bool GetState { get; init; }
 
     [Description("Settings for adding shared parameters")]
     [Required]
-    public AddSharedParamsSettings AddSharedParams { get; init; } = new();
+    public DefaultOperationSettings AddSharedParams { get; init; } = new();
 
     [Description("Settings for making reference planes and dimensions")]
     [Required]

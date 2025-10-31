@@ -8,8 +8,9 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
         _sharedParamsDict;
 
     public MapReplaceParams(
+        MapParamsSettings settings,
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
-    ) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
+    ) : base(settings) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
 
     public override string Description => "Replace a family's existing parameters with APS shared parameters";
 

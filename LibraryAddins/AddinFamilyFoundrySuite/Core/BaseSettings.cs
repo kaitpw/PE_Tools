@@ -10,11 +10,6 @@ public class BaseSettings<TProfile> where TProfile : BaseProfileSettings, new() 
     [Required]
     public string CurrentProfile { get; set; } = "Default";
 
-    [Description(
-        "When enabled, the command will output a JSON file with all APS parameters and families that would be processed, without actually processing them.")]
-    [Required]
-    public bool DryRun { get; set; } = false;
-
     [Required] public OnProcessingFinishSettings OnProcessingFinish { get; set; } = new();
 
 

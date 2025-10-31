@@ -4,14 +4,17 @@ using PeUtils.Files;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
+using System.ComponentModel;
 
 
 namespace AddinFamilyFoundrySuite.Core;
 
 public class BaseProfileSettings {
+
+    [Required] public ExecutionOptionsSettings ExecutionOptions { get; init; } = new();
     [Required] public FilterFamiliesSettings FilterFamilies { get; init; } = new();
     [Required] public FilterApsParamsSettings FilterApsParams { get; init; } = new();
-
+ 
     public List<Family> GetFamilies(Document doc) =>
         new FilteredElementCollector(doc)
             .OfClass(typeof(Family))
@@ -37,6 +40,21 @@ public class BaseProfileSettings {
         throw new InvalidOperationException(
             $"This Family Foundry command requires cached parameters data, but no cached data exists. " +
             $"Run the \"Cache Parameters Service\" command on a Revit version above 2024 to generate the cache.");
+    }
+
+    public class ExecutionOptionsSettings {
+        [Description("When enabled, the command will output a JSON file with all APS parameters and families that would be processed, without actually processing them.")]
+        [Required]
+        public bool PreviewRun { get; set; } = false;
+
+        [Description("When enabled, the command will bundle the operations into a single transaction.")]
+        public bool SingleTransaction { get; set; } = true;
+
+        [Description("When enabled, consecutive type operations will be batched together for better performance.")]
+        public bool OptimizeTypeOperations { get; set; } = true;
+
+        [Description("When enabled, the command will get the state of certain relevant data in a family.")]
+        public string Mode { get; set; } = "";
     }
 
     public class FilterFamiliesSettings {

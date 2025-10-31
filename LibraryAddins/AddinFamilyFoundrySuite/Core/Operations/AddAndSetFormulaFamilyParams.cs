@@ -7,6 +7,7 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class AddAndSetFormulaFamilyParams : DocOperation<AddAndSetFormulaFamilyParamsSettings> {
+    public AddAndSetFormulaFamilyParams(AddAndSetFormulaFamilyParamsSettings settings) : base(settings) { }
     // change this to type later probably after seeing if looping through the types isa ctually necessary
     public override string Description => "Add Family Parameters to the family";
 

@@ -4,17 +4,17 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 
 public class MakeRefPlaneAndDims : OperationGroup<MakeRefPlaneAndDimsSettings> {
-    public MakeRefPlaneAndDims() : base(
+    public MakeRefPlaneAndDims(MakeRefPlaneAndDimsSettings settings) : base(
         description: "Make reference planes and dimensions for the family",
-        operations: InitializeOperations()
+        operations: InitializeOperations(settings)
     ) {
     }
 
-    private static List<IOperation<MakeRefPlaneAndDimsSettings>> InitializeOperations() {
+    private static List<IOperation<MakeRefPlaneAndDimsSettings>> InitializeOperations(MakeRefPlaneAndDimsSettings settings) {
         var sharedHelper = new SharedHelper();
         return [
-            new MakeRefPlanes(sharedHelper),
-            new MakeDimensions(sharedHelper)
+            new MakeRefPlanes(settings, sharedHelper),
+            new MakeDimensions(settings, sharedHelper)
         ];
     }
 }
@@ -35,7 +35,7 @@ public class MakeRefPlaneAndDimsSettings : IOperationSettings {
 public class MakeRefPlanes : DocOperation<MakeRefPlaneAndDimsSettings> {
     private readonly SharedHelper _shared;
 
-    public MakeRefPlanes(SharedHelper shared) => this._shared = shared;
+    public MakeRefPlanes(MakeRefPlaneAndDimsSettings settings, SharedHelper shared) : base(settings) => this._shared = shared;
 
     public override string Description => "Make reference planes for the family";
 
@@ -53,7 +53,7 @@ public class MakeRefPlanes : DocOperation<MakeRefPlaneAndDimsSettings> {
 public class MakeDimensions : DocOperation<MakeRefPlaneAndDimsSettings> {
     private readonly SharedHelper _shared;
 
-    public MakeDimensions(SharedHelper shared) => this._shared = shared;
+    public MakeDimensions(MakeRefPlaneAndDimsSettings settings, SharedHelper shared) : base(settings) => this._shared = shared;
 
     public override string Description => "Make dimensions for the family";
 
