@@ -1,20 +1,19 @@
 using AddinFamilyFoundrySuite.Core.Operations.Settings;
 using PeServices.Storage;
 using PeUtils.Files;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
-using System.ComponentModel;
 
 
 namespace AddinFamilyFoundrySuite.Core;
 
 public class BaseProfileSettings {
-
     [Required] public ExecutionOptionsSettings ExecutionOptions { get; init; } = new();
     [Required] public FilterFamiliesSettings FilterFamilies { get; init; } = new();
     [Required] public FilterApsParamsSettings FilterApsParams { get; init; } = new();
- 
+
     public List<Family> GetFamilies(Document doc) =>
         new FilteredElementCollector(doc)
             .OfClass(typeof(Family))
@@ -43,7 +42,8 @@ public class BaseProfileSettings {
     }
 
     public class ExecutionOptionsSettings {
-        [Description("When enabled, the command will output a JSON file with all APS parameters and families that would be processed, without actually processing them.")]
+        [Description(
+            "When enabled, the command will output a JSON file with all APS parameters and families that would be processed, without actually processing them.")]
         [Required]
         public bool PreviewRun { get; set; } = false;
 

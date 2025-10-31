@@ -30,6 +30,8 @@ public class OperationProcessor<TProfile> : IDisposable
         }
     }
 
+    public void Dispose() => this._tempFile?.Dispose();
+
     /// <summary>
     ///     Gets the APS parameters using a temporary shared parameter file.
     ///     The temp file is disposed when the processor is disposed or when this method is called again.
@@ -40,27 +42,27 @@ public class OperationProcessor<TProfile> : IDisposable
         return this.Profile.GetAPSParams(this._tempFile);
     }
 
-    public OperationQueue CreateQueue() => new();
-
     /// <summary>
     ///     Execute a configured processor with full initialization and document handling.
-    ///     Execution options (preview run, single transaction, optimize type operations) are controlled by Profile.ExecutionOptions.
+    ///     Execution options (preview run, single transaction, optimize type operations) are controlled by
+    ///     Profile.ExecutionOptions.
     /// </summary>
-    public (Dictionary<string, (List<OperationLog>, double)> familyResults, double totalMs) ProcessQueue(OperationQueue queue) {
+    public (Dictionary<string, (List<OperationLog>, double)> familyResults, double totalMs) ProcessQueue(
+        OperationQueue queue) {
         var familyResults = new Dictionary<string, (List<OperationLog> logs, double totalMs)>();
         var totalSw = Stopwatch.StartNew();
 
         var familyActions = queue.ToFamilyActions(
-            optimizeTypeOperations: this.Profile.ExecutionOptions.OptimizeTypeOperations,
-            singleTransaction: this.Profile.ExecutionOptions.SingleTransaction);
-        var logs = new List<OperationLog>();
+            this.Profile.ExecutionOptions.OptimizeTypeOperations,
+            this.Profile.ExecutionOptions.SingleTransaction);
 
         if (this.doc.IsFamilyDocument) {
+            var logs = new List<OperationLog>();
             try {
                 var familySw = Stopwatch.StartNew();
                 var saveLocation = this.GetSaveLocations(this.doc, this.settings.OnProcessingFinish);
                 _ = this.doc
-                    .ProcessFamily(this.ConvertToActionsWithLogCollection(familyActions, logs))
+                    .ProcessFamily(this.CaptureActionLogs(familyActions, logs))
                     .SaveFamily(saveLocation);
                 familySw.Stop();
                 familyResults.Add(this.doc.Title, (logs, familySw.Elapsed.TotalMilliseconds));
@@ -71,12 +73,13 @@ public class OperationProcessor<TProfile> : IDisposable
             var families = this.Profile.GetFamilies(this.doc);
             foreach (var family in families) {
                 var familyName = family.Name; // Capture name 
+                var logs = new List<OperationLog>();
                 try {
                     var familySw = Stopwatch.StartNew();
                     var saveLocation = this.GetSaveLocations(this.doc, this.settings.OnProcessingFinish);
                     _ = this.doc
                         .EditFamily(family)
-                        .ProcessFamily(this.ConvertToActionsWithLogCollection(familyActions, logs))
+                        .ProcessFamily(this.CaptureActionLogs(familyActions, logs))
                         .SaveFamily(saveLocation)
                         .LoadAndCloseFamily(this.doc, new EditAndLoadFamilyOptions());
                     familySw.Stop();
@@ -92,7 +95,7 @@ public class OperationProcessor<TProfile> : IDisposable
         return (familyResults, totalSw.Elapsed.TotalMilliseconds);
     }
 
-    private Action<Document>[] ConvertToActionsWithLogCollection(
+    private Action<Document>[] CaptureActionLogs(
         Func<Document, List<OperationLog>>[] funcActions,
         List<OperationLog> logCollector
     ) => funcActions.Select(func => new Action<Document>(famDoc => logCollector.AddRange(func(famDoc)))).ToArray();
@@ -111,8 +114,6 @@ public class OperationProcessor<TProfile> : IDisposable
 
         return saveLocations;
     }
-
-    public void Dispose() => this._tempFile?.Dispose();
 }
 
 public interface ILoadAndSaveOptions {

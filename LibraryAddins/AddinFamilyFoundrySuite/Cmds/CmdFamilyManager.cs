@@ -4,7 +4,6 @@ using Newtonsoft.Json;
 using PeExtensions.FamDocument;
 using PeRevit.Ui;
 using PeServices.Storage;
-using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -40,10 +39,12 @@ public class CmdFamilyManager : IExternalCommand {
             };
             var mode = processor.Profile.ExecutionOptions.Mode;
             var queue = mode switch {
-                "snapshot" => processor.CreateQueue()
-                    .Add(new LogFamilyParamsState(new(), processor.storage.Output().GetFolderPath()))
-                    .Add(new LogRefPlaneAndDims(new(), processor.storage.Output().GetFolderPath())),
-                _ => processor.CreateQueue()
+                "snapshot" => new OperationQueue()
+                    .Add(new LogFamilyParamsState(new DefaultOperationSettings(),
+                        processor.storage.Output().GetFolderPath()))
+                    .Add(new LogRefPlaneAndDims(new LogRefPlaneAndDimsSettings(),
+                        processor.storage.Output().GetFolderPath())),
+                _ => new OperationQueue()
                     .Add(new AddSharedParams(processor.Profile.AddSharedParams, apsParamData))
                     .Add(new MakeRefPlaneAndDims(processor.Profile.MakeRefPlaneAndDims))
                     .Add(new AddAndGlobalSetFamilyParams(processor.Profile.AddAndGlobalSetFamilyParams))
@@ -63,9 +64,8 @@ public class CmdFamilyManager : IExternalCommand {
             var logPath = OperationLogger.OutputProcessingResults(processor, logs.familyResults, logs.totalMs);
             var balloon = new Ballogger();
 
-            foreach (var (famName, (_, ms)) in logs.familyResults) {
+            foreach (var (famName, (_, ms)) in logs.familyResults)
                 _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {famName} in {ms}ms");
-            }
             balloon.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
@@ -76,7 +76,9 @@ public class CmdFamilyManager : IExternalCommand {
 }
 
 public class LogFamilyParamsState : DocOperation<DefaultOperationSettings> {
-    public LogFamilyParamsState(DefaultOperationSettings settings, string outputDir) : base(settings) => this.OutputPath = outputDir;
+    public LogFamilyParamsState(DefaultOperationSettings settings, string outputDir) : base(settings) =>
+        this.OutputPath = outputDir;
+
     public string OutputPath { get; }
     public override string Description => "Log the state of the family parameters to a JSON file";
 
@@ -107,8 +109,7 @@ public class LogFamilyParamsState : DocOperation<DefaultOperationSettings> {
         var filePath = Path.Combine(this.OutputPath, filename);
 
         var serializerSettings = new JsonSerializerSettings {
-            Formatting = Formatting.Indented,
-            Converters = new List<JsonConverter> { new ForgeTypeIdConverter() }
+            Formatting = Formatting.Indented, Converters = new List<JsonConverter> { new ForgeTypeIdConverter() }
         };
 
         var json = JsonConvert.SerializeObject(familyParamDataList, serializerSettings);
@@ -120,7 +121,6 @@ public class LogFamilyParamsState : DocOperation<DefaultOperationSettings> {
 }
 
 public class ProfileFamilyManager : BaseProfileSettings {
-
     [Description("Settings for adding shared parameters")]
     [Required]
     public DefaultOperationSettings AddSharedParams { get; init; } = new();

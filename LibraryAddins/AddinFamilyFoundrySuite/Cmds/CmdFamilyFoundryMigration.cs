@@ -39,7 +39,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 ]
             };
 
-            var queue = processor.CreateQueue()
+            var queue = new OperationQueue()
                 .Add(new DeleteUnusedParams(processor.Profile.DeleteUnusedParams, mappingDataAllNames))
                 .Add(new DeleteUnusedNestedFamilies(processor.Profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(processor.Profile.AddAndMapSharedParams, apsParamData))
@@ -53,16 +53,15 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 Debug.WriteLine($"[Batch {op.IsMerged}] {op.Type}: {op.Name} - {op.Description}");
 
 
-            if (processor.Profile.ExecutionOptions.PreviewRun) {
+            if (processor.Profile.ExecutionOptions.PreviewRun)
                 OperationLogger.OutputDryRunResults(processor, queue);
-            } else {
+            else {
                 var logs = processor.ProcessQueue(queue);
                 var logPath = OperationLogger.OutputProcessingResults(processor, logs.familyResults, logs.totalMs);
                 var balloon = new Ballogger();
 
-                foreach (var (famName, (_, ms)) in logs.familyResults) {
+                foreach (var (famName, (_, ms)) in logs.familyResults)
                     _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {famName} in {ms}ms");
-                }
                 balloon.Show();
             }
 
@@ -77,6 +76,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
 public class DebugLogAnnoInfo : DocOperation<DebugLogAnnoInfoSettings> {
     public DebugLogAnnoInfo(DebugLogAnnoInfoSettings settings) : base(settings) {
     }
+
     public override string Description => "Log information about Generic Annotation family parameters";
 
     public override OperationLog Execute(Document doc) {
@@ -94,8 +94,7 @@ public class DebugLogAnnoInfo : DocOperation<DebugLogAnnoInfoSettings> {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check",
-                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }

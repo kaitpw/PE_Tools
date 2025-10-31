@@ -4,7 +4,8 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
-    public DeleteUnusedParams(DeleteUnusedParamsSettings settings, List<string> ExcludeNamesEqualing) : base(settings) =>
+    public DeleteUnusedParams(DeleteUnusedParamsSettings settings, List<string> ExcludeNamesEqualing) :
+        base(settings) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
 
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];

@@ -7,9 +7,9 @@ public class OperationQueue {
     private readonly List<IOperation> _operations = new();
 
     public OperationQueue Add<TOpSettings>(
-    IOperation<TOpSettings> operation,
-    bool internalOperation = false
-) where TOpSettings : class, IOperationSettings, new() {
+        IOperation<TOpSettings> operation,
+        bool internalOperation = false
+    ) where TOpSettings : class, IOperationSettings, new() {
         if (operation.Settings?.Enabled == false) return this;
         if (internalOperation) operation.Name = $"INTERNAL OPERATION: {operation.Name}";
         this._operations.Add(operation);
@@ -41,7 +41,8 @@ public class OperationQueue {
         foreach (var op in ops) {
             switch (op) {
             case MergedTypeOperation mergedOp:
-                result.AddRange(mergedOp.Operations.Select(o => (o.Name, o.Description, GetOperationType(o), "Merged")));
+                result.AddRange(mergedOp.Operations.Select(o =>
+                    (o.Name, o.Description, GetOperationType(o), "Merged")));
                 break;
             case TypeOperation typeOp:
                 result.Add((typeOp.Name, typeOp.Description, GetOperationType(typeOp), "Single"));
@@ -53,9 +54,9 @@ public class OperationQueue {
                 throw new InvalidOperationException($"Unknown operation type: {op.GetType().Name}");
             }
         }
+
         return result;
     }
-
 
 
     private static string GetOperationType(IOperation op) {
@@ -71,13 +72,14 @@ public class OperationQueue {
         var currentBatch = new List<TypeOperation>();
 
         foreach (var op in this._operations) {
-            if (typeof(TypeOperation).IsAssignableFrom(op.GetType())) {
+            if (typeof(TypeOperation).IsAssignableFrom(op.GetType()))
                 currentBatch.Add(op as TypeOperation);
-            } else {
+            else {
                 if (currentBatch.Count > 0) {
                     finalOps.Add(new MergedTypeOperation(currentBatch));
                     currentBatch = [];
                 }
+
                 finalOps.Add(op);
             }
         }
@@ -92,10 +94,17 @@ public class OperationQueue {
     /// <summary>
     ///     Converts the queued operations into family actions, optionally bundling them for single-transaction behavior.
     /// </summary>
-    /// <param name="optimizeTypeOperations">If true, optimizes type operations for better performance. If false, runs all operations on a one-to-one basis.</param>
-    /// <param name="singleTransaction">If true, bundles all actions into a single action for one transaction. If false, each action runs in its own transaction.</param>
+    /// <param name="optimizeTypeOperations">
+    ///     If true, optimizes type operations for better performance. If false, runs all
+    ///     operations on a one-to-one basis.
+    /// </param>
+    /// <param name="singleTransaction">
+    ///     If true, bundles all actions into a single action for one transaction. If false, each
+    ///     action runs in its own transaction.
+    /// </param>
     /// <returns>An array of family actions that return logs when executed.</returns>
-    public Func<Document, List<OperationLog>>[] ToFamilyActions(bool optimizeTypeOperations = true, bool singleTransaction = true) {
+    public Func<Document, List<OperationLog>>[] ToFamilyActions(bool optimizeTypeOperations = true,
+        bool singleTransaction = true) {
         var executableOps = optimizeTypeOperations
             ? this.ToTypeOptimizedList()
             : this._operations.Cast<IActionable>().ToList();
@@ -120,16 +129,12 @@ public class OperationQueue {
     /// </summary>
     private Func<Document, List<OperationLog>>[] BundleFamilyActions(
         Func<Document, List<OperationLog>>[] actions) {
-        if (actions.Length == 0) {
-            return actions;
-        }
+        if (actions.Length == 0) return actions;
 
         // Create a single action that executes all actions sequentially and collects logs
         List<OperationLog> BundleActions(Document famDoc) {
             var allLogs = new List<OperationLog>();
-            foreach (var action in actions) {
-                allLogs.AddRange(action(famDoc));
-            }
+            foreach (var action in actions) allLogs.AddRange(action(famDoc));
             return allLogs;
         }
 

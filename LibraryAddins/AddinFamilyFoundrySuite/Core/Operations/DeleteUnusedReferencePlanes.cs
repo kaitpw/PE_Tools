@@ -6,7 +6,9 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 // TODO: this still needs alot of work!!!
 public class DeleteUnusedReferencePlanes : DocOperation<DeleteUnusedReferencePlanesSettings> {
     public DeleteUnusedReferencePlanes(DeleteUnusedReferencePlanesSettings settings) : base(settings) { }
-    public override string Description => "Deletes reference planes in the Family which are not used by anything important";
+
+    public override string Description =>
+        "Deletes reference planes in the Family which are not used by anything important";
 
     public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();

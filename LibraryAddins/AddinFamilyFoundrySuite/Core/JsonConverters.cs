@@ -1,16 +1,14 @@
 using Newtonsoft.Json;
-using System.Reflection;
 
 namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
-/// JSON converter for ForgeTypeId that serializes to/from human-readable labels using LabelUtils.
-/// For writing: converts ForgeTypeId to display name (e.g., "Length", "Dimensions")
-/// For reading: attempts to find matching ForgeTypeId from known SpecTypeId/GroupTypeId constants,
-/// falls back to creating a new ForgeTypeId from the TypeId string if not found.
-/// 
-/// Example JSON serialization:
-/// <code>
+///     JSON converter for ForgeTypeId that serializes to/from human-readable labels using LabelUtils.
+///     For writing: converts ForgeTypeId to display name (e.g., "Length", "Dimensions")
+///     For reading: attempts to find matching ForgeTypeId from known SpecTypeId/GroupTypeId constants,
+///     falls back to creating a new ForgeTypeId from the TypeId string if not found.
+///     Example JSON serialization:
+///     <code>
 /// {
 ///   "DataType": "Length",
 ///   "PropertiesGroup": "Dimensions"
@@ -43,8 +41,11 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
         writer.WriteValue(label);
     }
 
-    public override ForgeTypeId ReadJson(JsonReader reader, Type objectType, ForgeTypeId existingValue,
-        bool hasExistingValue, JsonSerializer serializer) {
+    public override ForgeTypeId ReadJson(JsonReader reader,
+        Type objectType,
+        ForgeTypeId existingValue,
+        bool hasExistingValue,
+        JsonSerializer serializer) {
         if (reader.TokenType == JsonToken.Null) return null;
 
         var typeId = reader.Value?.ToString();
@@ -58,8 +59,8 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
     }
 
     /// <summary>
-    /// Builds a map of TypeId strings to ForgeTypeId instances by reflecting over SpecTypeId and its nested classes,
-    /// as well as other ID classes like GroupTypeId.
+    ///     Builds a map of TypeId strings to ForgeTypeId instances by reflecting over SpecTypeId and its nested classes,
+    ///     as well as other ID classes like GroupTypeId.
     /// </summary>
     private static Dictionary<string, ForgeTypeId> BuildSpecTypeIdMap() {
         var map = new Dictionary<string, ForgeTypeId>();
@@ -78,7 +79,7 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
     }
 
     /// <summary>
-    /// Adds all static ForgeTypeId properties from a type to the map.
+    ///     Adds all static ForgeTypeId properties from a type to the map.
     /// </summary>
     private static void AddPropertiesToMap(Type type, Dictionary<string, ForgeTypeId> map) {
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Static);
@@ -91,4 +92,3 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
         }
     }
 }
-

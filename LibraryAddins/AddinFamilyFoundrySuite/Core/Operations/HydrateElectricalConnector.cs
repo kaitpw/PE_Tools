@@ -4,7 +4,8 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperation<MakeElecConnectorSettings>(settings) {
-    public override string Description => "Configure electrical connector parameters and associate them with family parameters";
+    public override string Description =>
+        "Configure electrical connector parameters and associate them with family parameters";
 
     public override OperationLog Execute(Document doc) {
         var logs = new List<LogEntry>();

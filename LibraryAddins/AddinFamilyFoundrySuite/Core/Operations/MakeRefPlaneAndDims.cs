@@ -2,15 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-
 public class MakeRefPlaneAndDims : OperationGroup<MakeRefPlaneAndDimsSettings> {
     public MakeRefPlaneAndDims(MakeRefPlaneAndDimsSettings settings) : base(
-        description: "Make reference planes and dimensions for the family",
-        operations: InitializeOperations(settings)
+        "Make reference planes and dimensions for the family",
+        InitializeOperations(settings)
     ) {
     }
 
-    private static List<IOperation<MakeRefPlaneAndDimsSettings>> InitializeOperations(MakeRefPlaneAndDimsSettings settings) {
+    private static List<IOperation<MakeRefPlaneAndDimsSettings>> InitializeOperations(
+        MakeRefPlaneAndDimsSettings settings) {
         var sharedHelper = new SharedHelper();
         return [
             new MakeRefPlanes(settings, sharedHelper),
@@ -25,17 +25,17 @@ public class SharedHelper {
     public List<LogEntry> Logs { get; set; }
 }
 
-
 public class MakeRefPlaneAndDimsSettings : IOperationSettings {
+    [Required] public List<RefPlaneSpec> Specs { get; init; } = [];
+
     public bool Enabled { get; init; } = true;
-    [Required]
-    public List<RefPlaneSpec> Specs { get; init; } = [];
 }
 
 public class MakeRefPlanes : DocOperation<MakeRefPlaneAndDimsSettings> {
     private readonly SharedHelper _shared;
 
-    public MakeRefPlanes(MakeRefPlaneAndDimsSettings settings, SharedHelper shared) : base(settings) => this._shared = shared;
+    public MakeRefPlanes(MakeRefPlaneAndDimsSettings settings, SharedHelper shared) : base(settings) =>
+        this._shared = shared;
 
     public override string Description => "Make reference planes for the family";
 
@@ -53,7 +53,8 @@ public class MakeRefPlanes : DocOperation<MakeRefPlaneAndDimsSettings> {
 public class MakeDimensions : DocOperation<MakeRefPlaneAndDimsSettings> {
     private readonly SharedHelper _shared;
 
-    public MakeDimensions(MakeRefPlaneAndDimsSettings settings, SharedHelper shared) : base(settings) => this._shared = shared;
+    public MakeDimensions(MakeRefPlaneAndDimsSettings settings, SharedHelper shared) : base(settings) =>
+        this._shared = shared;
 
     public override string Description => "Make dimensions for the family";
 

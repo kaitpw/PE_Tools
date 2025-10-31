@@ -5,17 +5,18 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 // TODO: THIS IS NOT WORKING!!!
 /// <summary>
-///     Ad-hoc operation that logs existing reference planes and dimensions in a format 
+///     Ad-hoc operation that logs existing reference planes and dimensions in a format
 ///     compatible with MakeRefPlaneAndDimsSettings for copying into profile JSON.
 ///     <para>
-///     Usage example:
-///     <code>
+///         Usage example:
+///         <code>
 ///     queue.Add(new LogRefPlaneAndDims(storage.Output().GetFolderPath()), new LogRefPlaneAndDimsSettings());
 ///     </code>
 ///     </para>
 /// </summary>
 public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
-    public LogRefPlaneAndDims(LogRefPlaneAndDimsSettings settings, string outputDir) : base(settings) => this.OutputPath = outputDir;
+    public LogRefPlaneAndDims(LogRefPlaneAndDimsSettings settings, string outputDir) : base(settings) =>
+        this.OutputPath = outputDir;
 
     public string OutputPath { get; }
 
@@ -89,7 +90,8 @@ public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
             var leftPlane = refPlanes[0];
             var rightPlane = refPlanes[2];
 
-            if (this.IsCenterPlane(centerPlane.Name) && this.AreMirrorPair(leftPlane.Name, rightPlane.Name, centerPlane)) {
+            if (this.IsCenterPlane(centerPlane.Name) &&
+                this.AreMirrorPair(leftPlane.Name, rightPlane.Name, centerPlane)) {
                 var baseName = this.ExtractBaseName(leftPlane.Name);
                 var parameter = this.GetDimensionParameter(dim);
 
@@ -119,7 +121,7 @@ public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
                     Name = baseName,
                     AnchorName = centerAnchor,
                     Placement = Placement.Mirror,
-                    HasEqualPair = true,  // 2-plane dimensions that are mirror pairs are equal pair dimensions
+                    HasEqualPair = true, // 2-plane dimensions that are mirror pairs are equal pair dimensions
                     Parameter = parameter,
                     Strength = this.GetStrength(plane1)
                 };
@@ -150,11 +152,11 @@ public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
 
         // Check if the names suggest mirror pairs (left/right or front/back or top/bottom)
         var isLeftRight = (name1.Contains("left") && name2.Contains("right")) ||
-                         (name1.Contains("right") && name2.Contains("left"));
+                          (name1.Contains("right") && name2.Contains("left"));
         var isFrontBack = (name1.Contains("front") && name2.Contains("back")) ||
-                         (name1.Contains("back") && name2.Contains("front"));
+                          (name1.Contains("back") && name2.Contains("front"));
         var isTopBottom = (name1.Contains("top") && name2.Contains("bottom")) ||
-                         (name1.Contains("bottom") && name2.Contains("top"));
+                          (name1.Contains("bottom") && name2.Contains("top"));
 
         if (isLeftRight) return "Center (Left/Right)";
         if (isFrontBack) return "Center (Front/Back)";
@@ -224,4 +226,3 @@ public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
 public class LogRefPlaneAndDimsSettings : IOperationSettings {
     public bool Enabled { get; init; } = true;
 }
-

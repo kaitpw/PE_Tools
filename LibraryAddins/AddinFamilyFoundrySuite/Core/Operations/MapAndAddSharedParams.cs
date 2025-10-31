@@ -5,8 +5,8 @@ public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
         MapParamsSettings settings,
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
     ) : base(
-        description: "Map and add shared parameters (replace, add unmapped, and remap)",
-        operations: [
+        "Map and add shared parameters (replace, add unmapped, and remap)",
+        [
             new MapReplaceParams(settings, sharedParams),
             new AddUnmappedSharedParams(settings, sharedParams),
             new MapParams(settings)
@@ -24,7 +24,8 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
         List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
     ) : base(settings) => this._sharedParams = sharedParams;
 
-    public override string Description => "Add shared parameters that are not already processed by a previous operation";
+    public override string Description =>
+        "Add shared parameters that are not already processed by a previous operation";
 
     public override OperationLog Execute(Document doc) {
         // Compute skip list from already-processed mappings
@@ -35,7 +36,7 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
 
         var addsharedParams =
             new AddSharedParams(new DefaultOperationSettings(), this._sharedParams, sharedParamsToSkip) {
-                Name = this.Name,
+                Name = this.Name
             };
         return addsharedParams.Execute(doc);
     }
