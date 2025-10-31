@@ -72,15 +72,20 @@ public class OperationQueue {
         var currentBatch = new List<TypeOperation>();
 
         foreach (var op in this._operations) {
-            if (typeof(TypeOperation).IsAssignableFrom(op.GetType()))
-                currentBatch.Add(op as TypeOperation);
-            else {
+            switch (op) {
+            case TypeOperation typeOp:
+                currentBatch.Add(typeOp);
+                break;
+            case DocOperation docOp:
                 if (currentBatch.Count > 0) {
                     finalOps.Add(new MergedTypeOperation(currentBatch));
                     currentBatch = [];
                 }
-
-                finalOps.Add(op);
+                finalOps.Add(docOp);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Operation {op.GetType().Name} does not inherit from DocOperation or TypeOperation");
             }
         }
 

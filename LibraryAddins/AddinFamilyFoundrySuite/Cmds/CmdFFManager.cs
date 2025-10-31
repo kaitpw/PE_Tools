@@ -11,7 +11,7 @@ namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
 
 [Transaction(TransactionMode.Manual)]
-public class CmdFamilyManager : IExternalCommand {
+public class CmdFFManager : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -109,7 +109,8 @@ public class LogFamilyParamsState : DocOperation<DefaultOperationSettings> {
         var filePath = Path.Combine(this.OutputPath, filename);
 
         var serializerSettings = new JsonSerializerSettings {
-            Formatting = Formatting.Indented, Converters = new List<JsonConverter> { new ForgeTypeIdConverter() }
+            Formatting = Formatting.Indented,
+            Converters = new List<JsonConverter> { new ForgeTypeIdConverter() }
         };
 
         var json = JsonConvert.SerializeObject(familyParamDataList, serializerSettings);

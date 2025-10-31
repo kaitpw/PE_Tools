@@ -35,8 +35,8 @@ internal class App : IExternalApplication {
 #endif
 
         ButtonDataHydrator.AddButtonData([
-            panelMigration.AddPushButton<CmdFamilyFoundryMigration>("Migrator"),
-            panelMigration.AddPushButton<CmdFamilyManager>("Family Manager"),
+            panelMigration.AddPushButton<CmdFFMigrator>("Migrator"),
+            panelMigration.AddPushButton<CmdFFManager>("Family Manager"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
 
@@ -111,14 +111,14 @@ public static class ButtonDataHydrator {
                     """
             }
         }, {
-            nameof(CmdFamilyFoundryMigration),
+            nameof(CmdFFMigrator),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Process families in a variety of ways from the Family Foundry."
             }
         }, {
-            nameof(CmdFamilyManager),
+            nameof(CmdFFManager),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",

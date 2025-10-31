@@ -9,7 +9,7 @@ namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
 
 [Transaction(TransactionMode.Manual)]
-public class CmdFamilyFoundryMigration : IExternalCommand {
+public class CmdFFMigrator : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -18,7 +18,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            var storage = new Storage("FamilyFoundry");
+            var storage = new Storage("FF Migrator");
             using var processor = new OperationProcessor<ProfileRemap>(doc, storage);
             var apsParamData = processor.GetApsParams();
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
@@ -27,7 +27,7 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 .Concat(apsParamNames)
                 .ToList();
 
-            var addFamilyParams = new AddAndSetFormulaFamilyParamsSettings {
+            var addFamilyParamsSettings = new AddAndSetFormulaFamilyParamsSettings {
                 FamilyParamData = [
                     new FamilyParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
@@ -45,8 +45,8 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
                 .Add(new MapAndAddSharedParams(processor.Profile.AddAndMapSharedParams, apsParamData))
                 .Add(new MakeElecConnector(processor.Profile.HydrateElectricalConnector))
                 .Add(new DeleteUnusedParams(processor.Profile.DeleteUnusedParams, apsParamNames))
-                .Add(new DebugLogAnnoInfo(new DebugLogAnnoInfoSettings()))
-                .Add(new AddAndSetFormulaFamilyParams(addFamilyParams));
+                .Add(new DebugLogAnnoInfo(new()))
+                .Add(new AddAndSetFormulaFamilyParams(addFamilyParamsSettings));
 
             var metadata = queue.GetOperationMetadata();
             foreach (var op in metadata)
@@ -73,8 +73,8 @@ public class CmdFamilyFoundryMigration : IExternalCommand {
     }
 }
 
-public class DebugLogAnnoInfo : DocOperation<DebugLogAnnoInfoSettings> {
-    public DebugLogAnnoInfo(DebugLogAnnoInfoSettings settings) : base(settings) {
+public class DebugLogAnnoInfo : DocOperation<DefaultOperationSettings> {
+    public DebugLogAnnoInfo(DefaultOperationSettings settings) : base(settings) {
     }
 
     public override string Description => "Log information about Generic Annotation family parameters";
@@ -94,7 +94,8 @@ public class DebugLogAnnoInfo : DocOperation<DebugLogAnnoInfoSettings> {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check",
+                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }
@@ -119,10 +120,6 @@ public class DebugLogAnnoInfo : DocOperation<DebugLogAnnoInfoSettings> {
 
         return new OperationLog(this.Name, logs);
     }
-}
-
-public class DebugLogAnnoInfoSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
 }
 
 public class ProfileRemap : BaseProfileSettings {
