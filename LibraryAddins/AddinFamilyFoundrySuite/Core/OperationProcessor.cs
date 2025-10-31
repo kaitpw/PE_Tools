@@ -30,21 +30,18 @@ public class OperationProcessor<TProfile>
         var familyResults = new Dictionary<string, (List<OperationLog> logs, double totalMs)>();
         var totalSw = Stopwatch.StartNew();
 
-        (Action<Document>[] familyActions, Func<List<OperationLog>> getLogs) = (null, null);
-        (familyActions, getLogs) = singleTransaction
-            ? this.ToFamilyActions(queue.ToTypeOptimizedList())
-            : this.FlattenFamilyActions(this.ToFamilyActions(queue.ToTypeOptimizedList()));
-
+        var familyActions = queue.ToFamilyActions(optimizeTypeOperations: true, singleTransaction);
+        var logs = new List<OperationLog>();
 
         if (doc.IsFamilyDocument) {
             try {
                 var familySw = Stopwatch.StartNew();
                 var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
                 _ = doc
-                    .ProcessFamily(familyActions)
+                    .ProcessFamily(this.ConvertToActionsWithLogCollection(familyActions, logs))
                     .SaveFamily(saveLocation);
                 familySw.Stop();
-                familyResults.Add(doc.Title, (getLogs(), familySw.Elapsed.TotalMilliseconds));
+                familyResults.Add(doc.Title, (logs, familySw.Elapsed.TotalMilliseconds));
             } catch (Exception ex) {
                 Debug.WriteLine($"Failed to process family {doc.Title}: {ex.Message}");
             }
@@ -57,11 +54,11 @@ public class OperationProcessor<TProfile>
                     var saveLocation = this.GetSaveLocations(doc, this.settings.OnProcessingFinish);
                     _ = doc
                         .EditFamily(family)
-                        .ProcessFamily(familyActions)
+                        .ProcessFamily(this.ConvertToActionsWithLogCollection(familyActions, logs))
                         .SaveFamily(saveLocation)
                         .LoadAndCloseFamily(doc, new EditAndLoadFamilyOptions());
                     familySw.Stop();
-                    familyResults.Add(familyName, (getLogs(), familySw.Elapsed.TotalMilliseconds));
+                    familyResults.Add(familyName, (logs, familySw.Elapsed.TotalMilliseconds));
                 } catch (Exception ex) {
                     Debug.WriteLine($"Failed to process family {familyName}: {ex.Message}");
                 }
@@ -74,30 +71,11 @@ public class OperationProcessor<TProfile>
         return familyResults.SelectMany(kvp => kvp.Value.logs).ToList();
     }
 
-    // TODO:
-    private (Action<Document>[] actions, Func<List<OperationLog>> getLogs) FlattenFamilyActions((Action<Document>[] actions, Func<List<OperationLog>> getLogs) value) => throw new NotImplementedException();
+    private Action<Document>[] ConvertToActionsWithLogCollection(
+        Func<Document, List<OperationLog>>[] funcActions,
+        List<OperationLog> logCollector
+    ) => funcActions.Select(func => new Action<Document>(famDoc => logCollector.AddRange(func(famDoc)))).ToArray();
 
-    /// <summary>
-    /// Converts a list of operations into a list of family actions on a one-to-one basis.
-    /// Batched actions are faster, if there are consecutive TypeOperations in a processing cycle.
-    /// However it allows you to set a transaction boundary around each operation.
-    /// </summary>
-    /// <param name="operations"></param>
-    /// <returns></returns>
-    public (Action<Document>[] actions, Func<List<OperationLog>> getLogs) ToFamilyActions(List<IExecutable> operations) {
-        var familyActions = new List<Action<Document>>();
-        var allLogs = new List<OperationLog>();
-
-        foreach (var op in operations) {
-            familyActions.Add(op.ToAction(allLogs));
-        }
-        return (familyActions.ToArray(), () => {
-            var logsCopy = allLogs.ToList();
-            allLogs.Clear();
-            return logsCopy;
-        }
-        );
-    }
     private void OutputDryRunResults(Document doc, OperationQueue<TProfile> queue) =>
         OperationLogger.OutputDryRunResults(
             this.storage, this.profile, this.settings.CurrentProfile, doc, queue,

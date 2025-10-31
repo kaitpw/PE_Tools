@@ -32,7 +32,10 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
             .ToList();
 
         var addsharedParams =
-            new AddSharedParams(this._sharedParams, sharedParamsToSkip) { Settings = new AddSharedParamsSettings() };
+            new AddSharedParams(this._sharedParams, sharedParamsToSkip) {
+                Name = this.Name,
+                Settings = new AddSharedParamsSettings(),
+            };
         return addsharedParams.Execute(doc);
     }
 }

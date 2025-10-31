@@ -84,7 +84,6 @@ public class LogFamilyParamsState : DocOperation<LogFamilyParamsStateSettings> {
     public string OutputPath { get; }
 
     public override string Description => "Log the state of the family parameters to a JSON file";
-
     public override OperationLog Execute(Document doc) {
         var familyManager = doc.FamilyManager;
         var familyParamDataList = new List<FamilyParamModel>();

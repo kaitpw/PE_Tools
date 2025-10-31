@@ -1,70 +1,47 @@
 namespace AddinFamilyFoundrySuite.Core;
 
-public interface IExecutable {
-    public Action<Document> ToAction(
-        List<OperationLog> allLogs
-    );
+public interface IActionable {
+    public Func<Document, List<OperationLog>> ToAction();
 }
 
-/// <summary>
-///     Base interface for all operations. Provides metadata and execution.
-///     This interface is necessary to enable abstractions like the OperationQueue and OperationProcessor.
-/// </summary>
-public interface IOperation : IExecutable {
-    /// <summary>
-    ///     The name of the operation, set by OperationProcessor.
-    /// </summary>
+public interface IOperation : IActionable {
     string Name { get; set; }
-
-    /// <summary>
-    ///     The description of the operation to perform.
-    /// </summary>
     string Description { get; }
-
-    /// <summary>
-    ///     Execute the operation.
-    /// </summary>
     OperationLog Execute(Document doc);
 }
 
-/// <summary>
-///     Base interface for operations with settings. It is typed with the settings type.
-/// </summary>
-public interface IOperation<TSettings> : IOperation where TSettings : IOperationSettings {
-    /// <summary>
-    ///     The settings for the operation.
-    /// </summary>
-    TSettings Settings { get; set; }
-}
-
-public interface IOperationSettings {
-    bool Enabled { get; init; }
-}
 
 /// <summary>
 ///     Base abstract class for document-level operations.
 ///     Document-level operations are executed on the entire family document all at once.
 /// </summary>
-public abstract class DocOperation<TSettings> : IOperation<TSettings> where TSettings : IOperationSettings {
-    public string Name { get; set; }
-    public TSettings Settings { get; set; }
+public abstract class DocOperation : IOperation {
+    private string _nameOverride;
+
+    /// <summary>
+    ///     Gets the operation name. Returns the type name by default, or the override value if set.
+    ///     Setting a value creates an override that will be returned instead of the type name.
+    /// </summary>
+    public string Name {
+        get => this._nameOverride ?? this.GetType().Name;
+        set => this._nameOverride = value;
+    }
+
     public abstract string Description { get; }
     public abstract OperationLog Execute(Document doc);
-    public Action<Document> ToAction(
-        List<OperationLog> allLogs
-    ) => famDoc => {
+    public Func<Document, List<OperationLog>> ToAction() => famDoc => {
         try {
             var sw = Stopwatch.StartNew();
             var log = this.Execute(famDoc);
             sw.Stop();
             log.MsElapsed = sw.Elapsed.TotalMilliseconds;
-            allLogs.Add(log);
+            return [log];
         } catch (Exception ex) {
-            allLogs.Add(
+            return [
                 new OperationLog(
                     $"{this.Name}: (FATAL ERROR)",
                     [new LogEntry { Item = ex.GetType().Name, Error = ex.Message }])
-            );
+            ];
         }
     };
 }
@@ -75,15 +52,21 @@ public abstract class DocOperation<TSettings> : IOperation<TSettings> where TSet
 ///     Type-level operations are executed for each type in the family document.
 ///     The OperationEnqueuer batches consecutive type-operations for better performance.
 /// </summary>
-public abstract class TypeOperation<TSettings> : IOperation<TSettings> where TSettings : IOperationSettings {
-    public string Name { get; set; }
-    public TSettings Settings { get; set; }
+public abstract class TypeOperation : IOperation {
+    private string _nameOverride;
+
+    /// <summary>
+    ///     Gets the operation name. Returns the type name by default, or the override value if set.
+    ///     Setting a value creates an override that will be returned instead of the type name.
+    /// </summary>
+    public string Name {
+        get => this._nameOverride ?? this.GetType().Name;
+        set => this._nameOverride = value;
+    }
+
     public abstract string Description { get; }
     public abstract OperationLog Execute(Document doc);
-
-    public Action<Document> ToAction(
-        List<OperationLog> allLogs
-    ) => famDoc => {
+    public Func<Document, List<OperationLog>> ToAction() => famDoc => {
         try {
             var fm = famDoc.FamilyManager;
             var typeLogs = new List<OperationLog>();
@@ -100,29 +83,24 @@ public abstract class TypeOperation<TSettings> : IOperation<TSettings> where TSe
                 typeLogs.Add(typeLog);
             }
 
-            allLogs.Add(new OperationLog(
+            return [new OperationLog(
                 this.Name,
                 typeLogs.SelectMany(log => log.Entries).ToList()
             ) {
                 MsElapsed = typeLogs.Sum(log => log.MsElapsed)
-            });
+            }];
         } catch (Exception ex) {
-            allLogs.Add(new OperationLog(this.Name, [new LogEntry { Item = ex.GetType().Name, Error = ex.Message }]));
+            return [new OperationLog(this.Name, [new LogEntry { Item = ex.GetType().Name, Error = ex.Message }])];
         }
     };
 }
 
-public class MergedTypeOperation : IExecutable {
-    public List<IOperation> Operations { get; set; }
-    public MergedTypeOperation(
-        List<IOperation> operations
-    ) {
-        this.Operations = operations;
-    }
 
-    public Action<Document> ToAction(
-        List<OperationLog> allLogs
-    ) => famDoc => {
+public class MergedTypeOperation : IActionable {
+    public MergedTypeOperation(List<TypeOperation> operations) => this.Operations = operations;
+    public List<TypeOperation> Operations { get; set; }
+
+    public Func<Document, List<OperationLog>> ToAction() => famDoc => {
         string currFamTypeName = null;
         string currOpName = null;
         try {
@@ -151,23 +129,44 @@ public class MergedTypeOperation : IExecutable {
             }
 
             // Combine logs by operation name
-            var combinedLogs = operationLogs
+            return operationLogs
                 .GroupBy(log => log.OperationName)
                 .Select(group => new OperationLog(group.Key, group.SelectMany(log => log.Entries).ToList()) {
                     MsElapsed = group.Sum(log => log.MsElapsed)
-                });
-
-            allLogs.AddRange(combinedLogs);
+                })
+                .ToList();
         } catch (Exception ex) {
-            allLogs.Add(
+            return [
                 new OperationLog(
                     $"Operation {currOpName ?? "Unknown Operation"} (FATAL ERROR)",
                     [new LogEntry { Item = currFamTypeName ?? "Unknown Family Type", Error = ex.Message }])
-            );
+            ];
         }
     };
 }
 
+public interface IOperationSettings {
+    bool Enabled { get; init; }
+}
+
+/// <summary>
+///     Base interface for operations with settings. It is typed with the settings type.
+/// </summary>
+public interface IOperation<TSettings> : IOperation where TSettings : IOperationSettings {
+    /// <summary>
+    ///     The settings for the operation.
+    /// </summary>
+    TSettings Settings { get; set; }
+}
+
+
+public abstract class DocOperation<TSettings> : DocOperation, IOperation<TSettings> where TSettings : IOperationSettings {
+    public TSettings Settings { get; set; }
+}
+
+public abstract class TypeOperation<TSettings> : TypeOperation, IOperation<TSettings> where TSettings : IOperationSettings {
+    public TSettings Settings { get; set; }
+}
 
 
 /// <summary>
@@ -176,6 +175,7 @@ public class MergedTypeOperation : IExecutable {
 ///     The name is automatically derived from the type name.
 /// </summary>
 public class OperationGroup<TSettings> where TSettings : IOperationSettings {
+    public string Name => this.GetType().Name;
     public string Description { get; init; }
     public List<IOperation<TSettings>> Operations { get; init; }
 
@@ -187,11 +187,6 @@ public class OperationGroup<TSettings> where TSettings : IOperationSettings {
         this.Description = description;
         this.Operations = operations;
     }
-}
-
-public enum OperationType {
-    Doc,
-    Type
 }
 
 /// <summary>
