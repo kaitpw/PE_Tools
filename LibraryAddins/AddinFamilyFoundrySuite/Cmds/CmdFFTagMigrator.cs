@@ -9,7 +9,7 @@ namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
 
 [Transaction(TransactionMode.Manual)]
-public class CmdFFMigrator : IExternalCommand {
+public class CmdFFTagMigrator : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -20,11 +20,11 @@ public class CmdFFMigrator : IExternalCommand {
         try {
             var storage = new Storage("FF Migrator");
             var settingsManager = storage.Settings();
-            var settings = settingsManager.Json<BaseSettings<ProfileRemap>>().Read();
+            var settings = settingsManager.Json<BaseSettings<TagMigratorProfile>>().Read();
             var profile = settings.GetProfile(settingsManager);
             var outputFolderPath = storage.Output().GetFolderPath();
 
-            using var processor = new OperationProcessor<ProfileRemap>(
+            using var processor = new OperationProcessor<TagMigratorProfile>(
                 doc,
                 profile.GetFamilies,
                 profile.GetAPSParams,
@@ -52,8 +52,6 @@ public class CmdFFMigrator : IExternalCommand {
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, mappingDataAllNames))
                 .Add(new DeleteUnusedNestedFamilies(profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
-                .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
-                .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, apsParamNames))
                 .Add(new DebugLogAnnoInfo(new()))
                 .Add(new AddAndSetFormulaFamilyParams(addFamilyParamsSettings));
 
@@ -91,7 +89,54 @@ public class CmdFFMigrator : IExternalCommand {
         }
     }
 }
-public class ProfileRemap : BaseProfileSettings {
+
+public class DebugLogAnnoInfo(DefaultOperationSettings settings) : DocOperation<DefaultOperationSettings>(settings) {
+    public override string Description => "Log information about Generic Annotation family parameters";
+
+    public override OperationLog Execute(Document doc) {
+        var logs = new List<LogEntry>();
+
+        try {
+            var category = doc.OwnerFamily?.FamilyCategory;
+            if (category == null) {
+                logs.Add(new LogEntry { Item = "Family Category", Error = "Could not retrieve family category" });
+                return new OperationLog(this.Name, logs);
+            }
+
+            var categoryName = category.Name;
+            logs.Add(new LogEntry { Item = $"Category: {categoryName}" });
+
+            if (categoryName != "Generic Annotations") {
+                logs.Add(new LogEntry {
+                    Item = "Category Check",
+                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                });
+                return new OperationLog(this.Name, logs);
+            }
+
+            var parameters = doc.FamilyManager.Parameters.OfType<FamilyParameter>().ToList();
+            Debug.WriteLine($"Total Parameters: {parameters.Count}");
+
+            foreach (var param in parameters) {
+                var paramName = param.Definition.Name;
+                var isInstance = param.IsInstance ? "Instance" : "Type";
+                var dataType = param.Definition.GetDataType()?.TypeId ?? "Unknown";
+                var formula = param.Formula ?? "(no formula)";
+                var group = param.Definition.GetGroupTypeId()?.TypeId ?? "Unknown";
+                var isBuiltIn = ParameterUtils.IsBuiltInParameter(param.Id) ? "Built-in" : "User";
+
+                var paramInfo = $"{paramName} [{isBuiltIn}, {isInstance}, {dataType}, Group: {group}] = {formula}";
+                Debug.WriteLine(paramInfo);
+            }
+        } catch (Exception ex) {
+            logs.Add(new LogEntry { Item = "Operation", Error = ex.Message });
+        }
+
+        return new OperationLog(this.Name, logs);
+    }
+}
+
+public class TagMigratorProfile : BaseProfileSettings {
     [Description("Settings for deleting unused parameters")]
     [Required]
     public DeleteUnusedParamsSettings DeleteUnusedParams { get; init; } = new();
@@ -103,8 +148,4 @@ public class ProfileRemap : BaseProfileSettings {
     [Description("Settings for parameter mapping (add/replace and remap)")]
     [Required]
     public MapParamsSettings AddAndMapSharedParams { get; init; } = new();
-
-    [Description("Settings for hydrating electrical connectors")]
-    [Required]
-    public MakeElecConnectorSettings HydrateElectricalConnector { get; init; } = new();
 }

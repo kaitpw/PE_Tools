@@ -1,7 +1,7 @@
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class DeleteUnusedNestedFamilies : DocOperation<DeleteUnusedNestedFamiliesSettings> {
-    public DeleteUnusedNestedFamilies(DeleteUnusedNestedFamiliesSettings settings) : base(settings) {
+public class DeleteUnusedNestedFamilies : DocOperation<DefaultOperationSettings> {
+    public DeleteUnusedNestedFamilies(DefaultOperationSettings settings) : base(settings) {
     }
 
     public override string Description => "Delete unused nested families from the family";
@@ -43,8 +43,4 @@ public class DeleteUnusedNestedFamilies : DocOperation<DeleteUnusedNestedFamilie
 
         return new OperationLog(this.Name, logs);
     }
-}
-
-public class DeleteUnusedNestedFamiliesSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
 }

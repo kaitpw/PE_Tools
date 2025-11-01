@@ -15,15 +15,30 @@ public class CmdFFManager : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
-        ElementSet elementSet
+        ElementSet elementSetf
     ) {
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
             var storage = new Storage("FF Manager");
-            using var processor = new OperationProcessor<ProfileFamilyManager>(doc, storage);
-            // force this to never be singl transaction
-            processor.Profile.ExecutionOptions.SingleTransaction = false;
+            var settingsManager = storage.Settings();
+            var settings = settingsManager.Json<BaseSettings<ProfileFamilyManager>>().Read();
+            var profile = settings.GetProfile(settingsManager);
+            var outputFolderPath = storage.Output().GetFolderPath();
+
+            // force this to never be single transaction
+            var executionOptions = new ExecutionOptions {
+                SingleTransaction = false,
+                Mode = profile.ExecutionOptions.Mode,
+                PreviewRun = profile.ExecutionOptions.PreviewRun,
+                OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
+            };
+
+            using var processor = new OperationProcessor<ProfileFamilyManager>(
+                doc,
+                profile.GetFamilies,
+                profile.GetAPSParams,
+                executionOptions);
             var apsParamData = processor.GetApsParams();
 
             var addFamilyParams = new AddAndSetFormulaFamilyParamsSettings {
@@ -37,33 +52,41 @@ public class CmdFFManager : IExternalCommand {
                     }
                 ]
             };
-            var mode = processor.Profile.ExecutionOptions.Mode;
+            var mode = executionOptions.Mode;
             var queue = mode switch {
                 "snapshot" => new OperationQueue()
-                    .Add(new LogFamilyParamsState(new DefaultOperationSettings(),
-                        processor.storage.Output().GetFolderPath()))
-                    .Add(new LogRefPlaneAndDims(new LogRefPlaneAndDimsSettings(),
-                        processor.storage.Output().GetFolderPath())),
+                    .Add(new LogFamilyParamsState(new(), outputFolderPath))
+                    .Add(new LogRefPlaneAndDims(new(), outputFolderPath)),
                 _ => new OperationQueue()
-                    .Add(new AddSharedParams(processor.Profile.AddSharedParams, apsParamData))
-                    .Add(new MakeRefPlaneAndDims(processor.Profile.MakeRefPlaneAndDims))
-                    .Add(new AddAndGlobalSetFamilyParams(processor.Profile.AddAndGlobalSetFamilyParams))
+                    .Add(new AddSharedParams(profile.AddSharedParams, apsParamData))
+                    .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
+                    .Add(new AddAndGlobalSetFamilyParams(profile.AddAndGlobalSetFamilyParams))
                     .Add(new AddAndSetFormulaFamilyParams(addFamilyParams))
             };
-            var metadata = queue.GetOperationMetadata();
+            var metadata = queue.GetExecutableMetadata();
             foreach (var op in metadata)
                 Debug.WriteLine($"[Batch {op.IsMerged}] {op.Type}: {op.Name} - {op.Description}");
 
 
-            if (processor.Profile.ExecutionOptions.PreviewRun) {
-                OperationLogger.OutputDryRunResults(processor, queue);
+            if (executionOptions.PreviewRun) {
+                OperationLogger.OutputDryRunResults(
+                    processor,
+                    queue,
+                    profile.GetFamilies,
+                    storage,
+                    settings.CurrentProfile,
+                    settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
                 return Result.Succeeded;
             }
 
-            var logs = processor.ProcessQueue(queue);
-            var logPath = OperationLogger.OutputProcessingResults(processor, logs.familyResults, logs.totalMs);
-            var balloon = new Ballogger();
+            var logs = processor.ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
+            var logPath = OperationLogger.OutputProcessingResults(
+                logs.familyResults,
+                logs.totalMs,
+                storage,
+                settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
 
+            var balloon = new Ballogger();
             foreach (var (famName, (_, ms)) in logs.familyResults)
                 _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {famName} in {ms}ms");
             balloon.Show();

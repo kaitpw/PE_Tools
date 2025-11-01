@@ -35,8 +35,8 @@ public class OperationQueue {
     /// <summary>
     ///     Get metadata about all queued operations for frontend display
     /// </summary>
-    public List<(string Name, string Description, string Type, string IsMerged)> GetOperationMetadata() {
-        var ops = this.ToTypeOptimizedList();
+    public List<(string Name, string Description, string Type, string IsMerged)> GetExecutableMetadata() {
+        var ops = this.ToTypeOptimizedExecutableList();
         var result = new List<(string Name, string Description, string Type, string IsMerged)>();
         foreach (var op in ops) {
             switch (op) {
@@ -67,8 +67,35 @@ public class OperationQueue {
             $"Operation {op.GetType().Name} does not inherit from DocOperation or TypeOperation");
     }
 
-    public List<IActionable> ToTypeOptimizedList() {
-        var finalOps = new List<IActionable>();
+
+    /// <summary>
+    ///     Converts the queued operations into family actions, optionally bundling them for single-transaction behavior.
+    /// </summary>
+    /// <param name="optimizeTypeOperations">
+    ///     If true, optimizes type operations for better performance. If false, runs all
+    ///     operations on a one-to-one basis.
+    /// </param>
+    /// <param name="singleTransaction">
+    ///     If true, bundles all actions into a single action for one transaction. If false, each
+    ///     action runs in its own transaction.
+    /// </param>
+    /// <returns>An array of family actions that return logs when executed.</returns>
+    public Func<Document, List<OperationLog>>[] ToFuncs(bool optimizeTypeOperations = true,
+        bool singleTransaction = true) {
+        var executableOps = optimizeTypeOperations
+            ? this.ToTypeOptimizedExecutableList()
+            : this.ToExecutableList();
+        var funcs = executableOps.Select(op => op.ToFunc()).ToArray();
+
+        return singleTransaction
+            ? this.BundleFuncs(funcs)
+            : funcs.ToArray();
+    }
+
+    private List<IExecutable> ToExecutableList() => [.. this._operations.Cast<IExecutable>()];
+
+    public List<IExecutable> ToTypeOptimizedExecutableList() {
+        var finalOps = new List<IExecutable>();
         var currentBatch = new List<TypeOperation>();
 
         foreach (var op in this._operations) {
@@ -97,42 +124,10 @@ public class OperationQueue {
     }
 
     /// <summary>
-    ///     Converts the queued operations into family actions, optionally bundling them for single-transaction behavior.
-    /// </summary>
-    /// <param name="optimizeTypeOperations">
-    ///     If true, optimizes type operations for better performance. If false, runs all
-    ///     operations on a one-to-one basis.
-    /// </param>
-    /// <param name="singleTransaction">
-    ///     If true, bundles all actions into a single action for one transaction. If false, each
-    ///     action runs in its own transaction.
-    /// </param>
-    /// <returns>An array of family actions that return logs when executed.</returns>
-    public Func<Document, List<OperationLog>>[] ToFamilyActions(bool optimizeTypeOperations = true,
-        bool singleTransaction = true) {
-        var executableOps = optimizeTypeOperations
-            ? this.ToTypeOptimizedList()
-            : this._operations.Cast<IActionable>().ToList();
-        var actions = this.ConvertToActions(executableOps);
-
-        return singleTransaction
-            ? this.BundleFamilyActions(actions)
-            : actions;
-    }
-
-    /// <summary>
-    ///     Converts a list of executable operations into family actions on a one-to-one basis.
-    ///     Batched actions are faster if there are consecutive TypeOperations in a processing cycle.
-    ///     However it allows you to set a transaction boundary around each operation.
-    /// </summary>
-    private Func<Document, List<OperationLog>>[] ConvertToActions(List<IActionable> operations) =>
-        operations.Select(op => op.ToAction()).ToArray();
-
-    /// <summary>
     ///     Bundles all family actions into a single action to replicate single-transaction behavior.
     ///     When ProcessFamily receives this single action, it will run all operations within one transaction.
     /// </summary>
-    private Func<Document, List<OperationLog>>[] BundleFamilyActions(
+    private Func<Document, List<OperationLog>>[] BundleFuncs(
         Func<Document, List<OperationLog>>[] actions) {
         if (actions.Length == 0) return actions;
 
