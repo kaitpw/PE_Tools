@@ -4,14 +4,14 @@ using PeUtils.Files;
 namespace AddinFamilyFoundrySuite.Core;
 
 public class OperationLogger {
-    public static (object summary, object detailed) GenerateDryRunData<TProfile>(
-        OperationProcessor<TProfile> processor,
+    public static (object summary, object detailed) GenerateDryRunData(
+        List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> apsParams,
+        Document doc,
         OperationQueue queue,
         Func<Document, List<Family>> getFamilies,
         string currentProfile
-    ) where TProfile : BaseProfileSettings, new() {
-        var apsParams = processor.GetApsParams();
-        var families = getFamilies(processor.doc);
+    ) {
+        var families = getFamilies(doc);
         var operationMetadata = queue.GetExecutableMetadata();
 
         var summary = new {
@@ -118,15 +118,16 @@ public class OperationLogger {
         return (summary, detailed);
     }
 
-    public static void OutputDryRunResults<TProfile>(
-        OperationProcessor<TProfile> processor,
+    public static void OutputDryRunResults(
+        List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> apsParams,
+        Document doc,
         OperationQueue queue,
         Func<Document, List<Family>> getFamilies,
         Storage storage,
         string currentProfile,
         bool openOutputFilesOnCommandFinish
-    ) where TProfile : BaseProfileSettings, new() {
-        var (summary, detailed) = GenerateDryRunData(processor, queue, getFamilies, currentProfile);
+    ) {
+        var (summary, detailed) = GenerateDryRunData(apsParams, doc, queue, getFamilies, currentProfile);
 
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
         var filename = $"dry-run_{timestamp}.json";

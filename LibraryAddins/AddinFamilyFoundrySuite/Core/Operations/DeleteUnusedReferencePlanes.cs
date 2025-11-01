@@ -1,3 +1,4 @@
+using PeExtensions.FamDocument;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -10,13 +11,13 @@ public class DeleteUnusedReferencePlanes : DocOperation<DeleteUnusedReferencePla
     public override string Description =>
         "Deletes reference planes in the Family which are not used by anything important";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
         this.RecursiveDeleteUnusedReferencePlanes(doc, logs);
         return new OperationLog(this.Name, logs);
     }
 
-    private void RecursiveDeleteUnusedReferencePlanes(Document doc, List<LogEntry> logs) {
+    private void RecursiveDeleteUnusedReferencePlanes(FamilyDocument doc, List<LogEntry> logs) {
         var deleteCount = 0;
 
         var referencePlanes = new FilteredElementCollector(doc)
@@ -32,7 +33,7 @@ public class DeleteUnusedReferencePlanes : DocOperation<DeleteUnusedReferencePla
             if (this.Settings.SafeDelete && this.GetDependentElements(doc, refPlane).Count != 0) continue;
 
             try {
-                _ = doc.Delete(refPlane.Id);
+                _ = doc.Document.Delete(refPlane.Id);
                 logs.Add(new LogEntry { Item = planeName });
                 deleteCount++;
             } catch (Exception ex) {
@@ -50,21 +51,21 @@ public class DeleteUnusedReferencePlanes : DocOperation<DeleteUnusedReferencePla
             .Any(p => !new[] { "Not a Reference", "Weak Reference" }.Contains(p.AsValueString()));
 
 
-    private List<Element> GetDependentElements(Document doc, ReferencePlane refPlane) {
+    private List<Element> GetDependentElements(FamilyDocument doc, ReferencePlane refPlane) {
         var dependentElements = refPlane.GetDependentElements(null)?
             .Where(id => id != refPlane.Id);
 
         // Apply dimension filters when safe mode is enabled
         if (dependentElements != null) {
             dependentElements = dependentElements.Where(id => {
-                var element = doc.GetElement(id);
+                var element = doc.Document.GetElement(id);
                 if (element is not Dimension dimension) return true;
 
                 return !this.DimensionIsDeletable(dimension);
             });
         }
 
-        if (dependentElements?.Any() == true) return [.. dependentElements.Select(doc.GetElement)];
+        if (dependentElements?.Any() == true) return [.. dependentElements.Select(id => doc.Document.GetElement(id))];
         return [];
     }
 
@@ -76,7 +77,7 @@ public class DeleteUnusedReferencePlanes : DocOperation<DeleteUnusedReferencePla
         }
     }
 
-    private List<CurveElement> GetSketchedCurves(Document doc, ReferencePlane refPlane) {
+    private List<CurveElement> GetSketchedCurves(FamilyDocument doc, ReferencePlane refPlane) {
         var planeOrigin = refPlane.GetPlane().Origin;
         var planeNormal = refPlane.Normal;
 

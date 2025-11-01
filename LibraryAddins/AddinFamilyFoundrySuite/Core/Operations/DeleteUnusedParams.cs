@@ -1,4 +1,5 @@
 using AddinFamilyFoundrySuite.Core.Operations.Settings;
+using PeExtensions.FamDocument;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
@@ -11,13 +12,13 @@ public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public override string Description => "Recursively delete unused parameters from the family";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
         this.RecursiveDelete(doc, logs);
         return new OperationLog(this.Name, logs);
     }
 
-    private void RecursiveDelete(Document doc, List<LogEntry> logs) {
+    private void RecursiveDelete(FamilyDocument doc, List<LogEntry> logs) {
         var deleteCount = 0;
 
         var parameters = doc.FamilyManager.Parameters

@@ -1,3 +1,4 @@
+using PeExtensions.FamDocument;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -22,7 +23,7 @@ public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
 
     public override string Description => "Log existing reference planes and dimensions in profile JSON format";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var specs = new List<RefPlaneSpec>();
 
         // Get all reference planes

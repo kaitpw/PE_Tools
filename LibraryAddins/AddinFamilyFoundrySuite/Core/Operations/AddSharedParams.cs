@@ -19,7 +19,7 @@ public class AddSharedParams : DocOperation<DefaultOperationSettings> {
     private List<string> _sharedParamsToSkip { get; }
     public override string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
         foreach (var sharedParam in this._sharedParams) {

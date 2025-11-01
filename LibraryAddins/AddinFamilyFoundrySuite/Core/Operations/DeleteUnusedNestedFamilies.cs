@@ -1,3 +1,5 @@
+using PeExtensions.FamDocument;
+
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class DeleteUnusedNestedFamilies : DocOperation<DefaultOperationSettings> {
@@ -6,7 +8,7 @@ public class DeleteUnusedNestedFamilies : DocOperation<DefaultOperationSettings>
 
     public override string Description => "Delete unused nested families from the family";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
         var allFamilies = new FilteredElementCollector(doc)
@@ -34,7 +36,7 @@ public class DeleteUnusedNestedFamilies : DocOperation<DefaultOperationSettings>
                 var dependentCount = family.GetDependentElements(null).Count;
                 if (dependentCount > 100) continue; // skip anomalies
 
-                _ = doc.Delete(family.Id);
+                _ = doc.Document.Delete(family.Id);
                 logs.Add(new LogEntry { Item = familyName });
             } catch (Exception ex) {
                 logs.Add(new LogEntry { Item = familyName, Error = ex.Message });

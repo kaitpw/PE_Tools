@@ -18,13 +18,13 @@ public class OperationProcessor<TProfile> : IDisposable
         Func<Document, List<Family>> getFamilies,
         Func<TempSharedParamFile, List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>> getApsParams,
         ExecutionOptions executionOptions) {
-        this.doc = doc;
+        this._openDoc = doc;
         this._getFamilies = getFamilies;
         this._getApsParams = getApsParams;
         this._executionOptions = executionOptions;
     }
 
-    public Document doc { get; }
+    private Document _openDoc { get; }
 
     public void Dispose() => this._tempFile?.Dispose();
 
@@ -34,7 +34,7 @@ public class OperationProcessor<TProfile> : IDisposable
     /// </summary>
     public List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> GetApsParams() {
         this._tempFile?.Dispose();
-        this._tempFile = new TempSharedParamFile(this.doc);
+        this._tempFile = new TempSharedParamFile(this._openDoc);
         return this._getApsParams(this._tempFile);
     }
 
@@ -54,32 +54,30 @@ public class OperationProcessor<TProfile> : IDisposable
             this._executionOptions.OptimizeTypeOperations,
             this._executionOptions.SingleTransaction);
 
-        if (this.doc.IsFamilyDocument) {
+        if (this._openDoc.IsFamilyDocument) {
             var logs = new List<OperationLog>();
             try {
                 var familySw = Stopwatch.StartNew();
-                var saveLocation = this.GetSaveLocations(this.doc, loadAndSaveOptions, outputFolderPath);
-                _ = this.doc
+                _ = new FamilyDocument(this._openDoc)
                     .ProcessFamily(this.CaptureLogs(familyFuncs, logs))
-                    .SaveFamily(saveLocation);
+                    .SaveFamily(famDoc => this.GetSaveLocations(famDoc, loadAndSaveOptions, outputFolderPath));
                 familySw.Stop();
-                familyResults.Add(this.doc.Title, (logs, familySw.Elapsed.TotalMilliseconds));
+                familyResults.Add(this._openDoc.Title, (logs, familySw.Elapsed.TotalMilliseconds));
             } catch (Exception ex) {
-                Debug.WriteLine($"Failed to process family {this.doc.Title}: {ex.Message}");
+                Debug.WriteLine($"Failed to process family {this._openDoc.Title}: {ex.Message}");
             }
         } else {
-            var families = this._getFamilies(this.doc);
+            var families = this._getFamilies(this._openDoc);
             foreach (var family in families) {
                 var familyName = family.Name; // Capture name 
                 var logs = new List<OperationLog>();
                 try {
                     var familySw = Stopwatch.StartNew();
-                    var saveLocation = this.GetSaveLocations(this.doc, loadAndSaveOptions, outputFolderPath);
-                    _ = this.doc
-                        .EditFamily(family)
+                    _ = this._openDoc
+                        .GetFamily(family)
                         .ProcessFamily(this.CaptureLogs(familyFuncs, logs))
-                        .SaveFamily(saveLocation)
-                        .LoadAndCloseFamily(this.doc, new EditAndLoadFamilyOptions());
+                        .SaveFamily(famDoc => this.GetSaveLocations(famDoc, loadAndSaveOptions, outputFolderPath))
+                        .LoadAndCloseFamily(this._openDoc, new EditAndLoadFamilyOptions());
                     familySw.Stop();
                     familyResults.Add(familyName, (logs, familySw.Elapsed.TotalMilliseconds));
                 } catch (Exception ex) {
@@ -93,12 +91,12 @@ public class OperationProcessor<TProfile> : IDisposable
         return (familyResults, totalSw.Elapsed.TotalMilliseconds);
     }
 
-    private Action<Document>[] CaptureLogs(
-        Func<Document, List<OperationLog>>[] funcActions,
+    private Action<FamilyDocument>[] CaptureLogs(
+        Func<FamilyDocument, List<OperationLog>>[] funcActions,
         List<OperationLog> logCollector
-    ) => funcActions.Select(func => new Action<Document>(famDoc => logCollector.AddRange(func(famDoc)))).ToArray();
+    ) => funcActions.Select(func => new Action<FamilyDocument>(famDoc => logCollector.AddRange(func(famDoc)))).ToArray();
 
-    private List<string> GetSaveLocations(Document famDoc, ILoadAndSaveOptions options, string outputFolderPath) {
+    private List<string> GetSaveLocations(FamilyDocument famDoc, ILoadAndSaveOptions options, string outputFolderPath) {
         var saveLocations = new List<string>();
         if (options.SaveFamilyToInternalPath) {
             saveLocations.Add(outputFolderPath);

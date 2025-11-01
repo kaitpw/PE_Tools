@@ -12,7 +12,7 @@ public class AddAndSetFormulaFamilyParams : DocOperation<AddAndSetFormulaFamilyP
     // change this to type later probably after seeing if looping through the types isa ctually necessary
     public override string Description => "Add Family Parameters to the family";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
         if (this.Settings.FamilyParamData is null || this.Settings.FamilyParamData.Any(p => p is null)) {

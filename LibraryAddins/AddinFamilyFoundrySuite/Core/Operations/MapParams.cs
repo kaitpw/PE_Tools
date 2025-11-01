@@ -10,7 +10,7 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 public class MapParams(MapParamsSettings settings) : TypeOperation<MapParamsSettings>(settings) {
     public override string Description => "Map an old parameter's value to a new parameter for each family type";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
         foreach (var p in this.Settings.MappingData.Where(m => !m.isProcessed)) {

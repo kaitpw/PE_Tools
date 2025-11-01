@@ -1,7 +1,9 @@
+using PeExtensions.FamDocument;
+
 namespace AddinFamilyFoundrySuite.Core;
 
 public interface IExecutable {
-    Func<Document, List<OperationLog>> ToFunc();
+    Func<FamilyDocument, List<OperationLog>> ToFunc();
 }
 
 public interface IOperation : IExecutable {
@@ -26,7 +28,7 @@ public abstract class DocOperation : IOperation {
         set => this._nameOverride = value;
     }
 
-    public Func<Document, List<OperationLog>> ToFunc() => famDoc => {
+    public Func<FamilyDocument, List<OperationLog>> ToFunc() => famDoc => {
         try {
             var sw = Stopwatch.StartNew();
             var log = this.Execute(famDoc);
@@ -42,7 +44,7 @@ public abstract class DocOperation : IOperation {
         }
     };
 
-    public abstract OperationLog Execute(Document doc);
+    public abstract OperationLog Execute(FamilyDocument doc);
 }
 
 /// <summary>
@@ -64,7 +66,7 @@ public abstract class TypeOperation : IOperation {
         set => this._nameOverride = value;
     }
 
-    public Func<Document, List<OperationLog>> ToFunc() => famDoc => {
+    public Func<FamilyDocument, List<OperationLog>> ToFunc() => famDoc => {
         try {
             var fm = famDoc.FamilyManager;
             var typeLogs = new List<OperationLog>();
@@ -92,13 +94,13 @@ public abstract class TypeOperation : IOperation {
         }
     };
 
-    public abstract OperationLog Execute(Document doc);
+    public abstract OperationLog Execute(FamilyDocument doc);
 }
 
 public class MergedTypeOperation(List<TypeOperation> operations) : IExecutable {
     public List<TypeOperation> Operations { get; set; } = operations;
 
-    public Func<Document, List<OperationLog>> ToFunc() => famDoc => {
+    public Func<FamilyDocument, List<OperationLog>> ToFunc() => famDoc => {
         string currFamTypeName = null;
         string currOpName = null;
         try {

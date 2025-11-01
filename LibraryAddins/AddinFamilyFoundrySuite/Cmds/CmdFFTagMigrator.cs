@@ -1,5 +1,6 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
+using PeExtensions.FamDocument;
 using PeRevit.Ui;
 using PeServices.Storage;
 using System.ComponentModel;
@@ -62,7 +63,8 @@ public class CmdFFTagMigrator : IExternalCommand {
 
             if (profile.ExecutionOptions.PreviewRun)
                 OperationLogger.OutputDryRunResults(
-                    processor,
+                    apsParamData,
+                    doc,
                     queue,
                     profile.GetFamilies,
                     storage,
@@ -93,7 +95,7 @@ public class CmdFFTagMigrator : IExternalCommand {
 public class DebugLogAnnoInfo(DefaultOperationSettings settings) : DocOperation<DefaultOperationSettings>(settings) {
     public override string Description => "Log information about Generic Annotation family parameters";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
         try {

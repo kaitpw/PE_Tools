@@ -1,3 +1,4 @@
+using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
@@ -9,7 +10,7 @@ public class DeleteParams : DocOperation<DeleteParamsSettings> {
     public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public override string Description => "Recursively delete parameters from the family by name";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
         foreach (var name in this.ExternalExcludeNamesEqualing) {
             try {

@@ -1,4 +1,5 @@
 using Autodesk.Revit.DB.Electrical;
+using PeExtensions.FamDocument;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
@@ -7,7 +8,7 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
     public override string Description =>
         "Configure electrical connector parameters and associate them with family parameters";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
         var polesParamName = this.Settings.SourceParameterNames.NumberOfPoles;
@@ -15,7 +16,7 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
         var voltageParamName = this.Settings.SourceParameterNames.Voltage;
         var mcaParamName = this.Settings.SourceParameterNames.MinimumCurrentAmpacity;
 
-        var mappings = new List<(string source, BuiltInParameter target, Action<Document, FamilyParameter> action)> {
+        var mappings = new List<(string source, BuiltInParameter target, Action<FamilyDocument, FamilyParameter> action)> {
             (
                 polesParamName,
                 BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
@@ -109,7 +110,7 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
     /// <summary>
     ///     Make an electrical connector on the family at the origin
     /// </summary>
-    private static ConnectorElement MakeElectricalConnector(Document doc) {
+    private static ConnectorElement MakeElectricalConnector(FamilyDocument doc) {
         var referenceCollector = new FilteredElementCollector(doc)
             .OfClass(typeof(ReferencePlane))
             .Cast<ReferencePlane>()

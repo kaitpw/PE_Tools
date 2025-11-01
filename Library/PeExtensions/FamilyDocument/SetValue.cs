@@ -13,13 +13,11 @@ public static class FamilyDocumentSetValue {
     ///     are VERY expensive operations, thus it is not done inside this method. Do it at the highest-level possible
     ///     in your loop/s.
     /// </remarks>
-    public static FamilyParameter SetValue(this Document famDoc,
+    public static FamilyParameter SetValue(this FamilyDocument famDoc,
         FamilyParameter targetParam,
         FamilyParameter sourceParam,
         ParamCoercionStrategy strategy = ParamCoercionStrategy.Strict
     ) {
-        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
-
         var context = CoercionContext.FromParam(famDoc, sourceParam, targetParam);
         ICoercionStrategy strategyInstance = strategy switch {
             ParamCoercionStrategy.Strict => new Strict(),
@@ -49,13 +47,11 @@ public static class FamilyDocumentSetValue {
     ///     are VERY expensive operations, thus it is not done inside this method. Do it at the highest-level possible
     ///     in your loop/s.
     /// </remarks>
-    public static FamilyParameter SetValue(this Document famDoc,
+    public static FamilyParameter SetValue(this FamilyDocument famDoc,
         FamilyParameter targetParam,
         object sourceValue,
         ValueCoercionStrategy strategy = ValueCoercionStrategy.Strict
     ) {
-        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
-
         var context = CoercionContext.FromValue(famDoc, sourceValue, targetParam);
         ICoercionStrategy strategyInstance = strategy switch {
             ValueCoercionStrategy.Strict => new Strict(),

@@ -1,11 +1,14 @@
+using Microsoft.VisualBasic;
+
 namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentProcessFamily {
-    public static Document ProcessFamily(this Document famDoc, params Action<Document>[] callbacks) {
-        if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
-        if (famDoc.FamilyManager is null)
-            throw new InvalidOperationException("Family documents FamilyManager is null.");
 
+    public static FamilyDocument GetFamily(this Document doc, Family family) {
+        var famDoc = doc.EditFamily(family);
+        return new FamilyDocument(famDoc);
+    }
+    public static FamilyDocument ProcessFamily(this FamilyDocument famDoc, params Action<FamilyDocument>[] callbacks) {
         foreach (var callback in callbacks) {
             using var trans = new Transaction(famDoc, "Edit Family Document");
             _ = trans.Start();
@@ -17,14 +20,11 @@ public static class FamilyDocumentProcessFamily {
         return famDoc;
     }
 
-    public static Document SaveFamily(
-        this Document famDoc,
-        List<string> saveLocations
+    public static FamilyDocument SaveFamily(
+        this FamilyDocument famDoc,
+        Func<FamilyDocument, List<string>> getSaveLocations
     ) {
-        if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
-        if (famDoc.FamilyManager is null)
-            throw new InvalidOperationException("Family documents FamilyManager is null.");
-
+        var saveLocations = getSaveLocations(famDoc);
         if (saveLocations.Count == 0 || saveLocations.Count(l => l == null) > 0) return famDoc;
         foreach (var location in saveLocations) {
             if (!Directory.Exists(location)) _ = Directory.CreateDirectory(location);
@@ -40,11 +40,7 @@ public static class FamilyDocumentProcessFamily {
         return famDoc;
     }
 
-    public static Family LoadAndCloseFamily(this Document famDoc, Document doc, IFamilyLoadOptions options) {
-        if (!famDoc.IsFamilyDocument) throw new ArgumentException("Document is not a family document.");
-        if (famDoc.FamilyManager is null)
-            throw new InvalidOperationException("Family documents FamilyManager is null.");
-
+    public static Family LoadAndCloseFamily(this FamilyDocument famDoc, Document doc, IFamilyLoadOptions options) {
         var family = famDoc.LoadFamily(doc, options);
         var closed = famDoc.Close(false);
         return closed

@@ -64,7 +64,8 @@ public class CmdFFMigrator : IExternalCommand {
 
             if (profile.ExecutionOptions.PreviewRun)
                 OperationLogger.OutputDryRunResults(
-                    processor,
+                    apsParamData,
+                    doc,
                     queue,
                     profile.GetFamilies,
                     storage,

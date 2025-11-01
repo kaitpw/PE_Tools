@@ -11,12 +11,8 @@ public static class FamilyManagerGetValue {
     /// <exception cref="T:Autodesk.Revit.Exceptions.ArgumentException">
     ///     Thrown if the input argument-"familyParameter"-is invalid,
     /// </exception>
-    public static object GetValue(this Document famDoc, FamilyParameter familyParameter) {
-        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
-        var familyManager = famDoc.FamilyManager;
-        if (familyParameter is null) throw new ArgumentNullException(nameof(familyParameter));
-
-        var famType = familyManager.CurrentType;
+    public static object GetValue(this FamilyDocument famDoc, FamilyParameter familyParameter) {
+        var famType = famDoc.FamilyManager.CurrentType;
         if (!famType.HasValue(familyParameter)) return null;
 
         return familyParameter.StorageType switch {

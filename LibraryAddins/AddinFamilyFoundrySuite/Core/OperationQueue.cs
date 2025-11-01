@@ -1,3 +1,5 @@
+using PeExtensions.FamDocument;
+
 namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
@@ -80,7 +82,7 @@ public class OperationQueue {
     ///     action runs in its own transaction.
     /// </param>
     /// <returns>An array of family actions that return logs when executed.</returns>
-    public Func<Document, List<OperationLog>>[] ToFuncs(bool optimizeTypeOperations = true,
+    public Func<FamilyDocument, List<OperationLog>>[] ToFuncs(bool optimizeTypeOperations = true,
         bool singleTransaction = true) {
         var executableOps = optimizeTypeOperations
             ? this.ToTypeOptimizedExecutableList()
@@ -127,12 +129,12 @@ public class OperationQueue {
     ///     Bundles all family actions into a single action to replicate single-transaction behavior.
     ///     When ProcessFamily receives this single action, it will run all operations within one transaction.
     /// </summary>
-    private Func<Document, List<OperationLog>>[] BundleFuncs(
-        Func<Document, List<OperationLog>>[] actions) {
+    private Func<FamilyDocument, List<OperationLog>>[] BundleFuncs(
+        Func<FamilyDocument, List<OperationLog>>[] actions) {
         if (actions.Length == 0) return actions;
 
         // Create a single action that executes all actions sequentially and collects logs
-        List<OperationLog> BundleActions(Document famDoc) {
+        List<OperationLog> BundleActions(FamilyDocument famDoc) {
             var allLogs = new List<OperationLog>();
             foreach (var action in actions) allLogs.AddRange(action(famDoc));
             return allLogs;

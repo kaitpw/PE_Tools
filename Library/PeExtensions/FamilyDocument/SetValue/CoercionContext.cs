@@ -6,7 +6,7 @@ namespace PeExtensions.FamDocument.SetValue;
 ///     Supports both value-to-param and param-to-param mapping scenarios.
 /// </summary>
 public record CoercionContext {
-    public required Document FamilyDocument { get; init; }
+    public required FamilyDocument FamilyDocument { get; init; }
     public required FamilyManager FamilyManager { get; init; }
     public required FamilyParameter TargetParam { get; init; }
     public required object SourceValue { get; init; }
@@ -68,9 +68,9 @@ public record CoercionContext {
     /// <summary>
     ///     Factory method for creating a context from a direct value to target parameter mapping.
     /// </summary>
-    public static CoercionContext FromValue(Document doc, object sourceValue, FamilyParameter targetParam) =>
+    public static CoercionContext FromValue(FamilyDocument doc, object sourceValue, FamilyParameter targetParam) =>
         new() {
-            FamilyDocument = doc,
+            FamilyDocument = new FamilyDocument(doc),
             FamilyManager = doc.FamilyManager,
             SourceValue = sourceValue,
             TargetParam = targetParam
@@ -79,9 +79,9 @@ public record CoercionContext {
     /// <summary>
     ///     Factory method for creating a context from a source parameter to target parameter mapping.
     /// </summary>
-    public static CoercionContext FromParam(Document doc, FamilyParameter sourceParam, FamilyParameter targetParam) =>
+    public static CoercionContext FromParam(FamilyDocument doc, FamilyParameter sourceParam, FamilyParameter targetParam) =>
         new() {
-            FamilyDocument = doc,
+            FamilyDocument = new FamilyDocument(doc),
             FamilyManager = doc.FamilyManager,
             SourceValue = doc.GetValue(sourceParam),
             SourceValueString = doc.FamilyManager.CurrentType.AsValueString(sourceParam),

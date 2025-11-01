@@ -9,13 +9,12 @@ public static class FamilyDocumentAddParameter {
     ///     NOTE: To get a groupTypeId for "Other", use <c> new ForgeTypeId("")</c>
     /// </summary>
     public static FamilyParameter AddFamilyParameter(
-        this Document famDoc,
+        this FamilyDocument famDoc,
         string name,
         ForgeTypeId propertiesGroup,
         ForgeTypeId dataType,
         bool isInstance
     ) {
-        if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document");
         if (dataType == null) throw new ArgumentNullException(nameof(dataType));
         if (propertiesGroup == null) propertiesGroup = new ForgeTypeId("");
 
@@ -28,7 +27,7 @@ public static class FamilyDocumentAddParameter {
 
 
     public static Result<SharedParameterElement> AddApsParameterSlow(
-        this Document famDoc,
+        this FamilyDocument famDoc,
         ParamModelRes apsParamModel
     ) {
         var dlOptsSource = apsParamModel.DownloadOptions;
@@ -42,7 +41,6 @@ public static class FamilyDocumentAddParameter {
         try {
             return ParameterUtils.DownloadParameter(famDoc, dlOpts, parameterTypeId);
         } catch (Exception downloadErr) {
-            if (!famDoc.IsFamilyDocument) throw new Exception("Document is not a family document.");
             var paramMsg = $"\n{apsParamModel.Name} ({parameterTypeId})";
 
             switch (downloadErr.Message) {
@@ -68,7 +66,7 @@ public static class FamilyDocumentAddParameter {
     }
 
     public static FamilyParameter AddSharedParameter(
-        this Document famDoc,
+        this FamilyDocument famDoc,
         (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance) sharedParam
     ) {
         var sharedParamElement = famDoc.FamilyManager.FindParameter(sharedParam.externalDefinition.GUID);

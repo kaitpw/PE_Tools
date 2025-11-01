@@ -1,3 +1,5 @@
+using PeExtensions.FamDocument;
+
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
@@ -27,7 +29,7 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
     public override string Description =>
         "Add shared parameters that are not already processed by a previous operation";
 
-    public override OperationLog Execute(Document doc) {
+    public override OperationLog Execute(FamilyDocument doc) {
         // Compute skip list from already-processed mappings
         var sharedParamsToSkip = this.Settings.MappingData
             .Where(m => m.isProcessed)
