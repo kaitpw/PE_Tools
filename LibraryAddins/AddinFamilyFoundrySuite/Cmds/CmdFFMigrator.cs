@@ -2,6 +2,7 @@ using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
 using PeRevit.Ui;
 using PeServices.Storage;
+using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -24,12 +25,14 @@ public class CmdFFMigrator : IExternalCommand {
             var profile = settings.GetProfile(settingsManager);
             var outputFolderPath = storage.Output().GetFolderPath();
 
-            using var processor = new OperationProcessor<ProfileRemap>(
+            using var tempFile = new TempSharedParamFile(doc);
+            var apsParamData = profile.GetAPSParams(tempFile);
+            var families = profile.GetFamilies(doc);
+
+            using var processor = new OperationProcessor(
                 doc,
-                profile.GetFamilies,
-                profile.GetAPSParams,
+                families,
                 profile.ExecutionOptions);
-            var apsParamData = processor.GetApsParams();
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
             var mappingDataAllNames = profile.AddAndMapSharedParams.MappingData
                 .Select(m => m.CurrName)
@@ -54,12 +57,11 @@ public class CmdFFMigrator : IExternalCommand {
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, apsParamNames))
-                .Add(new DebugLogAnnoInfo(new()))
+                .Add(new DebugLogAnnoInfo())
                 .Add(new AddAndSetFormulaFamilyParams(addFamilyParamsSettings));
 
-            var metadata = queue.GetExecutableMetadata();
-            foreach (var op in metadata)
-                Debug.WriteLine($"[Batch {op.IsMerged}] {op.Type}: {op.Name} - {op.Description}");
+            var metadataString = queue.GetExecutableMetadataString();
+            Debug.WriteLine(metadataString);
 
 
             if (profile.ExecutionOptions.PreviewRun)

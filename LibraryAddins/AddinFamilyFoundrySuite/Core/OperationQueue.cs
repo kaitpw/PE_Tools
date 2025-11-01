@@ -18,6 +18,15 @@ public class OperationQueue {
         return this;
     }
 
+    public OperationQueue Add(
+        IOperation operation,
+        bool internalOperation = false
+    ) {
+        if (internalOperation) operation.Name = $"INTERNAL OPERATION: {operation.Name}";
+        this._operations.Add(operation);
+        return this;
+    }
+
     /// <summary>
     ///     Add an operation group to the queue with explicit settings from the profile.
     ///     Groups are unwrapped into individual operations, with names prefixed by the group name.
@@ -60,6 +69,14 @@ public class OperationQueue {
         return result;
     }
 
+    public string GetExecutableMetadataString() {
+        var op = this.GetExecutableMetadata();
+        var result = "";
+        foreach (var o in op) {
+            result += $"[Batch {o.IsMerged}] {o.Type}: {o.Name} - {o.Description}\n";
+        }
+        return result;
+    }
 
     private static string GetOperationType(IOperation op) {
         var opType = op.GetType();

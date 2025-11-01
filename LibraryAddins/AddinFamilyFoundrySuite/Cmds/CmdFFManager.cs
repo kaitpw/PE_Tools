@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using PeExtensions.FamDocument;
 using PeRevit.Ui;
 using PeServices.Storage;
+using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -34,12 +35,14 @@ public class CmdFFManager : IExternalCommand {
                 OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
             };
 
-            using var processor = new OperationProcessor<ProfileFamilyManager>(
+            using var tempFile = new TempSharedParamFile(doc);
+            var apsParamData = profile.GetAPSParams(tempFile);
+            var families = profile.GetFamilies(doc);
+
+            using var processor = new OperationProcessor(
                 doc,
-                profile.GetFamilies,
-                profile.GetAPSParams,
+                families,
                 executionOptions);
-            var apsParamData = processor.GetApsParams();
 
             var addFamilyParams = new AddAndSetFormulaFamilyParamsSettings {
                 FamilyParamData = [
@@ -55,17 +58,16 @@ public class CmdFFManager : IExternalCommand {
             var mode = executionOptions.Mode;
             var queue = mode switch {
                 "snapshot" => new OperationQueue()
-                    .Add(new LogFamilyParamsState(new(), outputFolderPath))
+                    .Add(new LogFamilyParamsState(outputFolderPath))
                     .Add(new LogRefPlaneAndDims(new(), outputFolderPath)),
                 _ => new OperationQueue()
-                    .Add(new AddSharedParams(profile.AddSharedParams, apsParamData))
+                    .Add(new AddSharedParams(apsParamData))
                     .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
                     .Add(new AddAndGlobalSetFamilyParams(profile.AddAndGlobalSetFamilyParams))
                     .Add(new AddAndSetFormulaFamilyParams(addFamilyParams))
             };
-            var metadata = queue.GetExecutableMetadata();
-            foreach (var op in metadata)
-                Debug.WriteLine($"[Batch {op.IsMerged}] {op.Type}: {op.Name} - {op.Description}");
+            var metadataString = queue.GetExecutableMetadataString();
+            Debug.WriteLine(metadataString);
 
 
             if (executionOptions.PreviewRun) {
@@ -99,8 +101,8 @@ public class CmdFFManager : IExternalCommand {
     }
 }
 
-public class LogFamilyParamsState : DocOperation<DefaultOperationSettings> {
-    public LogFamilyParamsState(DefaultOperationSettings settings, string outputDir) : base(settings) =>
+public class LogFamilyParamsState : DocOperation {
+    public LogFamilyParamsState(string outputDir) =>
         this.OutputPath = outputDir;
 
     public string OutputPath { get; }
@@ -146,9 +148,6 @@ public class LogFamilyParamsState : DocOperation<DefaultOperationSettings> {
 }
 
 public class ProfileFamilyManager : BaseProfileSettings {
-    [Description("Settings for adding shared parameters")]
-    [Required]
-    public DefaultOperationSettings AddSharedParams { get; init; } = new();
 
     [Description("Settings for making reference planes and dimensions")]
     [Required]

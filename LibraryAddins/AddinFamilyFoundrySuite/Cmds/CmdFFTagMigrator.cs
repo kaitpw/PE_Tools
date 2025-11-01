@@ -3,6 +3,7 @@ using AddinFamilyFoundrySuite.Core.Operations;
 using PeExtensions.FamDocument;
 using PeRevit.Ui;
 using PeServices.Storage;
+using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -25,12 +26,14 @@ public class CmdFFTagMigrator : IExternalCommand {
             var profile = settings.GetProfile(settingsManager);
             var outputFolderPath = storage.Output().GetFolderPath();
 
-            using var processor = new OperationProcessor<TagMigratorProfile>(
+            using var tempFile = new TempSharedParamFile(doc);
+            var apsParamData = profile.GetAPSParams(tempFile);
+            var families = profile.GetFamilies(doc);
+
+            using var processor = new OperationProcessor(
                 doc,
-                profile.GetFamilies,
-                profile.GetAPSParams,
+                families,
                 profile.ExecutionOptions);
-            var apsParamData = processor.GetApsParams();
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
             var mappingDataAllNames = profile.AddAndMapSharedParams.MappingData
                 .Select(m => m.CurrName)
@@ -53,12 +56,11 @@ public class CmdFFTagMigrator : IExternalCommand {
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, mappingDataAllNames))
                 .Add(new DeleteUnusedNestedFamilies(profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
-                .Add(new DebugLogAnnoInfo(new()))
+                .Add(new DebugLogAnnoInfo())
                 .Add(new AddAndSetFormulaFamilyParams(addFamilyParamsSettings));
 
-            var metadata = queue.GetExecutableMetadata();
-            foreach (var op in metadata)
-                Debug.WriteLine($"[Batch {op.IsMerged}] {op.Type}: {op.Name} - {op.Description}");
+            var metadataString = queue.GetExecutableMetadataString();
+            Debug.WriteLine(metadataString);
 
 
             if (profile.ExecutionOptions.PreviewRun)
@@ -92,7 +94,7 @@ public class CmdFFTagMigrator : IExternalCommand {
     }
 }
 
-public class DebugLogAnnoInfo(DefaultOperationSettings settings) : DocOperation<DefaultOperationSettings>(settings) {
+public class DebugLogAnnoInfo : DocOperation {
     public override string Description => "Log information about Generic Annotation family parameters";
 
     public override OperationLog Execute(FamilyDocument doc) {

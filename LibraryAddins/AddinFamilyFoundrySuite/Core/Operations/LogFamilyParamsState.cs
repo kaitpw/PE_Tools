@@ -3,8 +3,8 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class LogFamilyParamsState : DocOperation<DefaultOperationSettings> {
-    public LogFamilyParamsState(DefaultOperationSettings settings, string outputDir) : base(settings) => this.OutputPath = outputDir;
+public class LogFamilyParamsState : DocOperation {
+    public LogFamilyParamsState(string outputDir) => this.OutputPath = outputDir;
     public string OutputPath { get; }
     public override string Description => "Log the state of the family parameters to a JSON file";
 
