@@ -26,7 +26,7 @@ public class CmdFFManager : IExternalCommand {
             var storage = new Storage("FF Manager");
             var settingsManager = storage.Settings();
             var settings = settingsManager.Json<BaseSettings<ProfileFamilyManager>>().Read();
-            var profile = settings.GetProfile(settingsManager);
+            var profile = settingsManager.Subdirectory("profiles").Json<ProfileFamilyManager>($"{settings.CurrentProfile}.json").Read();
             var outputFolderPath = storage.Output().GetFolderPath();
 
             // force this to never be single transaction

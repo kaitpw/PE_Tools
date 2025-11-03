@@ -151,19 +151,21 @@ public class ExecutionOptions {
     public string Mode { get; set; } = "";
 }
 public class LoadAndSaveOptions {
-    /// <summary>
-    ///     Load the family into the main model document
-    /// </summary>
+    [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
+    [Required]
+    public bool OpenOutputFilesOnCommandFinish { get; set; } = true;
+
+    [Description(
+        "Load processed family(ies) into the main model document (if the command is run on a main model document)")]
+    [Required]
     public bool LoadFamily { get; set; } = true;
 
-    /// <summary>
-    ///     Save the family to the internal path of the family document
-    /// </summary>
+    [Description("Save processed family(ies) to the internal path of the family document on your computer")]
+    [Required]
     public bool SaveFamilyToInternalPath { get; set; } = false;
 
-    /// <summary>
-    ///     Save the family to the output directory of the command
-    /// </summary>
+    [Description("Save processed family(ies) to the output directory of the command")]
+    [Required]
     public bool SaveFamilyToOutputDir { get; set; } = false;
 }
 

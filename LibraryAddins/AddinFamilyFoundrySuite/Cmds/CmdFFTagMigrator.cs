@@ -24,11 +24,12 @@ public class CmdFFTagMigrator : IExternalCommand {
             var storage = new Storage("FF Migrator");
             var settingsManager = storage.Settings();
             var settings = settingsManager.Json<BaseSettings<TagMigratorProfile>>().Read();
-            var profile = settings.GetProfile(settingsManager);
+            var profile = settingsManager.Subdirectory("profiles").Json<TagMigratorProfile>($"{settings.CurrentProfile}.json").Read();
             var outputFolderPath = storage.Output().GetFolderPath();
 
             using var tempFile = new TempSharedParamFile(doc);
             var apsParamData = profile.GetAPSParams(tempFile);
+            var families = profile.GetFamilies(doc);
 
             using var processor = new OperationProcessor(
                 doc,
