@@ -83,17 +83,17 @@ var outputPath = storage.Output().GetFolderPath();
 
 ## Global Storage
 
-For cross-addin shared data, use static methods:
+For cross-addin shared data, use the `Global()` manager. All global data is stored in the `Global\` directory:
 
 ```csharp
-// Global settings (base path only)
-var globalSettings = Storage.GlobalSettings().Json<GlobalConfig>().Read();
+// Global settings (Global/settings.json)
+var globalSettings = Storage.Global().Settings().Read();
 
-// Global state (shared across all addins)
-var cache = Storage.GlobalState("parameters-service-cache.json").Json<ParamModel>().Read();
+// Global state (Global/{filename}.json or Global/{filename}.csv)
+var cache = Storage.Global().State("parameters-service-cache").Json<ParamModel>().Read();
 
-// Global logging (auto-cleanup, max 500 lines)
-Storage.GlobalLogging().Write("Message");
+// Global logging (Global/log.txt, auto-cleanup, max 500 lines)
+Storage.Global().Log("Message");
 ```
 
 ## Family Foundry Integration Pattern
@@ -112,7 +112,7 @@ public Result Execute(ExternalCommandData commandData, ...) {
     var outputFolderPath = storage.Output().GetFolderPath();
     
     // 3. Access global state (e.g., APS parameters cache)
-    var apsParams = Storage.GlobalState("parameters-service-cache.json")
+    var apsParams = Storage.Global().State("parameters-service-cache")
         .Json<ParamModel>().Read();
     
     // 4. Write output files
@@ -180,7 +180,7 @@ public class PostableCommandHelper(Storage storage) {
 ### Cache Validation
 
 ```csharp
-var cache = Storage.GlobalState("cache.json").Json<CacheData>();
+var cache = Storage.Global().State("cache").Json<CacheData>();
 if (!cache.IsCacheValid(maxAgeMinutes: 60, validator: c => c.Items.Any())) {
     // Refresh cache
 }

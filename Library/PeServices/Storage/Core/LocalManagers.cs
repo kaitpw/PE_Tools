@@ -23,7 +23,6 @@ public abstract class BaseLocalManager {
     /// </summary>
     public string GetCsvPath(string filename = null) =>
         Path.Combine(this.DirectoryPath, filename ?? $"{this.Name}.csv");
-
 }
 
 public class SettingsManager : BaseLocalManager {
@@ -48,7 +47,7 @@ public class SettingsManager : BaseLocalManager {
         var subdirectoryPath = Path.Combine(this.DirectoryPath, subdirectory);
         // Validate path doesn't escape base directory
         if (Path.GetFullPath(subdirectoryPath).StartsWith(Path.GetFullPath(this.DirectoryPath)))
-            return new SettingsManager(subdirectoryPath, this.Name);
+            return new SettingsManager(this.DirectoryPath, subdirectory);
 
         throw new ArgumentException($"Subdirectory path '{subdirectory}' would escape base directory.");
     }
@@ -95,7 +94,7 @@ public class OutputManager : BaseLocalManager {
         var subdirectoryPath = Path.Combine(this.DirectoryPath, subdirectory);
         // Validate path doesn't escape base directory
         if (Path.GetFullPath(subdirectoryPath).StartsWith(Path.GetFullPath(this.DirectoryPath)))
-            return new OutputManager(subdirectoryPath, this.Name);
+            return new OutputManager(this.DirectoryPath, subdirectory);
 
         throw new ArgumentException($"Subdirectory path '{subdirectory}' would escape base directory.");
     }

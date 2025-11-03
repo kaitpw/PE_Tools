@@ -142,9 +142,9 @@ public class MakeElecConnectorSettings : IOperationSettings {
     public bool Enabled { get; init; } = true;
 
     public class Parameters {
-        [Required] public string NumberOfPoles { get; init; } = "";
-        [Required] public string ApparentPower { get; init; } = "";
-        [Required] public string MinimumCurrentAmpacity { get; init; } = "";
-        [Required] public string Voltage { get; init; } = "";
+        [Required] public string NumberOfPoles { get; init; } = "PE_E___NumberOfPoles";
+        [Required] public string ApparentPower { get; init; } = "PE_E___ApparentPower";
+        [Required] public string MinimumCurrentAmpacity { get; init; } = "PE_E___MinimumCurrentAmpacity";
+        [Required] public string Voltage { get; init; } = "PE_E___Voltage";
     }
 }

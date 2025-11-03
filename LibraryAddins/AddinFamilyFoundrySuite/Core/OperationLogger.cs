@@ -137,7 +137,7 @@ public class OperationLogger {
         storage.Output().Json<object>(detailedFilename).Write(detailed);
 
         if (openOutputFilesOnCommandFinish)
-            FileUtils.OpenInDefaultApp(Path.Combine(storage.Output().GetFolderPath(), filename));
+            FileUtils.OpenInDefaultApp(Path.Combine(storage.Output().DirectoryPath, filename));
     }
 
     public static string OutputProcessingResults(
@@ -155,7 +155,7 @@ public class OperationLogger {
         storage.Output().Json<object>(filename).Write(summary);
         storage.Output().Json<object>(detailedFilename).Write(detailed);
 
-        var logPath = Path.Combine(storage.Output().GetFolderPath(), filename);
+        var logPath = Path.Combine(storage.Output().DirectoryPath, filename);
         if (openOutputFilesOnCommandFinish)
             FileUtils.OpenInDefaultApp(logPath);
 

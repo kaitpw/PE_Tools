@@ -69,7 +69,7 @@ internal class Ballogger {
         if (this._messages.Count == 0) _ = this.Add(Log.WARN, null, "No messages to display");
 
         foreach (var message in this._messages) {
-            Storage.GlobalLogging().Write(message);
+            Storage.Global().Log(message);
 #if RELEASE
             if (message.StartsWith("DEBUG")) continue;
 #endif
@@ -95,7 +95,7 @@ internal class Ballogger {
         if (this._messages.Count == 0) _ = this.Add(Log.WARN, null, "No messages to display");
 
         foreach (var message in this._messages) {
-            Storage.GlobalLogging().Write(message);
+            Storage.Global().Log(message);
 #if RELEASE
             if (message.StartsWith("DEBUG")) continue;
 #endif

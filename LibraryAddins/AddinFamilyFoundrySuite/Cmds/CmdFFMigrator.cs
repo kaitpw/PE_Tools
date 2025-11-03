@@ -26,7 +26,7 @@ public class CmdFFMigrator : IExternalCommand {
             var settingsManager = storage.Settings();
             var settings = settingsManager.Json<BaseSettings<ProfileRemap>>().Read();
             var profile = settingsManager.Subdirectory("profiles").Json<ProfileRemap>($"{settings.CurrentProfile}.json").Read();
-            var outputFolderPath = storage.Output().GetFolderPath();
+            var outputFolderPath = storage.Output().DirectoryPath;
 
             using var tempFile = new TempSharedParamFile(doc);
             var apsParamData = profile.GetAPSParams(tempFile);

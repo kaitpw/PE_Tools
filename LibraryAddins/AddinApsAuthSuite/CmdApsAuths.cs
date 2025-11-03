@@ -44,11 +44,11 @@ public class CmdApsAuthPKCE : IExternalCommand {
 }
 
 public class ApsAuthNormal : Aps.IOAuthTokenProvider {
-    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsWebClientId1;
-    public string GetClientSecret() => Storage.GlobalSettings().Json().Read().ApsWebClientSecret1;
+    public string GetClientId() => Storage.Global().SettingsFile().Read().ApsWebClientId1;
+    public string GetClientSecret() => Storage.Global().SettingsFile().Read().ApsWebClientSecret1;
 }
 
 public class ApsAuthPkce : Aps.IOAuthTokenProvider {
-    public string GetClientId() => Storage.GlobalSettings().Json().Read().ApsDesktopClientId1;
+    public string GetClientId() => Storage.Global().SettingsFile().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 }

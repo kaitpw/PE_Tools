@@ -25,7 +25,7 @@ public class CmdFFTagMigrator : IExternalCommand {
             var settingsManager = storage.Settings();
             var settings = settingsManager.Json<BaseSettings<TagMigratorProfile>>().Read();
             var profile = settingsManager.Subdirectory("profiles").Json<TagMigratorProfile>($"{settings.CurrentProfile}.json").Read();
-            var outputFolderPath = storage.Output().GetFolderPath();
+            var outputFolderPath = storage.Output().DirectoryPath;
 
             using var tempFile = new TempSharedParamFile(doc);
             var apsParamData = profile.GetAPSParams(tempFile);

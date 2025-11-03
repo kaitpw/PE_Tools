@@ -10,32 +10,13 @@ public class Storage(string addinName) {
     private readonly string _addinPath = Path.Combine(BasePath, addinName);
 
     /// <summary>
-    ///     Manager for the settings.json in the base storage dir. Handles only reads to the file.
+    ///     Manager for the `Global\` storage dir. Handles global settings, state, and logging.
     /// </summary>
     /// <remarks>
-    ///     Use this manager to store global add-in settings that should be persisted between Revit sessions.
-    ///     There is no non-default file path, it is always `{basePath}/settings.json`
+    ///     Use this manager to store global add-in data that should be persisted between Revit sessions.
+    ///     All global data is stored in the `Global\` directory without nesting.
     /// </remarks>
-    public static GlobalSettingsManager GlobalSettings() => new(BasePath);
-
-    /// <summary>
-    ///     Manager for global state json or csv files in the base storage dir.
-    ///     Handles granular read/write to CSV, and full (non-granular) read/write to JSON.
-    /// </summary>
-    /// <remarks>
-    ///     Use this manager to store global add-in state that should be persisted between Revit sessions.
-    ///     There is no non-default file path, it is always `{basePath}/{filename}.json` or `{basePath}/{filename}.csv`
-    /// </remarks>
-    public static GlobalStateManager GlobalState(string filename) => new(BasePath, filename);
-
-    /// <summary>
-    ///     Manager for the log.txt in the base storage dir. Handles only writes to the file with auto cleanup of old logs.
-    /// </summary>
-    /// <remarks>
-    ///     Use this manager to store global add-in logs that should be persisted between Revit sessions.
-    ///     There is no non-default file path, it is always `{basePath}/log.txt`
-    /// </remarks>
-    public static GlobalLoggingManager GlobalLogging() => new(BasePath);
+    public static GlobalManager Global() => new(BasePath);
 
     /// <summary>
     ///     Manager for the `settings\` storage dir. Handles granular read-only to JSON and CSV.
