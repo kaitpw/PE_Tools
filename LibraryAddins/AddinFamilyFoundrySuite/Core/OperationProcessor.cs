@@ -1,4 +1,5 @@
 using PeExtensions.FamDocument;
+using PeRevit.Lib;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using static AddinFamilyFoundrySuite.Core.BaseProfileSettings;
@@ -6,21 +7,35 @@ using static AddinFamilyFoundrySuite.Core.BaseProfileSettings;
 namespace AddinFamilyFoundrySuite.Core;
 
 public class OperationProcessor : IDisposable {
-    private readonly List<Family> _families;
     private readonly ExecutionOptions _executionOptions;
-
+    /// <summary>
+    ///     A function to select families in the Document. If the document is a family document, this will not be called
+    /// </summary>
+    private Func<List<Family>> _documentFamilySelector;
     public OperationProcessor(
         Document doc,
-        List<Family> families = null,
-        ExecutionOptions executionOptions = null) {
+        ExecutionOptions executionOptions = null
+    ) {
         this._openDoc = doc;
-        this._families = families;
         this._executionOptions = executionOptions ?? new ExecutionOptions();
     }
 
     private Document _openDoc { get; }
 
     public void Dispose() { }
+
+    public OperationProcessor SelectFamilies(params Func<List<Family>>[] familySelectors) {
+        var selectorList = familySelectors.ToList();
+        if (selectorList == null || selectorList.Count == 0) {
+            throw new ArgumentException("At least one family selector must be provided", nameof(familySelectors));
+        }
+        this._documentFamilySelector = () => selectorList
+            .SelectMany(selector => selector() ?? new List<Family>())
+            .GroupBy(f => f.Id)
+            .Select(g => g.First())
+            .ToList();
+        return this;
+    }
 
     /// <summary>
     ///     Execute a configured processor with full initialization and document handling.
@@ -29,8 +44,8 @@ public class OperationProcessor : IDisposable {
     /// </summary>
     public (Dictionary<string, (List<OperationLog>, double)> familyResults, double totalMs) ProcessQueue(
         OperationQueue queue,
-        string outputFolderPath,
-        ILoadAndSaveOptions loadAndSaveOptions) {
+        string outputFolderPath = null,
+        LoadAndSaveOptions loadAndSaveOptions = null) {
         var familyResults = new Dictionary<string, (List<OperationLog> logs, double totalMs)>();
         var totalSw = Stopwatch.StartNew();
 
@@ -42,24 +57,32 @@ public class OperationProcessor : IDisposable {
             var logs = new List<OperationLog>();
             try {
                 var familySw = Stopwatch.StartNew();
-                _ = new FamilyDocument(this._openDoc)
-                    .ProcessFamily(this.CaptureLogs(familyFuncs, logs))
-                    .SaveFamily(famDoc => this.GetSaveLocations(famDoc, loadAndSaveOptions, outputFolderPath));
+                _ = this._openDoc
+                    .GetFamilyDocument()
+                    .ProcessFamily(this.CaptureLogs(familyFuncs, logs));
                 familySw.Stop();
                 familyResults.Add(this._openDoc.Title, (logs, familySw.Elapsed.TotalMilliseconds));
             } catch (Exception ex) {
                 Debug.WriteLine($"Failed to process family {this._openDoc.Title}: {ex.Message}");
             }
         } else {
-            foreach (var family in this._families) {
+            var families = this._documentFamilySelector();
+            if (families == null) {
+                throw new ArgumentNullException(nameof(families),
+                "There must be families specified for processing"
+                + " if the open document is a normal model document");
+            }
+
+            foreach (var family in families) {
                 var familyName = family.Name; // Capture name 
                 var logs = new List<OperationLog>();
                 try {
                     var familySw = Stopwatch.StartNew();
                     _ = this._openDoc
-                        .GetFamily(family)
+                        .GetFamilyDocument(family)
                         .ProcessFamily(this.CaptureLogs(familyFuncs, logs))
-                        .SaveFamily(famDoc => this.GetSaveLocations(famDoc, loadAndSaveOptions, outputFolderPath))
+                        .SaveFamily(famDoc =>
+                            this.GetSaveLocations(famDoc, loadAndSaveOptions ?? new LoadAndSaveOptions(), outputFolderPath))
                         .LoadAndCloseFamily(this._openDoc, new EditAndLoadFamilyOptions());
                     familySw.Stop();
                     familyResults.Add(familyName, (logs, familySw.Elapsed.TotalMilliseconds));
@@ -83,7 +106,8 @@ public class OperationProcessor : IDisposable {
             this._executionOptions.OptimizeTypeOperations,
             this._executionOptions.SingleTransaction);
 
-        _ = new FamilyDocument(this._openDoc)
+        _ = this._openDoc
+            .GetFamilyDocument()
             .ProcessFamily(this.CaptureLogs(familyFuncs, logs));
 
         familySw.Stop();
@@ -95,9 +119,10 @@ public class OperationProcessor : IDisposable {
         List<OperationLog> logCollector
     ) => funcActions.Select(func => new Action<FamilyDocument>(famDoc => logCollector.AddRange(func(famDoc)))).ToArray();
 
-    private List<string> GetSaveLocations(FamilyDocument famDoc, ILoadAndSaveOptions options, string outputFolderPath) {
+    private List<string> GetSaveLocations(FamilyDocument famDoc, LoadAndSaveOptions options, string outputFolderPath) {
         var saveLocations = new List<string>();
-        if (options?.SaveFamilyToInternalPath ?? false) {
+        if ((options?.SaveFamilyToInternalPath ?? false)
+            && string.IsNullOrEmpty(outputFolderPath)) {
             saveLocations.Add(outputFolderPath);
         }
 
@@ -125,21 +150,21 @@ public class ExecutionOptions {
     [Description("When enabled, the command will get the state of certain relevant data in a family.")]
     public string Mode { get; set; } = "";
 }
-public interface ILoadAndSaveOptions {
+public class LoadAndSaveOptions {
     /// <summary>
     ///     Load the family into the main model document
     /// </summary>
-    bool LoadFamily { get; set; }
+    public bool LoadFamily { get; set; } = true;
 
     /// <summary>
     ///     Save the family to the internal path of the family document
     /// </summary>
-    bool SaveFamilyToInternalPath { get; set; }
+    public bool SaveFamilyToInternalPath { get; set; } = false;
 
     /// <summary>
     ///     Save the family to the output directory of the command
     /// </summary>
-    bool SaveFamilyToOutputDir { get; set; }
+    public bool SaveFamilyToOutputDir { get; set; } = false;
 }
 
 internal class EditAndLoadFamilyOptions : IFamilyLoadOptions {

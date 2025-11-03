@@ -1,6 +1,7 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
 using PeExtensions.FamDocument;
+using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeUtils.Files;
@@ -28,11 +29,9 @@ public class CmdFFTagMigrator : IExternalCommand {
 
             using var tempFile = new TempSharedParamFile(doc);
             var apsParamData = profile.GetAPSParams(tempFile);
-            var families = profile.GetFamilies(doc);
 
             using var processor = new OperationProcessor(
                 doc,
-                families,
                 profile.ExecutionOptions);
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
             var mappingDataAllNames = profile.AddAndMapSharedParams.MappingData
@@ -73,7 +72,14 @@ public class CmdFFTagMigrator : IExternalCommand {
                     settings.CurrentProfile,
                     settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
             else {
-                var logs = processor.ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
+                var uiDoc = commandData.Application.ActiveUIDocument;
+                var logs = processor
+                    .SelectFamilies(
+                        () => !doc.IsFamilyDocument
+                            ? (Pickers.GetSelectedFamilies(uiDoc) ?? profile.GetFamilies(doc))
+                            : null
+                    )
+                    .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(
                     logs.familyResults,
                     logs.totalMs,

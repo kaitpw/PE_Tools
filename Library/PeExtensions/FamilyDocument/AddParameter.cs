@@ -11,11 +11,11 @@ public static class FamilyDocumentAddParameter {
     public static FamilyParameter AddFamilyParameter(
         this FamilyDocument famDoc,
         string name,
-        ForgeTypeId propertiesGroup,
-        ForgeTypeId dataType,
-        bool isInstance
+        ForgeTypeId propertiesGroup = null,
+        ForgeTypeId dataType = null,
+        bool isInstance = true
     ) {
-        if (dataType == null) throw new ArgumentNullException(nameof(dataType));
+        if (dataType == null) dataType = SpecTypeId.String.Text;
         if (propertiesGroup == null) propertiesGroup = new ForgeTypeId("");
 
         var fm = famDoc.FamilyManager;
@@ -34,7 +34,7 @@ public static class FamilyDocumentAddParameter {
         var parameterTypeId = dlOptsSource.GetParameterTypeId();
         var dlOpts = new ParameterDownloadOptions(
             new HashSet<ElementId>(),
-            dlOptsSource.IsInstance,
+            dlOptsSource.IsInstance, 
             dlOptsSource.Visible,
             dlOptsSource.GetGroupTypeId());
 

@@ -20,7 +20,7 @@ public class BaseSettings<TProfile> where TProfile : BaseProfileSettings, new() 
     }
 }
 
-public class OnProcessingFinishSettings : ILoadAndSaveOptions {
+public class OnProcessingFinishSettings : LoadAndSaveOptions {
     [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
     [Required]
     public bool OpenOutputFilesOnCommandFinish { get; set; } = true;

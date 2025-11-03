@@ -1,18 +1,22 @@
 using Microsoft.VisualBasic;
+using PeRevit.Lib;
 
 namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentProcessFamily {
 
-    public static FamilyDocument GetFamily(this Document doc, Family family) {
+    public static FamilyDocument GetFamilyDocument(this Document doc, Family family = null) {
+        if (doc.IsFamilyDocument) return new FamilyDocument(doc);
+        if (family == null) throw new ArgumentNullException(nameof(family));
         var famDoc = doc.EditFamily(family);
         return new FamilyDocument(famDoc);
     }
+
     public static FamilyDocument ProcessFamily(this FamilyDocument famDoc, params Action<FamilyDocument>[] callbacks) {
         foreach (var callback in callbacks) {
             using var trans = new Transaction(famDoc, "Edit Family Document");
             _ = trans.Start();
-            callback(famDoc);
+            callback(new FamilyDocument(famDoc));
             _ = trans.Commit();
             trans.Dispose();
         }

@@ -3,6 +3,29 @@
 namespace PeRevit.Lib;
 
 public class Pickers {
+    /// <summary>
+    ///     Gets the unique families from selected FamilyInstance elements.
+    ///     Only works when the document is not a family document.
+    /// </summary>
+    /// <param name="uiDocument">The UI document</param>
+    /// <returns>Result containing the list of unique families from selected instances, or an error if the document is a family document</returns>
+    public static List<Family> GetSelectedFamilies(UIDocument uiDocument) {
+        var doc = uiDocument.Document;
+        var selectedIds = uiDocument.Selection.GetElementIds();
+
+        if (selectedIds.Count == 0)
+            return new List<Family>();
+
+        var families = selectedIds
+            .Select(doc.GetElement)
+            .OfType<FamilyInstance>()
+            .Select(fi => fi.Symbol.Family)
+            .Distinct()
+            .ToList();
+
+        return families;
+    }
+
     public static Result<(Element element, Face elementFace, UV clickPosition)> FacePosition(
         UIApplication uiApplication,
         ISelectionFilter selectionFilter,
