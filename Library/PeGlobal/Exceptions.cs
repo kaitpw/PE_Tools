@@ -1,3 +1,5 @@
+using NJsonSchema.Validation;
+
 /// <summary>
 ///     Exception thrown when an element has intersections with other elements
 ///     that prevent an operation from completing successfully.
@@ -29,6 +31,10 @@ public class JsonValidationException : Exception {
     public JsonValidationException(string path, IEnumerable<string> validationErrors)
         : base(FormatValidationErrors(path, validationErrors)) {
     }
+    public JsonValidationException(string path, IEnumerable<ValidationError> validationErrors)
+        : base(FormatValidationErrors(path, validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}"))) {
+    }
+
 
     private static string FormatValidationErrors(string path, IEnumerable<string> errors) {
         var errorList = errors.ToList();

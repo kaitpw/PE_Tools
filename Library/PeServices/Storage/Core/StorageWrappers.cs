@@ -2,63 +2,35 @@ namespace PeServices.Storage.Core;
 
 // Restrictive interfaces for different operation types
 
-public interface IJsonIO {
-    string FilePath { get; }
-}
-
 public interface ICsvIO {
     string FilePath { get; }
 }
 
-public class JsonReader<T>(
-    Json<T> json
-) : IJsonIO where T : class, new() {
-    public string FilePath => json.FilePath;
-    public T Read() => json.Read();
+public interface JsonReader<T> {
+    public string FilePath { get; }
+    public T Read();
 }
 
-public class JsonWriter<T>(
-    Json<T> json,
-    bool skipValidation = false,
-    bool skipSchemaSave = false
-) : IJsonIO where T : class, new() {
-    public string FilePath => json.FilePath;
-    public void Write(T data) => json.Write(data, skipValidation, skipSchemaSave);
+public interface JsonWriter<T> {
+    public string FilePath { get; }
+    public void Write(T data);
 }
 
-public class JsonReadWriter<T>(
-    Json<T> json,
-    bool skipValidation = false,
-    bool skipSchemaSave = false
-) : IJsonIO where T : class, new() {
-    public string FilePath => json.FilePath;
-    public T Read() => json.Read();
-    public void Write(T data) => json.Write(data, skipValidation, skipSchemaSave);
-
-    public bool IsCacheValid(int maxAgeMinutes, Func<T, bool> contentValidator = null) =>
-        json.IsCacheValid(maxAgeMinutes, contentValidator);
+public interface JsonReadWriter<T> : JsonReader<T>, JsonWriter<T> where T : class, new() {
+    public bool IsCacheValid(int maxAgeMinutes, Func<T, bool> contentValidator = null);
 }
 
-public class CsvReader<T>(
-    Csv<T> csv
-) : ICsvIO where T : class, new() {
-    public string FilePath => csv.FilePath;
-    public Dictionary<string, T> Read() => csv.Read();
+public interface CsvReader<T> {
+    string FilePath { get; }
+    Dictionary<string, T> Read();
+    T ReadRow(string key);
 }
 
-public class CsvWriter<T>(
-    Csv<T> csv
-) : ICsvIO where T : class, new() {
-    public string FilePath => csv.FilePath;
-    public void Write(Dictionary<string, T> data) => csv.Write(data);
+public interface CsvWriter<T> {
+    string FilePath { get; }
+    void Write(Dictionary<string, T> data);
+    void WriteRow(string key, T rowData);
 }
 
-public class CsvReadWriter<T>(
-    Csv<T> csv
-) : ICsvIO where T : class, new() {
-    public string FilePath => csv.FilePath;
-    public Dictionary<string, T> Read() => csv.Read();
-    public void Write(Dictionary<string, T> data) => csv.Write(data);
-    public T ReadRow(string key) => csv.ReadRow(key);
-    public void WriteRow(string key, T rowData) => csv.WriteRow(key, rowData);
+public interface CsvReadWriter<T> : CsvReader<T>, CsvWriter<T> where T : class, new() {
 }

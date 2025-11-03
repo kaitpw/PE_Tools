@@ -3,9 +3,8 @@ using PeUtils.Files;
 
 namespace PeServices.Storage.Core;
 
-public class Csv<T> where T : class, new() {
-    public readonly string FilePath;
-
+public class Csv<T> : CsvReadWriter<T> where T : class, new() {
+    public string FilePath { get; init; }
     public Csv(string filePath) {
         FileUtils.ValidateFileNameAndExtension(filePath, "csv");
         this.FilePath = filePath;
