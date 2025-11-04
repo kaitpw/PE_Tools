@@ -89,8 +89,8 @@ public class CmdFFMigrator : IExternalCommand {
                     settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
                 var balloon = new Ballogger();
 
-                foreach (var (famName, (_, ms)) in logs.familyResults)
-                    _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {famName} in {ms}ms");
+                foreach (var output in logs.familyResults)
+                    _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.familyName} in {output.totalMs}ms");
                 balloon.Show();
             }
 

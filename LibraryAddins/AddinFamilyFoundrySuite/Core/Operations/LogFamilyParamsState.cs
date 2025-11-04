@@ -11,8 +11,9 @@ public class LogFamilyParamsState : DocOperation {
     public override OperationLog Execute(FamilyDocument doc) {
         var familyManager = doc.FamilyManager;
         var familyParamDataList = new List<FamilyParamModel>();
+        var famParams = familyManager.GetParameters().Where(p => !ParameterUtils.IsBuiltInParameter(p.Id)).ToList();
 
-        foreach (FamilyParameter param in familyManager.Parameters) {
+        foreach (var param in famParams) {
             var formula = param.Formula;
             var globalValue = string.IsNullOrEmpty(formula)
                 ? doc.GetValue(param)

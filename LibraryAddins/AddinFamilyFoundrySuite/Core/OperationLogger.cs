@@ -54,64 +54,72 @@ public class OperationLogger {
     }
 
     public static (object summary, object detailed) GenerateLogData(
-        Dictionary<string, (List<OperationLog> logs, double totalMs)> familyResults,
+        List<FamilyProcessOutput> familyResults,
         double totalMs
     ) {
         // Summary log with grouped errors
         var summary = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             TotalSecondsElapsed = Math.Round(totalMs / 1000.0, 3),
-            ProcessedFamilies = familyResults.Select(kvp => new {
-                FamilyName = kvp.Key,
-                TotalSecondsElapsed = Math.Round(kvp.Value.totalMs / 1000.0, 3),
-                Operations = kvp.Value.logs.Select(log => {
-                    // Group errors by item and error message, collecting contexts
-                    var groupedErrors = log.Entries
-                        .Where(e => e.Error != null)
-                        .GroupBy(e => new { e.Item, e.Error })
-                        .Select(g => {
-                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
-                            return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
-                        })
-                        .ToList();
+            ProcessedFamilies = familyResults.Select(output => {
+                var (logs, err) = output.logs;
+                var operationLogs = err != null ? new List<OperationLog>() : logs;
+                return new {
+                    FamilyName = output.familyName,
+                    TotalSecondsElapsed = Math.Round(output.totalMs / 1000.0, 3),
+                    Operations = operationLogs.Select(log => {
+                        // Group errors by item and error message, collecting contexts
+                        var groupedErrors = log.Entries
+                            .Where(e => e.Error != null)
+                            .GroupBy(e => new { e.Item, e.Error })
+                            .Select(g => {
+                                var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
+                                var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
+                                return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
+                            })
+                            .ToList();
 
-                    return new Dictionary<string, object> {
-                        ["OperationName"] = log.OperationName,
-                        ["SecondsElapsed"] = Math.Round(log.MsElapsed / 1000.0, 3),
-                        ["SuccessCount"] = log.SuccessCount,
-                        ["FailedCount"] = log.FailedCount,
-                        ["Errors"] = groupedErrors
-                    };
-                }).ToList()
+                        return new Dictionary<string, object> {
+                            ["OperationName"] = log.OperationName,
+                            ["SecondsElapsed"] = Math.Round(log.MsElapsed / 1000.0, 3),
+                            ["SuccessCount"] = log.SuccessCount,
+                            ["FailedCount"] = log.FailedCount,
+                            ["Errors"] = groupedErrors
+                        };
+                    }).ToList()
+                };
             }).ToList()
         };
 
         // Detailed log with all entries
         var detailed = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            ProcessedFamilies = familyResults.Select(kvp => new {
-                FamilyName = kvp.Key,
-                Operations = kvp.Value.logs.Select(log => new {
-                    log.OperationName,
-                    Successes = log.Entries.Where(e => e.Error == null)
-                        .GroupBy(e => new { e.Item, e.Error })
-                        .Select(g => {
-                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
-                            return $"{contextsStr}{g.Key.Item}";
-                        })
-                        .ToList(),
-                    Errors = log.Entries
-                        .Where(e => e.Error != null)
-                        .GroupBy(e => new { e.Item, e.Error })
-                        .Select(g => {
-                            var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                            var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
-                            return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
-                        })
-                        .ToList()
-                }).ToList()
+            ProcessedFamilies = familyResults.Select(output => {
+                var (logs, err) = output.logs;
+                var operationLogs = err != null ? new List<OperationLog>() : logs;
+                return new {
+                    FamilyName = output.familyName,
+                    Operations = operationLogs.Select(log => new {
+                        log.OperationName,
+                        Successes = log.Entries.Where(e => e.Error == null)
+                            .GroupBy(e => new { e.Item, e.Error })
+                            .Select(g => {
+                                var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
+                                var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
+                                return $"{contextsStr}{g.Key.Item}";
+                            })
+                            .ToList(),
+                        Errors = log.Entries
+                            .Where(e => e.Error != null)
+                            .GroupBy(e => new { e.Item, e.Error })
+                            .Select(g => {
+                                var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
+                                var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : "";
+                                return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
+                            })
+                            .ToList()
+                    }).ToList()
+                };
             }).ToList()
         };
 
@@ -141,7 +149,7 @@ public class OperationLogger {
     }
 
     public static string OutputProcessingResults(
-        Dictionary<string, (List<OperationLog>, double)> familyResults,
+        List<FamilyProcessOutput> familyResults,
         double totalMs,
         Storage storage,
         bool openOutputFilesOnCommandFinish
