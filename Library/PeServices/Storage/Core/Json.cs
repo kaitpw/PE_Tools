@@ -139,8 +139,9 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
             FlattenInheritanceHierarchy = true
         };
 
-        // Add custom schema processor for enum constraints
+        // Add custom schema processors
         schemaSettings.SchemaProcessors.Add(new EnumConstraintSchemaProcessor());
+        schemaSettings.SchemaProcessors.Add(new ForgeTypeIdSchemaProcessor());
 
         var generator = new JsonSchemaGenerator(schemaSettings);
         this._schema = generator.Generate(typeof(T));
@@ -272,6 +273,144 @@ public class EnumConstraintSchemaProcessor : ISchemaProcessor {
                 }
             }
         }
+    }
+
+    private static string GetJsonPropertyName(PropertyInfo property) {
+        var jsonPropertyNameAttr = property.GetCustomAttribute<JsonPropertyAttribute>();
+        return jsonPropertyNameAttr?.PropertyName ?? property.Name;
+    }
+}
+
+/// <summary>
+///     Schema processor that converts ForgeTypeId properties to string schemas.
+///     This is needed because ForgeTypeId is serialized as a string via JsonConverter,
+///     but the schema generator treats it as an object by default.
+/// </summary>
+public class ForgeTypeIdSchemaProcessor : ISchemaProcessor {
+    public void Process(SchemaProcessorContext context) {
+        var type = context.ContextualType.Type;
+        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Processing type: {type.FullName}");
+
+        // Process classes and value types
+        if (type.IsClass || type.IsValueType) {
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Type is class/value type, processing properties");
+            ProcessTypeProperties(context, type);
+        }
+
+        // Process array item schemas
+        if (context.Schema.Item != null) {
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Found Item schema, processing item type");
+            ProcessItemSchema(context.Schema.Item, type);
+        } else {
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] No Item schema found");
+        }
+    }
+
+    private static void ProcessTypeProperties(SchemaProcessorContext context, Type typeToProcess) {
+        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Processing properties of {typeToProcess.FullName}");
+        var properties = typeToProcess.GetProperties();
+        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Found {properties.Length} properties");
+
+        // Get the actual schema (handle references)
+        var actualSchema = context.Schema;
+        if (context.Schema.HasReference) {
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Schema has reference, following it");
+            actualSchema = context.Schema.Reference;
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Available schema properties: {string.Join(", ", actualSchema.Properties.Keys)}");
+
+        foreach (var property in properties) {
+            var isForgeTypeId = ForgeTypeIdJsonHelper.IsForgeTypeIdProperty(property);
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Property '{property.Name}' (Type: {property.PropertyType.Name}) - IsForgeTypeId: {isForgeTypeId}");
+
+            if (isForgeTypeId) {
+                var propertyName = GetJsonPropertyName(property);
+                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Looking for property '{propertyName}' in schema properties");
+
+                if (actualSchema.Properties.TryGetValue(propertyName, out var propertySchema)) {
+                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Found property schema for '{propertyName}', current type: {propertySchema.Type}, converting to string");
+                    ConvertToStringSchema(propertySchema);
+                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Converted '{propertyName}' to string schema");
+                } else {
+                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] WARNING: Property '{propertyName}' not found in schema properties!");
+                }
+            }
+        }
+    }
+
+    private static void ProcessItemSchema(JsonSchema itemSchema, Type originalType) {
+        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Processing item schema for original type: {originalType.FullName}");
+
+        // If the original type is a generic collection, get the item type
+        Type itemType = null;
+        if (originalType.IsGenericType) {
+            var genericArgs = originalType.GetGenericArguments();
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Generic type with {genericArgs.Length} arguments");
+            if (genericArgs.Length > 0) {
+                itemType = genericArgs[0];
+                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item type: {itemType.FullName}");
+            }
+        } else if (originalType.IsArray) {
+            itemType = originalType.GetElementType();
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Array type, item type: {itemType?.FullName}");
+        }
+
+        // Process properties of the item type
+        if (itemType != null && (itemType.IsClass || itemType.IsValueType)) {
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Processing item type properties: {itemType.FullName}");
+            var properties = itemType.GetProperties();
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item type has {properties.Length} properties");
+
+            // Check if itemSchema has a reference (NJsonSchema may use references)
+            var actualSchema = itemSchema;
+            if (itemSchema.HasReference) {
+                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item schema has reference, following it");
+                actualSchema = itemSchema.Reference;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Available item schema properties: {string.Join(", ", actualSchema.Properties.Keys)}");
+
+            foreach (var property in properties) {
+                var isForgeTypeId = ForgeTypeIdJsonHelper.IsForgeTypeIdProperty(property);
+                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item property '{property.Name}' (Type: {property.PropertyType.Name}) - IsForgeTypeId: {isForgeTypeId}");
+
+                if (isForgeTypeId) {
+                    var propertyName = GetJsonPropertyName(property);
+                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Looking for item property '{propertyName}' in item schema");
+
+                    if (actualSchema.Properties.TryGetValue(propertyName, out var propertySchema)) {
+                        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Found item property schema for '{propertyName}', current type: {propertySchema.Type}, converting to string");
+                        ConvertToStringSchema(propertySchema);
+                        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Converted item property '{propertyName}' to string schema");
+                    } else {
+                        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] WARNING: Item property '{propertyName}' not found in item schema properties!");
+                    }
+                }
+            }
+        } else {
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item type is null or not class/value type");
+        }
+    }
+
+    private static void ConvertToStringSchema(JsonSchema propertySchema) {
+        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Converting schema - Before: Type={propertySchema.Type}, HasReference={propertySchema.HasReference}, HasProperties={propertySchema.Properties.Count}");
+
+        // If it has a reference, we need to modify the property schema itself, not the reference
+        // Clear the reference first so we can set the type directly
+        if (propertySchema.HasReference) {
+            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Property schema has reference, clearing it and converting to string");
+            propertySchema.Reference = null;
+        }
+
+        // Convert to string schema directly on the property schema
+        propertySchema.Type = JsonObjectType.String;
+        propertySchema.Format = null;
+        // Clear any object-related properties
+        propertySchema.Properties.Clear();
+        propertySchema.AdditionalPropertiesSchema = null;
+
+        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Converting schema - After: Type={propertySchema.Type}");
     }
 
     private static string GetJsonPropertyName(PropertyInfo property) {

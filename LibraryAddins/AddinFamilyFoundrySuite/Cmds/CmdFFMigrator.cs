@@ -1,6 +1,5 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
-using Autodesk.Revit.DB.Mechanical;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
@@ -25,7 +24,8 @@ public class CmdFFMigrator : IExternalCommand {
             var storage = new Storage("FF Migrator");
             var settingsManager = storage.Settings();
             var settings = settingsManager.Json<BaseSettings<ProfileRemap>>().Read();
-            var profile = settingsManager.Subdirectory("profiles").Json<ProfileRemap>($"{settings.CurrentProfile}.json").Read();
+            var profile = settingsManager.Subdirectory("profiles").Json<ProfileRemap>($"{settings.CurrentProfile}.json")
+                .Read();
             var outputFolderPath = storage.Output().DirectoryPath;
 
             using var tempFile = new TempSharedParamFile(doc);
@@ -65,7 +65,7 @@ public class CmdFFMigrator : IExternalCommand {
             Debug.WriteLine(metadataString);
 
 
-            if (profile.ExecutionOptions.PreviewRun)
+            if (profile.ExecutionOptions.PreviewRun) {
                 OperationLogger.OutputDryRunResults(
                     apsParamData,
                     doc,
@@ -74,12 +74,12 @@ public class CmdFFMigrator : IExternalCommand {
                     storage,
                     settings.CurrentProfile,
                     settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
-            else {
+            } else {
                 var logs = processor
-                    .SelectFamilies(
-                        () => !doc.IsFamilyDocument
-                            ? (Pickers.GetSelectedFamilies(uiDoc) ?? profile.GetFamilies(doc))
-                            : null
+                    .SelectFamilies(() => {
+                            var picked = Pickers.GetSelectedFamilies(uiDoc);
+                            return picked.Any() ? picked : profile.GetFamilies(doc);
+                        }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(
@@ -101,6 +101,7 @@ public class CmdFFMigrator : IExternalCommand {
         }
     }
 }
+
 public class ProfileRemap : BaseProfileSettings {
     [Description("Settings for deleting unused parameters")]
     [Required]

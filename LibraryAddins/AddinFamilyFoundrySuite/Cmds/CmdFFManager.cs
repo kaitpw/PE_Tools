@@ -5,6 +5,7 @@ using PeExtensions.FamDocument;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
+using PeServices.Storage.Core;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -32,7 +33,6 @@ public class CmdFFManager : IExternalCommand {
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
                 SingleTransaction = false,
-                Mode = profile.ExecutionOptions.Mode,
                 PreviewRun = profile.ExecutionOptions.PreviewRun,
                 OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
             };
@@ -55,20 +55,14 @@ public class CmdFFManager : IExternalCommand {
                     }
                 ]
             };
-            var mode = executionOptions.Mode;
-            var queue = mode switch {
-                "snapshot" => new OperationQueue()
-                    .Add(new LogFamilyParamsState(outputFolderPath))
-                    .Add(new LogRefPlaneAndDims(new(), outputFolderPath)),
-                _ => new OperationQueue()
+            var queue = new OperationQueue()
                     .Add(new AddSharedParams(apsParamData))
                     .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
                     .Add(new AddAndGlobalSetFamilyParams(profile.AddAndGlobalSetFamilyParams))
-                    .Add(new AddAndSetFormulaFamilyParams(addFamilyParams))
-            };
+                    .Add(new AddAndSetFormulaFamilyParams(addFamilyParams));
+
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
-
 
             if (executionOptions.PreviewRun) {
                 OperationLogger.OutputDryRunResults(
@@ -105,51 +99,6 @@ public class CmdFFManager : IExternalCommand {
     }
 }
 
-public class LogFamilyParamsState : DocOperation {
-    public LogFamilyParamsState(string outputDir) =>
-        this.OutputPath = outputDir;
-
-    public string OutputPath { get; }
-    public override string Description => "Log the state of the family parameters to a JSON file";
-
-    public override OperationLog Execute(FamilyDocument doc) {
-        var familyManager = doc.FamilyManager;
-        var familyParamDataList = new List<FamilyParamModel>();
-
-        foreach (FamilyParameter param in familyManager.Parameters) {
-            var formula = param.Formula;
-            var globalValue = string.IsNullOrEmpty(formula)
-                ? doc.GetValue(param)
-                : null;
-
-            var familyParamData = new FamilyParamModel {
-                Name = param.Definition.Name,
-                PropertiesGroup = param.Definition.GetGroupTypeId(),
-                DataType = param.Definition.GetDataType(),
-                IsInstance = param.IsInstance,
-                GlobalValue = globalValue,
-                Formula = string.IsNullOrEmpty(formula) ? null : formula
-            };
-
-            familyParamDataList.Add(familyParamData);
-        }
-
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        var filename = $"family-params_{timestamp}.json";
-        var filePath = Path.Combine(this.OutputPath, filename);
-
-        var serializerSettings = new JsonSerializerSettings {
-            Formatting = Formatting.Indented,
-            Converters = new List<JsonConverter> { new ForgeTypeIdConverter() }
-        };
-
-        var json = JsonConvert.SerializeObject(familyParamDataList, serializerSettings);
-        File.WriteAllText(filePath, json);
-
-        var log = new LogEntry { Item = $"Wrote {familyParamDataList.Count} parameters to {filename}" };
-        return new OperationLog(this.Name, [log]);
-    }
-}
 
 public class ProfileFamilyManager : BaseProfileSettings {
 

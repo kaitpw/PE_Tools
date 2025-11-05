@@ -1,11 +1,12 @@
+using AddinFamilyFoundrySuite.Core;
 using Newtonsoft.Json;
 using PeExtensions.FamDocument;
+using PeServices.Storage.Core;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class LogFamilyParamsState : DocOperation {
-    public LogFamilyParamsState(string outputDir) => this.OutputPath = outputDir;
-    public string OutputPath { get; }
+public class LogFamilyParamsState(string outputDir) : DocOperation {
+    public string OutputPath { get; } = outputDir;
     public override string Description => "Log the state of the family parameters to a JSON file";
 
     public override OperationLog Execute(FamilyDocument doc) {
@@ -15,16 +16,13 @@ public class LogFamilyParamsState : DocOperation {
 
         foreach (var param in famParams) {
             var formula = param.Formula;
-            var globalValue = string.IsNullOrEmpty(formula)
-                ? doc.GetValue(param)
-                : null;
+
 
             var familyParamData = new FamilyParamModel {
                 Name = param.Definition.Name,
                 PropertiesGroup = param.Definition.GetGroupTypeId(),
                 DataType = param.Definition.GetDataType(),
                 IsInstance = param.IsInstance,
-                GlobalValue = globalValue,
                 Formula = string.IsNullOrEmpty(formula) ? null : formula
             };
 
@@ -35,9 +33,15 @@ public class LogFamilyParamsState : DocOperation {
         var filename = $"family-params_{timestamp}.json";
         var filePath = Path.Combine(this.OutputPath, filename);
 
+        var defaultInstance = new FamilyParamModel {
+            Name = "",
+            DataType = new ForgeTypeId("")
+        };
+
         var serializerSettings = new JsonSerializerSettings {
             Formatting = Formatting.Indented,
-            Converters = new List<Newtonsoft.Json.JsonConverter> { new ForgeTypeIdConverter() }
+            Converters = new List<JsonConverter> { new ForgeTypeIdConverter() },
+            ContractResolver = new DefaultValueSkippingContractResolver(defaultInstance)
         };
 
         var json = JsonConvert.SerializeObject(familyParamDataList, serializerSettings);

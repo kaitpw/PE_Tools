@@ -1,94 +1,99 @@
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
-///     JSON converter for ForgeTypeId that serializes to/from human-readable labels using LabelUtils.
-///     For writing: converts ForgeTypeId to display name (e.g., "Length", "Dimensions")
-///     For reading: attempts to find matching ForgeTypeId from known SpecTypeId/GroupTypeId constants,
-///     falls back to creating a new ForgeTypeId from the TypeId string if not found.
-///     Example JSON serialization:
-///     <code>
-/// {
-///   "DataType": "Length",
-///   "PropertiesGroup": "Dimensions"
-/// }
-/// </code>
+///     Contract resolver that skips serializing properties when they equal their default values.
+///     Default values are determined by comparing the actual property value against a provided default instance.
 /// </summary>
-public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
-    private static readonly Lazy<Dictionary<string, ForgeTypeId>> _specTypeIdMap = new(BuildSpecTypeIdMap);
+public class DefaultValueSkippingContractResolver : DefaultContractResolver {
+    private readonly object _defaultInstance;
 
-    public override void WriteJson(JsonWriter writer, ForgeTypeId value, JsonSerializer serializer) {
-        if (value == null) {
-            writer.WriteNull();
-            return;
+    public DefaultValueSkippingContractResolver(object defaultInstance) =>
+        _defaultInstance = defaultInstance ?? throw new ArgumentNullException(nameof(defaultInstance));
+
+    protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization) {
+        var property = base.CreateProperty(member, memberSerialization);
+
+        if (property.PropertyType == null || member is not PropertyInfo propInfo) {
+            return property;
         }
 
-        // Try to get a human-readable label using LabelUtils
-        string label;
+        // Skip default value checking for required properties (always serialize them)
+        if (this.IsRequiredProperty(propInfo)) {
+            return property;
+        }
+
+        // Get the default value for this property from the default instance
+        var defaultValue = this.GetDefaultValue(propInfo, this._defaultInstance);
+
+        // Set ShouldSerialize to skip when value equals default
+        property.ShouldSerialize = instance => {
+            var actualValue = propInfo.GetValue(instance);
+            return !this.AreValuesEqual(actualValue, defaultValue, propInfo.PropertyType);
+        };
+
+        return property;
+    }
+
+    /// <summary>
+    ///     Checks if a property is required (either via C# 'required' keyword or [Required] attribute).
+    /// </summary>
+    private bool IsRequiredProperty(PropertyInfo propertyInfo) {
+        // Check for [Required] attribute from System.ComponentModel.DataAnnotations
+        if (propertyInfo.GetCustomAttribute<RequiredAttribute>() != null) {
+            return true;
+        }
+
+        // Check for RequiredMemberAttribute (C# 'required' keyword)
+        if (propertyInfo.GetCustomAttribute<RequiredMemberAttribute>() != null) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Gets the default value for a property from the default instance.
+    /// </summary>
+    private object GetDefaultValue(PropertyInfo propertyInfo, object defaultInstance) {
         try {
-            label = LabelUtils.GetLabelForSpec(value);
+            return propertyInfo.GetValue(defaultInstance);
         } catch {
-            // Not a spec type, try group type
-            try {
-                label = LabelUtils.GetLabelForGroup(value);
-            } catch {
-                // If both fail, fall back to the TypeId string
-                label = value.TypeId;
-            }
+            // If we can't get the value, return null (property will be serialized)
+            return null;
         }
-
-        writer.WriteValue(label);
-    }
-
-    public override ForgeTypeId ReadJson(JsonReader reader,
-        Type objectType,
-        ForgeTypeId existingValue,
-        bool hasExistingValue,
-        JsonSerializer serializer) {
-        if (reader.TokenType == JsonToken.Null) return null;
-
-        var typeId = reader.Value?.ToString();
-        if (string.IsNullOrWhiteSpace(typeId)) return null;
-
-        // Try to find a matching SpecTypeId property
-        if (_specTypeIdMap.Value.TryGetValue(typeId, out var forgeTypeId)) return forgeTypeId;
-
-        // If not found in SpecTypeId, create a new ForgeTypeId with the provided string
-        return new ForgeTypeId(typeId);
     }
 
     /// <summary>
-    ///     Builds a map of TypeId strings to ForgeTypeId instances by reflecting over SpecTypeId and its nested classes,
-    ///     as well as other ID classes like GroupTypeId.
+    ///     Compares two values for equality, handling null and value types properly.
     /// </summary>
-    private static Dictionary<string, ForgeTypeId> BuildSpecTypeIdMap() {
-        var map = new Dictionary<string, ForgeTypeId>();
-
-        // Process SpecTypeId and its nested classes
-        var specTypeIdType = typeof(SpecTypeId);
-        AddPropertiesToMap(specTypeIdType, map);
-        var nestedTypes = specTypeIdType.GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
-        foreach (var nestedType in nestedTypes) AddPropertiesToMap(nestedType, map);
-
-        // Process GroupTypeId
-        var groupTypeIdType = typeof(GroupTypeId);
-        AddPropertiesToMap(groupTypeIdType, map);
-
-        return map;
-    }
-
-    /// <summary>
-    ///     Adds all static ForgeTypeId properties from a type to the map.
-    /// </summary>
-    private static void AddPropertiesToMap(Type type, Dictionary<string, ForgeTypeId> map) {
-        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Static);
-
-        foreach (var property in properties) {
-            if (property.PropertyType != typeof(ForgeTypeId)) continue;
-
-            var value = property.GetValue(null) as ForgeTypeId;
-            if (value?.TypeId != null) map[value.TypeId] = value;
+    private bool AreValuesEqual(object value1, object value2, Type propertyType) {
+        // Handle null cases
+        if (value1 == null && value2 == null) {
+            return true;
         }
+
+        if (value1 == null || value2 == null) {
+            return false;
+        }
+
+        // Use EqualityComparer for proper comparison
+        var comparerType = typeof(EqualityComparer<>).MakeGenericType(propertyType);
+        var defaultComparer = comparerType.GetProperty("Default", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
+        if (defaultComparer == null) {
+            return Equals(value1, value2);
+        }
+
+        var equalsMethod = comparerType.GetMethod("Equals", new[] { propertyType, propertyType });
+        if (equalsMethod != null) {
+            return (bool)(equalsMethod.Invoke(defaultComparer, new[] { value1, value2 }) ?? false);
+        }
+
+        return Equals(value1, value2);
     }
 }

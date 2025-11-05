@@ -20,4 +20,11 @@
     <!-- Reference the PeAnalyzers project as an analyzer -->
     <ProjectReference Include="$(MSBuildThisFileDirectory)\..\LibraryAnalyzers\PeAnalyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
+  
+  <!-- Ensure the analyzer project is built before this project -->
+  <Target Name="BuildAnalyzerProject" BeforeTargets="BeforeBuild">
+    <MSBuild Projects="$(MSBuildThisFileDirectory)\..\LibraryAnalyzers\PeAnalyzers.csproj" 
+             Properties="Configuration=$(Configuration)" 
+             Targets="Build" />
+  </Target>
 </Project>

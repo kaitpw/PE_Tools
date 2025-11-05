@@ -15,12 +15,8 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     </code>
 ///     </para>
 /// </summary>
-public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
-    public LogRefPlaneAndDims(LogRefPlaneAndDimsSettings settings, string outputDir) : base(settings) =>
-        this.OutputPath = outputDir;
-
-    public string OutputPath { get; }
-
+public class LogRefPlaneAndDims(string outputDir) : DocOperation {
+    public string OutputPath { get; } = outputDir;
     public override string Description => "Log existing reference planes and dimensions in profile JSON format";
 
     public override OperationLog Execute(FamilyDocument doc) {
@@ -222,8 +218,4 @@ public class LogRefPlaneAndDims : DocOperation<LogRefPlaneAndDimsSettings> {
             return 3;
         }
     }
-}
-
-public class LogRefPlaneAndDimsSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
 }

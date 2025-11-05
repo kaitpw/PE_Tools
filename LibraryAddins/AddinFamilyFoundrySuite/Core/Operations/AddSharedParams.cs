@@ -2,29 +2,24 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddSharedParams : DocOperation {
-    public AddSharedParams(
-        List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams,
-        List<string> sharedParamsToSkip = null
-    ) {
-        this._sharedParams = sharedParams;
-        this._sharedParamsToSkip = sharedParamsToSkip;
-    }
-
-    private List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> _sharedParams {
+public class AddSharedParams(
+    List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams,
+    List<string> sharedParamsToSkip = null
+) : DocOperation {
+    private List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> SharedParams {
         get;
-    }
+    } = sharedParams;
 
-    private List<string> _sharedParamsToSkip { get; }
+    private List<string> SharedParamsToSkip { get; } = sharedParamsToSkip;
     public override string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
-        foreach (var sharedParam in this._sharedParams) {
+        foreach (var sharedParam in this.SharedParams) {
             var name = sharedParam.externalDefinition.Name;
-            if (this._sharedParamsToSkip != null
-                && this._sharedParamsToSkip.Contains(name)) continue;
+            if (this.SharedParamsToSkip != null
+                && this.SharedParamsToSkip.Contains(name)) continue;
 
             try {
                 var addedParam = doc.AddSharedParameter(sharedParam);

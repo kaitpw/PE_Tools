@@ -26,6 +26,7 @@ internal class App : IExternalApplication {
         var panelMigration = UiHelpers.CreateRibbonPanel(app, tabName, ribbonPanelName3);
 
         var manageStackButton = panelManage.AddPullDownButton("General");
+        var ffManagerStackButton = panelMigration.AddSplitButton("Manager");
 
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
         ButtonDataHydrator.AddButtonData([
@@ -35,8 +36,9 @@ internal class App : IExternalApplication {
 #endif
 
         ButtonDataHydrator.AddButtonData([
-            panelMigration.AddPushButton<CmdFFManager>("Family Manager"),
-            panelMigration.AddPushButton<CmdFFMigrator>("Migrator"),
+            ffManagerStackButton.AddPushButton<CmdFFManager>("FF Manager"),
+            ffManagerStackButton.AddPushButton<CmdFFManagerSnapshot>("FF Manager Snapshot"),
+            panelMigration.AddPushButton<CmdFFMigrator>("FF Migrator"),
             panelMigration.AddPushButton<CmdFFTagMigrator>("Tag Migrator"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
@@ -124,6 +126,13 @@ public static class ButtonDataHydrator {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Manage families in a variety of ways from the Family Foundry."
+            }
+        },{
+            nameof(CmdFFManagerSnapshot),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Running this will output a JSON file with a config the represents the reference planes, dimensions, and family parameters of the currently open family"
             }
         },
         {

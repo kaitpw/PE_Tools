@@ -8,10 +8,12 @@ public record FamilyProcessOutput(string familyName, Result<List<OperationLog>> 
 
 public class OperationProcessor : IDisposable {
     private readonly ExecutionOptions _executionOptions;
+
     /// <summary>
     ///     A function to select families in the Document. If the document is a family document, this will not be called
     /// </summary>
     private Func<List<Family>> _documentFamilySelector;
+
     public OperationProcessor(
         Document doc,
         ExecutionOptions executionOptions = null
@@ -26,9 +28,8 @@ public class OperationProcessor : IDisposable {
 
     public OperationProcessor SelectFamilies(params Func<List<Family>>[] familySelectors) {
         var selectorList = familySelectors.ToList();
-        if (selectorList == null || selectorList.Count == 0) {
+        if (selectorList == null || selectorList.Count == 0)
             throw new ArgumentException("At least one family selector must be provided", nameof(familySelectors));
-        }
         this._documentFamilySelector = () => selectorList
             .SelectMany(selector => selector() ?? new List<Family>())
             .GroupBy(f => f.Id)
@@ -87,10 +88,8 @@ public class OperationProcessor : IDisposable {
             }).Select(output => {
                 var (log, err) = output.logs;
                 return err;
-            });
-        if (errors.Count() > 0) {
-            throw errors.First();
-        }
+            }).ToList();
+        if (errors.Any()) throw errors.First();
 
         familyResults.AddRange(outputs);
 
@@ -99,13 +98,19 @@ public class OperationProcessor : IDisposable {
         return (familyResults, totalSw.Elapsed.TotalMilliseconds);
     }
 
-    private List<FamilyProcessOutput> ProcessNormalDocument(string outputFolderPath, LoadAndSaveOptions loadAndSaveOptions, Func<FamilyDocument, List<OperationLog>>[] familyFuncs) {
+    private List<FamilyProcessOutput> ProcessNormalDocument(string outputFolderPath,
+        LoadAndSaveOptions loadAndSaveOptions,
+        Func<FamilyDocument, List<OperationLog>>[] familyFuncs) {
         var familyResults = new List<FamilyProcessOutput>();
         var families = this._documentFamilySelector();
-        if (families == null) {
-            throw new ArgumentNullException(nameof(families),
-            "There must be families specified for processing"
-            + " if the open document is a normal model document");
+        if (families == null || families.Count == 0) {
+            familyResults.Add(new FamilyProcessOutput(
+                "ERROR",
+                new ArgumentNullException(nameof(families),
+                    "There must be families specified for processing"
+                    + " if the open document is a normal model document"),
+                0));
+            return familyResults;
         }
 
         foreach (var family in families) {
@@ -128,6 +133,7 @@ public class OperationProcessor : IDisposable {
                     0));
             }
         }
+
         return familyResults;
     }
 
@@ -140,45 +146,29 @@ public class OperationProcessor : IDisposable {
                 .GetFamilyDocument()
                 .ProcessFamily(this.CaptureLogs(familyFuncs, logs));
             familySw.Stop();
-            return new() { new FamilyProcessOutput(this._openDoc.Title, logs, familySw.Elapsed.TotalMilliseconds) };
+            return new List<FamilyProcessOutput> { new(this._openDoc.Title, logs, familySw.Elapsed.TotalMilliseconds) };
         } catch (Exception ex) {
-            return new() { new FamilyProcessOutput(
-                this._openDoc.Title,
-                new Exception($"Failed to process family {this._openDoc.Title}: {ex.Message}"),
-                0)
+            return new List<FamilyProcessOutput> {
+                new(
+                    this._openDoc.Title,
+                    new Exception($"Failed to process family {this._openDoc.Title}: {ex.Message}"),
+                    0)
             };
         }
     }
 
 
-    public (List<OperationLog> logs, double totalMs) SandboxProcessQueue(
-        OperationQueue queue
-    ) {
-        var familySw = Stopwatch.StartNew();
-        var logs = new List<OperationLog>();
-        var familyFuncs = queue.ToFuncs(
-            this._executionOptions.OptimizeTypeOperations,
-            this._executionOptions.SingleTransaction);
-
-        _ = this._openDoc
-            .GetFamilyDocument()
-            .ProcessFamily(this.CaptureLogs(familyFuncs, logs));
-
-        familySw.Stop();
-        return (logs, familySw.Elapsed.TotalMilliseconds);
-    }
-
     private Action<FamilyDocument>[] CaptureLogs(
         Func<FamilyDocument, List<OperationLog>>[] funcActions,
         List<OperationLog> logCollector
-    ) => funcActions.Select(func => new Action<FamilyDocument>(famDoc => logCollector.AddRange(func(famDoc)))).ToArray();
+    ) => funcActions.Select(func => new Action<FamilyDocument>(famDoc => logCollector.AddRange(func(famDoc))))
+        .ToArray();
 
     private List<string> GetSaveLocations(FamilyDocument famDoc, LoadAndSaveOptions options, string outputFolderPath) {
         var saveLocations = new List<string>();
         if ((options?.SaveFamilyToInternalPath ?? false)
-            && string.IsNullOrEmpty(outputFolderPath)) {
+            && string.IsNullOrEmpty(outputFolderPath))
             saveLocations.Add(outputFolderPath);
-        }
 
         if (options?.SaveFamilyToOutputDir ?? false) {
             var saveLocation = famDoc.PathName;
@@ -188,7 +178,6 @@ public class OperationProcessor : IDisposable {
         return saveLocations;
     }
 }
-
 
 public class ExecutionOptions {
     [Description(
@@ -200,10 +189,8 @@ public class ExecutionOptions {
 
     [Description("When enabled, consecutive type operations will be batched together for better performance.")]
     public bool OptimizeTypeOperations { get; set; } = true;
-
-    [Description("When enabled, the command will get the state of certain relevant data in a family.")]
-    public string Mode { get; set; } = "";
 }
+
 public class LoadAndSaveOptions {
     [Description("Automatically open output files (CSV, etc.) when commands complete successfully")]
     [Required]

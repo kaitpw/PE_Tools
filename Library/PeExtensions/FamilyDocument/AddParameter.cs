@@ -5,7 +5,7 @@ namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentAddParameter {
     /// <summary>
-    ///     Add a family parameter. PropertiesGroup must be a <c>GroupTypeId</c> and DataType must be a <c>SpecTypeId</c>.
+    ///     Add a family parameter. Returns the existing parameter if it already exists. PropertiesGroup must be a <c>GroupTypeId</c> and DataType must be a <c>SpecTypeId</c>.
     ///     NOTE: To get a groupTypeId for "Other", use <c> new ForgeTypeId("")</c>
     /// </summary>
     public static FamilyParameter AddFamilyParameter(
@@ -26,6 +26,7 @@ public static class FamilyDocumentAddParameter {
     }
 
 
+#if REVIT2025 || REVIT2026
     public static Result<SharedParameterElement> AddApsParameterSlow(
         this FamilyDocument famDoc,
         ParamModelRes apsParamModel
@@ -64,6 +65,14 @@ public static class FamilyDocumentAddParameter {
             }
         }
     }
+#else
+    public static Result<SharedParameterElement> AddApsParameterSlow(
+        this FamilyDocument famDoc,
+        ParamModelRes apsParamModel
+    ) {
+        return new Exception("This functionality is not available in this Revit version.");
+    }
+#endif
 
     public static FamilyParameter AddSharedParameter(
         this FamilyDocument famDoc,

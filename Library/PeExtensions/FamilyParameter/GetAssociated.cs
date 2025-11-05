@@ -15,7 +15,7 @@ public static class FamilyParameterGetAssociated {
         var paramFilter = new ElementParameterFilter(rule);
 
         var dimensionTypes = new List<Type> {
-            typeof(LinearDimension), typeof(RadialDimension), typeof(AngularDimension)
+            typeof(Dimension)
         };
         var dimensionFilter = new ElementMulticlassFilter(dimensionTypes);
 

@@ -28,7 +28,7 @@ public class CacheParametersService : Aps.IOAuthTokenProvider, Aps.IParametersTo
     public string GetClientId() => Storage.Global().SettingsFile().Read().ApsWebClientId1;
     public string GetClientSecret() => Storage.Global().SettingsFile().Read().ApsWebClientSecret1;
 #else
-    public string GetClientId() => Storage.Global().Settings().Read().ApsDesktopClientId1;
+    public string GetClientId() => Storage.Global().SettingsFile().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 #endif
     public string GetAccountId() => Storage.Global().SettingsFile().Read().Bim360AccountId;
