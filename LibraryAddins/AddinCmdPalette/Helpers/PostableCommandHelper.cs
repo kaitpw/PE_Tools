@@ -19,7 +19,7 @@ public record CommandUsageData {
 ///     Service for managing PostableCommand enumeration values and metadata
 /// </summary>
 public class PostableCommandHelper(Storage storage) {
-    private readonly CsvReadWriter<CommandUsageData> _state = storage.State().Csv<CommandUsageData>();
+    private readonly CsvReadWriter<CommandUsageData> _state = storage.StateDir().Csv<CommandUsageData>();
     private List<PostableCommandItem> _allCommands;
 
     /// <summary>

@@ -22,11 +22,11 @@ public class CmdFFMigrator : IExternalCommand {
 
         try {
             var storage = new Storage("FF Migrator");
-            var settingsManager = storage.Settings();
+            var settingsManager = storage.SettingsDir();
             var settings = settingsManager.Json<BaseSettings<ProfileRemap>>().Read();
-            var profile = settingsManager.Subdirectory("profiles").Json<ProfileRemap>($"{settings.CurrentProfile}.json")
+            var profile = settingsManager.SubDir("profiles").Json<ProfileRemap>($"{settings.CurrentProfile}.json")
                 .Read();
-            var outputFolderPath = storage.Output().DirectoryPath;
+            var outputFolderPath = storage.OutputDir().DirectoryPath;
 
             using var tempFile = new TempSharedParamFile(doc);
             var apsParamData = profile.GetAPSParams(tempFile);
@@ -77,9 +77,9 @@ public class CmdFFMigrator : IExternalCommand {
             } else {
                 var logs = processor
                     .SelectFamilies(() => {
-                            var picked = Pickers.GetSelectedFamilies(uiDoc);
-                            return picked.Any() ? picked : profile.GetFamilies(doc);
-                        }
+                        var picked = Pickers.GetSelectedFamilies(uiDoc);
+                        return picked.Any() ? picked : profile.GetFamilies(doc);
+                    }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(

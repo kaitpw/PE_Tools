@@ -43,7 +43,7 @@ public class SettingsManager : BaseLocalManager {
     ///     Navigate to a subdirectory for accessing files within nested folders.
     ///     Supports multi-level nesting via chaining or path strings (e.g., "profiles/production").
     /// </summary>
-    public SettingsManager Subdirectory(string subdirectory) {
+    public SettingsManager SubDir(string subdirectory) {
         var subdirectoryPath = Path.Combine(this.DirectoryPath, subdirectory);
         // Validate path doesn't escape base directory
         if (Path.GetFullPath(subdirectoryPath).StartsWith(Path.GetFullPath(this.DirectoryPath)))
@@ -90,7 +90,7 @@ public class OutputManager : BaseLocalManager {
     ///     Navigate to a subdirectory for accessing files within nested folders.
     ///     Supports multi-level nesting via chaining or path strings (e.g., "reports/2024").
     /// </summary>
-    public OutputManager Subdirectory(string subdirectory) {
+    public OutputManager SubDir(string subdirectory) {
         var subdirectoryPath = Path.Combine(this.DirectoryPath, subdirectory);
         // Validate path doesn't escape base directory
         if (Path.GetFullPath(subdirectoryPath).StartsWith(Path.GetFullPath(this.DirectoryPath)))

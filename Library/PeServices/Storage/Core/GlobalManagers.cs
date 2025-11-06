@@ -20,7 +20,7 @@ public class GlobalManager {
     ///     Use this to store global add-in settings that should be persisted between Revit sessions.
     ///     File path is always `{basePath}/Global/settings.json`
     /// </remarks>
-    public JsonReader<GlobalSettings> SettingsFile() =>
+    public JsonReader<GlobalSettings> SettingsJson() =>
         new Json<GlobalSettings>(Path.Combine(this._globalPath, "settings.json"), true, true);
 
     /// <summary>
@@ -31,7 +31,7 @@ public class GlobalManager {
     ///     Use this to store global add-in state that should be persisted between Revit sessions.
     ///     File path is `{basePath}/Global/{filename}.json` or `{basePath}/Global/{filename}.csv`
     /// </remarks>
-    public JsonReadWriter<T> StateJsonFile<T>(string filename) where T : class, new() =>
+    public JsonReadWriter<T> StateJson<T>(string filename) where T : class, new() =>
         new Json<T>(Path.Combine(this._globalPath, $"{filename}.json"), false, true);
 
     /// <summary>
@@ -41,7 +41,7 @@ public class GlobalManager {
     ///     Use this to store global add-in logs that should be persisted between Revit sessions.
     ///     File path is always `{basePath}/Global/log.txt`
     /// </remarks>
-    public void Log(string message) {
+    public void LogTxt(string message) {
         var logFilePath = Path.Combine(this._globalPath, "log.txt");
         this.CleanLog(logFilePath);
         var logEntry =

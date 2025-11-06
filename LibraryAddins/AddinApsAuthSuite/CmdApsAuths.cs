@@ -12,7 +12,7 @@ public class CmdApsAuthNormal : IExternalCommand {
         ElementSet elements) {
         try {
             var storage = new Storage(nameof(CmdApsAuthNormal));
-            var settings = storage.Settings().Json<ApsAuthNormal>().Read();
+            var settings = storage.SettingsDir().Json<ApsAuthNormal>().Read();
             var auth = new Aps(settings);
             var token = auth.GetToken();
             new Ballogger().AddDebug(Log.INFO, new StackFrame(), token).Show();
@@ -31,7 +31,7 @@ public class CmdApsAuthPKCE : IExternalCommand {
         ElementSet elements) {
         try {
             var storage = new Storage(nameof(CmdApsAuthPKCE));
-            var settings = storage.Settings().Json<ApsAuthPkce>().Read();
+            var settings = storage.SettingsDir().Json<ApsAuthPkce>().Read();
             var aps = new Aps(settings);
             var token = aps.GetToken();
             new Ballogger().AddDebug(Log.INFO, new StackFrame(), token).Show();
@@ -44,11 +44,11 @@ public class CmdApsAuthPKCE : IExternalCommand {
 }
 
 public class ApsAuthNormal : Aps.IOAuthTokenProvider {
-    public string GetClientId() => Storage.Global().SettingsFile().Read().ApsWebClientId1;
-    public string GetClientSecret() => Storage.Global().SettingsFile().Read().ApsWebClientSecret1;
+    public string GetClientId() => Storage.GlobalDir().SettingsJson().Read().ApsWebClientId1;
+    public string GetClientSecret() => Storage.GlobalDir().SettingsJson().Read().ApsWebClientSecret1;
 }
 
 public class ApsAuthPkce : Aps.IOAuthTokenProvider {
-    public string GetClientId() => Storage.Global().SettingsFile().Read().ApsDesktopClientId1;
+    public string GetClientId() => Storage.GlobalDir().SettingsJson().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 }

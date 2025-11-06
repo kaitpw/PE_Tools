@@ -23,7 +23,7 @@ public class BaseProfileSettings {
 
     public List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
         GetAPSParams(TempSharedParamFile tempFile) {
-        var apsParams = Storage.Global().StateJsonFile<ParamModel>("parameters-service-cache").Read();
+        var apsParams = Storage.GlobalDir().StateJson<ParamModel>("parameters-service-cache").Read();
         if (apsParams.Results != null) {
             return apsParams.Results
                 .Where(this.FilterApsParams.Filter)

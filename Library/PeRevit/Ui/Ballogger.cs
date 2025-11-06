@@ -69,7 +69,7 @@ internal class Ballogger {
         if (this._messages.Count == 0) _ = this.Add(Log.WARN, null, "No messages to display");
 
         foreach (var message in this._messages) {
-            Storage.Global().Log(message);
+            Storage.GlobalDir().LogTxt(message);
 #if RELEASE
             if (message.StartsWith("DEBUG")) continue;
 #endif
@@ -95,7 +95,7 @@ internal class Ballogger {
         if (this._messages.Count == 0) _ = this.Add(Log.WARN, null, "No messages to display");
 
         foreach (var message in this._messages) {
-            Storage.Global().Log(message);
+            Storage.GlobalDir().LogTxt(message);
 #if RELEASE
             if (message.StartsWith("DEBUG")) continue;
 #endif
@@ -123,7 +123,8 @@ internal class Ballogger {
             title = Assembly.GetExecutingAssembly().GetName().Name;
 #pragma warning disable CA1416 // Validate platform compatibility
         var ri = new ResultItem {
-            Title = text.Trim(), Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
+            Title = text.Trim(),
+            Category = title + (clickDescription != "" ? " (" + clickDescription + ")" : null)
         };
         ri.ResultClicked += (_, _) => clickHandler();
 

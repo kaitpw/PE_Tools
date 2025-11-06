@@ -20,7 +20,7 @@ public class CmdFFManagerSnapshot : IExternalCommand {
 
         try {
             var storage = new Storage("FF Manager");
-            var outputFolderPath = storage.Output().DirectoryPath;
+            var outputFolderPath = storage.OutputDir().DirectoryPath;
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {

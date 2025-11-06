@@ -25,10 +25,10 @@ public class CmdFFManager : IExternalCommand {
 
         try {
             var storage = new Storage("FF Manager");
-            var settingsManager = storage.Settings();
+            var settingsManager = storage.SettingsDir();
             var settings = settingsManager.Json<BaseSettings<ProfileFamilyManager>>().Read();
-            var profile = settingsManager.Subdirectory("profiles").Json<ProfileFamilyManager>($"{settings.CurrentProfile}.json").Read();
-            var outputFolderPath = storage.Output().DirectoryPath;
+            var profile = settingsManager.SubDir("profiles").Json<ProfileFamilyManager>($"{settings.CurrentProfile}.json").Read();
+            var outputFolderPath = storage.OutputDir().DirectoryPath;
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
@@ -57,8 +57,8 @@ public class CmdFFManager : IExternalCommand {
             };
             var queue = new OperationQueue()
                     .Add(new AddSharedParams(apsParamData))
-                    .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
                     .Add(new AddAndGlobalSetFamilyParams(profile.AddAndGlobalSetFamilyParams))
+                    .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
                     .Add(new AddAndSetFormulaFamilyParams(addFamilyParams));
 
             var metadataString = queue.GetExecutableMetadataString();

@@ -11,7 +11,7 @@ public class CmdCacheParametersService : IExternalCommand {
         ref string message,
         ElementSet elements) {
         var cacheFilename = "parameters-service-cache";
-        var apsParamsCache = Storage.Global().StateJsonFile<ParametersApi.Parameters>(cacheFilename);
+        var apsParamsCache = Storage.GlobalDir().StateJson<ParametersApi.Parameters>(cacheFilename);
 
         var svcAps = new Aps(new CacheParametersService());
         var _ = Task.Run(async () =>
@@ -25,13 +25,13 @@ public class CmdCacheParametersService : IExternalCommand {
 
 public class CacheParametersService : Aps.IOAuthTokenProvider, Aps.IParametersTokenProvider {
 #if DEBUG
-    public string GetClientId() => Storage.Global().SettingsFile().Read().ApsWebClientId1;
-    public string GetClientSecret() => Storage.Global().SettingsFile().Read().ApsWebClientSecret1;
+    public string GetClientId() => Storage.GlobalDir().SettingsJson().Read().ApsWebClientId1;
+    public string GetClientSecret() => Storage.GlobalDir().SettingsJson().Read().ApsWebClientSecret1;
 #else
     public string GetClientId() => Storage.Global().SettingsFile().Read().ApsDesktopClientId1;
     public string GetClientSecret() => null;
 #endif
-    public string GetAccountId() => Storage.Global().SettingsFile().Read().Bim360AccountId;
-    public string GetGroupId() => Storage.Global().SettingsFile().Read().ParamServiceGroupId;
-    public string GetCollectionId() => Storage.Global().SettingsFile().Read().ParamServiceCollectionId;
+    public string GetAccountId() => Storage.GlobalDir().SettingsJson().Read().Bim360AccountId;
+    public string GetGroupId() => Storage.GlobalDir().SettingsJson().Read().ParamServiceGroupId;
+    public string GetCollectionId() => Storage.GlobalDir().SettingsJson().Read().ParamServiceCollectionId;
 }
