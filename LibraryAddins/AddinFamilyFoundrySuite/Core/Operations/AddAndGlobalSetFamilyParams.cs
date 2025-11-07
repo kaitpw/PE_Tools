@@ -69,7 +69,7 @@ public class AddAndGlobalSetFamilyParamsSettings : IOperationSettings {
 public record FamilyParamModel {
     [Required] public required string Name { get; init; }
 
-    // make a JsonConverter for GroupTypeId later
+    [JsonConverter(typeof(ForgeTypeIdConverter))]
     public ForgeTypeId PropertiesGroup { get; init; } = new("");
 
     [JsonConverter(typeof(ForgeTypeIdConverter))]

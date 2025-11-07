@@ -94,8 +94,18 @@ public class ForgeTypeIdSchemaProcessor : ISchemaProcessor {
             propertySchema.Reference = null;
         }
 
-        // Convert to string schema directly on the property schema
-        propertySchema.Type = JsonObjectType.String;
+        // Check if property is nullable (has null in oneOf, which NJsonSchema adds for nullable reference types)
+        var isNullable = propertySchema.OneOf.Any(s => s.Type == JsonObjectType.Null);
+
+        // Clear oneOf entirely - we'll represent nullable as type array instead
+        propertySchema.OneOf.Clear();
+
+        // Convert to string schema: use type array for nullable, single type for non-nullable
+        if (isNullable) {
+            propertySchema.Type = JsonObjectType.String | JsonObjectType.Null;
+        } else {
+            propertySchema.Type = JsonObjectType.String;
+        }
         propertySchema.Format = null;
         // Clear any object-related properties
         propertySchema.Properties.Clear();

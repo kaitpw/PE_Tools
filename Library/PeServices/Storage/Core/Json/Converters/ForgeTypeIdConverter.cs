@@ -1,26 +1,33 @@
-using System.Reflection;
 using Newtonsoft.Json;
 
 namespace PeServices.Storage.Core.Json.Converters;
 
 /// <summary>
 ///     JSON converter for ForgeTypeId that serializes to/from human-readable labels using LabelUtils.
-///     For writing: converts ForgeTypeId to display name (e.g., "Length", "Dimensions")
+///     For writing: converts ForgeTypeId to display name (e.g., "Length", "Dimensions", "Other")
 ///     For reading: attempts to find matching ForgeTypeId from known SpecTypeId/GroupTypeId constants,
 ///     falls back to creating a new ForgeTypeId from the TypeId string if not found.
+///     Special case: "Other" maps to an empty ForgeTypeId (new ForgeTypeId("")).
 ///     Example JSON serialization:
 ///     <code>   
 /// {
 ///   "DataType": "Length",
-///   "PropertiesGroup": "Dimensions"
+///   "PropertiesGroup": "Other"
 /// }
 /// </code>
 /// </summary>
 public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
     private static readonly Lazy<Dictionary<string, ForgeTypeId>> _labelMap = new(BuildLabelMap);
+
     public override void WriteJson(JsonWriter writer, ForgeTypeId value, JsonSerializer serializer) {
         if (value == null) {
             writer.WriteNull();
+            return;
+        }
+
+        // Special case: Empty ForgeTypeId (or empty TypeId string) represents "Other" in Revit UI
+        if (string.IsNullOrEmpty(value.TypeId)) {
+            writer.WriteValue("Other");
             return;
         }
 
@@ -51,19 +58,20 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
         var input = reader.Value?.ToString();
         if (string.IsNullOrWhiteSpace(input)) return null;
 
+        // Special case: "Other" in Revit UI maps to an empty ForgeTypeId
+        if (input.Equals("Other", StringComparison.OrdinalIgnoreCase)) return new ForgeTypeId("");
+
         // First, try to find by label (most common case when reading JSON written by this converter)
         if (_labelMap.Value.TryGetValue(input, out var forgeTypeId)) return forgeTypeId;
 
         // If not found by label, check if the input is a valid TypeId format (starts with "autodesk.")
         // If so, create a new ForgeTypeId from it
-        if (input.StartsWith("autodesk.", StringComparison.OrdinalIgnoreCase)) {
-            return new ForgeTypeId(input);
-        }
+        if (input.StartsWith("autodesk.", StringComparison.OrdinalIgnoreCase)) return new ForgeTypeId(input);
 
         // If we get here, the input is neither a known label nor a valid TypeId format
-        // This shouldn't happen with properly serialized JSON, but throw a helpful error
-        throw new JsonSerializationException(
-            $"Cannot convert '{input}' to ForgeTypeId. Expected a label (e.g., 'Text', 'Length') or a TypeId string (e.g., 'autodesk.spec:string').");
+        // For backwards compatibility with legacy JSON files, return null for invalid values
+        // This allows the property to use its default value (null or empty ForgeTypeId)
+        return null;
     }
 
     /// <summary>
@@ -114,14 +122,10 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
             }
 
             // Add to map (case-insensitive), but don't overwrite if already exists (first wins)
-            if (!string.IsNullOrEmpty(label) && !map.ContainsKey(label)) {
-                map[label] = value;
-            }
+            if (!string.IsNullOrEmpty(label) && !map.ContainsKey(label)) map[label] = value;
 
             // Also add TypeId -> ForgeTypeId mapping for backwards compatibility
-            if (!string.IsNullOrEmpty(value.TypeId) && !map.ContainsKey(value.TypeId)) {
-                map[value.TypeId] = value;
-            }
+            if (!string.IsNullOrEmpty(value.TypeId) && !map.ContainsKey(value.TypeId)) map[value.TypeId] = value;
         }
     }
 }
