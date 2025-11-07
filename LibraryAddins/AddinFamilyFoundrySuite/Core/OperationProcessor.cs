@@ -120,6 +120,7 @@ public class OperationProcessor : IDisposable {
                 var familySw = Stopwatch.StartNew();
                 _ = this._openDoc
                     .GetFamilyDocument(family)
+                    .EnsureDefaultType()
                     .ProcessFamily(this.CaptureLogs(familyFuncs, logs))
                     .SaveFamily(famDoc =>
                         this.GetSaveLocations(famDoc, loadAndSaveOptions ?? new LoadAndSaveOptions(), outputFolderPath))
@@ -144,6 +145,7 @@ public class OperationProcessor : IDisposable {
             var familySw = Stopwatch.StartNew();
             _ = this._openDoc
                 .GetFamilyDocument()
+                .EnsureDefaultType()
                 .ProcessFamily(this.CaptureLogs(familyFuncs, logs));
             familySw.Stop();
             return new List<FamilyProcessOutput> { new(this._openDoc.Title, logs, familySw.Elapsed.TotalMilliseconds) };

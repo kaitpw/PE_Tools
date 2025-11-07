@@ -12,6 +12,28 @@ public static class FamilyDocumentProcessFamily {
         return new FamilyDocument(famDoc);
     }
 
+    /// <summary>
+    ///     Ensures the family has at least one type. If no types exist, creates a default type.
+    /// </summary>
+    public static FamilyDocument EnsureDefaultType(this FamilyDocument famDoc) {
+        var fm = famDoc.FamilyManager;
+        
+        if (fm.Types.Size == 0) {
+            using var trans = new Transaction(famDoc, "Create Default Family Type");
+            _ = trans.Start();
+            try {
+                _ = fm.NewType("Default");
+                Debug.WriteLine($"[EnsureDefaultType] Created default type for family: {famDoc.Document.Title}");
+            } catch (Exception ex) {
+                Debug.WriteLine($"[EnsureDefaultType] Failed to create default type for family {famDoc.Document.Title}: {ex.Message}");
+                throw;
+            }
+            _ = trans.Commit();
+        }
+        
+        return famDoc;
+    }
+
     public static FamilyDocument ProcessFamily(this FamilyDocument famDoc, params Action<FamilyDocument>[] callbacks) {
         foreach (var callback in callbacks) {
             using var trans = new Transaction(famDoc, "Edit Family Document");
