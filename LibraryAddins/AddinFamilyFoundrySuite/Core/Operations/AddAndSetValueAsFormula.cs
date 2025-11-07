@@ -6,10 +6,12 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddAndSetFormulaFamilyParams(AddAndSetFormulaFamilyParamsSettings settings)
-    : DocOperation<AddAndSetFormulaFamilyParamsSettings>(settings) {
-    // change this to type later probably after seeing if looping through the types isa ctually necessary
-    public override string Description => "Add Family Parameters to the family";
+public class AddAndSetValueAsFormula(AddFamilyParamsSettings settings)
+    : DocOperation<AddFamilyParamsSettings>(settings) {
+    // change this to type later probably after seeing if looping through the types is actually necessary
+    public override string Description => "Add Family Parameters and set the value by a formula." +
+    $"\nPro: Faster than {nameof(AddAndSetValueAsValue)} which sets a param's value per family type" +
+    $"\nCon: Formulas can only be changed by Editing a family";
 
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
@@ -23,7 +25,7 @@ public class AddAndSetFormulaFamilyParams(AddAndSetFormulaFamilyParamsSettings s
             try {
                 var parameter = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
                 // TODO: make this dependent on the p.DataType
-                if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
+                if (this.Settings.OverrideExistingValues)
                     doc.FamilyManager.SetFormula(parameter, $"\"{p.GlobalValue}\"");
                 logs.Add(new LogEntry { Item = p.Name });
             } catch (Exception ex) {
@@ -33,14 +35,4 @@ public class AddAndSetFormulaFamilyParams(AddAndSetFormulaFamilyParamsSettings s
 
         return new OperationLog(this.Name, logs);
     }
-}
-
-public class AddAndSetFormulaFamilyParamsSettings : IOperationSettings {
-    [Description(
-        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
-    [Required]
-    public bool OverrideExistingValues { get; init; } = true;
-
-    public List<FamilyParamModel> FamilyParamData { get; init; } = [];
-    public bool Enabled { get; init; } = true;
 }

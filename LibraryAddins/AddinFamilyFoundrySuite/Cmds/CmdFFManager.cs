@@ -42,22 +42,20 @@ public class CmdFFManager : IExternalCommand {
                 doc,
                 executionOptions);
 
-            var addFamilyParams = new AddAndSetFormulaFamilyParamsSettings {
+            var addFamilyParams = new AddFamilyParamsSettings {
                 FamilyParamData = [
                     new FamilyParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
-                        PropertiesGroup = new ForgeTypeId(""),
                         DataType = SpecTypeId.String.Text,
-                        IsInstance = false,
                         GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                     }
                 ]
             };
             var queue = new OperationQueue()
                 .Add(new AddSharedParams(apsParamData))
-                .Add(new AddAndGlobalSetFamilyParams(profile.AddAndGlobalSetFamilyParams))
+                .Add(new AddFamilyParams(profile.AddAndGlobalSetFamilyParams))
                 .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
-                .Add(new AddAndSetFormulaFamilyParams(addFamilyParams));
+                .Add(new AddAndSetValueAsFormula(addFamilyParams));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -99,7 +97,7 @@ public class CmdFFManager : IExternalCommand {
 public class ProfileFamilyManager : BaseProfileSettings {
     [Description("Settings for adding family parameters")]
     [Required]
-    public AddAndGlobalSetFamilyParamsSettings AddAndGlobalSetFamilyParams { get; init; } = new();
+    public AddFamilyParamsSettings AddAndGlobalSetFamilyParams { get; init; } = new();
 
     [Description("Settings for making reference planes and dimensions")]
     [Required]

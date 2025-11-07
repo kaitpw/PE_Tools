@@ -40,7 +40,7 @@ public class CmdFFTagMigrator : IExternalCommand {
                 .Concat(apsParamNames)
                 .ToList();
 
-            var addFamilyParamsSettings = new AddAndSetFormulaFamilyParamsSettings {
+            var addFamilyParamsSettings = new AddFamilyParamsSettings {
                 FamilyParamData = [
                     new FamilyParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
@@ -57,7 +57,7 @@ public class CmdFFTagMigrator : IExternalCommand {
                 .Add(new DeleteUnusedNestedFamilies(profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new DebugLogAnnoInfo())
-                .Add(new AddAndSetFormulaFamilyParams(addFamilyParamsSettings));
+                .Add(new AddAndSetValueAsFormula(addFamilyParamsSettings));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);

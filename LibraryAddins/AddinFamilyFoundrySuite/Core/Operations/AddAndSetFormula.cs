@@ -2,6 +2,7 @@
 
 using Newtonsoft.Json;
 using PeExtensions.FamDocument;
+using PeExtensions.FamDocument.SetValue;
 using PeServices.Storage.Core;
 using PeServices.Storage.Core.Json.Converters;
 using System.ComponentModel;
@@ -9,9 +10,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddAndGlobalSetFamilyParams(AddAndGlobalSetFamilyParamsSettings settings)
-    : TypeOperation<AddAndGlobalSetFamilyParamsSettings>(settings) {
-    public override string Description => "Add Family Parameters to the family";
+public class AddAndSetFormula(AddFamilyParamsSettings settings)
+    : DocOperation<AddFamilyParamsSettings>(settings) {
+    public override string Description => "Add Family Parameters and set their formula.";
 
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new Dictionary<string, LogEntry>();
@@ -22,10 +23,8 @@ public class AddAndGlobalSetFamilyParams(AddAndGlobalSetFamilyParamsSettings set
             FamilyParameter parameter = null;
             try {
                 parameter = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
-                if (p.Formula is not null && parameter.Formula != p.Formula)
+                if (p.Formula is not null && parameter.Formula != p.Formula && this.Settings.OverrideExistingValues)
                     doc.FamilyManager.SetFormula(parameter, p.Formula);
-                else if (p.GlobalValue is not null && this.Settings.OverrideExistingValues)
-                    _ = doc.SetValue(parameter, p.GlobalValue);
                 logs[p.Name] = new LogEntry { Item = p.Name };
             } catch (Exception ex) {
                 parametersToRetry.Add((parameter, p));
@@ -54,29 +53,4 @@ public class AddAndGlobalSetFamilyParams(AddAndGlobalSetFamilyParamsSettings set
             }
         }
     }
-}
-
-public class AddAndGlobalSetFamilyParamsSettings : IOperationSettings {
-    [Description(
-        "Overwrite a family's existing parameter value/s if they already exist. Note: already places family instances' values will remain unchanged.")]
-    [Required]
-    public bool OverrideExistingValues { get; init; } = true;
-
-    public List<FamilyParamModel> FamilyParamData { get; init; } = [];
-    public bool Enabled { get; init; } = true;
-}
-
-public record FamilyParamModel {
-    [Required] public required string Name { get; init; }
-
-    [JsonConverter(typeof(ForgeTypeIdConverter))]
-    public ForgeTypeId PropertiesGroup { get; init; } = new("");
-
-    [JsonConverter(typeof(ForgeTypeIdConverter))]
-    [Required]
-    public required ForgeTypeId DataType { get; init; }
-
-    public bool IsInstance { get; init; } = true;
-    public object GlobalValue { get; init; } = null;
-    public string Formula { get; init; } = null;
 }

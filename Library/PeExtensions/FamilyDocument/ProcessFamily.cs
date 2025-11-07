@@ -1,10 +1,6 @@
-using Microsoft.VisualBasic;
-using PeRevit.Lib;
-
 namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentProcessFamily {
-
     public static FamilyDocument GetFamilyDocument(this Document doc, Family family = null) {
         if (doc.IsFamilyDocument) return new FamilyDocument(doc);
         if (family == null) throw new ArgumentNullException(nameof(family));
@@ -17,20 +13,33 @@ public static class FamilyDocumentProcessFamily {
     /// </summary>
     public static FamilyDocument EnsureDefaultType(this FamilyDocument famDoc) {
         var fm = famDoc.FamilyManager;
-        
-        if (fm.Types.Size == 0) {
+
+        FamilyType emptyNameFamilyType = null;
+        foreach (FamilyType type in fm.Types) {
+            if (string.IsNullOrWhiteSpace(type.Name)) {
+                emptyNameFamilyType = type;
+                break;
+            }
+        }
+
+        var hasOnlyOneEmptyName = fm.Types.Size == 1 && emptyNameFamilyType != null;
+        if (fm.Types.Size == 0 || hasOnlyOneEmptyName) {
             using var trans = new Transaction(famDoc, "Create Default Family Type");
             _ = trans.Start();
             try {
-                _ = fm.NewType("Default");
+                var defaultType = fm.NewType("Default");
+                fm.CurrentType = defaultType;
+
                 Debug.WriteLine($"[EnsureDefaultType] Created default type for family: {famDoc.Document.Title}");
             } catch (Exception ex) {
-                Debug.WriteLine($"[EnsureDefaultType] Failed to create default type for family {famDoc.Document.Title}: {ex.Message}");
+                Debug.WriteLine(
+                    $"[EnsureDefaultType] Failed to create default type for family {famDoc.Document.Title}: {ex.Message}");
                 throw;
             }
+
             _ = trans.Commit();
         }
-        
+
         return famDoc;
     }
 
