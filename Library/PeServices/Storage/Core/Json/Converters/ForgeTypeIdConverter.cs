@@ -1,7 +1,7 @@
 using System.Reflection;
 using Newtonsoft.Json;
 
-namespace PeServices.Storage.Core;
+namespace PeServices.Storage.Core.Json.Converters;
 
 /// <summary>
 ///     JSON converter for ForgeTypeId that serializes to/from human-readable labels using LabelUtils.
@@ -9,7 +9,7 @@ namespace PeServices.Storage.Core;
 ///     For reading: attempts to find matching ForgeTypeId from known SpecTypeId/GroupTypeId constants,
 ///     falls back to creating a new ForgeTypeId from the TypeId string if not found.
 ///     Example JSON serialization:
-///     <code>  
+///     <code>   
 /// {
 ///   "DataType": "Length",
 ///   "PropertiesGroup": "Dimensions"
@@ -18,7 +18,6 @@ namespace PeServices.Storage.Core;
 /// </summary>
 public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
     private static readonly Lazy<Dictionary<string, ForgeTypeId>> _labelMap = new(BuildLabelMap);
-
     public override void WriteJson(JsonWriter writer, ForgeTypeId value, JsonSerializer serializer) {
         if (value == null) {
             writer.WriteNull();
@@ -101,7 +100,7 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
             if (value == null) continue;
 
             // Try to get label for spec type
-            string label = null;
+            string label;
             try {
                 label = LabelUtils.GetLabelForSpec(value);
             } catch {
@@ -126,65 +125,3 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
         }
     }
 }
-
-/// <summary>
-///     Helper class for identifying ForgeTypeId-related types and converters.
-///     Used by both the converter and schema processor to maintain consistency.
-/// </summary>
-public static class ForgeTypeIdJsonHelper {
-    private static readonly Type ForgeTypeIdType = Type.GetType("Autodesk.Revit.DB.ForgeTypeId, RevitAPI") 
-                                                    ?? Type.GetType("Autodesk.Revit.DB.ForgeTypeId");
-    private static readonly Type ForgeTypeIdConverterType = typeof(ForgeTypeIdConverter);
-
-    /// <summary>
-    ///     The name of the ForgeTypeIdConverter class.
-    /// </summary>
-    public const string ConverterTypeName = nameof(ForgeTypeIdConverter);
-
-    /// <summary>
-    ///     Checks if a property is a ForgeTypeId property or uses ForgeTypeIdConverter.
-    /// </summary>
-    public static bool IsForgeTypeIdProperty(PropertyInfo property) {
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Checking property '{property.Name}' of type '{property.PropertyType?.FullName ?? "null"}'");
-        
-        // Check if property type is ForgeTypeId
-        if (ForgeTypeIdType != null && property.PropertyType == ForgeTypeIdType) {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Property '{property.Name}' matches ForgeTypeIdType exactly");
-            return true;
-        }
-        // Fallback: check by type name
-        if (property.PropertyType != null && property.PropertyType.Name == "ForgeTypeId") {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Property '{property.Name}' matches ForgeTypeId by name");
-            return true;
-        }
-
-        // Check if property has JsonConverter attribute for ForgeTypeIdConverter
-        var jsonConverterAttr = property.GetCustomAttribute<JsonConverterAttribute>();
-        if (jsonConverterAttr != null) {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Property '{property.Name}' has JsonConverter attribute");
-            var converterType = jsonConverterAttr.ConverterType;
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Converter type: {converterType?.FullName ?? "null"}");
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Expected converter type: {ForgeTypeIdConverterType.FullName}");
-            
-            if (converterType != null) {
-                // Check if converter type matches ForgeTypeIdConverter exactly
-                if (converterType == ForgeTypeIdConverterType) {
-                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Property '{property.Name}' converter matches exactly");
-                    return true;
-                }
-                // Fallback: check by type name (for cases where types are from different assemblies)
-                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Converter name: '{converterType.Name}', Expected: '{ConverterTypeName}'");
-                if (converterType.Name == ConverterTypeName) {
-                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Property '{property.Name}' converter matches by name");
-                    return true;
-                }
-            }
-        } else {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Property '{property.Name}' has no JsonConverter attribute");
-        }
-
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdJsonHelper] Property '{property.Name}' is NOT a ForgeTypeId property");
-        return false;
-    }
-}
-

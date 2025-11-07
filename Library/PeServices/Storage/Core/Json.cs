@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Reflection;
 using Newtonsoft.Json;
@@ -9,112 +10,11 @@ using NJsonSchema.Generation;
 using NJsonSchema.NewtonsoftJson.Generation;
 using NJsonSchema.Validation;
 using PeUtils.Files;
+using PeServices.Storage.Core.Json.SchemaProcessors;
+using PeServices.Storage.Core.Json.Converters;
+using PeServices.Storage.Core.Json.ContractResolvers;
 
 namespace PeServices.Storage.Core;
-
-/// <summary> Handles JSON recovery operations for schema validation errors </summary>
-file static class JsonRecovery {
-    /// <summary> Recursively checks if any validation error is a PropertyRequired error </summary>
-    public static bool HasPropertyRequiredError(ICollection<ValidationError> errors) {
-        foreach (var error in errors) {
-            if (error.Kind == ValidationErrorKind.PropertyRequired) return true;
-
-            // Check nested errors in ChildSchemaValidationError
-            if (error is ChildSchemaValidationError childError) {
-                foreach (var nestedErrors in childError.Errors.Values) {
-                    if (HasPropertyRequiredError(nestedErrors))
-                        return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary> Gets all property paths from a JSON object </summary>
-    private static List<string> GetAllPropertyPaths(JObject obj, string prefix = "") {
-        var paths = new List<string>();
-        foreach (var prop in obj.Properties()) {
-            var path = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
-            paths.Add(path);
-            if (prop.Value is JObject nestedObj) paths.AddRange(GetAllPropertyPaths(nestedObj, path));
-        }
-
-        return paths;
-    }
-
-    /// <summary> Gets properties that were added (exist in updated but not in original) </summary>
-    private static List<string> GetAddedProperties(JObject original, JObject updated) {
-        var originalPaths = GetAllPropertyPaths(original);
-        var updatedPaths = GetAllPropertyPaths(updated);
-        return updatedPaths.Except(originalPaths).ToList();
-    }
-
-    /// <summary> Gets properties that were removed (exist in original but not in updated) </summary>
-    private static List<string> GetRemovedProperties(JObject original, JObject updated) {
-        var originalPaths = GetAllPropertyPaths(original);
-        var updatedPaths = GetAllPropertyPaths(updated);
-        return originalPaths.Except(updatedPaths).ToList();
-    }
-
-    /// <summary>
-    ///     Attempts to recover from JSON validation errors by fixing the file and throwing a CrashProgramException
-    /// </summary>
-    public static CrashProgramException AttemptRecovery<T>(
-        string filePath,
-        Func<string> fileText,
-        JsonSerializerSettings serializerSettings) where T : class, new() {
-        var originalJson = JObject.Parse(fileText());
-        var partialContent = JsonConvert.DeserializeObject<T>(fileText(), serializerSettings);
-
-        // Ensure directory exists before writing
-        var directory = Path.GetDirectoryName(filePath);
-        if (directory != null && !Directory.Exists(directory)) _ = Directory.CreateDirectory(directory);
-
-        File.WriteAllText(filePath, JsonConvert.SerializeObject(partialContent ?? new T(), serializerSettings));
-
-        var updatedJson = JObject.Parse(fileText());
-        var addedProps = GetAddedProperties(originalJson, updatedJson);
-        var removedProps = GetRemovedProperties(originalJson, updatedJson);
-
-        var message = $"JSON file {filePath} had schema validation errors and has been updated.";
-        if (addedProps.Any()) message += $"\nAdded properties: {string.Join("\n\t-", addedProps)}";
-        if (removedProps.Any()) message += $"\nRemoved properties: {string.Join("\n\t-", removedProps)}";
-        message += "\nPlease review the settings before running again.";
-
-        return new CrashProgramException(message);
-    }
-}
-
-/// <summary> Contract resolver that orders properties by declaration order, respecting inheritance hierarchy </summary>
-file class OrderedContractResolver : DefaultContractResolver {
-    protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization) {
-        var properties = base.CreateProperties(type, memberSerialization);
-
-        // Build inheritance chain from base to derived
-        var typeHierarchy = new List<Type>();
-        var currentType = type;
-        while (currentType != null && currentType != typeof(object)) {
-            typeHierarchy.Insert(0, currentType);
-            currentType = currentType.BaseType;
-        }
-
-        // Create ordered list: base class properties first, then derived class properties
-        var orderedProperties = new List<JsonProperty>();
-        foreach (var t in typeHierarchy) {
-            var declaredProps = t.GetProperties(BindingFlags.Public |
-                                                BindingFlags.Instance |
-                                                BindingFlags.DeclaredOnly);
-
-            foreach (var declaredProp in declaredProps) {
-                var jsonProp = properties.FirstOrDefault(p => p.UnderlyingName == declaredProp.Name);
-                if (jsonProp != null && !orderedProperties.Contains(jsonProp)) orderedProperties.Add(jsonProp);
-            }
-        }
-
-        return orderedProperties;
-    }
-}
 
 public class Json<T> : JsonReadWriter<T> where T : class, new() {
     private readonly DateTime _instanceCreationTime;
@@ -129,7 +29,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         this._instanceCreationTime = DateTime.Now;
         this._serializerSettings = new JsonSerializerSettings {
             Formatting = Formatting.Indented,
-            Converters = new List<JsonConverter> { new StringEnumConverter() },
+            Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter() },
             ContractResolver = new OrderedContractResolver()
         };
 
@@ -256,180 +156,163 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
     }
 }
 
-/// <summary>
-///     Simple schema processor that adds enum constraints for properties marked with EnumConstraintAttribute
-/// </summary>
-public class EnumConstraintSchemaProcessor : ISchemaProcessor {
-    public void Process(SchemaProcessorContext context) {
-        if (context.ContextualType.Type.IsClass) {
-            foreach (var property in context.ContextualType.Type.GetProperties()) {
-                var attribute = property.GetCustomAttribute<EnumConstraintAttribute>();
-                if (attribute != null) {
-                    var propertyName = GetJsonPropertyName(property);
-                    if (context.Schema.Properties.TryGetValue(propertyName, out var propertySchema)) {
-                        propertySchema.Enumeration.Clear();
-                        foreach (var value in attribute.Values) propertySchema.Enumeration.Add(value);
-                    }
+
+/// <summary> Handles JSON recovery operations for schema validation errors </summary>
+file static class JsonRecovery {
+    /// <summary> Recursively checks if any validation error is a PropertyRequired error </summary>
+    public static bool HasPropertyRequiredError(ICollection<ValidationError> errors) {
+        foreach (var error in errors) {
+            if (error.Kind == ValidationErrorKind.PropertyRequired) return true;
+
+            // Check nested errors in ChildSchemaValidationError
+            if (error is ChildSchemaValidationError childError) {
+                foreach (var nestedErrors in childError.Errors.Values) {
+                    if (HasPropertyRequiredError(nestedErrors))
+                        return true;
                 }
             }
         }
+
+        return false;
     }
 
-    private static string GetJsonPropertyName(PropertyInfo property) {
-        var jsonPropertyNameAttr = property.GetCustomAttribute<JsonPropertyAttribute>();
-        return jsonPropertyNameAttr?.PropertyName ?? property.Name;
-    }
-}
-
-/// <summary>
-///     Schema processor that converts ForgeTypeId properties to string schemas.
-///     This is needed because ForgeTypeId is serialized as a string via JsonConverter,
-///     but the schema generator treats it as an object by default.
-/// </summary>
-public class ForgeTypeIdSchemaProcessor : ISchemaProcessor {
-    public void Process(SchemaProcessorContext context) {
-        var type = context.ContextualType.Type;
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Processing type: {type.FullName}");
-
-        // Process classes and value types
-        if (type.IsClass || type.IsValueType) {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Type is class/value type, processing properties");
-            ProcessTypeProperties(context, type);
+    /// <summary> Gets all property paths from a JSON object </summary>
+    private static List<string> GetAllPropertyPaths(JObject obj, string prefix = "") {
+        var paths = new List<string>();
+        foreach (var prop in obj.Properties()) {
+            var path = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
+            paths.Add(path);
+            if (prop.Value is JObject nestedObj) paths.AddRange(GetAllPropertyPaths(nestedObj, path));
         }
 
-        // Process array item schemas
-        if (context.Schema.Item != null) {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Found Item schema, processing item type");
-            ProcessItemSchema(context.Schema.Item, type);
-        } else {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] No Item schema found");
-        }
+        return paths;
     }
 
-    private static void ProcessTypeProperties(SchemaProcessorContext context, Type typeToProcess) {
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Processing properties of {typeToProcess.FullName}");
-        var properties = typeToProcess.GetProperties();
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Found {properties.Length} properties");
-
-        // Get the actual schema (handle references)
-        var actualSchema = context.Schema;
-        if (context.Schema.HasReference) {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Schema has reference, following it");
-            actualSchema = context.Schema.Reference;
-        }
-
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Available schema properties: {string.Join(", ", actualSchema.Properties.Keys)}");
-
-        foreach (var property in properties) {
-            var isForgeTypeId = ForgeTypeIdJsonHelper.IsForgeTypeIdProperty(property);
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Property '{property.Name}' (Type: {property.PropertyType.Name}) - IsForgeTypeId: {isForgeTypeId}");
-
-            if (isForgeTypeId) {
-                var propertyName = GetJsonPropertyName(property);
-                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Looking for property '{propertyName}' in schema properties");
-
-                if (actualSchema.Properties.TryGetValue(propertyName, out var propertySchema)) {
-                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Found property schema for '{propertyName}', current type: {propertySchema.Type}, converting to string");
-                    ConvertToStringSchema(propertySchema);
-                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Converted '{propertyName}' to string schema");
-                } else {
-                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] WARNING: Property '{propertyName}' not found in schema properties!");
-                }
-            }
-        }
+    /// <summary> Gets properties that were added (exist in updated but not in original) </summary>
+    private static List<string> GetAddedProperties(JObject original, JObject updated) {
+        var originalPaths = GetAllPropertyPaths(original);
+        var updatedPaths = GetAllPropertyPaths(updated);
+        return updatedPaths.Except(originalPaths).ToList();
     }
 
-    private static void ProcessItemSchema(JsonSchema itemSchema, Type originalType) {
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Processing item schema for original type: {originalType.FullName}");
-
-        // If the original type is a generic collection, get the item type
-        Type itemType = null;
-        if (originalType.IsGenericType) {
-            var genericArgs = originalType.GetGenericArguments();
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Generic type with {genericArgs.Length} arguments");
-            if (genericArgs.Length > 0) {
-                itemType = genericArgs[0];
-                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item type: {itemType.FullName}");
-            }
-        } else if (originalType.IsArray) {
-            itemType = originalType.GetElementType();
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Array type, item type: {itemType?.FullName}");
-        }
-
-        // Process properties of the item type
-        if (itemType != null && (itemType.IsClass || itemType.IsValueType)) {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Processing item type properties: {itemType.FullName}");
-            var properties = itemType.GetProperties();
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item type has {properties.Length} properties");
-
-            // Check if itemSchema has a reference (NJsonSchema may use references)
-            var actualSchema = itemSchema;
-            if (itemSchema.HasReference) {
-                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item schema has reference, following it");
-                actualSchema = itemSchema.Reference;
-            }
-
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Available item schema properties: {string.Join(", ", actualSchema.Properties.Keys)}");
-
-            foreach (var property in properties) {
-                var isForgeTypeId = ForgeTypeIdJsonHelper.IsForgeTypeIdProperty(property);
-                System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item property '{property.Name}' (Type: {property.PropertyType.Name}) - IsForgeTypeId: {isForgeTypeId}");
-
-                if (isForgeTypeId) {
-                    var propertyName = GetJsonPropertyName(property);
-                    System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Looking for item property '{propertyName}' in item schema");
-
-                    if (actualSchema.Properties.TryGetValue(propertyName, out var propertySchema)) {
-                        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Found item property schema for '{propertyName}', current type: {propertySchema.Type}, converting to string");
-                        ConvertToStringSchema(propertySchema);
-                        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Converted item property '{propertyName}' to string schema");
-                    } else {
-                        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] WARNING: Item property '{propertyName}' not found in item schema properties!");
-                    }
-                }
-            }
-        } else {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Item type is null or not class/value type");
-        }
+    /// <summary> Gets properties that were removed (exist in original but not in updated) </summary>
+    private static List<string> GetRemovedProperties(JObject original, JObject updated) {
+        var originalPaths = GetAllPropertyPaths(original);
+        var updatedPaths = GetAllPropertyPaths(updated);
+        return originalPaths.Except(updatedPaths).ToList();
     }
 
-    private static void ConvertToStringSchema(JsonSchema propertySchema) {
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Converting schema - Before: Type={propertySchema.Type}, HasReference={propertySchema.HasReference}, HasProperties={propertySchema.Properties.Count}");
-
-        // If it has a reference, we need to modify the property schema itself, not the reference
-        // Clear the reference first so we can set the type directly
-        if (propertySchema.HasReference) {
-            System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Property schema has reference, clearing it and converting to string");
-            propertySchema.Reference = null;
-        }
-
-        // Convert to string schema directly on the property schema
-        propertySchema.Type = JsonObjectType.String;
-        propertySchema.Format = null;
-        // Clear any object-related properties
-        propertySchema.Properties.Clear();
-        propertySchema.AdditionalPropertiesSchema = null;
-
-        System.Diagnostics.Debug.WriteLine($"[ForgeTypeIdSchemaProcessor] Converting schema - After: Type={propertySchema.Type}");
-    }
-
-    private static string GetJsonPropertyName(PropertyInfo property) {
-        var jsonPropertyNameAttr = property.GetCustomAttribute<JsonPropertyAttribute>();
-        return jsonPropertyNameAttr?.PropertyName ?? property.Name;
-    }
-}
-
-/// <summary>
-///     Attribute to constrain a property to specific enum values in the JSON schema.
-///     Usage: [EnumConstraint("Value1", "Value2", "Value3")]
-/// </summary>
-[AttributeUsage(AttributeTargets.Property)]
-public class EnumConstraintAttribute : Attribute {
     /// <summary>
-    ///     Creates an enum constraint with the specified allowed values
+    ///     Attempts to recover from JSON validation errors by fixing the file and throwing a CrashProgramException
     /// </summary>
-    /// <param name="values">The allowed string values for this property</param>
-    public EnumConstraintAttribute(params string[] values) => this.Values = values;
+    public static CrashProgramException AttemptRecovery<T>(
+        string filePath,
+        Func<string> fileText,
+        JsonSerializerSettings serializerSettings) where T : class, new() {
+        var originalJson = JObject.Parse(fileText());
+        var partialContent = JsonConvert.DeserializeObject<T>(fileText(), serializerSettings);
 
-    public IEnumerable<string> Values { get; }
+        // Merge only required properties from deserialized object into original JSON
+        var mergedJson = MergeRequiredProperties(originalJson, partialContent ?? new T(), typeof(T), serializerSettings);
+
+        // Ensure directory exists before writing
+        var directory = Path.GetDirectoryName(filePath);
+        if (directory != null && !Directory.Exists(directory)) _ = Directory.CreateDirectory(directory);
+
+        File.WriteAllText(filePath, JsonConvert.SerializeObject(mergedJson, Formatting.Indented));
+
+        var updatedJson = JObject.Parse(fileText());
+        var addedProps = GetAddedProperties(originalJson, updatedJson);
+        var removedProps = GetRemovedProperties(originalJson, updatedJson);
+
+        var message = $"JSON file {filePath} had schema validation errors and has been updated.";
+        if (addedProps.Any()) message += $"\nAdded properties: {string.Join("\n\t-", addedProps)}";
+        if (removedProps.Any()) message += $"\nRemoved properties: {string.Join("\n\t-", removedProps)}";
+        message += "\nPlease review the settings before running again.";
+
+        return new CrashProgramException(message);
+    }
+
+    /// <summary> Merges only required properties from deserialized object into original JSON </summary>
+    private static JObject MergeRequiredProperties(
+        JObject originalJson,
+        object deserializedObject,
+        Type type,
+        JsonSerializerSettings serializerSettings,
+        string pathPrefix = "") {
+        var merged = (JObject)originalJson.DeepClone();
+        var deserializedJson = JObject.FromObject(deserializedObject, JsonSerializer.Create(serializerSettings));
+
+        // Get all properties from the type hierarchy
+        var typeHierarchy = new List<Type>();
+        var currentType = type;
+        while (currentType != null && currentType != typeof(object)) {
+            typeHierarchy.Add(currentType);
+            currentType = currentType.BaseType;
+        }
+
+        // Process properties from base to derived (to match serialization order)
+        foreach (var t in typeHierarchy.Reverse<Type>()) {
+            foreach (var property in t.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)) {
+                // Find the corresponding property in the deserialized JSON
+                var jsonPropertyName = GetJsonPropertyNameFromJson(property, deserializedJson, serializerSettings);
+                if (jsonPropertyName == null) continue;
+
+                var fullPath = string.IsNullOrEmpty(pathPrefix) ? jsonPropertyName : $"{pathPrefix}.{jsonPropertyName}";
+
+                // Check if property is required
+                var isRequired = property.GetCustomAttribute<RequiredAttribute>() != null;
+
+                if (isRequired) {
+                    // If required property is missing from original, add it from deserialized object
+                    if (!merged.ContainsKey(jsonPropertyName) && deserializedJson.ContainsKey(jsonPropertyName)) {
+                        merged[jsonPropertyName] = deserializedJson[jsonPropertyName]?.DeepClone();
+                    }
+                    // If it's a nested object, recursively merge required properties
+                    else if (merged.ContainsKey(jsonPropertyName) && merged[jsonPropertyName] is JObject nestedOriginal &&
+                             deserializedJson[jsonPropertyName] is JObject) {
+                        merged[jsonPropertyName] = MergeRequiredProperties(
+                            nestedOriginal,
+                            property.GetValue(deserializedObject),
+                            property.PropertyType,
+                            serializerSettings,
+                            fullPath);
+                    }
+                }
+            }
+        }
+
+        return merged;
+    }
+
+    /// <summary> Gets the JSON property name by finding it in the serialized JSON object </summary>
+    private static string GetJsonPropertyNameFromJson(
+        PropertyInfo property,
+        JObject deserializedJson,
+        JsonSerializerSettings serializerSettings) {
+        // Check for JsonPropertyAttribute first
+        var jsonPropertyAttr = property.GetCustomAttribute<JsonPropertyAttribute>();
+        if (jsonPropertyAttr != null) {
+            return deserializedJson.ContainsKey(jsonPropertyAttr.PropertyName) ? jsonPropertyAttr.PropertyName : null;
+        }
+
+        // Try property name as-is (case-sensitive)
+        if (deserializedJson.ContainsKey(property.Name)) return property.Name;
+
+        // Try property name with camelCase (common JSON convention)
+        var camelCaseName = char.ToLowerInvariant(property.Name[0]) + property.Name[1..];
+        if (deserializedJson.ContainsKey(camelCaseName)) return camelCaseName;
+
+        // Use contract resolver as fallback
+        var contractResolver = serializerSettings.ContractResolver ?? new DefaultContractResolver();
+        var contract = contractResolver.ResolveContract(property.DeclaringType ?? property.PropertyType);
+        if (contract is JsonObjectContract jsonContract) {
+            var jsonProperty = jsonContract.Properties.FirstOrDefault(p => p.UnderlyingName == property.Name);
+            if (jsonProperty != null && deserializedJson.ContainsKey(jsonProperty.PropertyName)) {
+                return jsonProperty.PropertyName;
+            }
+        }
+
+        return null;
+    }
 }

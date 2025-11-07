@@ -1,11 +1,8 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
-using Newtonsoft.Json;
-using PeExtensions.FamDocument;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
-using PeServices.Storage.Core;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -27,7 +24,8 @@ public class CmdFFManager : IExternalCommand {
             var storage = new Storage("FF Manager");
             var settingsManager = storage.SettingsDir();
             var settings = settingsManager.Json<BaseSettings<ProfileFamilyManager>>().Read();
-            var profile = settingsManager.SubDir("profiles").Json<ProfileFamilyManager>($"{settings.CurrentProfile}.json").Read();
+            var profile = settingsManager.SubDir("profiles")
+                .Json<ProfileFamilyManager>($"{settings.CurrentProfile}.json").Read();
             var outputFolderPath = storage.OutputDir().DirectoryPath;
 
             // force this to never be single transaction
@@ -56,10 +54,10 @@ public class CmdFFManager : IExternalCommand {
                 ]
             };
             var queue = new OperationQueue()
-                    .Add(new AddSharedParams(apsParamData))
-                    .Add(new AddAndGlobalSetFamilyParams(profile.AddAndGlobalSetFamilyParams))
-                    .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
-                    .Add(new AddAndSetFormulaFamilyParams(addFamilyParams));
+                .Add(new AddSharedParams(apsParamData))
+                .Add(new AddAndGlobalSetFamilyParams(profile.AddAndGlobalSetFamilyParams))
+                .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
+                .Add(new AddAndSetFormulaFamilyParams(addFamilyParams));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -77,8 +75,7 @@ public class CmdFFManager : IExternalCommand {
             }
 
             var logs = processor
-                .SelectFamilies(
-                    () => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc)
+                .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc)
                 )
                 .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
             var logPath = OperationLogger.OutputProcessingResults(
@@ -99,14 +96,12 @@ public class CmdFFManager : IExternalCommand {
     }
 }
 
-
 public class ProfileFamilyManager : BaseProfileSettings {
+    [Description("Settings for adding family parameters")]
+    [Required]
+    public AddAndGlobalSetFamilyParamsSettings AddAndGlobalSetFamilyParams { get; init; } = new();
 
     [Description("Settings for making reference planes and dimensions")]
     [Required]
     public MakeRefPlaneAndDimsSettings MakeRefPlaneAndDims { get; init; } = new();
-
-    [Description("Settings for adding family parameters")]
-    [Required]
-    public AddAndGlobalSetFamilyParamsSettings AddAndGlobalSetFamilyParams { get; init; } = new();
 }
