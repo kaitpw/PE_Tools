@@ -89,7 +89,7 @@ public class CmdFFTagMigrator : IExternalCommand {
                 var balloon = new Ballogger();
 
                 foreach (var output in logs.familyResults)
-                    _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.familyName} in {output.totalMs}ms");
+                    _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.FamilyName} in {output.TotalMs}ms");
                 balloon.Show();
             }
 
@@ -119,8 +119,7 @@ public class DebugLogAnnoInfo : DocOperation {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check",
-                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }

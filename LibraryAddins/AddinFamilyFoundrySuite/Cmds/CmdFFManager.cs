@@ -1,12 +1,12 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
+using AddinFamilyFoundrySuite.Core.Operations.Types;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using AddinFamilyFoundrySuite.Core.Operations.Types;
 
 namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
@@ -33,11 +33,10 @@ public class CmdFFManager : IExternalCommand {
             var apsParamData = profile.GetAPSParams(tempFile);
 
 
-
             var specs = new List<RefPlaneSubcategorySpec> {
-                new() {Strength = RpStrength.NotARef, Name = "NotARef", Color = new Color(211, 211, 211)},
-                new() {Strength = RpStrength.WeakRef, Name = "WeakRef", Color = new Color(217, 124, 0)},
-                new() { Strength = RpStrength.StrongRef, Name = "StrongRef", Color = new Color(255, 0, 0)},
+                new() { Strength = RpStrength.NotARef, Name = "NotARef", Color = new Color(211, 211, 211) },
+                new() { Strength = RpStrength.WeakRef, Name = "WeakRef", Color = new Color(217, 124, 0) },
+                new() { Strength = RpStrength.StrongRef, Name = "StrongRef", Color = new Color(255, 0, 0) },
                 new() { Strength = RpStrength.CenterLR, Name = "Center", Color = new Color(115, 0, 253) },
                 new() { Strength = RpStrength.CenterFB, Name = "Center", Color = new Color(115, 0, 253) }
             };
@@ -81,6 +80,7 @@ public class CmdFFManager : IExternalCommand {
                     settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
                 return Result.Succeeded;
             }
+
             using var processor = new OperationProcessor(doc, executionOptions);
             var logs = processor
                 .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc)
@@ -94,7 +94,7 @@ public class CmdFFManager : IExternalCommand {
 
             var balloon = new Ballogger();
             foreach (var output in logs.familyResults)
-                _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.familyName} in {output.totalMs}ms");
+                _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.FamilyName} in {output.TotalMs}ms");
             balloon.Show();
             return Result.Succeeded;
         } catch (Exception ex) {

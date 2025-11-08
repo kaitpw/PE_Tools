@@ -13,7 +13,7 @@ public readonly struct FamilyDocument {
     public FamilyDocument(Document document) {
         if (document is null) throw new ArgumentNullException("Document is null.", nameof(document));
         if (!document.IsFamilyDocument)
-            throw new ArgumentException("Document is not a family document.", nameof(document));
+            throw new ArgumentException(@"Document is not a family document.", nameof(document));
         if (document.FamilyManager is null)
             throw new InvalidOperationException("Family document's FamilyManager is null.");
 

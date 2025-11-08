@@ -77,9 +77,9 @@ public class CmdFFMigrator : IExternalCommand {
             } else {
                 var logs = processor
                     .SelectFamilies(() => {
-                        var picked = Pickers.GetSelectedFamilies(uiDoc);
-                        return picked.Any() ? picked : profile.GetFamilies(doc);
-                    }
+                            var picked = Pickers.GetSelectedFamilies(uiDoc);
+                            return picked.Any() ? picked : profile.GetFamilies(doc);
+                        }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(
@@ -90,7 +90,7 @@ public class CmdFFMigrator : IExternalCommand {
                 var balloon = new Ballogger();
 
                 foreach (var output in logs.familyResults)
-                    _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.familyName} in {output.totalMs}ms");
+                    _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.FamilyName} in {output.TotalMs}ms");
                 balloon.Show();
             }
 

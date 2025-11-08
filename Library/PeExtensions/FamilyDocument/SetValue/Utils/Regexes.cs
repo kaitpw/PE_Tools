@@ -32,7 +32,7 @@ public static class Regexes {
         TryExtractInteger(input, out var result)
             ? result
             : throw new ArgumentException(
-                $"No valid integer found at the start of string: {input}",
+                $@"No valid integer found at the start of string: {input}",
                 nameof(input)
             );
 
@@ -40,7 +40,7 @@ public static class Regexes {
         TryExtractDouble(input, out var result)
             ? result
             : throw new ArgumentException(
-                $"No valid numeric value found at the start of string: {input}",
+                $@"No valid numeric value found at the start of string: {input}",
                 nameof(input)
             );
 }

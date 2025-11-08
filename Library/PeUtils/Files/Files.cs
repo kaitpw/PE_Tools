@@ -23,9 +23,9 @@ public static class FileUtils {
 
     public static void ValidateFileNameAndExtension(string filePath, string expectedExt) {
         if (string.IsNullOrWhiteSpace(filePath))
-            throw new ArgumentException("File path cannot be null, empty, or whitespace.", nameof(filePath));
+            throw new ArgumentException(@"File path cannot be null, empty, or whitespace.", nameof(filePath));
         if (string.IsNullOrWhiteSpace(expectedExt)) {
-            throw new ArgumentException("Expected extension cannot be null, empty, or whitespace.",
+            throw new ArgumentException(@"Expected extension cannot be null, empty, or whitespace.",
                 nameof(expectedExt));
         }
 
@@ -37,11 +37,11 @@ public static class FileUtils {
 
 
         if (string.IsNullOrEmpty(fileName))
-            throw new ArgumentException("File path must contain a valid filename.", nameof(filePath));
+            throw new ArgumentException(@"File path must contain a valid filename.", nameof(filePath));
         if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            throw new ArgumentException($"Filename contains invalid characters: {fileName}", nameof(filePath));
+            throw new ArgumentException($@"Filename contains invalid characters: {fileName}", nameof(filePath));
         if (!string.Equals(fileExt, normalizedExpectedExtension, StringComparison.OrdinalIgnoreCase)) {
-            throw new ArgumentException($"File must have a '{expectedExt}' extension. Found '{fileExt}'.",
+            throw new ArgumentException($@"File must have a '{expectedExt}' extension. Found '{fileExt}'.",
                 nameof(filePath));
         }
     }

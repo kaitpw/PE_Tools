@@ -4,32 +4,27 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core;
 
-public record FamilyProcessOutput(string familyName, Result<List<OperationLog>> logs, double totalMs);
+public record FamilyProcessOutput(string FamilyName, Result<List<OperationLog>> Logs, double TotalMs);
 
-public class OperationProcessor : IDisposable {
-    private readonly ExecutionOptions _executionOptions;
+public class OperationProcessor(
+    Document doc,
+    ExecutionOptions executionOptions = null
+) : IDisposable {
+    private readonly ExecutionOptions _exOpts = executionOptions ?? new ExecutionOptions();
 
     /// <summary>
     ///     A function to select families in the Document. If the document is a family document, this will not be called
     /// </summary>
     private Func<List<Family>> _documentFamilySelector;
 
-    public OperationProcessor(
-        Document doc,
-        ExecutionOptions executionOptions = null
-    ) {
-        this._openDoc = doc;
-        this._executionOptions = executionOptions ?? new ExecutionOptions();
-    }
-
-    private Document _openDoc { get; }
+    private Document OpenDoc { get; } = doc;
 
     public void Dispose() { }
 
     public OperationProcessor SelectFamilies(params Func<List<Family>>[] familySelectors) {
         var selectorList = familySelectors.ToList();
         if (selectorList == null || selectorList.Count == 0)
-            throw new ArgumentException("At least one family selector must be provided", nameof(familySelectors));
+            throw new ArgumentException(@"At least one family selector must be provided", nameof(familySelectors));
         this._documentFamilySelector = () => selectorList
             .SelectMany(selector => selector() ?? new List<Family>())
             .GroupBy(f => f.Id)
@@ -51,23 +46,18 @@ public class OperationProcessor : IDisposable {
         var totalSw = Stopwatch.StartNew();
 
         var familyFuncs = queue.ToFuncs(
-            this._executionOptions.OptimizeTypeOperations,
-            this._executionOptions.SingleTransaction);
+            this._exOpts.OptimizeTypeOperations,
+            this._exOpts.SingleTransaction);
+        var outputs = this.OpenDoc.IsFamilyDocument
+            ? this.ProcessFamilyDocument(familyFuncs)
+            : this.ProcessNormalDocument(familyFuncs, loadAndSaveOptions, outputFolderPath);
 
-        if (this._openDoc.IsFamilyDocument) {
-            var outputs = this.ProcessFamilyDocument(familyFuncs);
-            familyResults.AddRange(outputs);
-        } else {
-            var outputs = this.ProcessNormalDocument(outputFolderPath, loadAndSaveOptions, familyFuncs);
-            familyResults.AddRange(outputs);
-        }
-
+        familyResults.AddRange(outputs);
         totalSw.Stop();
-
         return (familyResults, totalSw.Elapsed.TotalMilliseconds);
     }
 
-    public (List<FamilyProcessOutput> familyResults, double totalMs) SandboxProcessQueue(
+    public (List<FamilyProcessOutput> familyResults, double totalMs) ProcessQueueDangerously(
         OperationQueue queue,
         string outputFolderPath = null,
         LoadAndSaveOptions loadAndSaveOptions = null
@@ -76,40 +66,37 @@ public class OperationProcessor : IDisposable {
         var totalSw = Stopwatch.StartNew();
 
         var familyFuncs = queue.ToFuncs(
-            this._executionOptions.OptimizeTypeOperations,
-            this._executionOptions.SingleTransaction);
-        var outputs = this._openDoc.IsFamilyDocument
+            this._exOpts.OptimizeTypeOperations,
+            this._exOpts.SingleTransaction);
+        var outputs = this.OpenDoc.IsFamilyDocument
             ? this.ProcessFamilyDocument(familyFuncs)
-            : this.ProcessNormalDocument(outputFolderPath, loadAndSaveOptions, familyFuncs);
+            : this.ProcessNormalDocument(familyFuncs, loadAndSaveOptions, outputFolderPath);
         var errors = outputs
             .Where(output => {
-                var (log, err) = output.logs;
+                var (_, err) = output.Logs;
                 return err != null;
             }).Select(output => {
-                var (log, err) = output.logs;
+                var (_, err) = output.Logs;
                 return err;
             }).ToList();
         if (errors.Any()) throw errors.First();
 
         familyResults.AddRange(outputs);
-
         totalSw.Stop();
-
         return (familyResults, totalSw.Elapsed.TotalMilliseconds);
     }
 
-    private List<FamilyProcessOutput> ProcessNormalDocument(string outputFolderPath,
+    private List<FamilyProcessOutput> ProcessNormalDocument(
+        Func<FamilyDocument, List<OperationLog>>[] familyFuncs,
         LoadAndSaveOptions loadAndSaveOptions,
-        Func<FamilyDocument, List<OperationLog>>[] familyFuncs) {
+        string outputFolderPath
+    ) {
         var familyResults = new List<FamilyProcessOutput>();
         var families = this._documentFamilySelector();
         if (families == null || families.Count == 0) {
-            familyResults.Add(new FamilyProcessOutput(
-                "ERROR",
-                new ArgumentNullException(nameof(families),
-                    "There must be families specified for processing"
-                    + " if the open document is a normal model document"),
-                0));
+            var err = new ArgumentNullException(nameof(families),
+                @"There must be families specified for processing if the open document is a normal model document");
+            familyResults.Add(new FamilyProcessOutput("ERROR", err, 0));
             return familyResults;
         }
 
@@ -118,13 +105,13 @@ public class OperationProcessor : IDisposable {
             var logs = new List<OperationLog>();
             try {
                 var familySw = Stopwatch.StartNew();
-                _ = this._openDoc
+                _ = this.OpenDoc
                     .GetFamilyDocument(family)
                     .EnsureDefaultType()
-                    .ProcessFamily(this.CaptureLogs(familyFuncs, logs))
-                    .SaveFamily(famDoc =>
-                        this.GetSaveLocations(famDoc, loadAndSaveOptions ?? new LoadAndSaveOptions(), outputFolderPath))
-                    .LoadAndCloseFamily(this._openDoc, new EditAndLoadFamilyOptions());
+                    .ProcessWithoutSaving(this.CaptureLogs(familyFuncs, logs))
+                    .SaveToLocations(famDoc =>
+                        GetSaveLocations(famDoc, loadAndSaveOptions ?? new LoadAndSaveOptions(), outputFolderPath))
+                    .LoadAndClose(this.OpenDoc, new EditAndLoadFamilyOptions());
                 familySw.Stop();
                 familyResults.Add(new FamilyProcessOutput(familyName, logs, familySw.Elapsed.TotalMilliseconds));
             } catch (Exception ex) {
@@ -139,26 +126,64 @@ public class OperationProcessor : IDisposable {
     }
 
 
-    private List<FamilyProcessOutput> ProcessFamilyDocument(Func<FamilyDocument, List<OperationLog>>[] familyFuncs) {
+    private List<FamilyProcessOutput> ProcessFamilyDocument(
+        Func<FamilyDocument, List<OperationLog>>[] familyFuncs
+    ) {
         var logs = new List<OperationLog>();
         try {
             var familySw = Stopwatch.StartNew();
-            _ = this._openDoc
+            _ = this.OpenDoc
                 .GetFamilyDocument()
                 .EnsureDefaultType()
-                .ProcessFamily(this.CaptureLogs(familyFuncs, logs));
+                .ProcessWithoutSaving(this.CaptureLogs(familyFuncs, logs));
             familySw.Stop();
-            return new List<FamilyProcessOutput> { new(this._openDoc.Title, logs, familySw.Elapsed.TotalMilliseconds) };
+            return new List<FamilyProcessOutput> { new(this.OpenDoc.Title, logs, familySw.Elapsed.TotalMilliseconds) };
         } catch (Exception ex) {
             return new List<FamilyProcessOutput> {
                 new(
-                    this._openDoc.Title,
-                    new Exception($"Failed to process family {this._openDoc.Title}: {ex.Message}"),
+                    this.OpenDoc.Title,
+                    new Exception($"Failed to process family {this.OpenDoc.Title}: {ex.Message}"),
                     0)
             };
         }
     }
 
+    public List<FamilyProcessOutput> ProcessFamilyDocumentIntoVariants(
+        List<(string variant, OperationQueue queue)> variants,
+        string outputDirectory
+    ) {
+        var logs = new List<OperationLog>();
+        try {
+            var familySw = Stopwatch.StartNew();
+
+            if (variants == null || variants.Count == 0) return new List<FamilyProcessOutput>();
+            if (outputDirectory != null && !Directory.Exists(outputDirectory))
+                _ = Directory.CreateDirectory(outputDirectory);
+
+            var variantAndCallbacksList = variants
+                .Select(v => (suffix: v.variant,
+                    this.CaptureLogs(v.queue.ToFuncs(false, false), logs)))
+                .ToList();
+
+            foreach (var (variant, callbacks) in variantAndCallbacksList) {
+                _ = this.OpenDoc
+                    .GetFamilyDocument()
+                    .EnsureDefaultType()
+                    .ProcessAndSaveVariant(outputDirectory, variant,
+                        document => document.ProcessWithoutSaving(callbacks));
+            }
+
+            familySw.Stop();
+            return new List<FamilyProcessOutput> { new(this.OpenDoc.Title, logs, familySw.Elapsed.TotalMilliseconds) };
+        } catch (Exception ex) {
+            return new List<FamilyProcessOutput> {
+                new(
+                    this.OpenDoc.Title,
+                    new Exception($"Failed to process family {this.OpenDoc.Title}: {ex.Message}"),
+                    0)
+            };
+        }
+    }
 
     private Action<FamilyDocument>[] CaptureLogs(
         Func<FamilyDocument, List<OperationLog>>[] funcActions,
@@ -166,7 +191,9 @@ public class OperationProcessor : IDisposable {
     ) => funcActions.Select(func => new Action<FamilyDocument>(famDoc => logCollector.AddRange(func(famDoc))))
         .ToArray();
 
-    private List<string> GetSaveLocations(FamilyDocument famDoc, LoadAndSaveOptions options, string outputFolderPath) {
+    private static List<string> GetSaveLocations(FamilyDocument famDoc,
+        LoadAndSaveOptions options,
+        string outputFolderPath) {
         var saveLocations = new List<string>();
         if ((options?.SaveFamilyToInternalPath ?? false)
             && string.IsNullOrEmpty(outputFolderPath))
@@ -184,13 +211,13 @@ public class OperationProcessor : IDisposable {
 public class ExecutionOptions {
     [Description(
         "When enabled, the command will output a JSON file with all APS parameters and families that would be processed, without actually processing them.")]
-    public bool PreviewRun { get; set; } = false;
+    public bool PreviewRun { get; init; } = false;
 
     [Description("When enabled, the command will bundle the operations into a single transaction.")]
-    public bool SingleTransaction { get; set; } = true;
+    public bool SingleTransaction { get; init; } = true;
 
     [Description("When enabled, consecutive type operations will be batched together for better performance.")]
-    public bool OptimizeTypeOperations { get; set; } = true;
+    public bool OptimizeTypeOperations { get; init; } = true;
 }
 
 public class LoadAndSaveOptions {

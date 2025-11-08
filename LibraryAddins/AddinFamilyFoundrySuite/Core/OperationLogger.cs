@@ -62,11 +62,11 @@ public class OperationLogger {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             TotalSecondsElapsed = Math.Round(totalMs / 1000.0, 3),
             ProcessedFamilies = familyResults.Select(output => {
-                var (logs, err) = output.logs;
+                var (logs, err) = output.Logs;
                 var operationLogs = err != null ? new List<OperationLog>() : logs;
                 return new {
-                    FamilyName = output.familyName,
-                    TotalSecondsElapsed = Math.Round(output.totalMs / 1000.0, 3),
+                    output.FamilyName,
+                    TotalSecondsElapsed = Math.Round(output.TotalMs / 1000.0, 3),
                     Operations = operationLogs.Select(log => {
                         // Group errors by item and error message, collecting contexts
                         var groupedErrors = log.Entries
@@ -95,10 +95,10 @@ public class OperationLogger {
         var detailed = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             ProcessedFamilies = familyResults.Select(output => {
-                var (logs, err) = output.logs;
+                var (logs, err) = output.Logs;
                 var operationLogs = err != null ? new List<OperationLog>() : logs;
                 return new {
-                    FamilyName = output.familyName,
+                    output.FamilyName,
                     Operations = operationLogs.Select(log => new {
                         log.OperationName,
                         Successes = log.Entries.Where(e => e.Error == null)

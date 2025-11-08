@@ -40,6 +40,7 @@ internal class App : IExternalApplication {
             ffManagerStackButton.AddPushButton<CmdFFManagerSnapshot>("FF Manager Snapshot"),
             panelMigration.AddPushButton<CmdFFMigrator>("FF Migrator"),
             panelMigration.AddPushButton<CmdFFTagMigrator>("Tag Migrator"),
+            panelMigration.AddPushButton<CmdFFTestMultiProcess>("FF Test Multi"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
 
@@ -141,6 +142,13 @@ public static class ButtonDataHydrator {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Process tags in a variety of ways from the Family Foundry."
+            }
+        }, {
+            nameof(CmdFFTestMultiProcess),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
             }
         }
     };
