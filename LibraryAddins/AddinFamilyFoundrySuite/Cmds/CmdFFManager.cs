@@ -1,5 +1,6 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Operations;
+using PeExtensions.FamDocument;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
@@ -43,31 +44,17 @@ public class CmdFFManager : IExternalCommand {
                 executionOptions);
 
             var specs = new List<RefPlaneSubcategorySpec> {
-                new RefPlaneSubcategorySpec {
-                    Strength = RpStrength.NotARef,
-                    SubcategoryName = "NotAReference",
-                    Color = new Color(211, 211, 211),
+                new() {
+                    Strength = RpStrength.NotARef, SubcategoryName = "NotAReference", Color = new Color(211, 211, 211)
                 },
-                new RefPlaneSubcategorySpec {
-                    Strength = RpStrength.WeakRef,
-                    SubcategoryName = "WeakReference",
-                    Color = new Color(217, 124, 0),
+                new() {
+                    Strength = RpStrength.WeakRef, SubcategoryName = "WeakReference", Color = new Color(217, 124, 0)
                 },
-                new RefPlaneSubcategorySpec {
-                    Strength = RpStrength.StrongRef,
-                    SubcategoryName = "StrongReference",
-                    Color = new Color(255, 0, 0),
+                new() {
+                    Strength = RpStrength.StrongRef, SubcategoryName = "StrongReference", Color = new Color(255, 0, 0)
                 },
-                new RefPlaneSubcategorySpec {
-                    Strength = RpStrength.CenterLR,
-                    SubcategoryName = "Center",
-                    Color = new Color(115, 0, 253),
-                },
-                new RefPlaneSubcategorySpec {
-                    Strength = RpStrength.CenterFB,
-                    SubcategoryName = "Center",
-                    Color = new Color(115, 0, 253),
-                }
+                new() { Strength = RpStrength.CenterLR, SubcategoryName = "Center", Color = new Color(115, 0, 253) },
+                new() { Strength = RpStrength.CenterFB, SubcategoryName = "Center", Color = new Color(115, 0, 253) }
             };
 
             var addFamilyParams = new AddFamilyParamsSettings {
@@ -83,10 +70,11 @@ public class CmdFFManager : IExternalCommand {
                 .Add(new AddSharedParams(apsParamData))
                 .Add(new AddAllFamilyParams(addFamilyParams))
                 .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
-                .Add(new AddFamilyParams(profile.AddAndGlobalSetFamilyParams)) // must come after AddAllFamilyParams and RP/dims
+                .Add(new AddFamilyParams(profile
+                    .AddAndGlobalSetFamilyParams)) // must come after AddAllFamilyParams and RP/dims
                 .Add(new MakeRefPlaneSubcategories(specs))
-                .Add(new AddAndSetValueAsFormula(addFamilyParams));
-
+                .Add(new AddAndSetValueAsFormula(addFamilyParams))
+                .Add(new SortParams(new SortParamsSettings()));
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
 
@@ -123,7 +111,6 @@ public class CmdFFManager : IExternalCommand {
         }
     }
 }
-
 public class ProfileFamilyManager : BaseProfileSettings {
     [Description("Settings for adding family parameters")]
     [Required]
