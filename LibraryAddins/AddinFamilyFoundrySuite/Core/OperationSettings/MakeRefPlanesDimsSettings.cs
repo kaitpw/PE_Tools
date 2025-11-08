@@ -1,5 +1,7 @@
 using AddinFamilyFoundrySuite.Core.Helpers;
 using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace AddinFamilyFoundrySuite.Core.OperationSettings;
 
@@ -9,9 +11,6 @@ public class MakeRefPlaneAndDimsSettings : IOperationSettings {
     public bool Enabled { get; init; } = true;
 }
 
-
-public enum Placement { Positive, Mirror, Negative }
-
 public class RefPlaneSpec {
     public required string Name { get; set; }
     public required string AnchorName { get; set; }
@@ -20,7 +19,10 @@ public class RefPlaneSpec {
     public RpStrength Strength { get; set; } = RpStrength.NotARef;
 }
 
+[JsonConverter(typeof(StringEnumConverter))]
+public enum Placement { Positive, Mirror, Negative }
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum RpStrength {
     Left = 0,
     CenterLR = 1,

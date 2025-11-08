@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using PeExtensions.FamDocument;
 using System.ComponentModel;
 
@@ -38,16 +40,19 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
         return new OperationLog(this.Name, logs);
     }
 }
+[JsonConverter(typeof(StringEnumConverter))]
 
 public enum ParamTypeSortOrder {
     SharedParamsFirst,
     FamilyParamsFirst
 }
+[JsonConverter(typeof(StringEnumConverter))]
 
 public enum ParamValueSortOrder {
     FormulasFirst,
     ValuesFirst
 }
+[JsonConverter(typeof(StringEnumConverter))]
 
 public enum ParamNameSortOrder {
     Ascending,

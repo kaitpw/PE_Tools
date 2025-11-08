@@ -1,5 +1,6 @@
 #nullable enable
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 
 namespace PeExtensions.FamDocument.SetValue;
 
@@ -7,7 +8,7 @@ namespace PeExtensions.FamDocument.SetValue;
 ///     Coercion strategies for mapping from source parameter to target parameter.
 ///     These strategies have access to both the source parameter's value and metadata.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(StringEnumConverter))]
 public enum ParamCoercionStrategy {
     /// <summary>
     ///     Strict coercion - only allows mapping when source and target storage types match exactly.
@@ -32,7 +33,7 @@ public enum ParamCoercionStrategy {
 ///     Coercion strategies for mapping from a direct value to target parameter.
 ///     These strategies only have access to the value itself, not parameter metadata.
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(StringEnumConverter))]
 public enum ValueCoercionStrategy {
     /// <summary>
     ///     Strict coercion - only allows mapping when value type and target storage type match exactly.

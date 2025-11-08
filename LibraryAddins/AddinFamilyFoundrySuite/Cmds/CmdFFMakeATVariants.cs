@@ -6,7 +6,7 @@ using PeServices.Storage;
 namespace AddinFamilyFoundrySuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdFFTestMultiProcess : IExternalCommand {
+public class CmdFFMakeATVariants : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -15,19 +15,14 @@ public class CmdFFTestMultiProcess : IExternalCommand {
         var doc = commandData.Application.ActiveUIDocument.Document;
 
         try {
-            if (!doc.IsFamilyDocument) {
-                new Ballogger().Add(Log.ERR, new StackFrame(), "This command only works on family documents")
-                    .Show();
-                return Result.Failed;
-            }
-
-            var storage = new Storage("FF Test Multi Process");
+            var storage = new Storage("FF Make AT Variants");
             var outputFolderPath = storage.OutputDir().DirectoryPath;
-
+            static OperationQueue MakeQueue(DuctConnectorConfigurator settings) => new OperationQueue().Add(new SetDuctConnectorSettings(settings));
             var variants = new List<(string variant, OperationQueue queue)> {
-                ("_v1", CreateOperationsForVariant(1)),
-                ("_v2", CreateOperationsForVariant(2)),
-                ("_v3", CreateOperationsForVariant(3))
+                (" Supply", MakeQueue(DuctConnectorConfigurator.PresetATSupply)),
+                (" Return", MakeQueue(DuctConnectorConfigurator.PresetATReturn)),
+                (" Exhaust", MakeQueue(DuctConnectorConfigurator.PresetATExhaust)),
+                (" Intake", MakeQueue(DuctConnectorConfigurator.PresetATIntake)),
             };
 
             var processor = new OperationProcessor(doc, new ExecutionOptions());
@@ -56,24 +51,5 @@ public class CmdFFTestMultiProcess : IExternalCommand {
             new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
             return Result.Cancelled;
         }
-    }
-
-    private static OperationQueue CreateOperationsForVariant(int variantNumber) {
-        Debug.WriteLine($"[CmdFFTestMultiProcess] Creating operations for variant {variantNumber}");
-        var settings = new AddFamilyParamsSettings {
-            FamilyParamData = [
-                new FamilyParamModel {
-                    Name = "TEST_PROCESS_NUMBER",
-                    DataType = SpecTypeId.Int.Integer,
-                    PropertiesGroup = new ForgeTypeId(""),
-                    IsInstance = false,
-                    GlobalValue = variantNumber
-                }
-            ]
-        };
-        return new OperationQueue()
-            .Add(new AddFamilyParams(settings))
-            .Add(new SetParamValueAsValue(settings))
-            .Add(new DebugLogFamilyParams());
     }
 }

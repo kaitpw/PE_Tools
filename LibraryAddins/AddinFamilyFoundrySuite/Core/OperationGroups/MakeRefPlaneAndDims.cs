@@ -10,7 +10,7 @@ public class MakeRefPlaneAndDims : OperationGroup<MakeRefPlaneAndDimsSettings> {
         "Make reference planes and dimensions for the family",
         InitializeOperations(settings)
     ) {
-    }
+    } 
 
     private static List<IOperation<MakeRefPlaneAndDimsSettings>> InitializeOperations(
         MakeRefPlaneAndDimsSettings settings) {

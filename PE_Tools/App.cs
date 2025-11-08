@@ -26,7 +26,7 @@ internal class App : IExternalApplication {
         var panelMigration = UiHelpers.CreateRibbonPanel(app, tabName, ribbonPanelName3);
 
         var manageStackButton = panelManage.AddPullDownButton("General");
-        var ffManagerStackButton = panelMigration.AddSplitButton("Manager");
+        // var ffManagerStackButton = panelMigration.AddSplitButton("Manager");
 
 #if !REVIT2023 && !REVIT2024 // APS Auth not supported in Revit 2023/2024
         ButtonDataHydrator.AddButtonData([
@@ -36,11 +36,10 @@ internal class App : IExternalApplication {
 #endif
 
         ButtonDataHydrator.AddButtonData([
-            ffManagerStackButton.AddPushButton<CmdFFManager>("FF Manager"),
-            ffManagerStackButton.AddPushButton<CmdFFManagerSnapshot>("FF Manager Snapshot"),
+            panelMigration.AddPushButton<CmdFFManager>("FF Manager"),
+            panelMigration.AddPushButton<CmdFFManagerSnapshot>("FF Manager Snapshot"),
             panelMigration.AddPushButton<CmdFFMigrator>("FF Migrator"),
-            panelMigration.AddPushButton<CmdFFTagMigrator>("Tag Migrator"),
-            panelMigration.AddPushButton<CmdFFTestMultiProcess>("FF Test Multi"),
+            panelMigration.AddPushButton<CmdFFMakeATVariants>("Make AT Variants"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
 
@@ -144,7 +143,7 @@ public static class ButtonDataHydrator {
                 ToolTip = "Process tags in a variety of ways from the Family Foundry."
             }
         }, {
-            nameof(CmdFFTestMultiProcess),
+            nameof(CmdFFMakeATVariants),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
