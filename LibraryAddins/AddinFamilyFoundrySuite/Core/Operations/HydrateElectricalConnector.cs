@@ -16,26 +16,27 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
         var voltageParamName = this.Settings.SourceParameterNames.Voltage;
         var mcaParamName = this.Settings.SourceParameterNames.MinimumCurrentAmpacity;
 
-        var mappings = new List<(string source, BuiltInParameter target, Action<FamilyDocument, FamilyParameter> action)> {
-            (
-                polesParamName,
-                BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-                (doc, numberOfPoles) => doc.FamilyManager.SetFormula(numberOfPoles, "2")
-            ),
-            (
-                appPowerParamName,
-                BuiltInParameter.RBS_ELEC_APPARENT_LOAD,
-                (doc, apparentPower) => {
-                    if (string.IsNullOrEmpty(voltageParamName) || string.IsNullOrEmpty(mcaParamName)) return;
-                    doc.FamilyManager.SetFormula(apparentPower,
-                        $"{voltageParamName} * {mcaParamName} * 0.8 * if({polesParamName} = 3, sqrt(3), 1)");
-                }
-            ),
-            (
-                voltageParamName,
-                BuiltInParameter.RBS_ELEC_VOLTAGE,
-                null)
-        };
+        var mappings =
+            new List<(string source, BuiltInParameter target, Action<FamilyDocument, FamilyParameter> action)> {
+                (
+                    polesParamName,
+                    BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
+                    (doc, numberOfPoles) => doc.FamilyManager.SetFormula(numberOfPoles, "2")
+                ),
+                (
+                    appPowerParamName,
+                    BuiltInParameter.RBS_ELEC_APPARENT_LOAD,
+                    (doc, apparentPower) => {
+                        if (string.IsNullOrEmpty(voltageParamName) || string.IsNullOrEmpty(mcaParamName)) return;
+                        doc.FamilyManager.SetFormula(apparentPower,
+                            $"{voltageParamName} * {mcaParamName} * 0.8 * if({polesParamName} = 3, sqrt(3), 1)");
+                    }
+                ),
+                (
+                    voltageParamName,
+                    BuiltInParameter.RBS_ELEC_VOLTAGE,
+                    null)
+            };
 
         try {
             var connectorElements = new FilteredElementCollector(doc)

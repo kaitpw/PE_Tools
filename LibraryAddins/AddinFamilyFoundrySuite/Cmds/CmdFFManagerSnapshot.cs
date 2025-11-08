@@ -3,7 +3,6 @@ using AddinFamilyFoundrySuite.Core.Operations;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
-using PeUtils.Files;
 
 namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
@@ -24,9 +23,7 @@ public class CmdFFManagerSnapshot : IExternalCommand {
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
-                SingleTransaction = false,
-                PreviewRun = false,
-                OptimizeTypeOperations = true,
+                SingleTransaction = false, PreviewRun = false, OptimizeTypeOperations = true
             };
 
             using var processor = new OperationProcessor(doc, executionOptions);

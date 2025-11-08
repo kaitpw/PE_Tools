@@ -1,5 +1,4 @@
 using AddinFamilyFoundrySuite.Core;
-using System.Linq;
 using System.Text.Json.Serialization;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
@@ -25,7 +24,7 @@ public class RefPlaneSpec {
     public required string Name { get; set; }
     public required string AnchorName { get; set; }
     public Placement Placement { get; set; } = Placement.Mirror;
-    public string Parameter { get; set; } = null;
+    public string Parameter { get; set; }
     public RpStrength Strength { get; set; } = RpStrength.NotARef;
 }
 
@@ -58,9 +57,7 @@ public class PlaneQuery {
 
 public class RefPlaneAndDimHelper {
     private readonly Dictionary<string, int> _depths = new() {
-        ["Center (Left/Right)"] = 0,
-        ["Center (Front/Back)"] = 0,
-        ["Ref. Level"] = 0
+        ["Center (Left/Right)"] = 0, ["Center (Front/Back)"] = 0, ["Ref. Level"] = 0
     };
 
     private readonly Document _doc;
@@ -112,7 +109,8 @@ public class RefPlaneAndDimHelper {
     }
 
     private bool SpecExists(RefPlaneSpec spec) {
-        Debug.WriteLine($"[SpecExists] Checking if spec exists: {spec.Name}, Anchor: {spec.AnchorName}, Placement: {spec.Placement}");
+        Debug.WriteLine(
+            $"[SpecExists] Checking if spec exists: {spec.Name}, Anchor: {spec.AnchorName}, Placement: {spec.Placement}");
 
         var dims = new FilteredElementCollector(this._doc)
             .OfClass(typeof(Dimension))
@@ -127,24 +125,25 @@ public class RefPlaneAndDimHelper {
 
         // First pass: Find mirror patterns
         if (spec.Placement == Placement.Mirror) {
-            Debug.WriteLine($"[SpecExists] Checking for mirror pattern");
+            Debug.WriteLine("[SpecExists] Checking for mirror pattern");
 
             foreach (var dim in dims) {
                 if (dim.References.Size == 3 && dim.AreSegmentsEqual) {
                     var existing = SerializeDimensionToSpec(dim, this._doc);
                     if (existing != null && existing.Placement == Placement.Mirror) {
-                        Debug.WriteLine($"[SpecExists]   Found mirror dim: Name={existing.Name}, Anchor={existing.AnchorName}, Param={existing.Parameter}");
+                        Debug.WriteLine(
+                            $"[SpecExists]   Found mirror dim: Name={existing.Name}, Anchor={existing.AnchorName}, Param={existing.Parameter}");
 
                         // Match on Name and AnchorName; Parameter can be null/empty in serialized dimensions
                         var nameMatch = existing.Name == spec.Name;
                         var anchorMatch = existing.AnchorName == spec.AnchorName;
                         var paramMatch = string.IsNullOrEmpty(existing.Parameter) ||
-                                        string.IsNullOrEmpty(spec.Parameter) ||
-                                        existing.Parameter == spec.Parameter;
+                                         string.IsNullOrEmpty(spec.Parameter) ||
+                                         existing.Parameter == spec.Parameter;
 
                         var matches = nameMatch && anchorMatch && paramMatch;
                         if (matches) {
-                            Debug.WriteLine($"[SpecExists]   MATCH FOUND! Returning true");
+                            Debug.WriteLine("[SpecExists]   MATCH FOUND! Returning true");
                             return true;
                         }
 
@@ -163,12 +162,13 @@ public class RefPlaneAndDimHelper {
                     }
                 }
             }
-            Debug.WriteLine($"[SpecExists] No mirror match found, returning false");
+
+            Debug.WriteLine("[SpecExists] No mirror match found, returning false");
             return false;
         }
 
         // Second pass: For non-mirror specs, check for matches (Name/AnchorName are interchangeable)
-        Debug.WriteLine($"[SpecExists] Checking for non-mirror pattern");
+        Debug.WriteLine("[SpecExists] Checking for non-mirror pattern");
         foreach (var dim in dims) {
             var existing = SerializeDimensionToSpec(dim, this._doc);
             if (existing == null || existing.Placement == Placement.Mirror) continue;
@@ -178,32 +178,34 @@ public class RefPlaneAndDimHelper {
             if (refPlanes.Count == 2) {
                 var isMirrorPair = processedMirrorPlanes.Contains((refPlanes[0].Name, refPlanes[1].Name));
                 if (isMirrorPair) {
-                    Debug.WriteLine($"[SpecExists]   Skipping dimension (part of mirror pair)");
+                    Debug.WriteLine("[SpecExists]   Skipping dimension (part of mirror pair)");
                     continue;
                 }
             }
 
-            Debug.WriteLine($"[SpecExists]   Checking dim: Name={existing.Name}, Anchor={existing.AnchorName}, Placement={existing.Placement}, Param={existing.Parameter}");
+            Debug.WriteLine(
+                $"[SpecExists]   Checking dim: Name={existing.Name}, Anchor={existing.AnchorName}, Placement={existing.Placement}, Param={existing.Parameter}");
 
             // Parameter can be null/empty in serialized dimensions, so make it optional for matching
             var paramMatch = string.IsNullOrEmpty(existing.Parameter) ||
-                            string.IsNullOrEmpty(spec.Parameter) ||
-                            existing.Parameter == spec.Parameter;
+                             string.IsNullOrEmpty(spec.Parameter) ||
+                             existing.Parameter == spec.Parameter;
             var placementMatch = existing.Placement == spec.Placement;
 
             // For 2-plane specs, Name and AnchorName are interchangeable
             var nameMatch = (existing.Name == spec.Name && existing.AnchorName == spec.AnchorName) ||
-                           (existing.Name == spec.AnchorName && existing.AnchorName == spec.Name);
+                            (existing.Name == spec.AnchorName && existing.AnchorName == spec.Name);
 
-            Debug.WriteLine($"[SpecExists]     nameMatch={nameMatch}, placementMatch={placementMatch}, paramMatch={paramMatch}");
+            Debug.WriteLine(
+                $"[SpecExists]     nameMatch={nameMatch}, placementMatch={placementMatch}, paramMatch={paramMatch}");
 
             if (nameMatch && placementMatch && paramMatch) {
-                Debug.WriteLine($"[SpecExists]   MATCH FOUND! Returning true");
+                Debug.WriteLine("[SpecExists]   MATCH FOUND! Returning true");
                 return true;
             }
         }
 
-        Debug.WriteLine($"[SpecExists] No match found, returning false");
+        Debug.WriteLine("[SpecExists] No match found, returning false");
         return false;
     }
 
@@ -215,6 +217,7 @@ public class RefPlaneAndDimHelper {
             if (elem is ReferencePlane rp && !string.IsNullOrEmpty(rp.Name))
                 refPlanes.Add(rp);
         }
+
         return refPlanes;
     }
 
@@ -298,7 +301,9 @@ public class RefPlaneAndDimHelper {
     }
 
     private static (ReferencePlane negativeSide, ReferencePlane positiveSide) DetermineSidePlanes(
-        ReferencePlane plane1, ReferencePlane plane2, XYZ normal) {
+        ReferencePlane plane1,
+        ReferencePlane plane2,
+        XYZ normal) {
         var mid1 = (plane1.BubbleEnd + plane1.FreeEnd) * 0.5;
         var mid2 = (plane2.BubbleEnd + plane2.FreeEnd) * 0.5;
 
@@ -310,7 +315,8 @@ public class RefPlaneAndDimHelper {
         return pos1 < pos2 ? (plane1, plane2) : (plane2, plane1);
     }
 
-    private static string GetBaseNameFromDimension(Dimension dim, ReferencePlane side1,
+    private static string GetBaseNameFromDimension(Dimension dim,
+        ReferencePlane side1,
         ReferencePlane side2) {
         // Try to get base name from dimension parameter first
         var paramName = GetDimensionParameter(dim);
@@ -327,11 +333,10 @@ public class RefPlaneAndDimHelper {
         var commonPrefix = "";
         var minLength = Math.Min(name1.Length, name2.Length);
         for (var i = 0; i < minLength; i++) {
-            if (name1[i] == name2[i]) {
+            if (name1[i] == name2[i])
                 commonPrefix += name1[i];
-            } else {
+            else
                 break;
-            }
         }
 
         // If we have a reasonable common prefix, use it
@@ -372,13 +377,12 @@ public class RefPlaneAndDimHelper {
     }
 
     public void CreatePlanes(RefPlaneSpec spec) {
-        Debug.WriteLine($"[CreatePlanes] Checking spec: {spec.Name}, Anchor: {spec.AnchorName}, Placement: {spec.Placement}");
+        Debug.WriteLine(
+            $"[CreatePlanes] Checking spec: {spec.Name}, Anchor: {spec.AnchorName}, Placement: {spec.Placement}");
 
         if (this.SpecExists(spec)) {
             Debug.WriteLine($"[CreatePlanes] Spec exists, skipping: {spec.Name}");
-            this._logs.Add(new LogEntry {
-                Item = $"RefPlane: {spec.Name} (skipped - already exists)"
-            });
+            this._logs.Add(new LogEntry { Item = $"RefPlane: {spec.Name} (skipped - already exists)" });
             return;
         }
 
@@ -388,8 +392,7 @@ public class RefPlaneAndDimHelper {
         if (anchor == null) {
             Debug.WriteLine($"[CreatePlanes] Anchor plane not found: {spec.AnchorName}");
             this._logs.Add(new LogEntry {
-                Item = $"RefPlane: {spec.Name}",
-                Error = $"Anchor plane '{spec.AnchorName}' not found"
+                Item = $"RefPlane: {spec.Name}", Error = $"Anchor plane '{spec.AnchorName}' not found"
             });
             return;
         }
@@ -420,6 +423,7 @@ public class RefPlaneAndDimHelper {
                     Debug.WriteLine($"[CreatePlanes] Plane already exists, skipping: {name}");
                     continue;
                 }
+
                 Debug.WriteLine($"[CreatePlanes] Creating plane: {name}");
                 var rp = this._doc.FamilyCreate.NewReferencePlane(origin + t, origin - t, cutVec, this._doc.ActiveView);
                 rp.Name = name;
@@ -435,13 +439,12 @@ public class RefPlaneAndDimHelper {
     }
 
     public void CreateDimension(RefPlaneSpec spec) {
-        Debug.WriteLine($"[CreateDimension] Checking spec: {spec.Name}, Anchor: {spec.AnchorName}, Placement: {spec.Placement}, Parameter: {spec.Parameter}");
+        Debug.WriteLine(
+            $"[CreateDimension] Checking spec: {spec.Name}, Anchor: {spec.AnchorName}, Placement: {spec.Placement}, Parameter: {spec.Parameter}");
 
         if (this.SpecExists(spec)) {
             Debug.WriteLine($"[CreateDimension] Spec exists, skipping: {spec.Name}");
-            this._logs.Add(new LogEntry {
-                Item = $"Dimension: {spec.Name} (skipped - already exists)"
-            });
+            this._logs.Add(new LogEntry { Item = $"Dimension: {spec.Name} (skipped - already exists)" });
             return;
         }
 
@@ -454,7 +457,8 @@ public class RefPlaneAndDimHelper {
             Debug.WriteLine($"[CreateDimension] Anchor '{spec.AnchorName}' not found, trying '{spec.Name}' as anchor");
             anchor = this._query.Get(spec.Name);
             if (anchor == null) {
-                Debug.WriteLine($"[CreateDimension] Neither anchor '{spec.AnchorName}' nor '{spec.Name}' found, returning");
+                Debug.WriteLine(
+                    $"[CreateDimension] Neither anchor '{spec.AnchorName}' nor '{spec.Name}' found, returning");
                 return;
             }
         }
@@ -492,12 +496,11 @@ public class RefPlaneAndDimHelper {
                 dim = this._doc.FamilyCreate.NewLinearDimension(this._doc.ActiveView, dimLine, refArrayMirror);
                 Debug.WriteLine($"[CreateDimension] Created mirror dimension, Id: {dim.Id}");
 
-                Debug.WriteLine($"[CreateDimension] Creating equal segments dimension");
+                Debug.WriteLine("[CreateDimension] Creating equal segments dimension");
                 var dimLineEq = CreateDimensionLine(planes[0], planes[^1], dimOffset - 0.5);
                 var dimEq = this._doc.FamilyCreate.NewLinearDimension(this._doc.ActiveView, dimLineEq, refArray);
                 dimEq.AreSegmentsEqual = true;
                 Debug.WriteLine($"[CreateDimension] Created equal segments dimension, Id: {dimEq.Id}");
-
             } else {
                 Debug.WriteLine($"[CreateDimension] Creating non-mirror dimension for: {spec.Name}");
                 dim = this._doc.FamilyCreate.NewLinearDimension(this._doc.ActiveView, dimLine, refArray);
@@ -512,7 +515,8 @@ public class RefPlaneAndDimHelper {
             this._logs.Add(new LogEntry { Item = $"Dimension: {spec.Name}" });
             Debug.WriteLine($"[CreateDimension] Successfully completed dimension: {spec.Name}");
         } catch (Exception ex) {
-            Debug.WriteLine($"[CreateDimension] ERROR creating dimension {spec.Name}: {ex.GetType().Name} - {ex.Message}");
+            Debug.WriteLine(
+                $"[CreateDimension] ERROR creating dimension {spec.Name}: {ex.GetType().Name} - {ex.Message}");
             Debug.WriteLine($"[CreateDimension] Stack trace: {ex.StackTrace}");
             this._logs.Add(new LogEntry { Item = $"Dimension: {spec.Name}", Error = ex.Message });
         }

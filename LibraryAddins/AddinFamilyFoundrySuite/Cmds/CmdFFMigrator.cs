@@ -77,9 +77,9 @@ public class CmdFFMigrator : IExternalCommand {
             } else {
                 var logs = processor
                     .SelectFamilies(() => {
-                        var picked = Pickers.GetSelectedFamilies(uiDoc);
-                        return picked.Any() ? picked : profile.GetFamilies(doc);
-                    }
+                            var picked = Pickers.GetSelectedFamilies(uiDoc);
+                            return picked.Any() ? picked : profile.GetFamilies(doc);
+                        }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(

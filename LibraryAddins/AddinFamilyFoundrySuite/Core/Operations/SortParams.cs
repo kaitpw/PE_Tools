@@ -26,8 +26,8 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
                 : !p.IsDeterminedByFormula);
 
         var sortedParams = (this.NameSort == ParamNameSortOrder.Ascending
-            ? baseSort.ThenBy(p => p.Definition.Name, StringComparer.Ordinal)
-            : baseSort.ThenByDescending(p => p.Definition.Name, StringComparer.Ordinal))
+                ? baseSort.ThenBy(p => p.Definition.Name, StringComparer.Ordinal)
+                : baseSort.ThenByDescending(p => p.Definition.Name, StringComparer.Ordinal))
             .ToList();
         foreach (var p in sortedParams)
             Debug.WriteLine($"{p.Definition.Name} {string.IsNullOrWhiteSpace(p.Formula)} {p.IsDeterminedByFormula}");
@@ -39,7 +39,6 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
     }
 }
 
-
 public enum ParamTypeSortOrder {
     SharedParamsFirst,
     FamilyParamsFirst
@@ -49,17 +48,21 @@ public enum ParamValueSortOrder {
     FormulasFirst,
     ValuesFirst
 }
+
 public enum ParamNameSortOrder {
     Ascending,
     Descending
 }
 
 public class SortParamsSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
     [Description("Sort shared parameters first or family parameters first. Takes first priority")]
     public ParamTypeSortOrder ParamTypeSortOrder { get; init; } = ParamTypeSortOrder.SharedParamsFirst;
+
     [Description("Sort parameters with formulas first or values first. Takes second priority")]
     public ParamValueSortOrder ParamValueSortOrder { get; init; } = ParamValueSortOrder.ValuesFirst;
+
     [Description("Sort parameters alphabetically. Takes third priority")]
     public ParamNameSortOrder ParamNameSortOrder { get; init; } = ParamNameSortOrder.Ascending;
+
+    public bool Enabled { get; init; } = true;
 }

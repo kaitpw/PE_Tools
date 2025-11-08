@@ -5,7 +5,8 @@ namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentAddParameter {
     /// <summary>
-    ///     Add a family parameter. Returns the existing parameter if it already exists. PropertiesGroup must be a <c>GroupTypeId</c> and DataType must be a <c>SpecTypeId</c>.
+    ///     Add a family parameter. Returns the existing parameter if it already exists. PropertiesGroup must be a
+    ///     <c>GroupTypeId</c> and DataType must be a <c>SpecTypeId</c>.
     ///     NOTE: To get a groupTypeId for "Other", use <c> new ForgeTypeId("")</c>
     /// </summary>
     public static FamilyParameter AddFamilyParameter(
@@ -35,7 +36,7 @@ public static class FamilyDocumentAddParameter {
         var parameterTypeId = dlOptsSource.GetParameterTypeId();
         var dlOpts = new ParameterDownloadOptions(
             new HashSet<ElementId>(),
-            dlOptsSource.IsInstance, 
+            dlOptsSource.IsInstance,
             dlOptsSource.Visible,
             dlOptsSource.GetGroupTypeId());
 

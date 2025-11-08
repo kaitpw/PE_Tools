@@ -30,7 +30,6 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         ContractResolver = new RequiredAwareContractResolver(),
         NullValueHandling = NullValueHandling.Ignore,
         DefaultValueHandling = DefaultValueHandling.Ignore
-
     };
 
     public Json(string filePath, bool throwIfDefaultCreated, bool saveSchema) {
@@ -59,18 +58,18 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
                 if (removedProps.Any()) message += $"\nRemoved properties:\n\t-{string.Join("\n\t-", removedProps)}";
                 message += "\nPlease review the settings before running again.";
                 throw new CrashProgramException(message);
-            } else {
-                var valErrs = this._schema.Validate(this.CurrJObject());
-                if (valErrs.Any())
-                    throw new JsonValidationException(this.FilePath, valErrs);
-                else return;
             }
-        } else {
-            this.WritePossiblyInvalid(new T());
-            if (throwIfDefaultCreated) {
-                throw new CrashProgramException(
-                    $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
-            }
+
+            var valErrs = this._schema.Validate(this.CurrJObject());
+            if (valErrs.Any())
+                throw new JsonValidationException(this.FilePath, valErrs);
+            return;
+        }
+
+        this.WritePossiblyInvalid(new T());
+        if (throwIfDefaultCreated) {
+            throw new CrashProgramException(
+                $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
         }
 
         if (saveSchema) this.WriteSchema();
@@ -130,10 +129,12 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
     }
 
     public JObject CurrJObject() => JObject.Parse(File.ReadAllText(this.FilePath));
+
     public T Deserialize() {
         var text = File.ReadAllText(this.FilePath);
         return JsonConvert.DeserializeObject<T>(text, this._deserialSettings);
     }
+
     public string Serialize(T content) => JsonConvert.SerializeObject(content, this._serialSettings);
 
     public void WritePossiblyInvalid(T content) {

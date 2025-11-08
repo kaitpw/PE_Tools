@@ -10,7 +10,8 @@ public class AddFamilyParams : OperationGroup<AddFamilyParamsSettings> {
     public AddFamilyParams(AddFamilyParamsSettings settings, bool addFormulas = true) : base(
         "Add Family Parameters and set their value OR formula.",
         InitializeOperations(settings, addFormulas)
-    ) { }
+    ) {
+    }
 
     private static List<IOperation<AddFamilyParamsSettings>> InitializeOperations(
         AddFamilyParamsSettings settings,

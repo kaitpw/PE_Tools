@@ -79,7 +79,9 @@ public record CoercionContext {
     /// <summary>
     ///     Factory method for creating a context from a source parameter to target parameter mapping.
     /// </summary>
-    public static CoercionContext FromParam(FamilyDocument doc, FamilyParameter sourceParam, FamilyParameter targetParam) =>
+    public static CoercionContext FromParam(FamilyDocument doc,
+        FamilyParameter sourceParam,
+        FamilyParameter targetParam) =>
         new() {
             FamilyDocument = new FamilyDocument(doc),
             FamilyManager = doc.FamilyManager,

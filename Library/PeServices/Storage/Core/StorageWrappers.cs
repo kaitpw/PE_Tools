@@ -7,17 +7,17 @@ public interface ICsvIO {
 }
 
 public interface JsonReader<T> {
-    public string FilePath { get; }
-    public T Read();
+    string FilePath { get; }
+    T Read();
 }
 
 public interface JsonWriter<T> {
-    public string FilePath { get; }
-    public void Write(T data);
+    string FilePath { get; }
+    void Write(T data);
 }
 
 public interface JsonReadWriter<T> : JsonReader<T>, JsonWriter<T> where T : class, new() {
-    public bool IsCacheValid(int maxAgeMinutes, Func<T, bool> contentValidator = null);
+    bool IsCacheValid(int maxAgeMinutes, Func<T, bool> contentValidator = null);
 }
 
 public interface CsvReader<T> {

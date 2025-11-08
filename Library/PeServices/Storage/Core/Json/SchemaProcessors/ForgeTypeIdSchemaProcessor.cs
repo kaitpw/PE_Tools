@@ -1,18 +1,8 @@
-using System.ComponentModel.DataAnnotations;
-using System.IO;
-using System.Reflection;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
 using NJsonSchema;
 using NJsonSchema.Generation;
-using NJsonSchema.NewtonsoftJson.Generation;
-using NJsonSchema.Validation;
-using PeUtils.Files;
 
 namespace PeServices.Storage.Core.Json.SchemaProcessors;
-
 
 /// <summary>
 ///     Schema processor that converts ForgeTypeId properties to string schemas.
@@ -26,7 +16,6 @@ public class ForgeTypeIdSchemaProcessor : ISchemaProcessor {
         if (type.IsClass || type.IsValueType) ProcessTypeProperties(context, type);
         // Process array item schemas
         if (context.Schema.Item != null) ProcessItemSchema(context.Schema.Item, type);
-
     }
 
     private static void ProcessTypeProperties(SchemaProcessorContext context, Type typeToProcess) {
@@ -47,17 +36,12 @@ public class ForgeTypeIdSchemaProcessor : ISchemaProcessor {
     }
 
     private static void ProcessItemSchema(JsonSchema itemSchema, Type originalType) {
-
         // If the original type is a generic collection, get the item type
         Type itemType = null;
         if (originalType.IsGenericType) {
             var genericArgs = originalType.GetGenericArguments();
-            if (genericArgs.Length > 0) {
-                itemType = genericArgs[0];
-            }
-        } else if (originalType.IsArray) {
-            itemType = originalType.GetElementType();
-        }
+            if (genericArgs.Length > 0) itemType = genericArgs[0];
+        } else if (originalType.IsArray) itemType = originalType.GetElementType();
 
         // Process properties of the item type
         if (itemType != null && (itemType.IsClass || itemType.IsValueType)) {
@@ -65,9 +49,7 @@ public class ForgeTypeIdSchemaProcessor : ISchemaProcessor {
 
             // Check if itemSchema has a reference (NJsonSchema may use references)
             var actualSchema = itemSchema;
-            if (itemSchema.HasReference) {
-                actualSchema = itemSchema.Reference;
-            }
+            if (itemSchema.HasReference) actualSchema = itemSchema.Reference;
 
 
             foreach (var property in properties) {
@@ -76,23 +58,17 @@ public class ForgeTypeIdSchemaProcessor : ISchemaProcessor {
                 if (isForgeTypeId) {
                     var propertyName = GetJsonPropertyName(property);
 
-                    if (actualSchema.Properties.TryGetValue(propertyName, out var propertySchema)) {
+                    if (actualSchema.Properties.TryGetValue(propertyName, out var propertySchema))
                         ConvertToStringSchema(propertySchema);
-                    } else {
-                    }
                 }
             }
-        } else {
         }
     }
 
     private static void ConvertToStringSchema(JsonSchema propertySchema) {
-
         // If it has a reference, we need to modify the property schema itself, not the reference
         // Clear the reference first so we can set the type directly
-        if (propertySchema.HasReference) {
-            propertySchema.Reference = null;
-        }
+        if (propertySchema.HasReference) propertySchema.Reference = null;
 
         // Check if property is nullable (has null in oneOf, which NJsonSchema adds for nullable reference types)
         var isNullable = propertySchema.OneOf.Any(s => s.Type == JsonObjectType.Null);
@@ -101,16 +77,14 @@ public class ForgeTypeIdSchemaProcessor : ISchemaProcessor {
         propertySchema.OneOf.Clear();
 
         // Convert to string schema: use type array for nullable, single type for non-nullable
-        if (isNullable) {
+        if (isNullable)
             propertySchema.Type = JsonObjectType.String | JsonObjectType.Null;
-        } else {
+        else
             propertySchema.Type = JsonObjectType.String;
-        }
         propertySchema.Format = null;
         // Clear any object-related properties
         propertySchema.Properties.Clear();
         propertySchema.AdditionalPropertiesSchema = null;
-
     }
 
     private static string GetJsonPropertyName(PropertyInfo property) {

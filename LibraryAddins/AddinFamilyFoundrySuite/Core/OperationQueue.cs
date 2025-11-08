@@ -72,9 +72,7 @@ public class OperationQueue {
     public string GetExecutableMetadataString() {
         var op = this.GetExecutableMetadata();
         var result = "";
-        foreach (var o in op) {
-            result += $"[Batch {o.IsMerged}] {o.Type}: {o.Name} - {o.Description}\n";
-        }
+        foreach (var o in op) result += $"[Batch {o.IsMerged}] {o.Type}: {o.Name} - {o.Description}\n";
         return result;
     }
 
@@ -111,7 +109,7 @@ public class OperationQueue {
             : funcs.ToArray();
     }
 
-    private List<IExecutable> ToExecutableList() => [.. this._operations.Cast<IExecutable>()];
+    private List<IExecutable> ToExecutableList() => [.. this._operations];
 
     public List<IExecutable> ToTypeOptimizedExecutableList() {
         var finalOps = new List<IExecutable>();
@@ -127,6 +125,7 @@ public class OperationQueue {
                     finalOps.Add(new MergedTypeOperation(currentBatch));
                     currentBatch = [];
                 }
+
                 finalOps.Add(docOp);
                 break;
             default:

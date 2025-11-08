@@ -14,9 +14,7 @@ public static class FamilyParameterGetAssociated {
         var rule = new FilterElementIdRule(provider, new FilterNumericEquals(), param.Id);
         var paramFilter = new ElementParameterFilter(rule);
 
-        var dimensionTypes = new List<Type> {
-            typeof(Dimension)
-        };
+        var dimensionTypes = new List<Type> { typeof(Dimension) };
         var dimensionFilter = new ElementMulticlassFilter(dimensionTypes);
 
         var combinedFilter = new LogicalAndFilter(dimensionFilter, paramFilter);

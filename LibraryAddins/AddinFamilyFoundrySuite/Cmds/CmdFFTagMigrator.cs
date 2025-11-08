@@ -24,7 +24,8 @@ public class CmdFFTagMigrator : IExternalCommand {
             var storage = new Storage("FF Migrator");
             var settingsManager = storage.SettingsDir();
             var settings = settingsManager.Json<BaseSettings<TagMigratorProfile>>().Read();
-            var profile = settingsManager.SubDir("profiles").Json<TagMigratorProfile>($"{settings.CurrentProfile}.json").Read();
+            var profile = settingsManager.SubDir("profiles").Json<TagMigratorProfile>($"{settings.CurrentProfile}.json")
+                .Read();
             var outputFolderPath = storage.OutputDir().DirectoryPath;
 
             using var tempFile = new TempSharedParamFile(doc);
@@ -63,7 +64,7 @@ public class CmdFFTagMigrator : IExternalCommand {
             Debug.WriteLine(metadataString);
 
 
-            if (profile.ExecutionOptions.PreviewRun)
+            if (profile.ExecutionOptions.PreviewRun) {
                 OperationLogger.OutputDryRunResults(
                     apsParamData,
                     doc,
@@ -72,13 +73,12 @@ public class CmdFFTagMigrator : IExternalCommand {
                     storage,
                     settings.CurrentProfile,
                     settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
-            else {
+            } else {
                 var uiDoc = commandData.Application.ActiveUIDocument;
                 var logs = processor
-                    .SelectFamilies(
-                        () => !doc.IsFamilyDocument
-                            ? (Pickers.GetSelectedFamilies(uiDoc) ?? profile.GetFamilies(doc))
-                            : null
+                    .SelectFamilies(() => !doc.IsFamilyDocument
+                        ? Pickers.GetSelectedFamilies(uiDoc) ?? profile.GetFamilies(doc)
+                        : null
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(
@@ -119,8 +119,7 @@ public class DebugLogAnnoInfo : DocOperation {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check",
-                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }

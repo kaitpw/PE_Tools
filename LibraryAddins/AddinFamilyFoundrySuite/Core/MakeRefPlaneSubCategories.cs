@@ -1,6 +1,7 @@
 using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core;
+
 // var specs = new List<RefPlaneSubcategorySpec> {
 //     new RefPlaneSubcategorySpec {
 //         Strength = RpStrength.NotARef,
@@ -29,9 +30,9 @@ namespace AddinFamilyFoundrySuite.Core;
 //     }
 // };
 public record RefPlaneSubcategorySpec {
-    required public RpStrength Strength { get; init; }
-    required public string SubcategoryName { get; init; }
-    required public Color Color { get; init; }
+    public required RpStrength Strength { get; init; }
+    public required string SubcategoryName { get; init; }
+    public required Color Color { get; init; }
     public string LinePatternName { get; init; } = "Dash"; // null = use solid line
 
     public ElementId GetLinePatternId(Document doc) {
@@ -42,10 +43,11 @@ public record RefPlaneSubcategorySpec {
             return null;
 
         var linePattern = new FilteredElementCollector(doc)
-            .OfClass(typeof(LinePatternElement))
-            .Cast<LinePatternElement>()
-            .FirstOrDefault(lp => lp.Name == this.LinePatternName)
-            ?? throw new InvalidOperationException($"Line pattern '{this.LinePatternName}' not found in document");
+                              .OfClass(typeof(LinePatternElement))
+                              .Cast<LinePatternElement>()
+                              .FirstOrDefault(lp => lp.Name == this.LinePatternName)
+                          ?? throw new InvalidOperationException(
+                              $"Line pattern '{this.LinePatternName}' not found in document");
 
         return linePattern.Id;
     }
@@ -54,6 +56,7 @@ public record RefPlaneSubcategorySpec {
 public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : DocOperation {
     private readonly List<RefPlaneSubcategorySpec> _specs = specs;
     public override string Description => "Make reference planes subcategories with custom colors and line patterns";
+
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
@@ -63,9 +66,10 @@ public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : Do
 
             foreach (var spec in this._specs) {
                 var refPlanes = new FilteredElementCollector(doc.Document)
-                .OfClass(typeof(ReferencePlane))
-                .Cast<ReferencePlane>()
-                    .Where(rp => rp.get_Parameter(BuiltInParameter.ELEM_REFERENCE_NAME).AsInteger() == (int)spec.Strength)
+                    .OfClass(typeof(ReferencePlane))
+                    .Cast<ReferencePlane>()
+                    .Where(rp =>
+                        rp.get_Parameter(BuiltInParameter.ELEM_REFERENCE_NAME).AsInteger() == (int)spec.Strength)
                     .ToList();
 
                 if (!refPlanes.Any()) {
@@ -77,9 +81,9 @@ public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : Do
                 var matchingSubcat = subcategoryCache.GetMatching(spec);
                 Category subcategory;
 
-                if (matchingSubcat != null) {
+                if (matchingSubcat != null)
                     subcategory = matchingSubcat; // silently continue
-                } else {
+                else {
                     var existing = subcategoryCache.GetExisting(spec.SubcategoryName);
                     if (existing != null) {
                         subcategory = this.ApplySubcategoryStyle(existing, spec, doc.Document);
@@ -97,15 +101,11 @@ public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : Do
                     var subcategoryParam = refPlane.get_Parameter(BuiltInParameter.CLINE_SUBCATEGORY);
                     _ = subcategoryParam?.Set(subcategory.Id);
 
-                    logs.Add(new LogEntry {
-                        Item = $"Applied '{subcategory.Name}' to '{refPlane.Name}'",
-                    });
+                    logs.Add(new LogEntry { Item = $"Applied '{subcategory.Name}' to '{refPlane.Name}'" });
                 }
             }
         } catch (Exception ex) {
-            logs.Add(new LogEntry {
-                Item = $"{ex.GetType().Name}: {ex.Message}",
-            });
+            logs.Add(new LogEntry { Item = $"{ex.GetType().Name}: {ex.Message}" });
         }
 
         return new OperationLog(nameof(MakeRefPlaneSubcategories), logs);
@@ -117,14 +117,15 @@ public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : Do
             var patternId = spec.GetLinePatternId(doc);
             subcat.SetLinePatternId(patternId, GraphicsStyleType.Projection);
         }
+
         return subcat;
     }
 }
 
 public class SubcategoryCache {
     private readonly Dictionary<string, Category> _cache = new();
-    private readonly Category _parentCategory;
     private readonly Document _doc;
+    private readonly Category _parentCategory;
 
     public SubcategoryCache(Document doc, BuiltInCategory parentCategory) {
         this._doc = doc;
@@ -140,9 +141,7 @@ public class SubcategoryCache {
     public Category GetExisting(string name) {
         if (string.IsNullOrEmpty(name)) return null;
 
-        if (this._cache.ContainsKey(name)) {
-            return this._cache[name];
-        }
+        if (this._cache.ContainsKey(name)) return this._cache[name];
         var subcategory = this._parentCategory.SubCategories
             .Cast<Category>()
             .FirstOrDefault(sc => sc.Name == name);
@@ -152,8 +151,9 @@ public class SubcategoryCache {
     }
 
     private bool MatchesSpec(Category subcat, RefPlaneSubcategorySpec spec) {
-        static bool ColorsMatch(Color c1, Color c2) =>
-        c1.Red == c2.Red && c1.Green == c2.Green && c1.Blue == c2.Blue;
+        static bool ColorsMatch(Color c1, Color c2) {
+            return c1.Red == c2.Red && c1.Green == c2.Green && c1.Blue == c2.Blue;
+        }
 
         if (!ColorsMatch(subcat.LineColor, spec.Color))
             return false;
@@ -169,8 +169,6 @@ public class SubcategoryCache {
     }
 
     public void Set(string name, Category subcategory) {
-        if (!string.IsNullOrEmpty(name) && subcategory != null) {
-            this._cache[name] = subcategory;
-        }
+        if (!string.IsNullOrEmpty(name) && subcategory != null) this._cache[name] = subcategory;
     }
 }

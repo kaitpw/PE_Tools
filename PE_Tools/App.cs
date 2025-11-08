@@ -127,15 +127,15 @@ public static class ButtonDataHydrator {
                 LargeImage = "Red_32.png",
                 ToolTip = "Manage families in a variety of ways from the Family Foundry."
             }
-        },{
+        }, {
             nameof(CmdFFManagerSnapshot),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
-                ToolTip = "Running this will output a JSON file with a config the represents the reference planes, dimensions, and family parameters of the currently open family"
+                ToolTip =
+                    "Running this will output a JSON file with a config the represents the reference planes, dimensions, and family parameters of the currently open family"
             }
-        },
-        {
+        }, {
             nameof(CmdFFTagMigrator),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",

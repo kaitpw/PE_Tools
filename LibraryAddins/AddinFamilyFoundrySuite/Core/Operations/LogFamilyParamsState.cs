@@ -1,7 +1,5 @@
-using AddinFamilyFoundrySuite.Core;
 using Newtonsoft.Json;
 using PeExtensions.FamDocument;
-using PeServices.Storage.Core;
 using PeServices.Storage.Core.Json.ContractResolvers;
 using PeServices.Storage.Core.Json.Converters;
 
@@ -35,10 +33,7 @@ public class LogFamilyParamsState(string outputDir) : DocOperation {
         var filename = $"family-params_{timestamp}.json";
         var filePath = Path.Combine(this.OutputPath, filename);
 
-        var defaultInstance = new FamilyParamModel {
-            Name = "",
-            DataType = new ForgeTypeId("")
-        };
+        var defaultInstance = new FamilyParamModel { Name = "", DataType = new ForgeTypeId("") };
 
         var serializerSettings = new JsonSerializerSettings {
             Formatting = Formatting.Indented,

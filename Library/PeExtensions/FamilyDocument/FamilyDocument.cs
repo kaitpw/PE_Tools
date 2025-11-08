@@ -31,14 +31,13 @@ public readonly struct FamilyDocument {
     public static implicit operator Document(FamilyDocument familyDocument) => familyDocument.Document;
 
     // Forward common Document properties for seamless usage
-    public FamilyManager FamilyManager => Document.FamilyManager;
-    public Family OwnerFamily => Document.OwnerFamily;
-    public string PathName => Document.PathName;
+    public FamilyManager FamilyManager => this.Document.FamilyManager;
+    public Family OwnerFamily => this.Document.OwnerFamily;
+    public string PathName => this.Document.PathName;
 
     // Forward common Document methods
-    public void SaveAs(string filePath, SaveAsOptions options) => Document.SaveAs(filePath, options);
-    public bool Close(bool save) => Document.Close(save);
-    public Family LoadFamily(Document doc, IFamilyLoadOptions options) => Document.LoadFamily(doc, options);
-    public Units GetUnits() => Document.GetUnits();
+    public void SaveAs(string filePath, SaveAsOptions options) => this.Document.SaveAs(filePath, options);
+    public bool Close(bool save) => this.Document.Close(save);
+    public Family LoadFamily(Document doc, IFamilyLoadOptions options) => this.Document.LoadFamily(doc, options);
+    public Units GetUnits() => this.Document.GetUnits();
 }
-

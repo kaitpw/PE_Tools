@@ -1,17 +1,15 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
+using System.Collections;
 using System.ComponentModel.DataAnnotations;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.Serialization;
 
 namespace PeServices.Storage.Core.Json.ContractResolvers;
 
 /// <summary>
-/// Contract resolver that:
-/// 1. Orders properties by declaration order (respecting inheritance)
-/// 2. Always serializes properties marked with [Required] attribute
-/// 3. Skips serializing non-required properties when they equal their type's default values
+///     Contract resolver that:
+///     1. Orders properties by declaration order (respecting inheritance)
+///     2. Always serializes properties marked with [Required] attribute
+///     3. Skips serializing non-required properties when they equal their type's default values
 /// </summary>
 internal class RequiredAwareContractResolver : DefaultContractResolver {
     protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization) {
@@ -73,8 +71,8 @@ internal class RequiredAwareContractResolver : DefaultContractResolver {
     }
 
     /// <summary>
-    /// Attempts to create a default instance of the type for comparison.
-    /// Handles types with parameterless constructors and types with required properties.
+    ///     Attempts to create a default instance of the type for comparison.
+    ///     Handles types with parameterless constructors and types with required properties.
     /// </summary>
     private static object TryCreateDefaultInstance(Type type) {
         try {
@@ -117,49 +115,36 @@ internal class RequiredAwareContractResolver : DefaultContractResolver {
     }
 
     private static bool AreValuesEqual(object value1, object value2, Type propertyType) {
-        if (value1 == null && value2 == null) {
-            return true;
-        }
+        if (value1 == null && value2 == null) return true;
 
-        if (value1 == null || value2 == null) {
-            return false;
-        }
+        if (value1 == null || value2 == null) return false;
 
         // Special handling for collections - compare by content, not reference
-        if (value1 is System.Collections.IEnumerable enum1 && value2 is System.Collections.IEnumerable enum2) {
+        if (value1 is IEnumerable enum1 && value2 is IEnumerable enum2) {
             // Don't treat strings as collections
-            if (value1 is string || value2 is string) {
-                return Equals(value1, value2);
-            }
+            if (value1 is string || value2 is string) return Equals(value1, value2);
 
             var list1 = enum1.Cast<object>().ToList();
             var list2 = enum2.Cast<object>().ToList();
 
-            if (list1.Count != list2.Count) {
-                return false;
-            }
+            if (list1.Count != list2.Count) return false;
 
             // For empty collections, consider them equal
-            if (list1.Count == 0 && list2.Count == 0) {
-                return true;
-            }
+            if (list1.Count == 0 && list2.Count == 0) return true;
 
             // For non-empty collections, compare element by element
             return list1.SequenceEqual(list2);
         }
 
         var comparerType = typeof(EqualityComparer<>).MakeGenericType(propertyType);
-        var defaultComparer = comparerType.GetProperty("Default", BindingFlags.Public | BindingFlags.Static)?.GetValue(null);
-        if (defaultComparer == null) {
-            return Equals(value1, value2);
-        }
+        var defaultComparer = comparerType.GetProperty("Default", BindingFlags.Public | BindingFlags.Static)
+            ?.GetValue(null);
+        if (defaultComparer == null) return Equals(value1, value2);
 
         var equalsMethod = comparerType.GetMethod("Equals", new[] { propertyType, propertyType });
-        if (equalsMethod != null) {
+        if (equalsMethod != null)
             return (bool)(equalsMethod.Invoke(defaultComparer, new[] { value1, value2 }) ?? false);
-        }
 
         return Equals(value1, value2);
     }
 }
-

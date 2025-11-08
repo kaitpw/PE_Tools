@@ -37,9 +37,7 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
             .ToList();
 
         var addsharedParams =
-            new AddSharedParams(this._sharedParams, sharedParamsToSkip) {
-                Name = this.Name
-            };
+            new AddSharedParams(this._sharedParams, sharedParamsToSkip) { Name = this.Name };
         return addsharedParams.Execute(doc);
     }
 }
