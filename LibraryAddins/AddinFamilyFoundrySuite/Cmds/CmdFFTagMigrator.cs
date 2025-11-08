@@ -1,5 +1,7 @@
 using AddinFamilyFoundrySuite.Core;
+using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeRevit.Lib;
 using PeRevit.Ui;
@@ -119,7 +121,8 @@ public class DebugLogAnnoInfo : DocOperation {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check",
+                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }

@@ -1,4 +1,4 @@
-using AddinFamilyFoundrySuite.Core.Operations.Settings;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using System.ComponentModel.DataAnnotations;
 

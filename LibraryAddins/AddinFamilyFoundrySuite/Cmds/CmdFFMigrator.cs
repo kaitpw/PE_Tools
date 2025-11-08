@@ -1,5 +1,7 @@
 using AddinFamilyFoundrySuite.Core;
+using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
@@ -77,9 +79,9 @@ public class CmdFFMigrator : IExternalCommand {
             } else {
                 var logs = processor
                     .SelectFamilies(() => {
-                            var picked = Pickers.GetSelectedFamilies(uiDoc);
-                            return picked.Any() ? picked : profile.GetFamilies(doc);
-                        }
+                        var picked = Pickers.GetSelectedFamilies(uiDoc);
+                        return picked.Any() ? picked : profile.GetFamilies(doc);
+                    }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(

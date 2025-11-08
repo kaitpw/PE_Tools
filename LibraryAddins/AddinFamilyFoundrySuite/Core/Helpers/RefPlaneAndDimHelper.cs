@@ -1,19 +1,10 @@
-using AddinFamilyFoundrySuite.Core;
 using System.Text.Json.Serialization;
-using AddinFamilyFoundrySuite.Core.Operations.Types;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 
 namespace AddinFamilyFoundrySuite.Core.Helpers;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-public enum Placement { Positive, Mirror, Negative }
 
-public class RefPlaneSpec {
-    public required string Name { get; set; }
-    public required string AnchorName { get; set; }
-    public Placement Placement { get; set; } = Placement.Mirror;
-    public string Parameter { get; set; }
-    public RpStrength Strength { get; set; } = RpStrength.NotARef;
-}
 
 public class PlaneQuery {
     private readonly Dictionary<string, ReferencePlane> _cache = new();

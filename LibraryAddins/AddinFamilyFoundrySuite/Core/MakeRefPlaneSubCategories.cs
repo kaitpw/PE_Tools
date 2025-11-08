@@ -1,5 +1,4 @@
 using PeExtensions.FamDocument;
-using AddinFamilyFoundrySuite.Core.Operations.Types;
 
 namespace AddinFamilyFoundrySuite.Core;
 
@@ -31,7 +30,7 @@ namespace AddinFamilyFoundrySuite.Core;
 //     }
 // };
 public record RefPlaneSubcategorySpec {
-    public required RpStrength Strength { get; init; }
+    public required OperationSettings.RpStrength Strength { get; init; }
     public required string Name { get; init; }
     public required Color Color { get; init; }
     public string LinePatternName { get; init; } = "Dash"; // null = use solid line

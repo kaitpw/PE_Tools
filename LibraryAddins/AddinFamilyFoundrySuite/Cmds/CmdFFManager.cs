@@ -1,6 +1,7 @@
 using AddinFamilyFoundrySuite.Core;
+using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
-using AddinFamilyFoundrySuite.Core.Operations.Types;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;

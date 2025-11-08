@@ -1,6 +1,8 @@
 using PeExtensions.FamDocument;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
+using AddinFamilyFoundrySuite.Core.Operations;
 
-namespace AddinFamilyFoundrySuite.Core.Operations;
+namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 
 public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
     public MapAndAddSharedParams(

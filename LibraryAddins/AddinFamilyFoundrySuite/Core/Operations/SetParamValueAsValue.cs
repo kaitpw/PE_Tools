@@ -3,6 +3,7 @@
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamManager;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 

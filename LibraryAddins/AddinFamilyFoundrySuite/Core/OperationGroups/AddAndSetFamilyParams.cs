@@ -1,10 +1,7 @@
-using PeExtensions.FamDocument;
-using PeServices.Storage.Core.Json.Converters;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Text.Json.Serialization;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
+using AddinFamilyFoundrySuite.Core.Operations;
 
-namespace AddinFamilyFoundrySuite.Core.Operations;
+namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 
 public class AddAndSetFamilyParams : OperationGroup<AddFamilyParamsSettings> {
     public AddAndSetFamilyParams(AddFamilyParamsSettings settings) : base(

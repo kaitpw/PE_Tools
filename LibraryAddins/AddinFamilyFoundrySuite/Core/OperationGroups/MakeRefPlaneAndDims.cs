@@ -1,8 +1,9 @@
 using PeExtensions.FamDocument;
 using System.ComponentModel.DataAnnotations;
 using AddinFamilyFoundrySuite.Core.Helpers;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 
-namespace AddinFamilyFoundrySuite.Core.Operations;
+namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 
 public class MakeRefPlaneAndDims : OperationGroup<MakeRefPlaneAndDimsSettings> {
     public MakeRefPlaneAndDims(MakeRefPlaneAndDimsSettings settings) : base(
@@ -25,12 +26,6 @@ public class SharedHelper {
     public PlaneQuery Query { get; set; }
     public RefPlaneAndDimHelper Helper { get; set; }
     public List<LogEntry> Logs { get; set; }
-}
-
-public class MakeRefPlaneAndDimsSettings : IOperationSettings {
-    [Required] public List<RefPlaneSpec> Specs { get; init; } = [];
-
-    public bool Enabled { get; init; } = true;
 }
 
 public class MakeRefPlanes : DocOperation<MakeRefPlaneAndDimsSettings> {
