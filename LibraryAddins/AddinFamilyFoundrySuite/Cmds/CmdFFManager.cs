@@ -42,6 +42,34 @@ public class CmdFFManager : IExternalCommand {
                 doc,
                 executionOptions);
 
+            var specs = new List<RefPlaneSubcategorySpec> {
+                new RefPlaneSubcategorySpec {
+                    Strength = RpStrength.NotARef,
+                    SubcategoryName = "NotAReference",
+                    Color = new Color(211, 211, 211),
+                },
+                new RefPlaneSubcategorySpec {
+                    Strength = RpStrength.WeakRef,
+                    SubcategoryName = "WeakReference",
+                    Color = new Color(217, 124, 0),
+                },
+                new RefPlaneSubcategorySpec {
+                    Strength = RpStrength.StrongRef,
+                    SubcategoryName = "StrongReference",
+                    Color = new Color(255, 0, 0),
+                },
+                new RefPlaneSubcategorySpec {
+                    Strength = RpStrength.CenterLR,
+                    SubcategoryName = "Center",
+                    Color = new Color(115, 0, 253),
+                },
+                new RefPlaneSubcategorySpec {
+                    Strength = RpStrength.CenterFB,
+                    SubcategoryName = "Center",
+                    Color = new Color(115, 0, 253),
+                }
+            };
+
             var addFamilyParams = new AddFamilyParamsSettings {
                 FamilyParamData = [
                     new FamilyParamModel {
@@ -53,8 +81,10 @@ public class CmdFFManager : IExternalCommand {
             };
             var queue = new OperationQueue()
                 .Add(new AddSharedParams(apsParamData))
-                .Add(new AddFamilyParams(profile.AddAndGlobalSetFamilyParams))
+                .Add(new AddAllFamilyParams(addFamilyParams))
                 .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
+                .Add(new AddFamilyParams(profile.AddAndGlobalSetFamilyParams)) // must come after AddAllFamilyParams and RP/dims
+                .Add(new MakeRefPlaneSubcategories(specs))
                 .Add(new AddAndSetValueAsFormula(addFamilyParams));
 
             var metadataString = queue.GetExecutableMetadataString();

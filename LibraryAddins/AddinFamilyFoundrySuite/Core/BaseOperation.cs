@@ -32,6 +32,7 @@ public abstract class DocOperation : IOperation {
         try {
             var sw = Stopwatch.StartNew();
             var log = this.Execute(famDoc);
+            if (log == null) log = new OperationLog("IGNORE", new List<LogEntry>());
             sw.Stop();
             log.MsElapsed = sw.Elapsed.TotalMilliseconds;
             return [log];

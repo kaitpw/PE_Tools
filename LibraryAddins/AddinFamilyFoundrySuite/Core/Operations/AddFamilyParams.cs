@@ -1,27 +1,38 @@
+using PeExtensions.FamDocument;
 using PeServices.Storage.Core.Json.Converters;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace AddinFamilyFoundrySuite.Core.Operations; 
+namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class AddFamilyParams : OperationGroup<AddFamilyParamsSettings> {
-    public AddFamilyParams(AddFamilyParamsSettings settings) : base(
-    "Make reference planes and dimensions for the family",
-    InitializeOperations(settings)
-) {
-    }
+    public AddFamilyParams(AddFamilyParamsSettings settings, bool addFormulas = true) : base(
+        "Add Family Parameters and set their value OR formula.",
+        InitializeOperations(settings, addFormulas)
+    ) { }
 
     private static List<IOperation<AddFamilyParamsSettings>> InitializeOperations(
-        AddFamilyParamsSettings settings
+        AddFamilyParamsSettings settings,
+        bool addFormulas
     ) {
+        var operations = new List<IOperation<AddFamilyParamsSettings>> { new AddAllFamilyParams(settings) };
         var hasGlobalValues = settings.FamilyParamData.Any(p => p.GlobalValue is not null);
-        return hasGlobalValues ? [
-            new AddAndSetValueAsValue(settings),
-            new AddAndSetFormula(settings),
-        ] : [
-            new AddAndSetFormula(settings)
-        ];
+        if (hasGlobalValues) operations.Add(new AddAndSetValueAsValue(settings));
+        if (addFormulas) operations.Add(new AddAndSetFormula(settings));
+        return operations;
+    }
+}
+
+public class AddAllFamilyParams(AddFamilyParamsSettings settings)
+    : DocOperation<AddFamilyParamsSettings>(settings) {
+    public override string Description =>
+        "Add Family Parameters and set the value for each family type to the same value.";
+
+    public override OperationLog Execute(FamilyDocument doc) {
+        foreach (var p in this.Settings.FamilyParamData)
+            _ = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
+        return null;
     }
 }
 
