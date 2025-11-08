@@ -29,32 +29,17 @@ public class CmdFFManager : IExternalCommand {
                 .Json<ProfileFamilyManager>($"{settings.CurrentProfile}.json").Read();
             var outputFolderPath = storage.OutputDir().DirectoryPath;
 
-            // force this to never be single transaction
-            var executionOptions = new ExecutionOptions {
-                SingleTransaction = false,
-                PreviewRun = profile.ExecutionOptions.PreviewRun,
-                OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
-            };
-
             using var tempFile = new TempSharedParamFile(doc);
             var apsParamData = profile.GetAPSParams(tempFile);
 
-            using var processor = new OperationProcessor(
-                doc,
-                executionOptions);
+
 
             var specs = new List<RefPlaneSubcategorySpec> {
-                new() {
-                    Strength = RpStrength.NotARef, SubcategoryName = "NotAReference", Color = new Color(211, 211, 211)
-                },
-                new() {
-                    Strength = RpStrength.WeakRef, SubcategoryName = "WeakReference", Color = new Color(217, 124, 0)
-                },
-                new() {
-                    Strength = RpStrength.StrongRef, SubcategoryName = "StrongReference", Color = new Color(255, 0, 0)
-                },
-                new() { Strength = RpStrength.CenterLR, SubcategoryName = "Center", Color = new Color(115, 0, 253) },
-                new() { Strength = RpStrength.CenterFB, SubcategoryName = "Center", Color = new Color(115, 0, 253) }
+                new() {Strength = RpStrength.NotARef, Name = "NotARef", Color = new Color(211, 211, 211)},
+                new() {Strength = RpStrength.WeakRef, Name = "WeakRef", Color = new Color(217, 124, 0)},
+                new() { Strength = RpStrength.StrongRef, Name = "StrongRef", Color = new Color(255, 0, 0)},
+                new() { Strength = RpStrength.CenterLR, Name = "Center", Color = new Color(115, 0, 253) },
+                new() { Strength = RpStrength.CenterFB, Name = "Center", Color = new Color(115, 0, 253) }
             };
 
             var addFamilyParams = new AddFamilyParamsSettings {
@@ -78,6 +63,13 @@ public class CmdFFManager : IExternalCommand {
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
 
+            // force this to never be single transaction
+            var executionOptions = new ExecutionOptions {
+                SingleTransaction = false,
+                PreviewRun = profile.ExecutionOptions.PreviewRun,
+                OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
+            };
+
             if (executionOptions.PreviewRun) {
                 OperationLogger.OutputDryRunResults(
                     apsParamData,
@@ -89,7 +81,7 @@ public class CmdFFManager : IExternalCommand {
                     settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
                 return Result.Succeeded;
             }
-
+            using var processor = new OperationProcessor(doc, executionOptions);
             var logs = processor
                 .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc)
                 )

@@ -32,7 +32,7 @@ namespace AddinFamilyFoundrySuite.Core;
 // };
 public record RefPlaneSubcategorySpec {
     public required RpStrength Strength { get; init; }
-    public required string SubcategoryName { get; init; }
+    public required string Name { get; init; }
     public required Color Color { get; init; }
     public string LinePatternName { get; init; } = "Dash"; // null = use solid line
 
@@ -85,15 +85,15 @@ public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : Do
                 if (matchingSubcat != null)
                     subcategory = matchingSubcat; // silently continue
                 else {
-                    var existing = subcategoryCache.GetExisting(spec.SubcategoryName);
+                    var existing = subcategoryCache.GetExisting(spec.Name);
                     if (existing != null) {
                         subcategory = this.ApplySubcategoryStyle(existing, spec, doc.Document);
-                        logs.Add(new LogEntry { Item = $"Updated subcategory: '{spec.SubcategoryName}'" });
+                        logs.Add(new LogEntry { Item = $"Updated subcategory: '{spec.Name}'" });
                     } else {
-                        var newSubCat = doc.Document.Settings.Categories.NewSubcategory(category, spec.SubcategoryName);
+                        var newSubCat = doc.Document.Settings.Categories.NewSubcategory(category, spec.Name);
                         subcategory = this.ApplySubcategoryStyle(newSubCat, spec, doc.Document);
-                        subcategoryCache.Set(spec.SubcategoryName, subcategory);
-                        logs.Add(new LogEntry { Item = $"Created subcategory: '{spec.SubcategoryName}'" });
+                        subcategoryCache.Set(spec.Name, subcategory);
+                        logs.Add(new LogEntry { Item = $"Created subcategory: '{spec.Name}'" });
                     }
                 }
 
@@ -134,7 +134,7 @@ public class SubcategoryCache {
     }
 
     public Category GetMatching(RefPlaneSubcategorySpec spec) {
-        var existing = this.GetExisting(spec.SubcategoryName);
+        var existing = this.GetExisting(spec.Name);
         if (existing == null) return null;
         return this.MatchesSpec(existing, spec) ? existing : null;
     }

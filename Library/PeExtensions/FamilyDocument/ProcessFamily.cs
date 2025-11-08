@@ -68,7 +68,11 @@ public static class FamilyDocumentProcessFamily {
             var familyFileName = $"{family.Name}.rfa";
             var fullSavePath = Path.Combine(location, familyFileName);
 
-            var saveOptions = new SaveAsOptions { OverwriteExistingFile = true };
+            var saveOptions = new SaveAsOptions {
+                OverwriteExistingFile = true,
+                Compact = true,
+                MaximumBackups = 1
+            };
             famDoc.SaveAs(fullSavePath, saveOptions);
         }
 
