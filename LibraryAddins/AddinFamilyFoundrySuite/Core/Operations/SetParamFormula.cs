@@ -1,8 +1,9 @@
 using PeExtensions.FamDocument;
+using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddAndSetFormula(AddFamilyParamsSettings settings)
+public class SetParamFormula(AddFamilyParamsSettings settings)
     : DocOperation<AddFamilyParamsSettings>(settings) {
     public override string Description => "Add Family Parameters and set their formula.";
 
@@ -14,7 +15,11 @@ public class AddAndSetFormula(AddFamilyParamsSettings settings)
         foreach (var p in sortedParameters) {
             FamilyParameter parameter = null;
             try {
-                parameter = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
+                parameter = doc.FamilyManager.FindParameter(p.Name);
+                if (parameter is null) {
+                    logs[p.Name] = new LogEntry { Item = p.Name, Error = $"Parameter '{p.Name}' not found" };
+                    continue;
+                }
                 if (p.Formula is not null && parameter.Formula != p.Formula && this.Settings.OverrideExistingValues)
                     doc.FamilyManager.SetFormula(parameter, p.Formula);
                 logs[p.Name] = new LogEntry { Item = p.Name };

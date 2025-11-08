@@ -2,10 +2,11 @@
 
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.SetValue;
+using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddAndSetValueAsValue(AddFamilyParamsSettings settings)
+public class SetParamValueAsValue(AddFamilyParamsSettings settings)
     : TypeOperation<AddFamilyParamsSettings>(settings) {
     public override string Description =>
         "Add Family Parameters and set the value for each family type to the same value.";
@@ -15,7 +16,11 @@ public class AddAndSetValueAsValue(AddFamilyParamsSettings settings)
 
         var sortedParameters = this.Settings.FamilyParamData.Where(p => p.GlobalValue is not null);
         foreach (var p in sortedParameters) {
-            var parameter = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
+            var parameter = doc.FamilyManager.FindParameter(p.Name);
+            if (parameter is null) {
+                logs[p.Name] = new LogEntry { Item = p.Name, Error = $"Parameter '{p.Name}' not found" };
+                continue;
+            }
 
             if (this.Settings.OverrideExistingValues)
                 _ = doc.SetValue(parameter, p.GlobalValue, ValueCoercionStrategy.CoerceSimple);

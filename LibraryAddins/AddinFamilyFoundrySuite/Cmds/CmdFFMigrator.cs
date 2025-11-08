@@ -59,7 +59,7 @@ public class CmdFFMigrator : IExternalCommand {
                 .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, apsParamNames))
                 .Add(new DebugLogAnnoInfo())
-                .Add(new AddAndSetValueAsFormula(addFamilyParamsSettings));
+                .Add(new SetParamValueAsFormula(addFamilyParamsSettings));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -77,9 +77,9 @@ public class CmdFFMigrator : IExternalCommand {
             } else {
                 var logs = processor
                     .SelectFamilies(() => {
-                            var picked = Pickers.GetSelectedFamilies(uiDoc);
-                            return picked.Any() ? picked : profile.GetFamilies(doc);
-                        }
+                        var picked = Pickers.GetSelectedFamilies(uiDoc);
+                        return picked.Any() ? picked : profile.GetFamilies(doc);
+                    }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(

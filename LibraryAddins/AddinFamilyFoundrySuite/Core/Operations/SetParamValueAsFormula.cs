@@ -1,14 +1,15 @@
 // TODO: Migrate this!!!!!!!!!!
 
 using PeExtensions.FamDocument;
+using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddAndSetValueAsFormula(AddFamilyParamsSettings settings)
+public class SetParamValueAsFormula(AddFamilyParamsSettings settings)
     : DocOperation<AddFamilyParamsSettings>(settings) {
     // change this to type later probably after seeing if looping through the types is actually necessary
     public override string Description => "Add Family Parameters and set the value by a formula." +
-                                          $"\nPro: Faster than {nameof(AddAndSetValueAsValue)} which sets a param's value per family type" +
+                                          $"\nPro: Faster than {nameof(SetParamValueAsValue)} which sets a param's value per family type" +
                                           "\nCon: Formulas can only be changed by Editing a family";
 
     public override OperationLog Execute(FamilyDocument doc) {
@@ -21,8 +22,11 @@ public class AddAndSetValueAsFormula(AddFamilyParamsSettings settings)
 
         foreach (var p in this.Settings.FamilyParamData) {
             try {
-                var parameter = doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
-                // TODO: make this dependent on the p.DataType
+                var parameter = doc.FamilyManager.FindParameter(p.Name);
+                if (parameter is null) {
+                    logs.Add(new LogEntry { Item = p.Name, Error = $"Parameter '{p.Name}' not found" });
+                    continue;
+                }                // TODO: make this dependent on the p.DataType
                 if (this.Settings.OverrideExistingValues)
                     doc.FamilyManager.SetFormula(parameter, $"\"{p.GlobalValue}\"");
                 logs.Add(new LogEntry { Item = p.Name });

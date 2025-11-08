@@ -1,31 +1,12 @@
 using PeExtensions.FamDocument;
-using PeServices.Storage.Core.Json.Converters;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using PeServices.Storage.Core.Json.Converters;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class AddFamilyParams : OperationGroup<AddFamilyParamsSettings> {
-    public AddFamilyParams(AddFamilyParamsSettings settings, bool addFormulas = true) : base(
-        "Add Family Parameters and set their value OR formula.",
-        InitializeOperations(settings, addFormulas)
-    ) {
-    }
-
-    private static List<IOperation<AddFamilyParamsSettings>> InitializeOperations(
-        AddFamilyParamsSettings settings,
-        bool addFormulas
-    ) {
-        var operations = new List<IOperation<AddFamilyParamsSettings>> { new AddAllFamilyParams(settings) };
-        var hasGlobalValues = settings.FamilyParamData.Any(p => p.GlobalValue is not null);
-        if (hasGlobalValues) operations.Add(new AddAndSetValueAsValue(settings));
-        if (addFormulas) operations.Add(new AddAndSetFormula(settings));
-        return operations;
-    }
-}
-
-public class AddAllFamilyParams(AddFamilyParamsSettings settings)
+public class AddFamilyParams(AddFamilyParamsSettings settings)
     : DocOperation<AddFamilyParamsSettings>(settings) {
     public override string Description =>
         "Add Family Parameters and set the value for each family type to the same value.";

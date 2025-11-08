@@ -58,7 +58,7 @@ public class CmdFFTagMigrator : IExternalCommand {
                 .Add(new DeleteUnusedNestedFamilies(profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new DebugLogAnnoInfo())
-                .Add(new AddAndSetValueAsFormula(addFamilyParamsSettings));
+                .Add(new SetParamValueAsFormula(addFamilyParamsSettings));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -119,7 +119,8 @@ public class DebugLogAnnoInfo : DocOperation {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check",
+                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }

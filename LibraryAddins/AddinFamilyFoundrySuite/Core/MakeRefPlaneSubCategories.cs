@@ -1,4 +1,5 @@
 using PeExtensions.FamDocument;
+using AddinFamilyFoundrySuite.Core.Operations.Types;
 
 namespace AddinFamilyFoundrySuite.Core;
 

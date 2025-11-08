@@ -6,6 +6,7 @@ using PeServices.Storage;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using AddinFamilyFoundrySuite.Core.Operations.Types;
 
 namespace AddinFamilyFoundrySuite.Cmds;
 // support add, delete, remap, sort, rename
@@ -67,12 +68,12 @@ public class CmdFFManager : IExternalCommand {
             };
             var queue = new OperationQueue()
                 .Add(new AddSharedParams(apsParamData))
-                .Add(new AddAllFamilyParams(addFamilyParams))
+                .Add(new AddFamilyParams(addFamilyParams))
                 .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
-                .Add(new AddFamilyParams(profile
+                .Add(new AddAndSetFamilyParams(profile
                     .AddAndGlobalSetFamilyParams)) // must come after AddAllFamilyParams and RP/dims
                 .Add(new MakeRefPlaneSubcategories(specs))
-                .Add(new AddAndSetValueAsFormula(addFamilyParams))
+                .Add(new SetParamValueAsFormula(addFamilyParams))
                 .Add(new SortParams(new SortParamsSettings()));
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);

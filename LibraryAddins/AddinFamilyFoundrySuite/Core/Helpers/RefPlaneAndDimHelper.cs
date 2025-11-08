@@ -1,24 +1,11 @@
 using AddinFamilyFoundrySuite.Core;
 using System.Text.Json.Serialization;
+using AddinFamilyFoundrySuite.Core.Operations.Types;
+
+namespace AddinFamilyFoundrySuite.Core.Helpers;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
 public enum Placement { Positive, Mirror, Negative }
-
-[JsonConverter(typeof(JsonStringEnumConverter))]
-public enum RpStrength {
-    Left = 0,
-    CenterLR = 1,
-    Right = 2,
-    Front = 3,
-    CenterFB = 4,
-    Back = 5,
-    Bottom = 6,
-    CenterElev = 7,
-    Top = 8,
-    NotARef = 12,
-    StrongRef = 13,
-    WeakRef = 14
-}
 
 public class RefPlaneSpec {
     public required string Name { get; set; }
@@ -57,7 +44,9 @@ public class PlaneQuery {
 
 public class RefPlaneAndDimHelper {
     private readonly Dictionary<string, int> _depths = new() {
-        ["Center (Left/Right)"] = 0, ["Center (Front/Back)"] = 0, ["Ref. Level"] = 0
+        ["Center (Left/Right)"] = 0,
+        ["Center (Front/Back)"] = 0,
+        ["Ref. Level"] = 0
     };
 
     private readonly Document _doc;
@@ -392,7 +381,8 @@ public class RefPlaneAndDimHelper {
         if (anchor == null) {
             Debug.WriteLine($"[CreatePlanes] Anchor plane not found: {spec.AnchorName}");
             this._logs.Add(new LogEntry {
-                Item = $"RefPlane: {spec.Name}", Error = $"Anchor plane '{spec.AnchorName}' not found"
+                Item = $"RefPlane: {spec.Name}",
+                Error = $"Anchor plane '{spec.AnchorName}' not found"
             });
             return;
         }

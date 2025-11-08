@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using PeExtensions.FamDocument;
 using PeServices.Storage.Core.Json.ContractResolvers;
+using AddinFamilyFoundrySuite.Core.Helpers;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
