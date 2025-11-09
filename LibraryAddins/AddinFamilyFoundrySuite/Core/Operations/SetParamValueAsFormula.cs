@@ -4,8 +4,10 @@ using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class SetParamValueAsFormula(AddFamilyParamsSettings settings)
+public class SetParamValueAsFormula(AddFamilyParamsSettings settings, bool setOnly = true)
     : DocOperation<AddFamilyParamsSettings>(settings) {
+    public readonly bool SetOnly = setOnly;
+
     // change this to type later probably after seeing if looping through the types is actually necessary
     public override string Description => "Add Family Parameters and set the value by a formula." +
                                           $"\nPro: Faster than {nameof(SetParamValueAsValue)} which sets a param's value per family type" +
@@ -21,11 +23,14 @@ public class SetParamValueAsFormula(AddFamilyParamsSettings settings)
 
         foreach (var p in this.Settings.FamilyParamData) {
             try {
-                var parameter = doc.FamilyManager.FindParameter(p.Name);
+                var parameter = this.SetOnly
+                    ? doc.FamilyManager.FindParameter(p.Name)
+                    : doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
                 if (parameter is null) {
                     logs.Add(new LogEntry { Item = p.Name, Error = $"Parameter '{p.Name}' not found" });
                     continue;
-                }                // TODO: make this dependent on the p.DataType
+                } // TODO: make this dependent on the p.DataType
+
                 if (this.Settings.OverrideExistingValues)
                     doc.FamilyManager.SetFormula(parameter, $"\"{p.GlobalValue}\"");
                 logs.Add(new LogEntry { Item = p.Name });

@@ -7,8 +7,9 @@ using AddinFamilyFoundrySuite.Core.OperationSettings;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class SetParamValueAsValue(AddFamilyParamsSettings settings)
+public class SetParamValueAsValue(AddFamilyParamsSettings settings, bool setOnly = true)
     : TypeOperation<AddFamilyParamsSettings>(settings) {
+    public readonly bool SetOnly = setOnly;
     public override string Description =>
         "Add Family Parameters and set the value for each family type to the same value.";
 
@@ -17,7 +18,9 @@ public class SetParamValueAsValue(AddFamilyParamsSettings settings)
 
         var sortedParameters = this.Settings.FamilyParamData.Where(p => p.GlobalValue is not null);
         foreach (var p in sortedParameters) {
-            var parameter = doc.FamilyManager.FindParameter(p.Name);
+            var parameter = this.SetOnly
+                ? doc.FamilyManager.FindParameter(p.Name)
+                : doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
             if (parameter is null) {
                 logs[p.Name] = new LogEntry { Item = p.Name, Error = $"Parameter '{p.Name}' not found" };
                 continue;

@@ -42,7 +42,7 @@ public class CmdFFManager : IExternalCommand {
                 new() { Strength = RpStrength.CenterFB, Name = "Center", Color = new Color(115, 0, 253) }
             };
 
-            var addFamilyParams = new AddFamilyParamsSettings {
+            var timestampParam = new AddFamilyParamsSettings {
                 FamilyParamData = [
                     new FamilyParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
@@ -53,12 +53,12 @@ public class CmdFFManager : IExternalCommand {
             };
             var queue = new OperationQueue()
                 .Add(new AddSharedParams(apsParamData))
-                .Add(new AddFamilyParams(addFamilyParams))
+                .Add(new AddFamilyParams(profile.AddFamilyParams))
                 .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
                 .Add(new AddAndSetFamilyParams(profile
-                    .AddAndGlobalSetFamilyParams)) // must come after AddAllFamilyParams and RP/dims
+                    .AddFamilyParams)) // must come after AddAllFamilyParams and RP/dims
                 .Add(new MakeRefPlaneSubcategories(specs))
-                .Add(new SetParamValueAsFormula(addFamilyParams))
+                .Add(new SetParamValueAsFormula(timestampParam, false))
                 .Add(new SortParams(new SortParamsSettings()));
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -108,7 +108,7 @@ public class CmdFFManager : IExternalCommand {
 public class ProfileFamilyManager : BaseProfileSettings {
     [Description("Settings for adding family parameters")]
     [Required]
-    public AddFamilyParamsSettings AddAndGlobalSetFamilyParams { get; init; } = new();
+    public AddFamilyParamsSettings AddFamilyParams { get; init; } = new();
 
     [Description("Settings for making reference planes and dimensions")]
     [Required]

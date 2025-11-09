@@ -4,8 +4,10 @@ using AddinFamilyFoundrySuite.Core.OperationSettings;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class SetParamFormula(AddFamilyParamsSettings settings)
+public class SetParamFormula(AddFamilyParamsSettings settings, bool setOnly = true)
     : DocOperation<AddFamilyParamsSettings>(settings) {
+    public readonly bool SetOnly = setOnly;
+
     public override string Description => "Add Family Parameters and set their formula.";
 
     public override OperationLog Execute(FamilyDocument doc) {
@@ -16,7 +18,9 @@ public class SetParamFormula(AddFamilyParamsSettings settings)
         foreach (var p in sortedParameters) {
             FamilyParameter parameter = null;
             try {
-                parameter = doc.FamilyManager.FindParameter(p.Name);
+                parameter = this.SetOnly
+                    ? doc.FamilyManager.FindParameter(p.Name)
+                    : doc.AddFamilyParameter(p.Name, p.PropertiesGroup, p.DataType, p.IsInstance);
                 if (parameter is null) {
                     logs[p.Name] = new LogEntry { Item = p.Name, Error = $"Parameter '{p.Name}' not found" };
                     continue;
