@@ -1,10 +1,6 @@
-using Newtonsoft.Json;
-using PeExtensions.FamDocument;
-using PeExtensions.FamDocument.SetValue;
-using PeExtensions.FamManager;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
+using PeExtensions.FamDocument;
+using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 

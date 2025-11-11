@@ -3,7 +3,8 @@ $APPDATA = $env:APPDATA
 $REVIT_VERSIONS = 2023..2027
 $PROJECT_NAME = "PE_Tools"
 
-foreach ($REVIT_VERSION in $REVIT_VERSIONS) {
+foreach ($REVIT_VERSION in $REVIT_VERSIONS)
+{
     $RvtAddinsAddinPath = "$APPDATA\Autodesk\Revit\Addins\$REVIT_VERSION"
     $RvtAddinsDllPath = "$APPDATA\Autodesk\Revit\Addins\$REVIT_VERSION\$PROJECT_NAME"
 
@@ -13,19 +14,25 @@ foreach ($REVIT_VERSION in $REVIT_VERSIONS) {
 
     # Remove the .addin file
     $addinTarget = Join-Path $RvtAddinsAddinPath "$PROJECT_NAME.addin"
-    if (Test-Path $addinTarget) {
+    if (Test-Path $addinTarget)
+    {
         Remove-Item $addinTarget -Force
         Write-Host "*     - Removed: $addinTarget"
-    } else {
+    }
+    else
+    {
         Write-Host "*     - Not found: $addinTarget"
     }
 
     # Remove the .dll file
     $dllTarget = Join-Path $RvtAddinsDllPath "$PROJECT_NAME.dll"
-    if (Test-Path $RvtAddinsDllPath) {
+    if (Test-Path $RvtAddinsDllPath)
+    {
         Remove-Item $RvtAddinsDllPath -Force
         Write-Host "*     - Removed: $RvtAddinsDllPath"
-    } else {
+    }
+    else
+    {
         Write-Host "*     - Not found: $dllTarget"
     }
 }

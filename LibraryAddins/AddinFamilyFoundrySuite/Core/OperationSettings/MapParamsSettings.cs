@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
 namespace AddinFamilyFoundrySuite.Core.OperationSettings;
+
 public class MapParamsSettings : IOperationSettings {
     [Description("List of parameter remapping rules")]
     [Required]

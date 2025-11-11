@@ -1,6 +1,6 @@
 using PeExtensions.FamManager;
-namespace PeExtensions.FamDocument;
 
+namespace PeExtensions.FamDocument;
 
 public static class FamilyManagerGetValue {
     /// <summary>

@@ -121,8 +121,7 @@ public class DebugLogAnnoInfo : DocOperation {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check",
-                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }

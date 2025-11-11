@@ -17,8 +17,7 @@ public record FamilyParamModel {
 
     public ForgeTypeId PropertiesGroup { get; init; } = new("");
 
-    [Required]
-    public required ForgeTypeId DataType { get; init; }
+    [Required] public required ForgeTypeId DataType { get; init; }
 
     public bool IsInstance { get; init; } = true;
     public object GlobalValue { get; init; } = null;

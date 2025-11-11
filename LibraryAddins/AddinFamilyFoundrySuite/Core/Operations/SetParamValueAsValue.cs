@@ -1,15 +1,16 @@
 // TODO: Migrate this!!!!!!!!!!
 
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamManager;
-using AddinFamilyFoundrySuite.Core.OperationSettings;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class SetParamValueAsValue(AddFamilyParamsSettings settings, bool setOnly = true)
     : TypeOperation<AddFamilyParamsSettings>(settings) {
     public readonly bool SetOnly = setOnly;
+
     public override string Description =>
         "Add Family Parameters and set the value for each family type to the same value.";
 

@@ -17,12 +17,16 @@ public class CmdFFMakeATVariants : IExternalCommand {
         try {
             var storage = new Storage("FF Make AT Variants");
             var outputFolderPath = storage.OutputDir().DirectoryPath;
-            static OperationQueue MakeQueue(DuctConnectorConfigurator settings) => new OperationQueue().Add(new SetDuctConnectorSettings(settings));
+
+            static OperationQueue MakeQueue(DuctConnectorConfigurator settings) {
+                return new OperationQueue().Add(new SetDuctConnectorSettings(settings));
+            }
+
             var variants = new List<(string variant, OperationQueue queue)> {
                 (" Supply", MakeQueue(DuctConnectorConfigurator.PresetATSupply)),
                 (" Return", MakeQueue(DuctConnectorConfigurator.PresetATReturn)),
                 (" Exhaust", MakeQueue(DuctConnectorConfigurator.PresetATExhaust)),
-                (" Intake", MakeQueue(DuctConnectorConfigurator.PresetATIntake)),
+                (" Intake", MakeQueue(DuctConnectorConfigurator.PresetATIntake))
             };
 
             var processor = new OperationProcessor(doc, new ExecutionOptions());

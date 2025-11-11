@@ -132,7 +132,7 @@
             <DependentUpon>Settings.settings</DependentUpon>
         </Compile>
         <!-- Exclude AssemblyInfo.cs from WPF temp projects to avoid duplicate attribute errors -->
-        <Compile Remove="Properties\AssemblyInfo.cs" Condition="'$(MSBuildProjectName)' != 'PE_Tools'" />
+        <Compile Remove="Properties\AssemblyInfo.cs" Condition="'$(MSBuildProjectName)' != 'PE_Tools'"/>
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Update="Properties\Resources.resx">

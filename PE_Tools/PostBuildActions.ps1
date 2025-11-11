@@ -5,7 +5,8 @@ param(
     [string]$AppData
 )
 
-if ($env:GITHUB_ACTIONS -eq "true" -or $env:GITHUB_RUN_ID) {
+if ($env:GITHUB_ACTIONS -eq "true" -or $env:GITHUB_RUN_ID)
+{
     Write-Host ""
     Write-Host "****** SKIPPING LOCAL DEV ADDIN COPY *******"
     Write-Host "****** env:GITHUB_ACTIONS: $env:GITHUB_ACTIONS *******"
@@ -27,9 +28,10 @@ Write-Host "* from **$BuildOutputPath**"
 Write-Host "* to **$RvtAddinsAddinPath**"
 
 # Create dll directory if it doesn't exist
-if (-not (Test-Path $RvtAddinsDllPath)) {
+if (-not (Test-Path $RvtAddinsDllPath))
+{
     New-Item -ItemType Directory -Path $RvtAddinsDllPath -Force | Out-Null
-    Write-Host "*     - Created dir: $RvtAddinsDllPath" 
+    Write-Host "*     - Created dir: $RvtAddinsDllPath"
 }
 
 # Copy .addin files
@@ -38,12 +40,15 @@ Write-Host "*     - Copied .addin files to: $RvtAddinsAddinPath"
 
 # Copy .dll files from project root
 Copy-Item -Path "$BuildOutputPath\*.dll" -Destination $RvtAddinsDllPath -Force
-Write-Host "*     - Copied .dll files to: $RvtAddinsDllPath" 
+Write-Host "*     - Copied .dll files to: $RvtAddinsDllPath"
 
 # Delete bundle directory if it exists
-if (Test-Path $BundlePath) {
+if (Test-Path $BundlePath)
+{
     Remove-Item -Path $BundlePath -Recurse -Force
     Write-Host "*     - Deleted bundle directory: $BundlePath"
-} else {
+}
+else
+{
     Write-Host "*     - Bundle directory not found: $BundlePath"
 } 

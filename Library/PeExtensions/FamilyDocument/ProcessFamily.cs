@@ -31,7 +31,8 @@ public static class FamilyDocumentProcessFamily {
         return famDoc;
     }
 
-    public static FamilyDocument ProcessWithoutSaving(this FamilyDocument famDoc, params Action<FamilyDocument>[] callbacks) {
+    public static FamilyDocument ProcessWithoutSaving(this FamilyDocument famDoc,
+        params Action<FamilyDocument>[] callbacks) {
         foreach (var callback in callbacks) {
             using var trans = new Transaction(famDoc, "Edit Family Document");
             _ = trans.Start();

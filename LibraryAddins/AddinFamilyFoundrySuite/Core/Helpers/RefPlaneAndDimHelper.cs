@@ -1,11 +1,9 @@
-using System.Text.Json.Serialization;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
+using System.Text.Json.Serialization;
 
 namespace AddinFamilyFoundrySuite.Core.Helpers;
 
 [JsonConverter(typeof(JsonStringEnumConverter))]
-
-
 public class PlaneQuery {
     private readonly Dictionary<string, ReferencePlane> _cache = new();
     private readonly Document _doc;
@@ -35,9 +33,7 @@ public class PlaneQuery {
 
 public class RefPlaneAndDimHelper {
     private readonly Dictionary<string, int> _depths = new() {
-        ["Center (Left/Right)"] = 0,
-        ["Center (Front/Back)"] = 0,
-        ["Ref. Level"] = 0
+        ["Center (Left/Right)"] = 0, ["Center (Front/Back)"] = 0, ["Ref. Level"] = 0
     };
 
     private readonly Document _doc;
@@ -372,8 +368,7 @@ public class RefPlaneAndDimHelper {
         if (anchor == null) {
             Debug.WriteLine($"[CreatePlanes] Anchor plane not found: {spec.AnchorName}");
             this._logs.Add(new LogEntry {
-                Item = $"RefPlane: {spec.Name}",
-                Error = $"Anchor plane '{spec.AnchorName}' not found"
+                Item = $"RefPlane: {spec.Name}", Error = $"Anchor plane '{spec.AnchorName}' not found"
             });
             return;
         }

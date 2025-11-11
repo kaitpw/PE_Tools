@@ -1,7 +1,6 @@
-using PeExtensions.FamDocument;
-using System.ComponentModel.DataAnnotations;
 using AddinFamilyFoundrySuite.Core.Helpers;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
+using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 
@@ -10,7 +9,7 @@ public class MakeRefPlaneAndDims : OperationGroup<MakeRefPlaneAndDimsSettings> {
         "Make reference planes and dimensions for the family",
         InitializeOperations(settings)
     ) {
-    } 
+    }
 
     private static List<IOperation<MakeRefPlaneAndDimsSettings>> InitializeOperations(
         MakeRefPlaneAndDimsSettings settings) {

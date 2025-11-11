@@ -1,6 +1,6 @@
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
-using AddinFamilyFoundrySuite.Core.OperationSettings;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -25,6 +25,7 @@ public class SetParamFormula(AddFamilyParamsSettings settings, bool setOnly = tr
                     logs[p.Name] = new LogEntry { Item = p.Name, Error = $"Parameter '{p.Name}' not found" };
                     continue;
                 }
+
                 if (p.Formula is not null && parameter.Formula != p.Formula && this.Settings.OverrideExistingValues)
                     doc.FamilyManager.SetFormula(parameter, p.Formula);
                 logs[p.Name] = new LogEntry { Item = p.Name };

@@ -40,20 +40,20 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
         return new OperationLog(this.Name, logs);
     }
 }
-[JsonConverter(typeof(StringEnumConverter))]
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum ParamTypeSortOrder {
     SharedParamsFirst,
     FamilyParamsFirst
 }
-[JsonConverter(typeof(StringEnumConverter))]
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum ParamValueSortOrder {
     FormulasFirst,
     ValuesFirst
 }
-[JsonConverter(typeof(StringEnumConverter))]
 
+[JsonConverter(typeof(StringEnumConverter))]
 public enum ParamNameSortOrder {
     Ascending,
     Descending
