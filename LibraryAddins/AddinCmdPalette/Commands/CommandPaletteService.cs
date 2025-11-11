@@ -1,10 +1,7 @@
 using AddinCmdPalette.Actions;
 using AddinCmdPalette.Core;
 using AddinCmdPalette.Helpers;
-using AddinCmdPalette.Models;
 using AddinCmdPalette.Services;
-using Autodesk.Revit.UI;
-using PeRevit.Lib;
 using PeServices.Storage;
 
 namespace AddinCmdPalette.Commands;
@@ -68,4 +65,3 @@ public static class CommandPaletteService {
         return new SelectablePalette(viewModel, actions);
     }
 }
-

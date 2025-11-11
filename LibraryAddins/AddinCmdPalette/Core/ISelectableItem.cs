@@ -28,4 +28,3 @@ public interface ISelectableItem : INotifyPropertyChanged {
     /// <summary> Search relevance score for filtering/ranking (set by search service) </summary>
     double SearchScore { get; set; }
 }
-

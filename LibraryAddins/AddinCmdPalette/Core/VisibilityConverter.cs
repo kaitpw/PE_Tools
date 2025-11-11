@@ -1,6 +1,7 @@
 using System.Globalization;
-using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media.Imaging;
+using Visibility = System.Windows.Visibility;
 
 namespace AddinCmdPalette.Core;
 
@@ -11,21 +12,20 @@ public class VisibilityConverter : IValueConverter {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
         value switch {
             bool boolValue => boolValue
-                ? System.Windows.Visibility.Visible
-                : System.Windows.Visibility.Collapsed,
+                ? Visibility.Visible
+                : Visibility.Collapsed,
             int intValue => intValue > 0
-                ? System.Windows.Visibility.Visible
-                : System.Windows.Visibility.Collapsed,
+                ? Visibility.Visible
+                : Visibility.Collapsed,
             string stringValue => !string.IsNullOrWhiteSpace(stringValue)
-                ? System.Windows.Visibility.Visible
-                : System.Windows.Visibility.Collapsed,
-            System.Windows.Media.Imaging.BitmapImage img => img != null
-                ? System.Windows.Visibility.Visible
-                : System.Windows.Visibility.Collapsed,
-            _ => System.Windows.Visibility.Collapsed
+                ? Visibility.Visible
+                : Visibility.Collapsed,
+            BitmapImage img => img != null
+                ? Visibility.Visible
+                : Visibility.Collapsed,
+            _ => Visibility.Collapsed
         };
 
     public object ConvertBack(object _, Type __, object ___, CultureInfo ____) =>
         throw new NotImplementedException();
 }
-

@@ -8,10 +8,10 @@ namespace AddinCmdPalette.Services;
 ///     Standard implementation of search/filter service with fuzzy matching and persistence
 /// </summary>
 public class SearchFilterService {
-    private readonly CsvReadWriter<ItemUsageData> _state;
+    private readonly bool _enableUsageTracking;
     private readonly Func<ISelectableItem, string> _keyGenerator;
     private readonly double _minFuzzyScore;
-    private readonly bool _enableUsageTracking;
+    private readonly CsvReadWriter<ItemUsageData> _state;
     private Dictionary<string, ItemUsageData> _usageCache = new();
 
     public SearchFilterService(
@@ -60,11 +60,7 @@ public class SearchFilterService {
         var existing = this._usageCache.GetValueOrDefault(key);
         var usageCount = (existing?.UsageCount ?? 0) + 1;
 
-        var usageData = new ItemUsageData {
-            ItemKey = key,
-            UsageCount = usageCount,
-            LastUsed = DateTime.Now
-        };
+        var usageData = new ItemUsageData { ItemKey = key, UsageCount = usageCount, LastUsed = DateTime.Now };
 
         this._state.WriteRow(key, usageData);
         this._usageCache[key] = usageData;
@@ -99,9 +95,7 @@ public class SearchFilterService {
         if (text.Contains(search)) baseScore += 50;
 
         var fuzzyScore = this.CalculateFuzzyScore(text, search);
-        if (fuzzyScore >= this._minFuzzyScore) {
-            return baseScore + (fuzzyScore * 50);
-        }
+        if (fuzzyScore >= this._minFuzzyScore) return baseScore + (fuzzyScore * 50);
 
         return baseScore > 0 ? baseScore : 0;
     }
@@ -126,4 +120,3 @@ public class SearchFilterService {
         return (double)matches / search.Length;
     }
 }
-

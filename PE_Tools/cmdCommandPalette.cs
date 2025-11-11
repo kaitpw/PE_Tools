@@ -1,5 +1,9 @@
 using AddinCmdPalette.Commands;
+using AddinCmdPalette.Core;
+using CommunityToolkit.Mvvm.ComponentModel;
+using PeRevit.Lib;
 using PeServices.Storage;
+using System.Windows.Media.Imaging;
 
 namespace PE_Tools;
 
@@ -25,4 +29,95 @@ public class CmdCommandPalette : IExternalCommand {
             throw new InvalidOperationException($"Error opening command palette: {ex.Message}");
         }
     }
+}
+
+/// <summary>
+///     Represents a PostableCommand item with additional metadata for the command palette
+/// </summary>
+public partial class PostableCommandItem : ObservableObject, ISelectableItem {
+    /// <summary>
+    ///     Whether this item is currently selected in the UI
+    /// </summary>
+    [ObservableProperty] private bool _isSelected;
+
+    /// <summary>
+    ///     For internal commands, the actual PostableCommand enum value
+    ///     For external (addin) commands, the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
+    /// </summary>
+    public CommandRef Command { get; set; }
+
+    /// <summary>
+    ///     Display name of the command
+    /// </summary>
+    public string Name { get; set; }
+
+    /// <summary>
+    ///     Number of times this command has been used (for prioritization)
+    /// </summary>
+    public int UsageCount { get; set; }
+
+    /// <summary>
+    ///     Last time this command was executed
+    /// </summary>
+    public DateTime LastUsed { get; set; }
+
+    /// <summary>
+    ///     Keyboard shortcuts for this command
+    /// </summary>
+    public List<string> Shortcuts { get; set; } = new();
+
+    /// <summary>
+    ///     Menu paths for this command
+    /// </summary>
+    public List<string> Paths { get; set; } = new();
+
+    /// <summary>
+    ///     For addin commands, stores the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
+    /// </summary>
+    public bool isExternalCommand => this.Command.Value is not PostableCommand;
+
+    /// <summary>
+    ///     Gets the primary shortcut as a display string
+    /// </summary>
+    public string PrimaryShortcut => this.Shortcuts.Count > 0 ? this.Shortcuts[0] : string.Empty;
+
+    /// <summary>
+    ///     Gets all shortcuts as a display string
+    /// </summary>
+    public string AllShortcuts => string.Join(", ", this.Shortcuts);
+
+    /// <summary>
+    ///     Gets all paths as a display string
+    /// </summary>
+    public string AllPaths => string.Join("; ", this.Paths);
+
+    /// <summary>
+    ///     Gets truncated paths for display (with tooltip for full paths)
+    /// </summary>
+    public string TruncatedPaths {
+        get {
+            if (this.Paths.Count == 0)
+                return string.Empty;
+
+            var allPaths = this.AllPaths;
+            if (allPaths.Length <= 50)
+                return allPaths;
+
+            return allPaths.Substring(0, 47) + "...";
+        }
+    }
+
+    /// <summary>
+    ///     Search relevance score for filtering
+    /// </summary>
+    public double SearchScore { get; set; }
+
+    // ISelectableItem implementation
+    public string PrimaryText => this.Name;
+    public string SecondaryText => this.TruncatedPaths;
+    public string PillText => this.PrimaryShortcut;
+    public string TooltipText => this.AllPaths;
+    public BitmapImage Icon => null;
+
+    public override string ToString() => this.Name;
 }

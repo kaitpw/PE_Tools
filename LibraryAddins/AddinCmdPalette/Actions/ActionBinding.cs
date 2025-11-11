@@ -12,16 +12,12 @@ public class ActionBinding {
     /// <summary>
     ///     Registers an action with the binding system
     /// </summary>
-    public void Register(PaletteAction action) {
-        this._actions.Add(action);
-    }
+    public void Register(PaletteAction action) => this._actions.Add(action);
 
     /// <summary>
     ///     Registers multiple actions
     /// </summary>
-    public void RegisterRange(IEnumerable<PaletteAction> actions) {
-        this._actions.AddRange(actions);
-    }
+    public void RegisterRange(IEnumerable<PaletteAction> actions) => this._actions.AddRange(actions);
 
     /// <summary>
     ///     Finds and executes the matching action for a keyboard event
@@ -54,8 +50,9 @@ public class ActionBinding {
         // Find exact matches first (most specific)
         var exactMatch = this._actions.FirstOrDefault(a =>
             a.Modifiers == modifiers &&
-            (key.HasValue && a.Key == key || !key.HasValue && a.Key == null) &&
-            (mouseButton.HasValue && a.MouseButton == mouseButton || !mouseButton.HasValue && a.MouseButton == null));
+            ((key.HasValue && a.Key == key) || (!key.HasValue && a.Key == null)) &&
+            ((mouseButton.HasValue && a.MouseButton == mouseButton) ||
+             (!mouseButton.HasValue && a.MouseButton == null)));
 
         if (exactMatch != null) return exactMatch;
 
@@ -66,4 +63,3 @@ public class ActionBinding {
             a.MouseButton == null);
     }
 }
-

@@ -9,22 +9,19 @@ namespace AddinCmdPalette.Core;
 ///     Generic ViewModel for the SelectablePalette window
 /// </summary>
 public partial class SelectablePaletteViewModel : ObservableObject {
-    private readonly SearchFilterService _searchService;
     private readonly List<ISelectableItem> _allItems;
+    private readonly SearchFilterService _searchService;
 
     /// <summary> Current search text </summary>
     [ObservableProperty] private string _searchText = string.Empty;
+
+    /// <summary> Currently selected index in the filtered list </summary>
+    [ObservableProperty] private int _selectedIndex = -1;
 
 #nullable enable
     /// <summary> Currently selected item </summary>
     [ObservableProperty] private ISelectableItem? _selectedItem;
 #nullable disable
-
-    /// <summary> Currently selected index in the filtered list </summary>
-    [ObservableProperty] private int _selectedIndex = -1;
-
-    /// <summary> Filtered list of items based on search text </summary>
-    public ObservableCollection<ISelectableItem> FilteredItems { get; }
 
     public SelectablePaletteViewModel(
         IEnumerable<ISelectableItem> items,
@@ -45,6 +42,9 @@ public partial class SelectablePaletteViewModel : ObservableObject {
         if (this.FilteredItems.Count > 0)
             this.SelectedIndex = 0;
     }
+
+    /// <summary> Filtered list of items based on search text </summary>
+    public ObservableCollection<ISelectableItem> FilteredItems { get; }
 
     [RelayCommand]
     private void MoveSelectionUp() {
@@ -87,9 +87,10 @@ public partial class SelectablePaletteViewModel : ObservableObject {
 
     partial void OnSelectedItemChanged(ISelectableItem value) {
         // Clear previous selection
-        foreach (var item in this.FilteredItems)
+        foreach (var item in this.FilteredItems) {
             if (item != value)
                 item.IsSelected = false;
+        }
 
         // Set new selection
         if (value != null) value.IsSelected = true;
@@ -105,4 +106,3 @@ public partial class SelectablePaletteViewModel : ObservableObject {
 
     #endregion
 }
-

@@ -46,20 +46,14 @@ public partial class SelectablePalette : Window {
                 if (item == null) {
                     // Try to find the ListBoxItem parent
                     var parent = source.Parent as FrameworkElement;
-                    while (parent != null && !(parent is System.Windows.Controls.ListBoxItem)) {
-                        parent = parent.Parent as FrameworkElement;
-                    }
-                    if (parent is System.Windows.Controls.ListBoxItem listBoxItem) {
-                        item = listBoxItem.DataContext as ISelectableItem;
-                    }
+                    while (parent != null && !(parent is ListBoxItem)) parent = parent.Parent as FrameworkElement;
+                    if (parent is ListBoxItem listBoxItem) item = listBoxItem.DataContext as ISelectableItem;
                 }
 
                 if (item == null) return;
 
                 // Update selection to the clicked item
-                if (this.ViewModel != null) {
-                    this.ViewModel.SelectedItem = item;
-                }
+                if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
 
                 var modifiers = Keyboard.Modifiers;
                 try {
@@ -177,4 +171,3 @@ public partial class SelectablePalette : Window {
 
     #endregion
 }
-

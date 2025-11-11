@@ -1,4 +1,4 @@
-using AddinCmdPalette.Models;
+using AddinCmdPalette.Commands;
 using AddinCmdPalette.Services;
 using PeRevit.Lib;
 using PeRevit.Ui;
@@ -33,11 +33,7 @@ public class PostableCommandHelper(Storage storage) {
             var existing = this._state.ReadRow(key);
             var usageCount = (existing?.UsageCount ?? 0) + 1;
 
-            var usageData = new ItemUsageData {
-                ItemKey = key,
-                UsageCount = usageCount,
-                LastUsed = DateTime.Now
-            };
+            var usageData = new ItemUsageData { ItemKey = key, UsageCount = usageCount, LastUsed = DateTime.Now };
             this._state.WriteRow(key, usageData);
         }
     }

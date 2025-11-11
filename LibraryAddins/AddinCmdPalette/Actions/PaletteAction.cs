@@ -25,4 +25,3 @@ public record PaletteAction {
     /// <summary> Optional predicate to check if action can execute </summary>
     public Func<ISelectableItem, bool> CanExecute { get; init; } = _ => true;
 }
-

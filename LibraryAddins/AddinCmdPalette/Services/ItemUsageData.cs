@@ -8,4 +8,3 @@ public record ItemUsageData {
     public int UsageCount { get; init; }
     public DateTime LastUsed { get; init; }
 }
-

@@ -3,7 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using PeRevit.Lib;
 using System.Windows.Media.Imaging;
 
-namespace AddinCmdPalette.Models;
+namespace AddinCmdPalette.Commands;
 
 /// <summary>
 ///     Represents a PostableCommand item with additional metadata for the command palette
@@ -34,11 +34,6 @@ public partial class PostableCommandItem : ObservableObject, ISelectableItem {
     ///     Last time this command was executed
     /// </summary>
     public DateTime LastUsed { get; set; }
-
-    /// <summary>
-    ///     Search relevance score for filtering
-    /// </summary>
-    public double SearchScore { get; set; }
 
     /// <summary>
     ///     Keyboard shortcuts for this command
@@ -86,7 +81,10 @@ public partial class PostableCommandItem : ObservableObject, ISelectableItem {
         }
     }
 
-    public override string ToString() => this.Name;
+    /// <summary>
+    ///     Search relevance score for filtering
+    /// </summary>
+    public double SearchScore { get; set; }
 
     // ISelectableItem implementation
     public string PrimaryText => this.Name;
@@ -94,4 +92,6 @@ public partial class PostableCommandItem : ObservableObject, ISelectableItem {
     public string PillText => this.PrimaryShortcut;
     public string TooltipText => this.AllPaths;
     public BitmapImage Icon => null;
+
+    public override string ToString() => this.Name;
 }

@@ -103,25 +103,29 @@ public static class ButtonDataHydrator {
                     "Search and execute Revit commands quickly without looking through Revit's tabs, ribbons, and panels. Not all commands are guaranteed to run."
             }
         }, {
-            nameof(CmdOpenView), new ButtonDataRecord {
+            nameof(CmdOpenView),
+            new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search and open views in the current document."
             }
         }, {
-            nameof(CmdOpenSchedule), new ButtonDataRecord {
+            nameof(CmdOpenSchedule),
+            new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search and open schedules in the current document."
             }
         }, {
-            nameof(CmdOpenSheet), new ButtonDataRecord {
+            nameof(CmdOpenSheet),
+            new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search and open sheets in the current document."
             }
         }, {
-            nameof(CmdOpenFamily), new ButtonDataRecord {
+            nameof(CmdOpenFamily),
+            new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search families in the document. Click to edit family, Ctrl+Click to select all instances."
@@ -156,8 +160,7 @@ public static class ButtonDataHydrator {
                 ToolTip = "Manage families in a variety of ways from the Family Foundry."
             }
         }, {
-            nameof(CmdFFManagerSnapshot),
-            new ButtonDataRecord {
+            nameof(CmdFFManagerSnapshot), new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip =
@@ -175,7 +178,8 @@ public static class ButtonDataHydrator {
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
-                ToolTip = "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
+                ToolTip =
+                    "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
             }
         }
     };
