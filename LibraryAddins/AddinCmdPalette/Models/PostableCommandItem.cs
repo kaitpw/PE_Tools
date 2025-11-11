@@ -1,12 +1,14 @@
+using AddinCmdPalette.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PeRevit.Lib;
+using System.Windows.Media.Imaging;
 
 namespace AddinCmdPalette.Models;
 
 /// <summary>
 ///     Represents a PostableCommand item with additional metadata for the command palette
 /// </summary>
-public partial class PostableCommandItem : ObservableObject {
+public partial class PostableCommandItem : ObservableObject, ISelectableItem {
     /// <summary>
     ///     Whether this item is currently selected in the UI
     /// </summary>
@@ -85,4 +87,11 @@ public partial class PostableCommandItem : ObservableObject {
     }
 
     public override string ToString() => this.Name;
+
+    // ISelectableItem implementation
+    public string PrimaryText => this.Name;
+    public string SecondaryText => this.TruncatedPaths;
+    public string PillText => this.PrimaryShortcut;
+    public string TooltipText => this.AllPaths;
+    public BitmapImage Icon => null;
 }

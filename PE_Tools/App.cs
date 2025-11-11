@@ -45,6 +45,10 @@ internal class App : IExternalApplication {
 
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
             panelTools.AddPushButton<CmdCommandPalette>("Command Palette"),
+            panelTools.AddPushButton<CmdOpenView>("Open View"),
+            panelTools.AddPushButton<CmdOpenSchedule>("Open Schedule"),
+            panelTools.AddPushButton<CmdOpenSheet>("Open Sheet"),
+            panelTools.AddPushButton<CmdOpenFamily>("Open Family"),
             panelTools.AddPushButton<CmdTapMaker>("Tap Maker")
         ]);
 
@@ -97,6 +101,30 @@ public static class ButtonDataHydrator {
                 LargeImage = "square-terminal32.png",
                 ToolTip =
                     "Search and execute Revit commands quickly without looking through Revit's tabs, ribbons, and panels. Not all commands are guaranteed to run."
+            }
+        }, {
+            nameof(CmdOpenView), new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Search and open views in the current document."
+            }
+        }, {
+            nameof(CmdOpenSchedule), new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Search and open schedules in the current document."
+            }
+        }, {
+            nameof(CmdOpenSheet), new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Search and open sheets in the current document."
+            }
+        }, {
+            nameof(CmdOpenFamily), new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Search families in the document. Click to edit family, Ctrl+Click to select all instances."
             }
         }, {
             nameof(CmdTapMaker), new ButtonDataRecord {

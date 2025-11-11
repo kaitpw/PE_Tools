@@ -8,6 +8,7 @@
         <Configurations>Debug R23;Debug R24;Debug R25;Debug R26;Release R23;Release R24;Release R25;Release R26</Configurations>
         <Nullable>disable</Nullable>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
         <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -130,6 +131,8 @@
             <AutoGen>True</AutoGen>
             <DependentUpon>Settings.settings</DependentUpon>
         </Compile>
+        <!-- Exclude AssemblyInfo.cs from WPF temp projects to avoid duplicate attribute errors -->
+        <Compile Remove="Properties\AssemblyInfo.cs" Condition="'$(MSBuildProjectName)' != 'PE_Tools'" />
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Update="Properties\Resources.resx">
