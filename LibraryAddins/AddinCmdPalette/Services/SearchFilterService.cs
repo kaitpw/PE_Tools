@@ -17,7 +17,6 @@ public class SearchFilterService {
     public SearchFilterService(
         Storage storage,
         Func<ISelectableItem, string> keyGenerator,
-        string persistenceKey,
         double minFuzzyScore = 0.7,
         bool enableUsageTracking = true
     ) {
@@ -66,7 +65,7 @@ public class SearchFilterService {
         this._usageCache[key] = usageData;
     }
 
-    public void LoadUsageData(IEnumerable<ISelectableItem> items) {
+    public void LoadUsageData() {
         if (!this._enableUsageTracking) return;
 
         this._usageCache = this._state.Read();

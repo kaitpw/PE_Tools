@@ -31,7 +31,7 @@ public partial class SelectablePaletteViewModel : ObservableObject {
         this._searchService = searchService;
 
         // Load usage data if service supports it
-        this._searchService.LoadUsageData(this._allItems);
+        this._searchService.LoadUsageData();
 
         this.FilteredItems = new ObservableCollection<ISelectableItem>();
 

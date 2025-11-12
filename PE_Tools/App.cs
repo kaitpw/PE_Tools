@@ -174,8 +174,7 @@ public static class ButtonDataHydrator {
                 ToolTip = "Process tags in a variety of ways from the Family Foundry."
             }
         }, {
-            nameof(CmdFFMakeATVariants),
-            new ButtonDataRecord {
+            nameof(CmdFFMakeATVariants), new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip =

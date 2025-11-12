@@ -46,7 +46,7 @@ public partial class SelectablePalette : Window {
                 if (item == null) {
                     // Try to find the ListBoxItem parent
                     var parent = source.Parent as FrameworkElement;
-                    while (parent != null && !(parent is ListBoxItem)) parent = parent.Parent as FrameworkElement;
+                    while (parent is not null and not ListBoxItem) parent = parent.Parent as FrameworkElement;
                     if (parent is ListBoxItem listBoxItem) item = listBoxItem.DataContext as ISelectableItem;
                 }
 
@@ -69,7 +69,7 @@ public partial class SelectablePalette : Window {
                     }
                 } catch (Exception ex) {
                     this.CloseWindow();
-                    MessageBox.Show(
+                    _ = MessageBox.Show(
                         ex.Message,
                         "Action Failed",
                         MessageBoxButton.OK,
@@ -86,7 +86,7 @@ public partial class SelectablePalette : Window {
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e) {
-        this.SearchTextBox.Focus();
+        _ = this.SearchTextBox.Focus();
         this.SearchTextBox.SelectAll();
     }
 
@@ -116,7 +116,7 @@ public partial class SelectablePalette : Window {
                     }
                 } catch (Exception ex) {
                     this.CloseWindow();
-                    MessageBox.Show(
+                    _ = MessageBox.Show(
                         ex.Message,
                         "Action Failed",
                         MessageBoxButton.OK,

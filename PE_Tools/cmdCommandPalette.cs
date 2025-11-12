@@ -1,9 +1,10 @@
+using AddinCmdPalette.Actions;
 using AddinCmdPalette.Commands;
 using AddinCmdPalette.Core;
-using CommunityToolkit.Mvvm.ComponentModel;
+using AddinCmdPalette.Helpers;
+using AddinCmdPalette.Services;
 using PeRevit.Lib;
 using PeServices.Storage;
-using System.Windows.Media.Imaging;
 
 namespace PE_Tools;
 
@@ -16,8 +17,6 @@ public class CmdCommandPalette : IExternalCommand {
     ) {
         try {
             var uiapp = commandData.Application;
-
-            // Create persistence service for the command palette
             var persistence = new Storage(nameof(CmdCommandPalette));
 
             // Create and show palette using new API
@@ -31,93 +30,54 @@ public class CmdCommandPalette : IExternalCommand {
     }
 }
 
-/// <summary>
-///     Represents a PostableCommand item with additional metadata for the command palette
-/// </summary>
-public partial class PostableCommandItem : ObservableObject, ISelectableItem {
-    /// <summary>
-    ///     Whether this item is currently selected in the UI
-    /// </summary>
-    [ObservableProperty] private bool _isSelected;
+public static class CommandPaletteService {
+    public static SelectablePalette Create(
+        UIApplication uiApp,
+        Storage persistence
+    ) {
+        // Load commands using existing helper
+        var commandHelper = new PostableCommandHelper(persistence);
+        var commandItems = commandHelper.GetAllCommands();
 
-    /// <summary>
-    ///     For internal commands, the actual PostableCommand enum value
-    ///     For external (addin) commands, the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
-    /// </summary>
-    public CommandRef Command { get; set; }
+        // Convert to ISelectableItem adapters
+        var selectableItems = commandItems
+            .Cast<ISelectableItem>()
+            .ToList();
 
-    /// <summary>
-    ///     Display name of the command
-    /// </summary>
-    public string Name { get; set; }
+        // Create search filter service
+        var searchService = new SearchFilterService(
+            persistence,
+            item => {
+                if (item is PostableCommandItem cmdItem)
+                    return cmdItem.Command.Value.ToString() ?? string.Empty;
+                return item.PrimaryText;
+            });
 
-    /// <summary>
-    ///     Number of times this command has been used (for prioritization)
-    /// </summary>
-    public int UsageCount { get; set; }
+        // Create actions
+        var actions = new List<PaletteAction> {
+            new() {
+                Name = "Execute Command",
+                ExecuteAsync = async item => {
+                    if (item is PostableCommandItem cmdItem) {
+                        await Task.Run(() => {
+                            var (success, error) = Commands.Execute(uiApp, cmdItem.Command);
+                            if (error is not null) throw error;
+                            if (success) commandHelper.UpdateCommandUsage(cmdItem.Command);
+                        });
+                    }
+                },
+                CanExecute = item => {
+                    if (item is PostableCommandItem cmdItem)
+                        return Commands.IsAvailable(uiApp, cmdItem.Command);
+                    return false;
+                }
+            }
+        };
 
-    /// <summary>
-    ///     Last time this command was executed
-    /// </summary>
-    public DateTime LastUsed { get; set; }
+        // Create view model
+        var viewModel = new SelectablePaletteViewModel(selectableItems, searchService);
 
-    /// <summary>
-    ///     Keyboard shortcuts for this command
-    /// </summary>
-    public List<string> Shortcuts { get; set; } = new();
-
-    /// <summary>
-    ///     Menu paths for this command
-    /// </summary>
-    public List<string> Paths { get; set; } = new();
-
-    /// <summary>
-    ///     For addin commands, stores the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
-    /// </summary>
-    public bool isExternalCommand => this.Command.Value is not PostableCommand;
-
-    /// <summary>
-    ///     Gets the primary shortcut as a display string
-    /// </summary>
-    public string PrimaryShortcut => this.Shortcuts.Count > 0 ? this.Shortcuts[0] : string.Empty;
-
-    /// <summary>
-    ///     Gets all shortcuts as a display string
-    /// </summary>
-    public string AllShortcuts => string.Join(", ", this.Shortcuts);
-
-    /// <summary>
-    ///     Gets all paths as a display string
-    /// </summary>
-    public string AllPaths => string.Join("; ", this.Paths);
-
-    /// <summary>
-    ///     Gets truncated paths for display (with tooltip for full paths)
-    /// </summary>
-    public string TruncatedPaths {
-        get {
-            if (this.Paths.Count == 0)
-                return string.Empty;
-
-            var allPaths = this.AllPaths;
-            if (allPaths.Length <= 50)
-                return allPaths;
-
-            return allPaths.Substring(0, 47) + "...";
-        }
+        // Create and return palette window
+        return new SelectablePalette(viewModel, actions);
     }
-
-    /// <summary>
-    ///     Search relevance score for filtering
-    /// </summary>
-    public double SearchScore { get; set; }
-
-    // ISelectableItem implementation
-    public string PrimaryText => this.Name;
-    public string SecondaryText => this.TruncatedPaths;
-    public string PillText => this.PrimaryShortcut;
-    public string TooltipText => this.AllPaths;
-    public BitmapImage Icon => null;
-
-    public override string ToString() => this.Name;
 }

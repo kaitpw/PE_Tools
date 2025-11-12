@@ -1,46 +1,30 @@
 using AddinCmdPalette.Actions;
 using AddinCmdPalette.Core;
-using AddinCmdPalette.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
-using PeServices.Storage;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdOpenFamily : CmdOpenPaletteBase {
-    protected override string PaletteTypeName => "family";
-    protected override string PaletteTitle => "Family Browser";
+public class CmdOpenFamily : BaseCmdPalette {
+    public override string TypeName => "family";
 
-    protected override IEnumerable<ISelectableItem> GetSelectableItems(UIApplication uiApp) {
-        var doc = uiApp.ActiveUIDocument.Document;
-
-        // Get all families in the document
-        var families = new FilteredElementCollector(doc)
+    public override IEnumerable<ISelectableItem> GetItems(Document doc) =>
+        new FilteredElementCollector(doc)
             .OfClass(typeof(Family))
             .Cast<Family>()
             .OrderBy(f => f.Name)
-            .ToList();
-
-        // Convert to ISelectableItem adapters
-        return families
+            .ToList()
             .Select(family => new FamilyPaletteItem(family, doc));
+
+    public override string GetPersistenceKey(ISelectableItem item) {
+        if (item is FamilyPaletteItem familyItem)
+            return familyItem.Family.Id.ToString();
+        return item.PrimaryText;
     }
 
-    protected override SearchFilterService GetSearchFilterService(Storage persistence,
-        IEnumerable<ISelectableItem> items) =>
-        new(
-            persistence,
-            item => {
-                if (item is FamilyPaletteItem familyItem)
-                    return familyItem.Family.Id.ToString();
-                return item.PrimaryText;
-            },
-            "FamilyPalette"
-        );
-
-    protected override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) {
+    public override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) {
         var doc = uiApp.ActiveUIDocument.Document;
 
         return new List<PaletteAction> {
@@ -117,7 +101,6 @@ public class CmdOpenFamily : CmdOpenPaletteBase {
 /// </summary>
 public partial class FamilyPaletteItem : ObservableObject, ISelectableItem {
     private readonly Document _doc;
-
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
 

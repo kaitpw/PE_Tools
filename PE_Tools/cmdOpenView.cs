@@ -1,51 +1,37 @@
 using AddinCmdPalette.Actions;
 using AddinCmdPalette.Core;
-using AddinCmdPalette.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
-using PeServices.Storage;
+using Nice3point.Revit.Extensions;
 using System.Windows.Media.Imaging;
-using InvalidOperationException = Autodesk.Revit.Exceptions.InvalidOperationException;
 
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdOpenView : CmdOpenPaletteBase {
-    protected override string PaletteTypeName => "view";
-    protected override string PaletteTitle => "Open View";
+public class CmdOpenView : BaseCmdPalette {
+    public override string TypeName => "view";
 
-    protected override IEnumerable<ISelectableItem> GetSelectableItems(UIApplication uiApp) {
-        var doc = uiApp.ActiveUIDocument.Document;
-
-        // Get all views (excluding templates, legends, sheets, schedules, drafting views, and groups)
-        var views = new FilteredElementCollector(doc)
+    public override IEnumerable<ISelectableItem> GetItems(Document doc) =>
+        // Get all views (excluding view templates, legends, sheets, schedules, drafting views, and groups)
+        new FilteredElementCollector(doc)
             .OfClass(typeof(View))
             .Cast<View>()
             .Where(v => !v.IsTemplate
                         && v.ViewType != ViewType.Legend
                         && v.ViewType != ViewType.DrawingSheet
                         && v.ViewType != ViewType.DraftingView
+                        && v.ViewType != ViewType.SystemBrowser
                         && v is not ViewSchedule)
             .OrderBy(v => v.Name)
-            .ToList();
-
-        // Convert to ISelectableItem adapters
-        return views
+            .ToList()
             .Select(view => new ViewPaletteItem(view));
+
+    public override string GetPersistenceKey(ISelectableItem item) {
+        if (item is ViewPaletteItem viewItem)
+            return viewItem.View.Id.ToString();
+        return item.PrimaryText;
     }
 
-    protected override SearchFilterService GetSearchFilterService(Storage persistence,
-        IEnumerable<ISelectableItem> items) =>
-        new(
-            persistence,
-            item => {
-                if (item is ViewPaletteItem viewItem)
-                    return viewItem.View.Id.ToString();
-                return item.PrimaryText;
-            },
-            "ViewPalette"
-        );
-
-    protected override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) =>
+    public override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) =>
         new List<PaletteAction> {
             new() {
                 Name = "Open View",
@@ -54,16 +40,9 @@ public class CmdOpenView : CmdOpenPaletteBase {
                         try {
                             // Must run on main thread, not Task.Run
                             uiApp.ActiveUIDocument.ActiveView = viewItem.View;
-                        } catch (InvalidOperationException ex) {
-                            throw new System.InvalidOperationException(
-                                $"Cannot open view '{viewItem.View.Name}'. The document may be read-only or the view cannot be activated.",
-                                ex
-                            );
                         } catch (Exception ex) {
-                            throw new System.InvalidOperationException(
-                                $"Failed to open view '{viewItem.View.Name}': {ex.Message}",
-                                ex
-                            );
+                            throw new InvalidOperationException(
+                                $"Failed to open view '{viewItem.View.Name}': {ex.Message}");
                         }
                     }
                 },
@@ -82,36 +61,27 @@ public class CmdOpenView : CmdOpenPaletteBase {
 /// <summary>
 ///     Adapter that wraps Revit View to implement ISelectableItem
 /// </summary>
-public partial class ViewPaletteItem : ObservableObject, ISelectableItem {
+public partial class ViewPaletteItem(View view) : ObservableObject, ISelectableItem {
+    private readonly string _discipline = view.HasViewDiscipline()
+        ? view.Discipline.ToString()
+        : string.Empty;
+
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
 
-    public ViewPaletteItem(View view) => this.View = view;
+    // Use HasViewDiscipline to check before accessing to avoid exceptions
 
-    /// <summary> Access to underlying view </summary>
-    public View View { get; }
-
+    public View View { get; } = view;
     public string PrimaryText => this.View.Name;
+    public string SecondaryText => this.GetSheetInfo() == null ? $"Sheeted on: {this.GetSheetInfo()}" : "Not Sheeted";
+    public string PillText => this.View.FindParameter("View Use")?.AsString() ?? string.Empty;
 
-    public string SecondaryText {
-        get {
-            // Get sheet information if view is on a sheet
-            var sheetInfo = this.GetSheetInfo();
-            return sheetInfo ?? string.Empty;
-        }
-    }
-
-    public string PillText {
-        get {
-            // Get View Use parameter (VIEW_DESCRIPTION contains the "View Use" field)
-            var viewUseParam = this.View.get_Parameter(BuiltInParameter.VIEW_DESCRIPTION);
-            if (viewUseParam != null && !string.IsNullOrEmpty(viewUseParam.AsString())) return viewUseParam.AsString();
-
-            return string.Empty;
-        }
-    }
-
-    public string TooltipText => $"{this.View.Name}\nType: {this.View.ViewType}\nId: {this.View.Id}";
+    public string TooltipText =>
+        $"Assoc. Lvl:{this.View.FindParameter(BuiltInParameter.PLAN_VIEW_LEVEL)?.AsValueString()}" +
+        $"\nDetail Lvl: {this.View.DetailLevel}" +
+        $"\nDiscipline: {this._discipline}" +
+        $"\nType: {this.View.ViewType}" +
+        $"\nId: {this.View.Id}";
 
     public BitmapImage Icon => null;
 
