@@ -48,6 +48,7 @@ public class CmdPltSheets : BaseCmdPalette {
 public partial class SheetPaletteItem(ViewSheet sheet) : ObservableObject, IPaletteListItem {
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
+    [ObservableProperty] private bool _canExecute = true;
     public ViewSheet Sheet { get; } = sheet;
     public string PrimaryText => $"{this.Sheet.SheetNumber} - {this.Sheet.Name}";
 

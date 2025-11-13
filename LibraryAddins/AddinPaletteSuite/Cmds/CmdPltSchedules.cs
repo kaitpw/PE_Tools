@@ -52,6 +52,7 @@ public class CmdPltSchedules : BaseCmdPalette {
 public partial class SchedulePaletteItem(ViewSchedule schedule) : ObservableObject, IPaletteListItem {
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
+    [ObservableProperty] private bool _canExecute = true;
     public ViewSchedule Schedule { get; } = schedule;
     public string PrimaryText => this.Schedule.Name;
 

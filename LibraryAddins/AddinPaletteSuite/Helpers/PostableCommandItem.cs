@@ -15,6 +15,11 @@ public partial class PostableCommandItem : ObservableObject, IPaletteListItem {
     [ObservableProperty] private bool _isSelected;
 
     /// <summary>
+    ///     Whether this item can be executed (used for visual styling)
+    /// </summary>
+    [ObservableProperty] private bool _canExecute = true;
+
+    /// <summary>
     ///     For internal commands, the actual PostableCommand enum value
     ///     For external (addin) commands, the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
     /// </summary>

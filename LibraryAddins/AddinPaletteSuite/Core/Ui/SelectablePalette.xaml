@@ -22,7 +22,7 @@
                PopupAnimation="Fade"
                StaysOpen="False">
             <local:SelectableTextBox x:Name="TooltipPanel"
-                                     TooltipText="{Binding SelectedItem.TooltipText}"
+                                     Text="{Binding SelectedItem.TooltipText}"
                                      ReturnFocusTarget="{Binding ElementName=SearchTextBox}" />
         </Popup>
 
@@ -31,6 +31,7 @@
                 CornerRadius="8"
                 BorderThickness="1"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                Padding="4,0,4,0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch">
             <Grid HorizontalAlignment="Stretch"
@@ -86,11 +87,12 @@
                 </Border>
 
                 <!-- Item List -->
-                <local:SelectableListBox x:Name="ItemListBox"
-                                         Grid.Row="1"
-                                         ItemsSource="{Binding FilteredItems}"
-                                         SelectedItem="{Binding SelectedItem}"
-                                         SelectedIndex="{Binding SelectedIndex}" />
+                <Border Grid.Row="1" Padding="4,0,4,0">
+                    <local:SelectableListBox x:Name="ItemListBox"
+                                             ItemsSource="{Binding FilteredItems}"
+                                             SelectedItem="{Binding SelectedItem}"
+                                             SelectedIndex="{Binding SelectedIndex}" />
+                </Border>
 
                 <!-- Status Bar -->
                 <Border Grid.Row="2"

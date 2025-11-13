@@ -3,6 +3,8 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
+using OperationCanceledException = Autodesk.Revit.Exceptions.OperationCanceledException;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -22,13 +24,19 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 
         this._actionBinding = new ActionBinding();
         this._actionBinding.RegisterRange(actions);
-
         this._actionMenu = new ActionMenu();
     }
 
     private SelectablePaletteViewModel ViewModel => this.DataContext as SelectablePaletteViewModel;
 
     public event EventHandler CloseRequested;
+
+    private void UpdateCanExecuteForAllItems(SelectablePaletteViewModel viewModel) {
+        foreach (var item in viewModel.FilteredItems) {
+            var firstAction = this._actionBinding.GetAvailableActions(item).FirstOrDefault();
+            if (firstAction != null) item.CanExecute = firstAction.CanExecute(item);
+        }
+    }
 
     private void UserControl_Loaded(object sender, RoutedEventArgs e) {
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
@@ -53,28 +61,17 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
             // Update selection to the clicked item
             if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
 
-            // Execute action
-            try {
-                var executed = await this._actionBinding.TryExecuteAsync(
-                    item,
-                    MouseButton.Left,
-                    ModifierKeys.None
-                );
+            var executed = await this._actionBinding.TryExecuteAsync(
+                item,
+                MouseButton.Left,
+                ModifierKeys.None
+            );
 
 
-                if (executed) {
-                    this.ViewModel?.RecordUsage();
+            if (executed) {
+                this.ViewModel?.RecordUsage();
 
-                    this.RequestClose();
-                }
-            } catch (Exception ex) {
                 this.RequestClose();
-                _ = MessageBox.Show(
-                    ex.Message,
-                    "Action Failed",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning
-                );
             }
         };
 
@@ -98,27 +95,48 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 
     private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
         // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
+        if (Keyboard.FocusedElement is DependencyObject focusedElement)
             if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement)) {
-                return; // Let tooltip popover handle its keys
             }
-        }
     }
 
     private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
         // Handle Left arrow key to show tooltip popover
         if (e.Key == Key.Left) {
             if (this.ViewModel?.SelectedItem != null) {
-                this.ShowTooltipPopover();
+                this.UpdateCanExecuteForAllItems(this.DataContext as SelectablePaletteViewModel);
+                this.PositionTooltipPopover();
+                this.TooltipPopup.IsOpen = true;
+                this.TooltipPanel.UpdateLayout();
+                _ = this.Dispatcher.BeginInvoke(new Action(() => {
+                    var tooltipText = this.ViewModel.SelectedItem?.TooltipText;
+                    if (tooltipText != null) this.TooltipPanel.Text = tooltipText;
+                }), DispatcherPriority.Loaded);
                 e.Handled = true;
             }
+
             return;
         }
 
         // Handle Right arrow key to show actions popover
         if (e.Key == Key.Right) {
             if (this.ViewModel?.SelectedItem != null) {
-                this.ShowActionsPopover();
+                var actions = this._actionBinding.GetAllActions().ToList();
+                if (actions.Count > 0) {
+                    this.ItemListBox.ScrollIntoView(this.ViewModel.SelectedItem);
+                    this.ItemListBox.UpdateLayout();
+                    this.UpdateCanExecuteForAllItems(this.DataContext as SelectablePaletteViewModel);
+                    var selectedItem = this.ViewModel.SelectedItem;
+                    var freshListBoxItem =
+                        this.ItemListBox.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListBoxItem;
+                    _ = this.Dispatcher.BeginInvoke(new Action(() => {
+                        if (freshListBoxItem != null) {
+                            this._actionMenu.Actions = actions;
+                            this._actionMenu.Show(freshListBoxItem, selectedItem);
+                        }
+                    }), DispatcherPriority.Loaded);
+                }
+
                 e.Handled = true;
             }
         }
@@ -128,11 +146,10 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
 
         // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
-            if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement)) {
+        if (Keyboard.FocusedElement is DependencyObject focusedElement)
+            if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement))
                 return; // Let tooltip popover handle its keys
-            }
-        }
+        var selectedItem = this.ViewModel.SelectedItem;
 
         switch (e.Key) {
         case Key.Escape:
@@ -143,28 +160,13 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 
         case Key.Enter:
 
-            if (this.ViewModel.SelectedItem != null) {
-                try {
-                    var executed = await this._actionBinding.TryExecuteAsync(
-                        this.ViewModel.SelectedItem,
-                        Key.Enter,
-                        ModifierKeys.None
-                    );
+            if (selectedItem != null) {
+                var executed = await this._actionBinding.TryExecuteAsync(
+                    selectedItem, Key.Enter, ModifierKeys.None);
 
-
-                    if (executed) {
-                        this.ViewModel.RecordUsage();
-
-                        this.RequestClose();
-                    }
-                } catch (Exception ex) {
+                if (executed) {
+                    this.ViewModel.RecordUsage();
                     this.RequestClose();
-                    _ = MessageBox.Show(
-                        ex.Message,
-                        "Action Failed",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning
-                    );
                 }
             }
 
@@ -172,18 +174,25 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
             break;
 
         case Key.Left:
-            if (this.ViewModel.SelectedItem != null) {
-                this.ShowTooltipPopover();
-                e.Handled = true;
-            }
+            if (selectedItem != null) this.PositionTooltipPopover();
+            this.TooltipPopup.IsOpen = true;
+            this.TooltipPanel.UpdateLayout();
+            e.Handled = this.ShowPopover(() => {
+                var tooltipText = selectedItem.TooltipText;
+                this.TooltipPanel.Text = tooltipText;
+            });
             break;
 
         case Key.Right:
-            if (this.ViewModel.SelectedItem != null) {
-                this.ShowActionsPopover();
-                e.Handled = true;
+            if (selectedItem != null) {
+                e.Handled = this.ShowPopover(() => {
+                    var actions = this._actionBinding.GetAllActions().ToList();
+                    this._actionMenu.Actions = actions;
+                    this._actionMenu.Show(selectedItem as UIElement);
+                });
             }
 
+            ;
             break;
 
         case Key.Tab: // Prevent tab from changing focus
@@ -192,59 +201,16 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
         }
     }
 
-
-    private void ShowActionsPopover() {
-        if (this.ViewModel?.SelectedItem == null) return;
-
-        var actions = this._actionBinding.GetAvailableActions(this.ViewModel.SelectedItem).ToList();
-        if (actions.Count == 0) return;
-
-        // Ensure the item is in view first
+    private bool ShowPopover(Action action) {
+        var selectedItem = this.ViewModel?.SelectedItem;
+        if (selectedItem == null) return false;
         this.ItemListBox.ScrollIntoView(this.ViewModel.SelectedItem);
-
-        // Force complete layout pass
         this.ItemListBox.UpdateLayout();
-
-        var listBoxItem =
-            this.ItemListBox.ItemContainerGenerator.ContainerFromItem(this.ViewModel.SelectedItem) as ListBoxItem;
-        if (listBoxItem == null) return;
-
-        // Wait for layout to complete before showing menu
-        _ = this.Dispatcher.BeginInvoke(new Action(() => {
-            // Get fresh container reference after layout completes
-            var freshListBoxItem =
-                this.ItemListBox.ItemContainerGenerator.ContainerFromItem(this.ViewModel.SelectedItem) as ListBoxItem;
-            if (freshListBoxItem == null) return;
-
-            this._actionMenu.Actions = actions;
-            this._actionMenu.Show(freshListBoxItem);
-        }), System.Windows.Threading.DispatcherPriority.Loaded);
+        _ = this.Dispatcher.BeginInvoke(new Action(() => action()), DispatcherPriority.Loaded);
+        return true;
     }
 
     private void HideActionsPopover() => this._actionMenu.Hide();
-
-    private void ShowTooltipPopover() {
-        if (this.ViewModel?.SelectedItem == null) return;
-        if (string.IsNullOrEmpty(this.ViewModel.SelectedItem.TooltipText)) return;
-
-        // Update tooltip text binding - force update
-        var tooltipText = this.ViewModel.SelectedItem.TooltipText;
-        this.TooltipPanel.TooltipText = tooltipText;
-
-        Debug.WriteLine($"[Palette] Showing tooltip popover with text: '{tooltipText}'");
-
-        this.PositionTooltipPopover();
-        this.TooltipPopup.IsOpen = true;
-
-        // Force update after popup opens
-        this.TooltipPanel.UpdateLayout();
-
-        // Focus the tooltip after a short delay to allow popup to render
-        _ = this.Dispatcher.BeginInvoke(new Action(() => {
-            this.TooltipPanel.TooltipText = tooltipText; // Force update again
-            this.TooltipPanel.FocusTooltip();
-        }), System.Windows.Threading.DispatcherPriority.Loaded);
-    }
 
     private void HideTooltipPopover() => this.TooltipPopup.IsOpen = false;
 
@@ -276,6 +242,10 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
             this.ViewModel.RecordUsage();
             this.HideActionsPopover();
             this.RequestClose();
+        } catch (OperationCanceledException) {
+            // User cancelled the operation (ESC, Cancel, etc.) - this is expected, not an error
+            this.HideActionsPopover();
+            // Don't close the palette, let user continue working
         } catch (Exception ex) {
             this.HideActionsPopover();
             this.RequestClose();

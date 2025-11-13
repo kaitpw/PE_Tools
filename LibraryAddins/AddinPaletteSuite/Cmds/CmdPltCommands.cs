@@ -61,7 +61,7 @@ public static class CommandPaletteService {
                 Execute = item => {
                     if (item is PostableCommandItem cmdItem) {
                         var (success, error) = PeRevit.Lib.Commands.Execute(uiApp, cmdItem.Command);
-                        if (error is not null) throw error;
+                        if (error is not null) Debug.WriteLine("Error: " + error.Message + error.StackTrace);
                         if (success) commandHelper.UpdateCommandUsage(cmdItem.Command);
                     }
                 },

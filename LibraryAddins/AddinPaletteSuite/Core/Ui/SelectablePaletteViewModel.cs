@@ -46,6 +46,9 @@ public partial class SelectablePaletteViewModel : ObservableObject {
     /// <summary> Filtered list of items based on search text </summary>
     public ObservableCollection<IPaletteListItem> FilteredItems { get; }
 
+    /// <summary> Event raised when filtered items collection changes </summary>
+    public event EventHandler FilteredItemsChanged;
+
     [RelayCommand]
     private void MoveSelectionUp() {
         if (this.SelectedIndex > 0) this.SelectedIndex--;
@@ -71,6 +74,9 @@ public partial class SelectablePaletteViewModel : ObservableObject {
 
         // Reset selection to first item
         this.SelectedIndex = this.FilteredItems.Count > 0 ? 0 : -1;
+
+        // Notify that filtered items have changed
+        this.FilteredItemsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>

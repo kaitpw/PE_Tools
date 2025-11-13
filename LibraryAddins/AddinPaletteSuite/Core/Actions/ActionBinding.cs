@@ -24,22 +24,32 @@ public class ActionBinding {
     ///     Finds and executes the matching action for a keyboard event
     /// </summary>
     public async Task<bool> TryExecuteAsync(IPaletteListItem item, Key key, ModifierKeys modifiers) {
-        var action = this.FindMatchingAction(key, modifiers, null);
-        if (action == null || !action.CanExecute(item)) return false;
+        try {
+            var action = this.FindMatchingAction(key, modifiers, null);
+            if (action == null || !action.CanExecute(item)) return false;
 
-        await this.ExecuteActionInternalAsync(action, item);
-        return true;
+            await this.ExecuteActionInternalAsync(action, item);
+            return true;
+        } catch (Exception ex) {
+            Debug.WriteLine($"Error executing action: {ex.Message} : \n{ex.StackTrace}");
+            return false;
+        }
     }
 
     /// <summary>
     ///     Finds and executes the matching action for a mouse event
     /// </summary>
     public async Task<bool> TryExecuteAsync(IPaletteListItem item, MouseButton button, ModifierKeys modifiers) {
-        var action = this.FindMatchingAction(null, modifiers, button);
-        if (action == null || !action.CanExecute(item)) return false;
+        try {
+            var action = this.FindMatchingAction(null, modifiers, button);
+            if (action == null || !action.CanExecute(item)) return false;
 
-        await this.ExecuteActionInternalAsync(action, item);
-        return true;
+            await this.ExecuteActionInternalAsync(action, item);
+            return true;
+        } catch (Exception ex) {
+            Debug.WriteLine($"Error executing action: {ex.Message} : \n{ex.StackTrace}");
+            return false;
+        }
     }
 
     /// <summary>
@@ -47,6 +57,11 @@ public class ActionBinding {
     /// </summary>
     public IEnumerable<PaletteAction> GetAvailableActions(IPaletteListItem item) =>
         this._actions.Where(a => a.CanExecute(item));
+
+    /// <summary>
+    ///     Gets all registered actions (not filtered by CanExecute)
+    /// </summary>
+    public IEnumerable<PaletteAction> GetAllActions() => this._actions;
 
     /// <summary>
     ///     Executes a specific action for a given item

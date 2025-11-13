@@ -26,11 +26,56 @@ public class CmdPltFamilies : BaseCmdPalette {
 
     public override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) {
         var doc = uiApp.ActiveUIDocument.Document;
+        var activeView = uiApp.ActiveUIDocument.ActiveView;
 
         return new List<PaletteAction> {
-            // Default action: Open family for editing (no modifiers)
+            // Default action: Activate family for placement (Enter or Click)
+            new() {
+                Name = "Place Family",
+                ExecuteAsync = async item => {
+                    if (item is not FamilyPaletteItem familyItem) return;
+
+                    var family = familyItem.Family;
+                    var symbolIds = family.GetFamilySymbolIds();
+                    if (symbolIds.Count == 0)
+                        throw new InvalidOperationException($"Family '{family.Name}' has no symbols/types.");
+
+                    // Get the first symbol (or you could prompt user to choose)
+                    var symbolId = symbolIds.First();
+                    var symbol = doc.GetElement(symbolId) as FamilySymbol
+                                 ?? throw new InvalidOperationException($"Failed to retrieve symbol from '{family.Name}'.");
+
+                    // Activate the symbol if not already active
+                    if (!symbol.IsActive) {
+                        using var tx = new Transaction(doc, "Activate Family Symbol");
+                        _ = tx.Start();
+                        symbol.Activate();
+                        _ = tx.Commit();
+                    }
+
+                     // Prompt user to place instances (cannot be called inside transaction)
+                    // Let OperationCanceledException propagate naturally - async handles it better
+                    uiApp.ActiveUIDocument.PromptForFamilyInstancePlacement(symbol);
+                    await Task.CompletedTask;
+                },
+                CanExecute = item => {
+                    if (item is not FamilyPaletteItem) return false;
+                    
+                    // Check if active view is valid for placing families
+                    // Same logic as CmdPltViews - exclude templates, legends, sheets, schedules, etc.
+                    return !activeView.IsTemplate
+                           && activeView.ViewType != ViewType.Legend
+                           && activeView.ViewType != ViewType.DrawingSheet
+                           && activeView.ViewType != ViewType.DraftingView
+                           && activeView.ViewType != ViewType.SystemBrowser
+                           && activeView is not ViewSchedule;
+                }
+            },
+            // Shift+Click: Open family for editing
             new() {
                 Name = "Edit Family",
+                Modifiers = ModifierKeys.Shift,
+                MouseButton = MouseButton.Left,
                 Execute = item => {
                     if (item is FamilyPaletteItem familyItem) {
                         try {
@@ -90,7 +135,8 @@ public class CmdPltFamilies : BaseCmdPalette {
                     }
                 },
                 CanExecute = item => item is FamilyPaletteItem
-            }
+            },
+
         };
     }
 }
@@ -102,6 +148,7 @@ public partial class FamilyPaletteItem : ObservableObject, IPaletteListItem {
     private readonly Document _doc;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
+    [ObservableProperty] private bool _canExecute = true;
 
     public FamilyPaletteItem(Family family, Document doc) {
         this.Family = family;

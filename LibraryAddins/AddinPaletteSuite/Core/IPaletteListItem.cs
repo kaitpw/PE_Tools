@@ -27,4 +27,7 @@ public interface IPaletteListItem : INotifyPropertyChanged {
 
     /// <summary> Search relevance score for filtering/ranking (set by search service) </summary>
     double SearchScore { get; set; }
+
+    /// <summary> Whether this item can be executed (used for visual styling) </summary>
+    bool CanExecute { get; set; }
 }

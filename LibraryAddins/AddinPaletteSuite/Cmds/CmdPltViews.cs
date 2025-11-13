@@ -67,6 +67,7 @@ public partial class ViewPaletteItem(View view) : ObservableObject, IPaletteList
 
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
+    [ObservableProperty] private bool _canExecute = true;
 
     // Use HasViewDiscipline to check before accessing to avoid exceptions
 
