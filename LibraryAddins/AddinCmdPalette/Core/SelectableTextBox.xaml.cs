@@ -1,8 +1,8 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using WpfUiRichTextBox = Wpf.Ui.Controls.RichTextBox;
 
 namespace AddinCmdPalette.Core;
@@ -20,20 +20,28 @@ public class SelectableTextBox : UserControl {
         typeof(SelectableTextBox),
         new PropertyMetadata(null));
 
-    private WpfUiRichTextBox _richTextBox;
-    private ScrollViewer _scrollViewer;
     private Border _border;
     private bool _isInitialized;
 
+    private WpfUiRichTextBox _richTextBox;
+    private ScrollViewer _scrollViewer;
+
     public SelectableTextBox() => this.InitializeControls();
+
+    public string TooltipText {
+        get => (string)this.GetValue(TooltipTextProperty);
+        set => this.SetValue(TooltipTextProperty, value);
+    }
+
+    public UIElement? ReturnFocusTarget {
+        get => (UIElement?)this.GetValue(ReturnFocusTargetProperty);
+        set => this.SetValue(ReturnFocusTargetProperty, value);
+    }
 
     private void InitializeControls() {
         if (this._isInitialized) return;
         // Create Border - transparent, no border
-        this._border = new Border {
-            Background = System.Windows.Media.Brushes.Transparent,
-            BorderThickness = new Thickness(0)
-        };
+        this._border = new Border { Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
 
         // Create ScrollViewer
         this._scrollViewer = new ScrollViewer {
@@ -47,11 +55,10 @@ public class SelectableTextBox : UserControl {
             IsReadOnly = true,
             IsTextSelectionEnabled = true,
             Focusable = true,
-            FontFamily = new System.Windows.Media.FontFamily("Open Sans"),
+            FontFamily = new FontFamily("Open Sans"),
             FontSize = (double)(this.TryFindResource("PaletteFontSizeMedium") ?? 6.0),
-            Foreground = (System.Windows.Media.Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? System.Windows.Media.Brushes.White),
-            CaretBrush = (System.Windows.Media.Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? System.Windows.Media.Brushes.White),
-
+            Foreground = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White),
+            CaretBrush = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White)
         };
 
         this._richTextBox.KeyDown += this.TooltipRichTextBox_KeyDown;
@@ -66,16 +73,6 @@ public class SelectableTextBox : UserControl {
         this._isInitialized = true;
     }
 
-    public string TooltipText {
-        get => (string)this.GetValue(TooltipTextProperty);
-        set => this.SetValue(TooltipTextProperty, value);
-    }
-
-    public UIElement? ReturnFocusTarget {
-        get => (UIElement?)this.GetValue(ReturnFocusTargetProperty);
-        set => this.SetValue(ReturnFocusTargetProperty, value);
-    }
-
     public void FocusTooltip() {
         if (this._richTextBox == null) return;
 
@@ -86,9 +83,7 @@ public class SelectableTextBox : UserControl {
     }
 
     private static void OnTooltipTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
-        if (d is SelectableTextBox panel) {
-            panel.UpdateTooltipText();
-        }
+        if (d is SelectableTextBox panel) panel.UpdateTooltipText();
     }
 
     private void UpdateTooltipText() {
@@ -96,10 +91,7 @@ public class SelectableTextBox : UserControl {
 
         var text = this.TooltipText ?? string.Empty;
         var paragraph = new Paragraph(new Run(text)) {
-            LineHeight = 8,
-            Margin = new Thickness(0),
-            Padding = new Thickness(0),
-            TextIndent = 0
+            LineHeight = 8, Margin = new Thickness(0), Padding = new Thickness(0), TextIndent = 0
         };
         this._richTextBox.Document.Blocks.Clear();
         this._richTextBox.Document.Blocks.Add(paragraph);

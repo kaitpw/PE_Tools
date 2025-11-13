@@ -1,6 +1,5 @@
 using AddinCmdPalette.Actions;
 using System.Collections;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -90,8 +89,7 @@ public class InfoPopover : UserControl {
 
         // Create Actions ItemsControl
         this._actionsItemsControl = new ItemsControl {
-            Name = "ActionsItemsControl",
-            Visibility = Visibility.Collapsed
+            Name = "ActionsItemsControl", Visibility = Visibility.Collapsed
         };
 
         // Create ItemTemplate for actions

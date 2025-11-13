@@ -120,9 +120,10 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 
         // Don't handle arrow keys if focus is in the tooltip RichTextBox
         if (Keyboard.FocusedElement is DependencyObject focusedElement) {
-            if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement))
+            if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement)) {
                 if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
                     return;
+            }
         }
 
 

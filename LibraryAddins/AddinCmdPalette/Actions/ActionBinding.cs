@@ -44,9 +44,8 @@ public class ActionBinding {
     /// <summary>
     ///     Gets all available actions for a given item (filtered by CanExecute)
     /// </summary>
-    public IEnumerable<PaletteAction> GetAvailableActions(ISelectableItem item) {
-        return this._actions.Where(a => a.CanExecute(item));
-    }
+    public IEnumerable<PaletteAction> GetAvailableActions(ISelectableItem item) =>
+        this._actions.Where(a => a.CanExecute(item));
 
     /// <summary>
     ///     Executes a specific action for a given item

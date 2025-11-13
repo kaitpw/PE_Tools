@@ -1,7 +1,6 @@
 using AddinCmdPalette.Actions;
 using AddinCmdPalette.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
-using System.Linq;
 using System.Windows.Media.Imaging;
 
 namespace PE_Tools;

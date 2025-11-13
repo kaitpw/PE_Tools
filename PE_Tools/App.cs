@@ -9,7 +9,7 @@ internal class App : IExternalApplication {
     public Result OnStartup(UIControlledApplication app) {
         // Set up assembly resolver for Wpf.Ui and other dependencies
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
-        
+
         // 1. Create ribbon tab
         const string tabName = "PE TOOLS";
         try {
@@ -63,27 +63,23 @@ internal class App : IExternalApplication {
         return Result.Succeeded;
     }
 
-    private static System.Reflection.Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
+    private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
         // Get the assembly name being requested
-        var assemblyName = new System.Reflection.AssemblyName(args.Name);
-        
+        var assemblyName = new AssemblyName(args.Name);
+
         // Only handle assemblies we know about
-        if (assemblyName.Name != "Wpf.Ui" && assemblyName.Name != "Wpf.Ui.Abstractions") {
-            return null;
-        }
+        if (assemblyName.Name != "Wpf.Ui" && assemblyName.Name != "Wpf.Ui.Abstractions") return null;
 
         // Get the directory where this add-in's DLL is located
         var addinPath = typeof(App).Assembly.Location;
-        var addinDirectory = System.IO.Path.GetDirectoryName(addinPath);
-        
+        var addinDirectory = Path.GetDirectoryName(addinPath);
+
         // Construct the path to the requested assembly
-        var assemblyPath = System.IO.Path.Combine(addinDirectory, $"{assemblyName.Name}.dll");
-        
+        var assemblyPath = Path.Combine(addinDirectory, $"{assemblyName.Name}.dll");
+
         // Load and return the assembly if it exists
-        if (System.IO.File.Exists(assemblyPath)) {
-            return System.Reflection.Assembly.LoadFrom(assemblyPath);
-        }
-        
+        if (File.Exists(assemblyPath)) return Assembly.LoadFrom(assemblyPath);
+
         return null;
     }
 }

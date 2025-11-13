@@ -50,7 +50,7 @@
 
                 <!-- Search Box -->
                 <Border Grid.Row="0"
-                        Grid.Column="1" 
+                        Grid.Column="1"
                         Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                         BorderThickness="0,0,0,1"
@@ -103,7 +103,7 @@
 
                 <!-- Status Bar -->
                 <ui:CardControl Grid.Row="2"
-                                Grid.Column="1" 
+                                Grid.Column="1"
                                 CornerRadius="0,0,8,8"
                                 Padding="0"
                                 Background="{DynamicResource BackgroundFillColorPrimaryBrush}">
