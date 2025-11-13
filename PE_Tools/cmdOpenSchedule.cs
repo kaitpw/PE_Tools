@@ -50,7 +50,6 @@ public class CmdOpenSchedule : BaseCmdPalette {
 ///     Adapter that wraps Revit ViewSchedule to implement ISelectableItem
 /// </summary>
 public partial class SchedulePaletteItem(ViewSchedule schedule) : ObservableObject, ISelectableItem {
-    private readonly string _discipline;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
     public ViewSchedule Schedule { get; } = schedule;

@@ -42,6 +42,23 @@ public class ActionBinding {
     }
 
     /// <summary>
+    ///     Gets all available actions for a given item (filtered by CanExecute)
+    /// </summary>
+    public IEnumerable<PaletteAction> GetAvailableActions(ISelectableItem item) {
+        return this._actions.Where(a => a.CanExecute(item));
+    }
+
+    /// <summary>
+    ///     Executes a specific action for a given item
+    /// </summary>
+    public async Task ExecuteActionAsync(PaletteAction action, ISelectableItem item) {
+        if (!action.CanExecute(item))
+            throw new InvalidOperationException($"Action '{action.Name}' cannot execute for this item");
+
+        await action.ExecuteAsync(item);
+    }
+
+    /// <summary>
     ///     Finds the best matching action for the given input combination
     /// </summary>
 #nullable enable
