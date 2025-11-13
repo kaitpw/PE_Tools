@@ -25,8 +25,9 @@ public abstract class BaseCmdPalette : IExternalCommand {
             var searchService = new SearchFilterService(persistence, this.GetPersistenceKey);
             var actions = this.GetActions(uiapp).ToList();
             var viewModel = new SelectablePaletteViewModel(selectableItems, searchService);
-            var palette = new SelectablePalette(viewModel, actions) { Title = this.Title };
-            palette.Show();
+            var palette = new SelectablePalette(viewModel, actions);
+            var window = new EphemeralWindow(palette, this.Title);
+            window.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
             throw new InvalidOperationException($"Error opening {this.Title} palette: {ex.Message}");

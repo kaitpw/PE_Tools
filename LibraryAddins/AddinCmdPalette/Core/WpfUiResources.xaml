@@ -2,13 +2,13 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
-    
+
     <!-- Merge Wpf.Ui base theme and control dictionaries -->
     <ResourceDictionary.MergedDictionaries>
         <ui:ThemesDictionary Theme="Dark" />
         <ui:ControlsDictionary />
     </ResourceDictionary.MergedDictionaries>
-    
+
     <!-- Custom Shadcn-inspired dark palette color overrides -->
     <!-- These override the default Wpf.Ui dark theme colors -->
     <SolidColorBrush x:Key="BackgroundFillColorPrimaryBrush" Color="#18181B" />
@@ -19,24 +19,24 @@
     <SolidColorBrush x:Key="TextFillColorTertiaryBrush" Color="#71717A" />
     <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#27272A" />
     <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#3F3F46" />
-    
+
     <!-- Shadcn-style pill/badge colors -->
     <SolidColorBrush x:Key="PillBackgroundBrush" Color="#27272A" />
     <SolidColorBrush x:Key="PillBorderBrush" Color="#3F3F46" />
     <SolidColorBrush x:Key="PillTextBrush" Color="#A1A1AA" />
-    
+
     <!-- Configurable font sizes -->
     <system:Double x:Key="PaletteFontSizeSmall">10</system:Double>
     <system:Double x:Key="PaletteFontSizeNormal">11</system:Double>
     <system:Double x:Key="PaletteFontSizeMedium">12</system:Double>
     <system:Double x:Key="PaletteFontSizeLarge">13</system:Double>
-    
+
     <!-- Configurable padding values -->
     <Thickness x:Key="PalettePaddingSmall">6,2</Thickness>
     <Thickness x:Key="PalettePaddingNormal">8,4</Thickness>
     <Thickness x:Key="PalettePaddingMedium">10,5</Thickness>
     <Thickness x:Key="PalettePaddingLarge">12,6</Thickness>
-    
+
     <!-- Configurable item padding -->
     <Thickness x:Key="PaletteItemPadding">10,5</Thickness>
 </ResourceDictionary>

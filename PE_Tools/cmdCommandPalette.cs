@@ -31,7 +31,7 @@ public class CmdCommandPalette : IExternalCommand {
 }
 
 public static class CommandPaletteService {
-    public static SelectablePalette Create(
+    public static EphemeralWindow Create(
         UIApplication uiApp,
         Storage persistence
     ) {
@@ -77,7 +77,10 @@ public static class CommandPaletteService {
         // Create view model
         var viewModel = new SelectablePaletteViewModel(selectableItems, searchService);
 
-        // Create and return palette window
-        return new SelectablePalette(viewModel, actions);
+        // Create palette UserControl
+        var palette = new SelectablePalette(viewModel, actions);
+
+        // Wrap in EphemeralWindow and return
+        return new EphemeralWindow(palette, "Command Palette");
     }
 }

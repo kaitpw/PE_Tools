@@ -105,8 +105,8 @@ public class SelectableTextBox : UserControl {
         this._richTextBox.Document.Blocks.Add(paragraph);
 
         // Set document padding to match the resource
-        var docPadding = (Thickness)(this.TryFindResource("PalettePaddingMedium") ?? new Thickness(10, 5, 10, 5));
-        this._richTextBox.Document.PagePadding = docPadding;
+        // var docPadding = (Thickness)(this.TryFindResource("PalettePaddingMedium") ?? new Thickness(10, 5, 10, 5));
+        // this._richTextBox.Document.PagePadding = docPadding;
     }
 
     private void TooltipRichTextBox_Loaded(object sender, RoutedEventArgs e) => this.UpdateTooltipText();
