@@ -64,53 +64,53 @@
         <StartArguments>/language ENG</StartArguments>
     </PropertyGroup>
     <ItemGroup>
-        <Resource Include="Resources\Red_16.png"/>
-        <Resource Include="Resources\Red_32.png"/>
-        <Resource Include="Resources\id-card16.png"/>
-        <Resource Include="Resources\id-card32.png"/>
-        <Resource Include="Resources\square-terminal16.png"/>
-        <Resource Include="Resources\square-terminal32.png"/>
-        <Resource Include="Resources\key-round16.png"/>
-        <Resource Include="Resources\key-round32.png"/>
-        <Resource Include="Resources\key-square16.png"/>
-        <Resource Include="Resources\key-square32.png"/>
-        <Resource Include="Resources\monitor-down16.png"/>
-        <Resource Include="Resources\monitor-down32.png"/>
+        <Resource Include="Resources\Red_16.png" />
+        <Resource Include="Resources\Red_32.png" />
+        <Resource Include="Resources\id-card16.png" />
+        <Resource Include="Resources\id-card32.png" />
+        <Resource Include="Resources\square-terminal16.png" />
+        <Resource Include="Resources\square-terminal32.png" />
+        <Resource Include="Resources\key-round16.png" />
+        <Resource Include="Resources\key-round32.png" />
+        <Resource Include="Resources\key-square16.png" />
+        <Resource Include="Resources\key-square32.png" />
+        <Resource Include="Resources\monitor-down16.png" />
+        <Resource Include="Resources\monitor-down32.png" />
 
 
     </ItemGroup>
     <ItemGroup>
         <!-- <PackageReference Include="Adsk.Platform.DataManagement" Version="0.1.16"/> -->
-        <PackageReference Include="Mingmoe.Demystifier" Version="0.9.9"/>
-        <PackageReference Include="NJsonSchema" Version="11.4.0"/>
-        <PackageReference Include="NJsonSchema.NewtonsoftJson" Version="11.4.0"/>
-        <PackageReference Include="Revit.Async" Version="2.1.1"/>
-        <PackageReference Include="System.Windows.Forms"/>
-        <PackageReference Include="Newtonsoft.Json" Version="13.0.4-beta1"/>
-        <PackageReference Include="ricaun.Revit.Github" Version="0.4.1"/>
-        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>
-        <PackageReference Include="Wpf.Ui" Version="3.0.3"/>
-        <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*"/>
-        <PackageReference Include="Nice3point.Revit.Api.UIFrameworkServices" Version="$(RevitVersion).*"/>
-        <PackageReference Include="System.Drawing.Common" Version="8.0.3" IncludeAssets="build; compile" PrivateAssets="All"/>
-        <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" PrivateAssets="All"/>
+        <PackageReference Include="Mingmoe.Demystifier" Version="0.9.9" />
+        <PackageReference Include="NJsonSchema" Version="11.4.0" />
+        <PackageReference Include="NJsonSchema.NewtonsoftJson" Version="11.4.0" />
+        <PackageReference Include="Revit.Async" Version="2.1.1" />
+        <PackageReference Include="System.Windows.Forms" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4-beta1" />
+        <PackageReference Include="ricaun.Revit.Github" Version="0.4.1" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <PackageReference Include="Nice3point.Revit.Extensions" Version="$(RevitVersion).*" />
+        <PackageReference Include="Nice3point.Revit.Api.UIFrameworkServices" Version="$(RevitVersion).*" />
+        <PackageReference Include="System.Drawing.Common" Version="8.0.3" IncludeAssets="build; compile" PrivateAssets="All" />
+        <PackageReference Include="Revit_All_Main_Versions_API_x64" Version="$(RevitVersion).*" IncludeAssets="build; compile" PrivateAssets="All" />
+        <PackageReference Include="WPF-UI" Version="4.0.3" />
     </ItemGroup>
 
     <!-- Packages for .NET Framework 4.8 (Revit 2023/2024) -->
     <ItemGroup Condition="$(TargetFramework.StartsWith('net48'))">
         <!-- Allow for `dynamic` keyword in C# for net48 -->
-        <Reference Include="Microsoft.CSharp"/>
+        <Reference Include="Microsoft.CSharp" />
         <!-- Polyfill for Range operators, enumerable stuff, etc.-->
-        <PackageReference Include="Polyfill" Version="4.0.0"/>
+        <PackageReference Include="Polyfill" Version="4.0.0" />
         <!-- Enable builds for .NET 4.8. Using this package WILL THROW RUNTIME ERRORS though which are unfixable 
          See APS service and APS service-using code to see how its being handled.-->
-        <PackageReference Include="Autodesk.Authentication" Version="2.0.0-beta4"/>
+        <PackageReference Include="Autodesk.Authentication" Version="2.0.0-beta4" />
     </ItemGroup>
 
     <!-- Packages for .NET 8.0 (Revit 2025/2026) -->
     <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
         <!-- Use stable version for .NET 8.0 -->
-        <PackageReference Include="Autodesk.Authentication" Version="2.0.0"/>
+        <PackageReference Include="Autodesk.Authentication" Version="2.0.0" />
     </ItemGroup>
 
     <PropertyGroup>
@@ -133,7 +133,7 @@
             <DependentUpon>Settings.settings</DependentUpon>
         </Compile>
         <!-- Exclude AssemblyInfo.cs from WPF temp projects to avoid duplicate attribute errors -->
-        <Compile Remove="Properties\AssemblyInfo.cs" Condition="'$(MSBuildProjectName)' != 'PE_Tools'"/>
+        <Compile Remove="Properties\AssemblyInfo.cs" Condition="'$(MSBuildProjectName)' != 'PE_Tools'" />
     </ItemGroup>
     <ItemGroup>
         <EmbeddedResource Update="Properties\Resources.resx">
@@ -151,6 +151,6 @@
         </None>
     </ItemGroup>
     <ItemGroup>
-        <Folder Include="NukeFiles\"/>
+        <Folder Include="NukeFiles\" />
     </ItemGroup>
 </Project>

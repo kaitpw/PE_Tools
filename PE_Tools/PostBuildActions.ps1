@@ -36,7 +36,7 @@ if (-not (Test-Path $RvtAddinsDllPath)) {
 Copy-Item -Path "$MSBuildProjectDirectory\*.addin" -Destination $RvtAddinsAddinPath -Force
 Write-Host "*     - Copied .addin files to: $RvtAddinsAddinPath"
 
-# Copy .dll files from project root
+# Copy .dll files from build output
 Copy-Item -Path "$BuildOutputPath\*.dll" -Destination $RvtAddinsDllPath -Force
 Write-Host "*     - Copied .dll files to: $RvtAddinsDllPath"
 

@@ -8,6 +8,7 @@
         Height="400"
         MinWidth="500"
         MinHeight="300"
+        SizeToContent="Manual"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -15,12 +16,14 @@
         ShowInTaskbar="False"
         Topmost="True"
         KeyDown="Window_KeyDown"
+        PreviewKeyDown="Window_PreviewKeyDown"
         Loaded="Window_Loaded">
 
     <Window.Resources>
         <ResourceDictionary>
-            <!-- Visibility converter for optional fields -->
-            <local:VisibilityConverter x:Key="VisibilityConverter" />
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="WpfUiResources.xaml" />
+            </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
 
@@ -34,28 +37,32 @@
         </Popup>
 
         <!-- Main container -->
-        <Border Margin="0"
-                Padding="0"
-                Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                BorderThickness="1"
-                CornerRadius="8">
-            <Border.Effect>
-                <DropShadowEffect Color="Black"
-                                  Opacity="0.3"
-                                  BlurRadius="20"
-                                  ShadowDepth="8"
-                                  Direction="270" />
-            </Border.Effect>
+        <ui:CardControl Margin="0"
+                        Padding="0"
+                        CornerRadius="8"
+                        Background="{DynamicResource BackgroundFillColorPrimaryBrush}">
             <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
+                <!-- Tooltip Panel -->
+                <local:SelectableTextBox x:Name="TooltipPanel"
+                                         Grid.Row="0"
+                                         Grid.RowSpan="3"
+                                         Grid.Column="0"
+                                         TooltipText="{Binding SelectedItem.TooltipText}"
+                                         ReturnFocusTarget="{Binding ElementName=SearchTextBox}" />
+
                 <!-- Search Box -->
-                <Border Grid.Row="0" 
+                <Border Grid.Row="0"
+                        Grid.Column="1" 
                         Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                         BorderThickness="0,0,0,1"
@@ -64,9 +71,10 @@
                     <TextBox x:Name="SearchTextBox"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                              PreviewKeyDown="SearchTextBox_PreviewKeyDown"
-                             FontSize="14"
-                             FontFamily="Segoe UI"
-                             Padding="12,10"
+                             FontSize="{DynamicResource PaletteFontSizeMedium}"
+                             FontFamily="Segoe UI Variable"
+                             Padding="{DynamicResource PalettePaddingMedium}"
+                             Margin="0"
                              Background="Transparent"
                              Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                              BorderThickness="0"
@@ -83,9 +91,10 @@
                                             <Border Background="{TemplateBinding Background}"
                                                     BorderBrush="{TemplateBinding BorderBrush}"
                                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="0">
+                                                    CornerRadius="0"
+                                                    Padding="{TemplateBinding Padding}">
                                                 <ScrollViewer x:Name="PART_ContentHost"
-                                                              Margin="{TemplateBinding Padding}"
+                                                              Margin="0"
                                                               Focusable="False" />
                                             </Border>
                                         </ControlTemplate>
@@ -97,132 +106,20 @@
                 </Border>
 
                 <!-- Item List -->
-                <ListBox x:Name="ItemListBox"
-                         Grid.Row="1"
-                         Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
-                         BorderThickness="0"
-                         ItemsSource="{Binding FilteredItems}"
-                         SelectedItem="{Binding SelectedItem}"
-                         SelectedIndex="{Binding SelectedIndex}">
-                    <ListBox.Resources>
-                        <Style TargetType="ScrollBar">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="Width" Value="8" />
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="ScrollBar">
-                                        <Grid>
-                                            <Track x:Name="PART_Track" IsDirectionReversed="True">
-                                                <Track.Thumb>
-                                                    <Thumb>
-                                                        <Thumb.Style>
-                                                            <Style TargetType="Thumb">
-                                                                <Setter Property="Background" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
-                                                                <Setter Property="BorderThickness" Value="0" />
-                                                                <Setter Property="Template">
-                                                                    <Setter.Value>
-                                                                        <ControlTemplate TargetType="Thumb">
-                                                                            <Border Background="{TemplateBinding Background}"
-                                                                                    CornerRadius="4" />
-                                                                        </ControlTemplate>
-                                                                    </Setter.Value>
-                                                                </Setter>
-                                                            </Style>
-                                                        </Thumb.Style>
-                                                    </Thumb>
-                                                </Track.Thumb>
-                                            </Track>
-                                        </Grid>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                        <Style TargetType="ScrollViewer">
-                            <Setter Property="Background" Value="Transparent" />
-                        </Style>
-                    </ListBox.Resources>
-                    <ListBox.ItemContainerStyle>
-                        <Style TargetType="ListBoxItem">
-                            <Setter Property="Background" Value="Transparent" />
-                            <Setter Property="Padding" Value="14,8" />
-                            <Setter Property="Margin" Value="0" />
-                            <Setter Property="BorderThickness" Value="0" />
-                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-                            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource BackgroundFillColorSecondaryBrush}" />
-                                </Trigger>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource BackgroundFillColorSecondaryBrush}" />
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ListBox.ItemContainerStyle>
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ToolTip="{Binding TooltipText}">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" />
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-
-                                <!-- Icon -->
-                                <Image Grid.Column="0"
-                                       Source="{Binding Icon}"
-                                       Width="18"
-                                       Height="18"
-                                       Margin="0,0,14,0"
-                                       VerticalAlignment="Center"
-                                       Opacity="0.8"
-                                       Visibility="{Binding Icon, Converter={StaticResource VisibilityConverter}}" />
-
-                                <!-- Primary and Secondary Text -->
-                                <StackPanel Grid.Column="1" Orientation="Vertical" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding PrimaryText}"
-                                               FontFamily="Segoe UI"
-                                               FontWeight="SemiBold"
-                                               FontSize="13"
-                                               LineHeight="20"
-                                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                                    <TextBlock Text="{Binding SecondaryText}"
-                                               FontFamily="Segoe UI"
-                                               FontSize="11"
-                                               Margin="0,1,0,0"
-                                               LineHeight="16"
-                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                               Visibility="{Binding SecondaryText, Converter={StaticResource VisibilityConverter}}" />
-                                </StackPanel>
-
-                                <!-- Pill Text - Badge style -->
-                                <Border Grid.Column="2"
-                                        Background="{DynamicResource BackgroundFillColorTertiaryBrush}"
-                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                                        BorderThickness="1"
-                                        CornerRadius="4"
-                                        Padding="6,2"
-                                        Margin="12,0,0,0"
-                                        VerticalAlignment="Center"
-                                        Visibility="{Binding PillText, Converter={StaticResource VisibilityConverter}}">
-                                    <TextBlock Text="{Binding PillText}"
-                                               FontFamily="Segoe UI"
-                                               FontSize="10"
-                                               FontWeight="Medium" />
-                                </Border>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                <local:SelectableListBox x:Name="ItemListBox"
+                                         Grid.Row="1"
+                                         Grid.Column="1"
+                                         ItemsSource="{Binding FilteredItems}"
+                                         SelectedItem="{Binding SelectedItem}"
+                                         SelectedIndex="{Binding SelectedIndex}" />
 
                 <!-- Status Bar -->
-                <Border Grid.Row="2" 
-                        Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
-                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                        BorderThickness="0,1,0,0"
-                        ClipToBounds="True"
-                        CornerRadius="0,0,8,8">
-                    <Grid Margin="16,10">
+                <ui:CardControl Grid.Row="2"
+                                Grid.Column="1" 
+                                CornerRadius="0,0,8,8"
+                                Padding="0"
+                                Background="{DynamicResource BackgroundFillColorPrimaryBrush}">
+                    <Grid Margin="{DynamicResource PalettePaddingMedium}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -232,20 +129,20 @@
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center">
                             <TextBlock Text="{Binding FilteredItems.Count, StringFormat=\{0\} items}"
-                                       FontFamily="Segoe UI"
+                                       FontFamily="Segoe UI Variable"
                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource PaletteFontSizeNormal}"
                                        VerticalAlignment="Center"
-                                       Margin="0,0,16,0" />
-                            <TextBlock Text="↑↓ Navigate • ← Tooltip • → Actions • Click/Enter Execute • Esc Close"
-                                       FontFamily="Segoe UI"
+                                       Margin="0,0,12,0" />
+                            <TextBlock Text="↑↓ Navigate • → Actions • Click/Enter Execute • Esc Close"
+                                       FontFamily="Segoe UI Variable"
                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       FontSize="11"
+                                       FontSize="{DynamicResource PaletteFontSizeNormal}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
-                </Border>
+                </ui:CardControl>
             </Grid>
-        </Border>
+        </ui:CardControl>
     </Grid>
 </Window>

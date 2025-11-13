@@ -18,85 +18,37 @@ public partial class SelectablePalette : Window {
     private bool _isClosing;
     private bool _isPopoverOpen;
 
+    public static readonly DependencyProperty SizeToContentModeProperty = DependencyProperty.Register(
+        nameof(SizeToContentMode),
+        typeof(SizeToContent),
+        typeof(SelectablePalette),
+        new PropertyMetadata(SizeToContent.Manual, OnSizeToContentModeChanged));
+
+    public SizeToContent SizeToContentMode {
+        get => (SizeToContent)this.GetValue(SizeToContentModeProperty);
+        set => this.SetValue(SizeToContentModeProperty, value);
+    }
+
+    private static void OnSizeToContentModeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
+        if (d is SelectablePalette window) {
+            window.SizeToContent = (SizeToContent)e.NewValue;
+        }
+    }
+
     public SelectablePalette(
         SelectablePaletteViewModel viewModel,
         IEnumerable<PaletteAction> actions
     ) {
         this.InitializeComponent();
-        this.LoadResources();
         this.DataContext = viewModel;
 
         this._actionBinding = new ActionBinding();
         this._actionBinding.RegisterRange(actions);
 
         this.Loaded += this.OnLoad;
-        this.Deactivated += (_, _) => {
-            if (!this.IsActive && !this._isClosing && !this.IsMouseOver) this.CloseWindow();
-        };
-        this.LostFocus += (_, _) => {
-            if (!this._isClosing) this.CloseWindow();
-        };
-    }
 
-    private void LoadResources() {
-        try {
-            Debug.WriteLine("[SelectablePalette] Loading WPF-UI resources from WpfUiResources.xaml");
-
-            // Load WPF-UI resources (includes ThemesDictionary, ControlsDictionary, and custom overrides)
-            // Try multiple pack URI formats
-            var resourcePaths = new[] {
-                "pack://application:,,,/PE_Tools;component/LibraryAddins/AddinCmdPalette/Core/WpfUiResources.xaml",
-                "pack://application:,,,/PE_Tools;component/WpfUiResources.xaml",
-                "/LibraryAddins/AddinCmdPalette/Core/WpfUiResources.xaml",
-                "/WpfUiResources.xaml"
-            };
-
-            ResourceDictionary resourceDict = null;
-            Exception lastException = null;
-
-            foreach (var path in resourcePaths) {
-                try {
-                    Debug.WriteLine($"[SelectablePalette] Trying resource path: {path}");
-                    var uri = new Uri(path, UriKind.RelativeOrAbsolute);
-                    resourceDict = (ResourceDictionary)Application.LoadComponent(uri);
-                    Debug.WriteLine($"[SelectablePalette] Successfully loaded resource from: {path}");
-                    break;
-                } catch (Exception ex) {
-                    Debug.WriteLine($"[SelectablePalette] Failed to load from {path}: {ex.Message}");
-                    lastException = ex;
-                }
-            }
-
-            if (resourceDict != null) {
-                this.Resources.MergedDictionaries.Add(resourceDict);
-                Debug.WriteLine("[SelectablePalette] WPF-UI resources merged successfully");
-            } else {
-                Debug.WriteLine($"[SelectablePalette] Failed to load WPF-UI resources. Last error: {lastException?.Message}");
-                // Fallback: create basic resources inline
-                this.CreateFallbackResources();
-            }
-        } catch (Exception ex) {
-            Debug.WriteLine($"[SelectablePalette] Error loading resources: {ex}");
-            this.CreateFallbackResources();
-        }
-    }
-
-    private void CreateFallbackResources() {
-        Debug.WriteLine("[SelectablePalette] Creating fallback resources inline");
-        var fallbackDict = new ResourceDictionary();
-
-        // Custom Shadcn-inspired dark palette colors
-        fallbackDict["BackgroundFillColorPrimaryBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#18181B"));
-        fallbackDict["BackgroundFillColorSecondaryBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#1F1F23"));
-        fallbackDict["BackgroundFillColorTertiaryBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#27272A"));
-        fallbackDict["TextFillColorPrimaryBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#FAFAFA"));
-        fallbackDict["TextFillColorSecondaryBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#A1A1AA"));
-        fallbackDict["TextFillColorTertiaryBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#71717A"));
-        fallbackDict["ControlFillColorDefaultBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#27272A"));
-        fallbackDict["ControlStrokeColorDefaultBrush"] = new System.Windows.Media.SolidColorBrush((System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString("#3F3F46"));
-
-        this.Resources.MergedDictionaries.Add(fallbackDict);
-        Debug.WriteLine("[SelectablePalette] Fallback resources created and merged");
+        // Window closing is handled entirely by WndProc (WM_ACTIVATE) for better control
+        // Deactivated and LostKeyboardFocus handlers removed to avoid conflicts
     }
 
     private SelectablePaletteViewModel ViewModel => this.DataContext as SelectablePaletteViewModel;
@@ -104,52 +56,65 @@ public partial class SelectablePalette : Window {
     private void OnLoad(object sender, RoutedEventArgs eventArgs) {
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
 
-        this.ItemListBox.MouseLeftButtonUp += async (_, e) => {
-            // Get the clicked item from the event source
-            if (e.OriginalSource is FrameworkElement source) {
-                var item = source.DataContext as ISelectableItem;
-                if (item == null) {
-                    // Try to find the ListBoxItem parent
-                    var parent = source.Parent as FrameworkElement;
-                    while (parent is not null and not ListBoxItem) parent = parent.Parent as FrameworkElement;
-                    if (parent is ListBoxItem listBoxItem) item = listBoxItem.DataContext as ISelectableItem;
+        this.ItemListBox.ItemMouseLeftButtonUp += async (_, e) => {
+            if (e.OriginalSource is not FrameworkElement source) return;
+
+            var item = source.DataContext as ISelectableItem;
+            if (item == null) {
+                // Try to find the ListBoxItem parent
+                var parent = source.Parent as FrameworkElement;
+                while (parent is not null and not ListBoxItem) parent = parent.Parent as FrameworkElement;
+                if (parent is ListBoxItem listBoxItem) {
+                    item = listBoxItem.DataContext as ISelectableItem;
                 }
+            }
 
-                if (item == null) return;
+            if (item == null) return;
+            Debug.WriteLine($"[Palette] Action: Mouse click on item: {item.PrimaryText}");
 
-                // Update selection to the clicked item
-                if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
+            // Update selection to the clicked item
+            if (this.ViewModel != null) {
+                this.ViewModel.SelectedItem = item;
+            }
 
-                // Only execute actions with no modifiers directly
-                try {
-                    var executed = await this._actionBinding.TryExecuteAsync(
-                        item,
-                        MouseButton.Left,
-                        ModifierKeys.None
-                    );
+            // Execute action
+            try {
+                Debug.WriteLine($"[Palette] Executing action for clicked item: {item.PrimaryText}");
+                var executed = await this._actionBinding.TryExecuteAsync(
+                    item,
+                    MouseButton.Left,
+                    ModifierKeys.None
+                );
 
-                    if (executed) {
-                        this.ViewModel?.RecordUsage();
-                        this.CloseWindow();
-                    }
-                } catch (Exception ex) {
+                Debug.WriteLine($"[Palette] Action execution result: {executed}");
+                if (executed) {
+                    this.ViewModel?.RecordUsage();
+                    Debug.WriteLine("[Palette] Action: Mouse click → Close (action executed)");
                     this.CloseWindow();
-                    _ = MessageBox.Show(
-                        ex.Message,
-                        "Action Failed",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning
-                    );
                 }
+            } catch (Exception ex) {
+                Debug.WriteLine($"[Palette] Action error: {ex.Message}");
+                Debug.WriteLine("[Palette] Action: Mouse click → Close (error occurred)");
+                this.CloseWindow();
+                _ = MessageBox.Show(
+                    ex.Message,
+                    "Action Failed",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
             }
         };
 
-        this.ItemListBox.SelectionChanged += (_, _) => {
-            if (this.ViewModel.SelectedItem != null)
+        this.ItemListBox.SelectionChanged += (_, e) => {
+            Debug.WriteLine($"[Palette] Selection: {this.ViewModel.SelectedItem?.PrimaryText ?? "null"} (idx={this.ItemListBox.SelectedIndex})");
+            if (this.ViewModel.SelectedItem != null) {
                 this.ItemListBox.ScrollIntoView(this.ViewModel.SelectedItem);
+            }
 
             // Close popover when selection changes
-            if (this._isPopoverOpen) this.HidePopover();
+            if (this._isPopoverOpen) {
+                this.HidePopover();
+            }
         };
 
         this.InfoPopover.ActionClicked += this.InfoPopover_ActionClicked;
@@ -161,24 +126,32 @@ public partial class SelectablePalette : Window {
         this.SearchTextBox.SelectAll();
     }
 
-    private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
-        Debug.WriteLine($"[SelectablePalette] SearchTextBox_PreviewKeyDown: {e.Key}");
-
-        // Handle Left/Right arrow keys here to prevent TextBox from consuming them
-        if (e.Key == Key.Left) {
-            Debug.WriteLine("[SelectablePalette] Left arrow in PreviewKeyDown");
-            if (this.ViewModel?.SelectedItem != null) {
-                Debug.WriteLine("[SelectablePalette] Showing tooltip popover from PreviewKeyDown");
-                this.ShowTooltipPopover();
-                e.Handled = true;
+    private void Window_PreviewKeyDown(object sender, KeyEventArgs e) {
+        // Don't handle arrow keys if focus is in the tooltip RichTextBox
+        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
+            if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement)) {
+                // Allow arrow keys to work normally in RichTextBox
+                if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down) {
+                    Debug.WriteLine($"[Palette] PreviewKey: {e.Key} (in tooltip, pass through)");
+                    return;
+                }
             }
+        }
+    }
+
+    private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
+        // Handle Left arrow key to focus tooltip panel
+        if (e.Key == Key.Left) {
+            Debug.WriteLine("[Palette] SearchBox ← → Focus tooltip");
+            this.TooltipPanel.FocusTooltip();
+            e.Handled = true;
             return;
         }
 
+        // Handle Right arrow key to show actions popover
         if (e.Key == Key.Right) {
-            Debug.WriteLine("[SelectablePalette] Right arrow in PreviewKeyDown");
             if (this.ViewModel?.SelectedItem != null) {
-                Debug.WriteLine("[SelectablePalette] Showing actions popover from PreviewKeyDown");
+                Debug.WriteLine("[Palette] SearchBox → Show actions");
                 this.ShowActionsPopover();
                 e.Handled = true;
             }
@@ -187,30 +160,39 @@ public partial class SelectablePalette : Window {
     }
 
     private async void Window_KeyDown(object sender, KeyEventArgs e) {
-        Debug.WriteLine($"[SelectablePalette] KeyDown: {e.Key}, Handled: {e.Handled}, Source: {e.Source}");
-
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
-        if (this._isClosing) {
-            Debug.WriteLine("[SelectablePalette] Window is closing, ignoring key");
-            return;
+        if (this._isClosing) return;
+
+        // Don't handle arrow keys if focus is in the tooltip RichTextBox
+        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
+            if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement)) {
+                if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down) {
+                    Debug.WriteLine($"[Palette] Key: {e.Key} (in tooltip, skip)");
+                    return;
+                }
+            }
         }
+
+        Debug.WriteLine($"[Palette] Key: {e.Key}");
 
         switch (e.Key) {
         case Key.Escape:
-            Debug.WriteLine("[SelectablePalette] Escape key pressed, popover open: " + this._isPopoverOpen);
+            Debug.WriteLine("[Palette] Action: Escape key pressed");
             if (this._isPopoverOpen) {
+                Debug.WriteLine("[Palette] Popover is open, hiding it");
                 this.HidePopover();
                 e.Handled = true;
             } else {
+                Debug.WriteLine("[Palette] Action: Escape → Close");
                 this.CloseWindow();
                 e.Handled = true;
             }
             break;
 
         case Key.Enter:
-            Debug.WriteLine($"[SelectablePalette] Enter key pressed, selected item: {this.ViewModel.SelectedItem?.PrimaryText ?? "null"}");
+            Debug.WriteLine("[Palette] Action: Enter key pressed");
             if (this.ViewModel.SelectedItem != null) {
-                // Only execute actions with no modifiers directly
+                Debug.WriteLine($"[Palette] Executing action for: {this.ViewModel.SelectedItem.PrimaryText}");
                 try {
                     var executed = await this._actionBinding.TryExecuteAsync(
                         this.ViewModel.SelectedItem,
@@ -218,11 +200,15 @@ public partial class SelectablePalette : Window {
                         ModifierKeys.None
                     );
 
+                    Debug.WriteLine($"[Palette] Action execution result: {executed}");
                     if (executed) {
                         this.ViewModel.RecordUsage();
+                        Debug.WriteLine("[Palette] Action: Enter → Close (action executed)");
                         this.CloseWindow();
                     }
                 } catch (Exception ex) {
+                    Debug.WriteLine($"[Palette] Action execution error: {ex.Message}");
+                    Debug.WriteLine("[Palette] Action: Enter → Close (error occurred)");
                     this.CloseWindow();
                     _ = MessageBox.Show(
                         ex.Message,
@@ -231,30 +217,22 @@ public partial class SelectablePalette : Window {
                         MessageBoxImage.Warning
                     );
                 }
+            } else {
+                Debug.WriteLine("[Palette] Enter pressed but no selected item");
             }
 
             e.Handled = true;
             break;
 
         case Key.Left:
-            Debug.WriteLine($"[SelectablePalette] Left arrow pressed, selected item: {this.ViewModel.SelectedItem?.PrimaryText ?? "null"}");
-            if (this.ViewModel.SelectedItem != null) {
-                Debug.WriteLine("[SelectablePalette] Showing tooltip popover");
-                this.ShowTooltipPopover();
-                e.Handled = true;
-            } else {
-                Debug.WriteLine("[SelectablePalette] No selected item, cannot show tooltip");
-            }
+            this.TooltipPanel.FocusTooltip();
+            e.Handled = true;
             break;
 
         case Key.Right:
-            Debug.WriteLine($"[SelectablePalette] Right arrow pressed, selected item: {this.ViewModel.SelectedItem?.PrimaryText ?? "null"}");
             if (this.ViewModel.SelectedItem != null) {
-                Debug.WriteLine("[SelectablePalette] Showing actions popover");
                 this.ShowActionsPopover();
                 e.Handled = true;
-            } else {
-                Debug.WriteLine("[SelectablePalette] No selected item, cannot show actions");
             }
             break;
 
@@ -264,113 +242,54 @@ public partial class SelectablePalette : Window {
         }
     }
 
-    private void ShowTooltipPopover() {
-        Debug.WriteLine("[SelectablePalette] ShowTooltipPopover called");
-        if (this.ViewModel?.SelectedItem == null) {
-            Debug.WriteLine("[SelectablePalette] ShowTooltipPopover: No selected item");
-            return;
-        }
-
-        Debug.WriteLine($"[SelectablePalette] ShowTooltipPopover: Tooltip text = {this.ViewModel.SelectedItem.TooltipText}");
-        this.InfoPopover.TooltipText = this.ViewModel.SelectedItem.TooltipText;
-        this.InfoPopover.Actions = null;
-        this.PositionPopover();
-        this.InfoPopup.IsOpen = true;
-        this._isPopoverOpen = true;
-        Debug.WriteLine($"[SelectablePalette] ShowTooltipPopover: Popup.IsOpen = {this.InfoPopup.IsOpen}");
-    }
 
     private void ShowActionsPopover() {
-        Debug.WriteLine("[SelectablePalette] ShowActionsPopover called");
-        if (this.ViewModel?.SelectedItem == null) {
-            Debug.WriteLine("[SelectablePalette] ShowActionsPopover: No selected item");
-            return;
-        }
+        if (this.ViewModel?.SelectedItem == null) return;
 
         var actions = this._actionBinding.GetAvailableActions(this.ViewModel.SelectedItem).ToList();
-        Debug.WriteLine($"[SelectablePalette] ShowActionsPopover: Found {actions.Count} actions");
+        Debug.WriteLine($"[Palette] Show popover: {actions.Count} actions");
         this.InfoPopover.TooltipText = null;
         this.InfoPopover.Actions = actions;
         this.PositionPopover();
         this.InfoPopup.IsOpen = true;
         this._isPopoverOpen = true;
-        Debug.WriteLine($"[SelectablePalette] ShowActionsPopover: Popup.IsOpen = {this.InfoPopup.IsOpen}");
     }
 
     private void HidePopover() {
+        Debug.WriteLine("[Palette] Hide popover");
         this.InfoPopup.IsOpen = false;
         this._isPopoverOpen = false;
     }
 
     private void PositionPopover() {
-        Debug.WriteLine($"[SelectablePalette] PositionPopover: Window position = ({this.Left}, {this.Top}), Size = ({this.Width}, {this.Height})");
-
-        if (this.ViewModel?.SelectedItem == null) {
-            Debug.WriteLine("[SelectablePalette] PositionPopover: No selected item");
-            return;
-        }
+        if (this.ViewModel?.SelectedItem == null) return;
 
         var listBoxItem = this.ItemListBox.ItemContainerGenerator.ContainerFromItem(this.ViewModel.SelectedItem) as ListBoxItem;
         if (listBoxItem == null) {
             // Try to generate container if it doesn't exist yet
             this.ItemListBox.UpdateLayout();
             listBoxItem = this.ItemListBox.ItemContainerGenerator.ContainerFromItem(this.ViewModel.SelectedItem) as ListBoxItem;
-            if (listBoxItem == null) {
-                Debug.WriteLine("[SelectablePalette] PositionPopover: Could not find ListBoxItem container");
-                return;
-            }
+            if (listBoxItem == null) return;
         }
 
-        // Calculate position relative to the window to determine best placement
-        try {
-            var transform = listBoxItem.TransformToAncestor(this);
-            var rect = new Rect(0, 0, listBoxItem.RenderSize.Width, listBoxItem.RenderSize.Height);
-            var bounds = transform.TransformBounds(rect);
-
-            // Estimate popover width (use MaxWidth from InfoPopover or default)
-            var estimatedPopoverWidth = this.InfoPopover.MaxWidth > 0 ? this.InfoPopover.MaxWidth : 400;
-            var spaceOnRight = this.Width - bounds.Right;
-            var spaceOnLeft = bounds.Left;
-
-            Debug.WriteLine($"[SelectablePalette] PositionPopover: Item bounds = ({bounds.Left}, {bounds.Top}, {bounds.Width}, {bounds.Height})");
-            Debug.WriteLine($"[SelectablePalette] PositionPopover: Space on right = {spaceOnRight}, Space on left = {spaceOnLeft}, Estimated popover width = {estimatedPopoverWidth}");
-
-            // Use PlacementTarget for simpler positioning
-            this.InfoPopup.PlacementTarget = listBoxItem;
-
-            // Choose placement based on available space
-            if (spaceOnRight >= estimatedPopoverWidth || spaceOnRight > spaceOnLeft) {
-                // Enough space on right, or right has more space
-                this.InfoPopup.Placement = PlacementMode.Right;
-                this.InfoPopup.HorizontalOffset = 8;
-                Debug.WriteLine("[SelectablePalette] PositionPopover: Using right placement");
-            } else {
-                // Not enough space on right, use left
-                this.InfoPopup.Placement = PlacementMode.Left;
-                this.InfoPopup.HorizontalOffset = -8;
-                Debug.WriteLine("[SelectablePalette] PositionPopover: Using left placement");
-            }
-
-            this.InfoPopup.VerticalOffset = 0;
-        } catch (Exception ex) {
-            Debug.WriteLine($"[SelectablePalette] PositionPopover: Error calculating position: {ex.Message}");
-            // Fallback to right placement
-            this.InfoPopup.PlacementTarget = listBoxItem;
-            this.InfoPopup.Placement = PlacementMode.Right;
-            this.InfoPopup.HorizontalOffset = 8;
-            this.InfoPopup.VerticalOffset = 0;
-        }
+        // Position popover to the right of the selected item
+        this.InfoPopup.PlacementTarget = listBoxItem;
+        this.InfoPopup.Placement = PlacementMode.Right;
+        this.InfoPopup.HorizontalOffset = 0;
+        this.InfoPopup.VerticalOffset = 0;
     }
 
     private async void InfoPopover_ActionClicked(object sender, PaletteAction action) {
         if (this.ViewModel?.SelectedItem == null) return;
 
+        Debug.WriteLine($"[Palette] Execute action: {action.Name}");
         try {
             await this._actionBinding.ExecuteActionAsync(action, this.ViewModel.SelectedItem);
             this.ViewModel.RecordUsage();
             this.HidePopover();
             this.CloseWindow();
         } catch (Exception ex) {
+            Debug.WriteLine($"[Palette] Action error: {ex.Message}");
             this.HidePopover();
             this.CloseWindow();
             _ = MessageBox.Show(
@@ -382,13 +301,58 @@ public partial class SelectablePalette : Window {
         }
     }
 
-    private void CloseWindow() {
+    private void CloseWindow(bool restoreFocus = true) {
+        Debug.WriteLine($"[Palette] CloseWindow called: restoreFocus={restoreFocus}, _isClosing={this._isClosing}");
         try {
-            if (this._isClosing) return;
+            if (this._isClosing) {
+                Debug.WriteLine("[Palette] CloseWindow: Already closing, aborting");
+                return;
+            }
+
             this._isClosing = true;
+            Debug.WriteLine("[Palette] CloseWindow: Hiding popover");
             this.HidePopover();
+
+            // Restore focus to Revit before closing (unless user is switching to another app)
+            if (restoreFocus) {
+                Debug.WriteLine("[Palette] CloseWindow: Restoring focus to Revit");
+                this.RestoreRevitFocus();
+            } else {
+                Debug.WriteLine("[Palette] CloseWindow: Skipping focus restore (user switching apps)");
+            }
+
+            Debug.WriteLine("[Palette] CloseWindow: Calling Window.Close()");
             this.Close();
-        } catch (InvalidOperationException) { } // Window is already closing, ignore
+        } catch (InvalidOperationException ex) {
+            Debug.WriteLine($"[Palette] CloseWindow: Window already closing exception: {ex.Message}");
+        }
+    }
+
+    private void RestoreRevitFocus() {
+        try {
+            // Get the main Revit window handle
+            var revitProcess = System.Diagnostics.Process.GetCurrentProcess();
+            var revitHandle = revitProcess.MainWindowHandle;
+
+            Debug.WriteLine($"[Palette] RestoreRevitFocus: Process={revitProcess.ProcessName}, Handle={revitHandle}");
+
+            if (revitHandle != IntPtr.Zero) {
+                var revitTitle = this.GetWindowTitle(revitHandle);
+                Debug.WriteLine($"[Palette] RestoreRevitFocus: Revit window title='{revitTitle}'");
+
+                var success = SetForegroundWindow(revitHandle);
+                Debug.WriteLine($"[Palette] RestoreRevitFocus: SetForegroundWindow returned {success}");
+
+                // Verify focus was restored
+                var currentForeground = GetForegroundWindow();
+                Debug.WriteLine($"[Palette] RestoreRevitFocus: Current foreground window={currentForeground} (expected {revitHandle})");
+            } else {
+                Debug.WriteLine("[Palette] RestoreRevitFocus: Revit handle is zero, cannot restore focus");
+            }
+        } catch (Exception ex) {
+            Debug.WriteLine($"[Palette] RestoreRevitFocus: Exception: {ex.Message}");
+            Debug.WriteLine($"[Palette] RestoreRevitFocus: StackTrace: {ex.StackTrace}");
+        }
     }
 
     protected override void OnClosing(CancelEventArgs e) {
@@ -396,10 +360,11 @@ public partial class SelectablePalette : Window {
         base.OnClosing(e);
     }
 
-    #region Hiding from Alt+Tab
+    #region Hiding from Alt+Tab and Window Messages
 
     protected override void OnSourceInitialized(EventArgs e) {
         base.OnSourceInitialized(e);
+
         // Remove window from Alt+Tab
         var helper = new WindowInteropHelper(this);
         _ = SetWindowLong(
@@ -407,6 +372,119 @@ public partial class SelectablePalette : Window {
             GWL_EXSTYLE,
             GetWindowLong(helper.Handle, GWL_EXSTYLE) | WS_EX_TOOLWINDOW
         );
+
+        // Hook into window messages to detect activation changes
+        var source = HwndSource.FromHwnd(helper.Handle);
+        source?.AddHook(this.WndProc);
+    }
+
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) {
+        const int WM_ACTIVATE = 0x0006;
+        const int WA_INACTIVE = 0;
+
+        if (msg == WM_ACTIVATE) {
+            var activateType = (int)wParam & 0xFFFF;
+            Debug.WriteLine($"[Palette] WM_ACTIVATE: type={activateType} (0=inactive, 1=active, 2=click)");
+
+            if (activateType == WA_INACTIVE && !this._isClosing) {
+                // lParam contains the handle of the window being activated (may be zero)
+                var newActiveWindow = lParam;
+                var revitHandle = System.Diagnostics.Process.GetCurrentProcess().MainWindowHandle;
+
+                // Get actual foreground window (more reliable than lParam)
+                var actualForegroundWindow = GetForegroundWindow();
+
+                // Check if Alt key is pressed (Alt+Tab is active)
+                var isAltTabActive = (GetAsyncKeyState(0x12) & 0x8000) != 0; // VK_MENU = 0x12
+
+                // Get window info for debugging
+                var newWindowTitle = this.GetWindowTitle(newActiveWindow);
+                var revitWindowTitle = this.GetWindowTitle(revitHandle);
+                var foregroundWindowTitle = this.GetWindowTitle(actualForegroundWindow);
+
+                Debug.WriteLine($"[Palette] WM_ACTIVATE: NewActiveWindow={newActiveWindow} ({newWindowTitle})");
+                Debug.WriteLine($"[Palette] WM_ACTIVATE: ActualForegroundWindow={actualForegroundWindow} ({foregroundWindowTitle})");
+                Debug.WriteLine($"[Palette] WM_ACTIVATE: RevitWindow={revitHandle} ({revitWindowTitle})");
+                Debug.WriteLine($"[Palette] WM_ACTIVATE: Alt+Tab active={isAltTabActive}");
+
+                // Determine the actual target window
+                // If lParam is zero, use foreground window to determine what's actually being activated
+                var targetWindow = newActiveWindow != IntPtr.Zero ? newActiveWindow : actualForegroundWindow;
+
+                // Get our window handle to exclude it from consideration
+                var helper = new WindowInteropHelper(this);
+                var ourWindowHandle = helper.Handle;
+
+                // If target is our own window or still zero, it's likely clicking outside or Alt+Tab
+                // In that case, check if foreground is another app
+                if (targetWindow == ourWindowHandle || targetWindow == IntPtr.Zero) {
+                    if (actualForegroundWindow != IntPtr.Zero &&
+                        actualForegroundWindow != ourWindowHandle &&
+                        actualForegroundWindow != revitHandle) {
+                        // Foreground is another app - user is switching away
+                        targetWindow = actualForegroundWindow;
+                    }
+                }
+
+                // Check if user is switching to a different window (not Revit, not our window)
+                var isSwitchingToOtherApp = targetWindow != IntPtr.Zero &&
+                                          targetWindow != revitHandle &&
+                                          targetWindow != ourWindowHandle;
+
+                // If clicking Revit but it's already the foreground window, don't restore focus
+                var isRevitAlreadyForeground = targetWindow == revitHandle && actualForegroundWindow == revitHandle;
+
+                // Don't restore focus if: Alt+Tab is active, switching to another app, or Revit is already foreground
+                var shouldRestoreFocus = !isAltTabActive && !isSwitchingToOtherApp && !isRevitAlreadyForeground;
+
+                var actionType = isAltTabActive
+                    ? $"Alt+Tab active (target: {this.GetWindowTitle(targetWindow)})"
+                    : targetWindow == IntPtr.Zero
+                        ? "Click outside (desktop/void)"
+                        : targetWindow == revitHandle
+                            ? isRevitAlreadyForeground
+                                ? "Clicking Revit (already foreground)"
+                                : "Switching to Revit"
+                            : $"Switching to: {this.GetWindowTitle(targetWindow)}";
+
+                Debug.WriteLine($"[Palette] Action: {actionType} → Close (restoreFocus={shouldRestoreFocus})");
+
+                // Use Dispatcher to avoid issues with closing during message processing
+                _ = this.Dispatcher.BeginInvoke(new Action(() => {
+                    if (!this._isClosing) {
+                        this.CloseWindow(restoreFocus: shouldRestoreFocus);
+                    }
+                }));
+            }
+        }
+
+        return IntPtr.Zero;
+    }
+
+    private string GetWindowTitle(IntPtr hwnd) {
+        if (hwnd == IntPtr.Zero) return "null";
+
+        try {
+            const int maxLength = 256;
+            var title = new System.Text.StringBuilder(maxLength);
+            _ = GetWindowText(hwnd, title, maxLength);
+            var titleText = title.ToString();
+
+            if (string.IsNullOrEmpty(titleText)) {
+                // Try to get process name instead
+                _ = GetWindowThreadProcessId(hwnd, out var processId);
+                try {
+                    var process = System.Diagnostics.Process.GetProcessById((int)processId);
+                    return $"[Process: {process.ProcessName}]";
+                } catch {
+                    return $"[HWND: {hwnd}]";
+                }
+            }
+
+            return titleText;
+        } catch {
+            return $"[HWND: {hwnd}]";
+        }
     }
 
     private const int GWL_EXSTYLE = -20;
@@ -417,6 +495,22 @@ public partial class SelectablePalette : Window {
 
     [DllImport("user32.dll")]
     private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder lpString, int nMaxCount);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     #endregion
 }
