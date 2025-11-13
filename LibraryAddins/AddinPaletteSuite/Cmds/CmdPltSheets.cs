@@ -27,7 +27,7 @@ public class CmdPltSheets : BaseCmdPalette {
         new List<PaletteAction> {
             new() {
                 Name = "Open Sheet",
-                ExecuteAsync = async item => {
+                ExecuteAsync = item => {
                     if (item is SheetPaletteItem sheetItem) {
                         try {
                             uiApp.ActiveUIDocument.ActiveView = sheetItem.Sheet;
@@ -36,6 +36,7 @@ public class CmdPltSheets : BaseCmdPalette {
                                 $"Failed to open sheet '{sheetItem.Sheet.Name}': {ex.Message}");
                         }
                     }
+                    return Task.CompletedTask;
                 },
                 CanExecute = item => item is SheetPaletteItem
             }

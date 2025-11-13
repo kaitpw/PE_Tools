@@ -30,7 +30,7 @@ public class CmdPltSchedules : BaseCmdPalette {
         new List<PaletteAction> {
             new() {
                 Name = "Open Schedule",
-                ExecuteAsync = async item => {
+                ExecuteAsync = item => {
                     if (item is SchedulePaletteItem scheduleItem) {
                         try {
                             uiApp.ActiveUIDocument.ActiveView = scheduleItem.Schedule;
@@ -40,6 +40,7 @@ public class CmdPltSchedules : BaseCmdPalette {
                             );
                         }
                     }
+                    return Task.CompletedTask;
                 },
                 CanExecute = item => item is SchedulePaletteItem
             }

@@ -33,12 +33,14 @@ public class SelectableTextBox : UserControl, IPopoverExit  {
         set => this.SetValue(TooltipTextProperty, value);
     }
 
+#nullable enable
     public UIElement? ReturnFocusTarget {
         get => (UIElement?)this.GetValue(ReturnFocusTargetProperty);
         set => this.SetValue(ReturnFocusTargetProperty, value);
     }
 
     public event EventHandler? ExitRequested;
+#nullable restore
 
     public void RequestExit() {
         this.ExitRequested?.Invoke(this, EventArgs.Empty);

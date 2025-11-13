@@ -33,10 +33,12 @@ public class SelectableTooltipPanel : UserControl {
         set => this.SetValue(TooltipTextProperty, value);
     }
 
+#nullable enable
     public UIElement? ReturnFocusTarget {
         get => (UIElement?)this.GetValue(ReturnFocusTargetProperty);
         set => this.SetValue(ReturnFocusTargetProperty, value);
     }
+#nullable restore
 
     private void InitializeControls() {
         if (this._isInitialized) return;

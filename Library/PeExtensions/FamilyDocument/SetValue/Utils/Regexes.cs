@@ -9,7 +9,7 @@ public static class Regexes {
         result = 0;
         if (string.IsNullOrWhiteSpace(input)) return false;
 
-        var trimmed = input.Trim();
+        var trimmed = input!.Trim();
         var match = Regex.Match(trimmed, @"^-?\d+");
 
         return match.Success
@@ -20,7 +20,7 @@ public static class Regexes {
         result = 0.0;
         if (string.IsNullOrWhiteSpace(input)) return false;
 
-        var trimmed = input.Trim();
+        var trimmed = input!.Trim();
         var match = Regex.Match(trimmed, @"^-?\d*\.?\d+");
 
         return match.Success

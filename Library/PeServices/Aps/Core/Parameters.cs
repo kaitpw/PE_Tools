@@ -7,7 +7,6 @@ namespace PeServices.Aps.Core;
 
 public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenProvider) {
     private const string Suffix = "parameters/v1/accounts/";
-    private readonly TokenProviders.IParameters _tokenProvider = tokenProvider;
 
     private static async Task<T> DeserializeToType<T>(HttpResponseMessage res) =>
         JsonConvert.DeserializeObject<T>(await res.Content.ReadAsStringAsync());
