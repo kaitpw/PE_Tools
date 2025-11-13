@@ -6,7 +6,7 @@ using AddinPaletteSuite.Core.Ui;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdOpenSheet : BaseCmdPalette {
+public class CmdPltSheets : BaseCmdPalette {
     public override string TypeName => "sheet";
 
     public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>

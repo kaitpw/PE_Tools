@@ -7,7 +7,7 @@ using AddinPaletteSuite.Core.Ui;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdOpenView : BaseCmdPalette {
+public class CmdPltViews : BaseCmdPalette {
     public override string TypeName => "view";
 
     public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>

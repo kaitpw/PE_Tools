@@ -7,7 +7,7 @@ using AddinPaletteSuite.Core.Ui;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdOpenFamily : BaseCmdPalette {
+public class CmdPltFamilies : BaseCmdPalette {
     public override string TypeName => "family";
 
     public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>

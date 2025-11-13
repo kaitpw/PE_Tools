@@ -52,11 +52,11 @@ internal class App : IExternalApplication {
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
 
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
-            panelTools.AddPushButton<CmdCommandPalette>("Command Palette"),
-            panelTools.AddPushButton<CmdOpenView>("Open View"),
-            panelTools.AddPushButton<CmdOpenSchedule>("Open Schedule"),
-            panelTools.AddPushButton<CmdOpenSheet>("Open Sheet"),
-            panelTools.AddPushButton<CmdOpenFamily>("Open Family"),
+            panelTools.AddPushButton<CmdPltCommands>("Command Palette"),
+            panelTools.AddPushButton<CmdPltViews>("View Palette"),
+            panelTools.AddPushButton<CmdPltSchedules>("Schedule Palette"),
+            panelTools.AddPushButton<CmdPltSheets>("Sheet Palette"),
+            panelTools.AddPushButton<CmdPltFamilies>("Family Palette"),
             panelTools.AddPushButton<CmdTapMaker>("Tap Maker")
         ]);
 
@@ -127,35 +127,35 @@ public static class ButtonDataHydrator {
                 ToolTip = "Analyze MEP sustainability metrics (pipe length, refrigerant volume, mech equipment count)."
             }
         }, {
-            nameof(CmdCommandPalette), new ButtonDataRecord {
+            nameof(CmdPltCommands), new ButtonDataRecord {
                 SmallImage = "square-terminal16.png",
                 LargeImage = "square-terminal32.png",
                 ToolTip =
                     "Search and execute Revit commands quickly without looking through Revit's tabs, ribbons, and panels. Not all commands are guaranteed to run."
             }
         }, {
-            nameof(CmdOpenView),
+            nameof(CmdPltViews),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search and open views in the current document."
             }
         }, {
-            nameof(CmdOpenSchedule),
+            nameof(CmdPltSchedules),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search and open schedules in the current document."
             }
         }, {
-            nameof(CmdOpenSheet),
+            nameof(CmdPltSheets),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search and open sheets in the current document."
             }
         }, {
-            nameof(CmdOpenFamily),
+            nameof(CmdPltFamilies),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",

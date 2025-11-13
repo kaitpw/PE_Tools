@@ -10,7 +10,7 @@ using PeServices.Storage;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdCommandPalette : IExternalCommand {
+public class CmdPltCommands : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
@@ -18,7 +18,7 @@ public class CmdCommandPalette : IExternalCommand {
     ) {
         try {
             var uiapp = commandData.Application;
-            var persistence = new Storage(nameof(CmdCommandPalette));
+            var persistence = new Storage(nameof(CmdPltCommands));
 
             // Create and show palette using new API
             var palette = CommandPaletteService.Create(uiapp, persistence);

@@ -7,7 +7,7 @@ using AddinPaletteSuite.Core.Ui;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdOpenSchedule : BaseCmdPalette {
+public class CmdPltSchedules : BaseCmdPalette {
     public override string TypeName => "Schedule";
 
     public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
