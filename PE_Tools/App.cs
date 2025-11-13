@@ -1,5 +1,6 @@
 using AddinApsAuthSuite;
 using AddinFamilyFoundrySuite.Cmds;
+using AddinPaletteSuite.Cmds;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
 using Wpf.Ui.Appearance;

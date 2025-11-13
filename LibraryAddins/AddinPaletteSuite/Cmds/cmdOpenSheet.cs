@@ -2,9 +2,8 @@ using AddinPaletteSuite.Core.Actions;
 using AddinPaletteSuite.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media.Imaging;
-using AddinPaletteSuite.Core;
 using AddinPaletteSuite.Core.Ui;
-namespace PE_Tools;
+namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdOpenSheet : BaseCmdPalette {

@@ -1,13 +1,13 @@
-using AddinPaletteSuite.Core.Actions;
+
+
 using AddinPaletteSuite.Commands;
 using AddinPaletteSuite.Core;
-using AddinPaletteSuite.Helpers;
 using AddinPaletteSuite.Core.Services;
-using PeRevit.Lib;
-using PeServices.Storage;
 using AddinPaletteSuite.Core.Ui;
+using AddinPaletteSuite.Helpers;
+using PeServices.Storage;
 
-namespace PE_Tools;
+namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdCommandPalette : IExternalCommand {
@@ -60,14 +60,14 @@ public static class CommandPaletteService {
                 Name = "Execute Command",
                 Execute = item => {
                     if (item is PostableCommandItem cmdItem) {
-                        var (success, error) = Commands.Execute(uiApp, cmdItem.Command);
+                        var (success, error) = PeRevit.Lib.Commands.Execute(uiApp, cmdItem.Command);
                         if (error is not null) throw error;
                         if (success) commandHelper.UpdateCommandUsage(cmdItem.Command);
                     }
                 },
                 CanExecute = item => {
                     if (item is PostableCommandItem cmdItem)
-                        return Commands.IsAvailable(uiApp, cmdItem.Command);
+                        return PeRevit.Lib.Commands.IsAvailable(uiApp, cmdItem.Command);
                     return false;
                 }
             }

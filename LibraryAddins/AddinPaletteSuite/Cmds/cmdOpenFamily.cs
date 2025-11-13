@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using AddinPaletteSuite.Core.Ui;
-namespace PE_Tools;
+namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdOpenFamily : BaseCmdPalette {

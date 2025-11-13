@@ -1,8 +1,6 @@
-using AddinPaletteSuite.Core;
-using AddinPaletteSuite.Core.Ui;
 using System.Windows.Input;
 
-namespace AddinPaletteSuite.Core.Actions;
+namespace AddinPaletteSuite.Core;
 
 /// <summary>
 ///     Represents a single action that can be triggered in the palette

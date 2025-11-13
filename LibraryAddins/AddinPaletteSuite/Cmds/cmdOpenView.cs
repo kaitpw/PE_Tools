@@ -4,7 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Nice3point.Revit.Extensions;
 using System.Windows.Media.Imaging;
 using AddinPaletteSuite.Core.Ui;
-namespace PE_Tools;
+namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdOpenView : BaseCmdPalette {
