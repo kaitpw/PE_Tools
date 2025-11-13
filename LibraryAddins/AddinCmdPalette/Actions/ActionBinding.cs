@@ -26,7 +26,7 @@ public class ActionBinding {
         var action = this.FindMatchingAction(key, modifiers, null);
         if (action == null || !action.CanExecute(item)) return false;
 
-        await action.ExecuteAsync(item);
+        await this.ExecuteActionInternalAsync(action, item);
         return true;
     }
 
@@ -37,7 +37,7 @@ public class ActionBinding {
         var action = this.FindMatchingAction(null, modifiers, button);
         if (action == null || !action.CanExecute(item)) return false;
 
-        await action.ExecuteAsync(item);
+        await this.ExecuteActionInternalAsync(action, item);
         return true;
     }
 
@@ -54,7 +54,20 @@ public class ActionBinding {
         if (!action.CanExecute(item))
             throw new InvalidOperationException($"Action '{action.Name}' cannot execute for this item");
 
-        await action.ExecuteAsync(item);
+        await this.ExecuteActionInternalAsync(action, item);
+    }
+
+    /// <summary>
+    ///     Internal helper that executes either synchronous or asynchronous action
+    /// </summary>
+    private async Task ExecuteActionInternalAsync(PaletteAction action, ISelectableItem item) {
+        if (action.ExecuteAsync != null) {
+            await action.ExecuteAsync(item);
+        } else if (action.Execute != null) {
+            action.Execute(item);
+        } else {
+            throw new InvalidOperationException($"Action '{action.Name}' has neither Execute nor ExecuteAsync defined");
+        }
     }
 
     /// <summary>

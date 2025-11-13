@@ -2,6 +2,7 @@ using AddinApsAuthSuite;
 using AddinFamilyFoundrySuite.Cmds;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
+using Wpf.Ui.Appearance;
 
 namespace PE_Tools;
 
@@ -9,6 +10,9 @@ internal class App : IExternalApplication {
     public Result OnStartup(UIControlledApplication app) {
         // Set up assembly resolver for Wpf.Ui and other dependencies
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+
+        // Initialize WPF.UI theme system - defaults to Dark theme
+        ApplicationThemeManager.Apply(ApplicationTheme.Dark);
 
         // 1. Create ribbon tab
         const string tabName = "PE TOOLS";

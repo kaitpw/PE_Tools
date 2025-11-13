@@ -1,12 +1,11 @@
 <UserControl x:Class="AddinCmdPalette.Core.SelectablePalette"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
              xmlns:local="clr-namespace:AddinCmdPalette.Core"
              KeyDown="UserControl_KeyDown"
              PreviewKeyDown="UserControl_PreviewKeyDown"
-             Loaded="UserControl_Loaded">
-
+             Loaded="UserControl_Loaded"
+             VerticalAlignment="Top">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -15,42 +14,35 @@
         </ResourceDictionary>
     </UserControl.Resources>
 
-    <Grid>
-        <!-- Popup for Info Popover -->
-        <Popup x:Name="InfoPopup"
+    <Grid HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch">
+        <!-- Popup for Tooltip -->
+        <Popup x:Name="TooltipPopup"
                AllowsTransparency="True"
                PopupAnimation="Fade"
                StaysOpen="False">
-            <local:InfoPopover x:Name="InfoPopover" />
+            <local:SelectableTextBox x:Name="TooltipPanel"
+                                     TooltipText="{Binding SelectedItem.TooltipText}"
+                                     ReturnFocusTarget="{Binding ElementName=SearchTextBox}" />
         </Popup>
 
         <!-- Main container -->
-        <ui:CardControl Margin="0"
-                        Padding="0"
-                        CornerRadius="8"
-                        Background="{DynamicResource BackgroundFillColorPrimaryBrush}">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="150" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+        <Border Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
+                CornerRadius="8"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch">
+            <Grid HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Tooltip Panel -->
-                <local:SelectableTextBox x:Name="TooltipPanel"
-                                         Grid.Row="0"
-                                         Grid.RowSpan="3"
-                                         Grid.Column="0"
-                                         TooltipText="{Binding SelectedItem.TooltipText}"
-                                         ReturnFocusTarget="{Binding ElementName=SearchTextBox}" />
-
                 <!-- Search Box -->
                 <Border Grid.Row="0"
-                        Grid.Column="1"
                         Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
                         BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
                         BorderThickness="0,0,0,1"
@@ -96,17 +88,15 @@
                 <!-- Item List -->
                 <local:SelectableListBox x:Name="ItemListBox"
                                          Grid.Row="1"
-                                         Grid.Column="1"
                                          ItemsSource="{Binding FilteredItems}"
                                          SelectedItem="{Binding SelectedItem}"
                                          SelectedIndex="{Binding SelectedIndex}" />
 
                 <!-- Status Bar -->
-                <ui:CardControl Grid.Row="2"
-                                Grid.Column="1"
-                                CornerRadius="0,0,8,8"
-                                Padding="0"
-                                Background="{DynamicResource BackgroundFillColorPrimaryBrush}">
+                <Border Grid.Row="2"
+                        Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        BorderThickness="0,1,0,0">
                     <Grid Margin="{DynamicResource PalettePaddingMedium}">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
@@ -122,15 +112,15 @@
                                        FontSize="{DynamicResource PaletteFontSizeNormal}"
                                        VerticalAlignment="Center"
                                        Margin="0,0,12,0" />
-                            <TextBlock Text="↑↓ Navigate • → Actions • Click/Enter Execute • Esc Close"
+                            <TextBlock Text="↑↓ Navigate • ← Tooltip • → Actions • Click/Enter Execute • Esc Close"
                                        FontFamily="Segoe UI Variable"
                                        Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                                        FontSize="{DynamicResource PaletteFontSizeNormal}"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>
-                </ui:CardControl>
+                </Border>
             </Grid>
-        </ui:CardControl>
+        </Border>
     </Grid>
 </UserControl>

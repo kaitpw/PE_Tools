@@ -7,7 +7,7 @@ using WpfUiRichTextBox = Wpf.Ui.Controls.RichTextBox;
 
 namespace AddinCmdPalette.Core;
 
-public class SelectableTextBox : UserControl {
+public class SelectableTextBox : UserControl, IPopoverExit {
     public static readonly DependencyProperty TooltipTextProperty = DependencyProperty.Register(
         nameof(TooltipText),
         typeof(string),
@@ -20,13 +20,13 @@ public class SelectableTextBox : UserControl {
         typeof(SelectableTextBox),
         new PropertyMetadata(null));
 
-    private Border _border;
     private bool _isInitialized;
-
     private WpfUiRichTextBox _richTextBox;
-    private ScrollViewer _scrollViewer;
 
-    public SelectableTextBox() => this.InitializeControls();
+    public SelectableTextBox() {
+        this.Focusable = true;
+        this.InitializeControls();
+    }
 
     public string TooltipText {
         get => (string)this.GetValue(TooltipTextProperty);
@@ -38,37 +38,49 @@ public class SelectableTextBox : UserControl {
         set => this.SetValue(ReturnFocusTargetProperty, value);
     }
 
+    public event EventHandler? ExitRequested;
+
+    public void RequestExit() {
+        this.ExitRequested?.Invoke(this, EventArgs.Empty);
+        _ = this.ReturnFocusTarget?.Focus();
+    }
+
     private void InitializeControls() {
         if (this._isInitialized) return;
-        // Create Border - transparent, no border
-        this._border = new Border { Background = Brushes.Transparent, BorderThickness = new Thickness(0) };
 
-        // Create ScrollViewer
-        this._scrollViewer = new ScrollViewer {
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Padding = new Thickness(0)
+        // Create Border using theme resources for consistent popover styling
+        var border = new Border {
+            Background =
+                (Brush)(this.TryFindResource("BackgroundFillColorPrimaryBrush") ??
+                        new SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 24, 27))),
+            BorderBrush = (Brush)(this.TryFindResource("ControlStrokeColorDefaultBrush") ?? Brushes.Gray),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(8, 6, 8, 6),
+            HorizontalAlignment = HorizontalAlignment.Left,
+            VerticalAlignment = VerticalAlignment.Top
         };
 
-        // Create RichTextBox
+        // Use Wpf.Ui RichTextBox with theme-based styling
         this._richTextBox = new WpfUiRichTextBox {
             IsReadOnly = true,
-            IsTextSelectionEnabled = true,
             Focusable = true,
-            FontFamily = new FontFamily("Open Sans"),
-            FontSize = (double)(this.TryFindResource("PaletteFontSizeMedium") ?? 6.0),
-            Foreground = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White),
-            CaretBrush = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White)
+            IsTextSelectionEnabled = true,
+            AutoWordSelection = false,
+            FontFamily = new FontFamily("Segoe UI Variable"),
+            FontSize = 12.0,
+            Foreground = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.Red),
+            Width = 250.0,
+            MinHeight = 100.0,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
 
-        this._richTextBox.KeyDown += this.TooltipRichTextBox_KeyDown;
-        this._richTextBox.PreviewKeyDown += this.TooltipRichTextBox_PreviewKeyDown;
-        this._richTextBox.Loaded += this.TooltipRichTextBox_Loaded;
+        this._richTextBox.PreviewKeyDown += this.RichTextBox_PreviewKeyDown;
+        this._richTextBox.LostFocus += this.RichTextBox_LostFocus;
 
-        // Assemble hierarchy
-        this._scrollViewer.Content = this._richTextBox;
-        this._border.Child = this._scrollViewer;
-        this.Content = this._border;
+        border.Child = this._richTextBox;
+        this.Content = border;
 
         this._isInitialized = true;
     }
@@ -77,9 +89,14 @@ public class SelectableTextBox : UserControl {
         if (this._richTextBox == null) return;
 
         Debug.WriteLine("[Tooltip] Focus");
-        this._richTextBox.Focusable = true;
         _ = this._richTextBox.Focus();
-        this._richTextBox.CaretPosition = this._richTextBox.Document.ContentEnd;
+
+        // Select all text for easy copying
+        if (this._richTextBox.Document != null) {
+            this._richTextBox.Selection.Select(
+                this._richTextBox.Document.ContentStart,
+                this._richTextBox.Document.ContentEnd);
+        }
     }
 
     private static void OnTooltipTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
@@ -87,32 +104,54 @@ public class SelectableTextBox : UserControl {
     }
 
     private void UpdateTooltipText() {
-        if (this._richTextBox.Document == null) return;
+        if (this._richTextBox == null) return;
 
         var text = this.TooltipText ?? string.Empty;
-        var paragraph = new Paragraph(new Run(text)) {
-            LineHeight = 8, Margin = new Thickness(0), Padding = new Thickness(0), TextIndent = 0
-        };
-        this._richTextBox.Document.Blocks.Clear();
-        this._richTextBox.Document.Blocks.Add(paragraph);
 
-        // Set document padding to match the resource
-        // var docPadding = (Thickness)(this.TryFindResource("PalettePaddingMedium") ?? new Thickness(10, 5, 10, 5));
-        // this._richTextBox.Document.PagePadding = docPadding;
+        // Create a simple FlowDocument with the text
+        var flowDoc = new FlowDocument {
+            PagePadding = new Thickness(0),
+            TextAlignment = TextAlignment.Left,
+            FontFamily = new FontFamily("Segoe UI Variable"),
+            FontSize = 12.0,
+            Foreground = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White)
+        };
+
+        var paragraph = new Paragraph(new Run(text)) {
+            Margin = new Thickness(0),
+            LineHeight = double.NaN, // Auto line height
+            FontFamily = new FontFamily("Segoe UI Variable"),
+            FontSize = 12.0,
+            Foreground = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White)
+        };
+
+        flowDoc.Blocks.Add(paragraph);
+        this._richTextBox.Document = flowDoc;
+
+        Debug.WriteLine($"[Tooltip] Updated text: '{text}' (length: {text.Length})");
     }
 
-    private void TooltipRichTextBox_Loaded(object sender, RoutedEventArgs e) => this.UpdateTooltipText();
-
-    private void TooltipRichTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
-        // Handle Escape - return focus to search box
-        if (e.Key == Key.Escape) {
-            Debug.WriteLine("[Tooltip] Esc → Return focus");
+    private void RichTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
+        switch (e.Key) {
+        case Key.Escape:
             e.Handled = true;
-            _ = this.ReturnFocusTarget?.Focus();
+            this.RequestExit();
+            break;
+        case Key.Right:
+            // Right arrow exits if cursor is at end and no selection
+            if (this._richTextBox.Selection.IsEmpty &&
+                this._richTextBox.CaretPosition.CompareTo(this._richTextBox.Document.ContentEnd) >= 0) {
+                e.Handled = true;
+                this.RequestExit();
+            }
+
+            break;
         }
     }
 
-    private void TooltipRichTextBox_KeyDown(object sender, KeyEventArgs e) {
-        // Escape already handled in PreviewKeyDown
+    private void RichTextBox_LostFocus(object sender, RoutedEventArgs e) {
+        // Close popover when focus is lost
+        var newFocus = Keyboard.FocusedElement as DependencyObject;
+        if (newFocus != null && !this.IsAncestorOf(newFocus)) this.RequestExit();
     }
 }

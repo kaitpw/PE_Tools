@@ -11,7 +11,7 @@ namespace AddinCmdPalette.Core;
 /// </summary>
 public partial class SelectablePalette : UserControl, ICloseRequestable {
     private readonly ActionBinding _actionBinding;
-    private bool _isPopoverOpen;
+    private readonly ActionMenu _actionMenu;
 
     public SelectablePalette(
         SelectablePaletteViewModel viewModel,
@@ -22,6 +22,8 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 
         this._actionBinding = new ActionBinding();
         this._actionBinding.RegisterRange(actions);
+
+        this._actionMenu = new ActionMenu();
     }
 
     private SelectablePaletteViewModel ViewModel => this.DataContext as SelectablePaletteViewModel;
@@ -79,30 +81,37 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
         this.ItemListBox.SelectionChanged += (_, e) => {
             if (this.ViewModel.SelectedItem != null) this.ItemListBox.ScrollIntoView(this.ViewModel.SelectedItem);
 
-            // Close popover when selection changes
-            if (this._isPopoverOpen) this.HidePopover();
+            // Close popovers when selection changes
+            this.HideActionsPopover();
+            this.HideTooltipPopover();
         };
 
-        this.InfoPopover.ActionClicked += this.InfoPopover_ActionClicked;
-        this.InfoPopup.Closed += (_, _) => this._isPopoverOpen = false;
+        // Set up action menu handlers
+        this._actionMenu.ExitRequested += (_, _) => this.HideActionsPopover();
+        this._actionMenu.ReturnFocusTarget = this.SearchTextBox;
+        this._actionMenu.ActionClicked += this.ActionMenu_ActionClicked;
+
+        // Set up tooltip popover exit handler
+        this.TooltipPanel.ExitRequested += (_, _) => this.HideTooltipPopover();
+        this.TooltipPanel.ReturnFocusTarget = this.SearchTextBox;
     }
 
     private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
-        // Don't handle arrow keys if focus is in the tooltip RichTextBox
+        // Don't handle keys if focus is in a popover - let the popover handle its own keys
         if (Keyboard.FocusedElement is DependencyObject focusedElement) {
             if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement)) {
-                // Allow arrow keys to work normally in RichTextBox
-                if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down) {
-                }
+                return; // Let tooltip popover handle its keys
             }
         }
     }
 
     private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
-        // Handle Left arrow key to focus tooltip panel
+        // Handle Left arrow key to show tooltip popover
         if (e.Key == Key.Left) {
-            this.TooltipPanel.FocusTooltip();
-            e.Handled = true;
+            if (this.ViewModel?.SelectedItem != null) {
+                this.ShowTooltipPopover();
+                e.Handled = true;
+            }
             return;
         }
 
@@ -118,26 +127,18 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
     private async void UserControl_KeyDown(object sender, KeyEventArgs e) {
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
 
-        // Don't handle arrow keys if focus is in the tooltip RichTextBox
+        // Don't handle keys if focus is in a popover - let the popover handle its own keys
         if (Keyboard.FocusedElement is DependencyObject focusedElement) {
             if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement)) {
-                if (e.Key is Key.Left or Key.Right or Key.Up or Key.Down)
-                    return;
+                return; // Let tooltip popover handle its keys
             }
         }
 
-
         switch (e.Key) {
         case Key.Escape:
-
-            if (this._isPopoverOpen) {
-                this.HidePopover();
-                e.Handled = true;
-            } else {
-                this.RequestClose();
-                e.Handled = true;
-            }
-
+            // If no popover is open, close the palette
+            this.RequestClose();
+            e.Handled = true;
             break;
 
         case Key.Enter:
@@ -171,8 +172,10 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
             break;
 
         case Key.Left:
-            this.TooltipPanel.FocusTooltip();
-            e.Handled = true;
+            if (this.ViewModel.SelectedItem != null) {
+                this.ShowTooltipPopover();
+                e.Handled = true;
+            }
             break;
 
         case Key.Right:
@@ -194,20 +197,58 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
         if (this.ViewModel?.SelectedItem == null) return;
 
         var actions = this._actionBinding.GetAvailableActions(this.ViewModel.SelectedItem).ToList();
+        if (actions.Count == 0) return;
 
-        this.InfoPopover.TooltipText = null;
-        this.InfoPopover.Actions = actions;
-        this.PositionPopover();
-        this.InfoPopup.IsOpen = true;
-        this._isPopoverOpen = true;
+        // Ensure the item is in view first
+        this.ItemListBox.ScrollIntoView(this.ViewModel.SelectedItem);
+
+        // Force complete layout pass
+        this.ItemListBox.UpdateLayout();
+
+        var listBoxItem =
+            this.ItemListBox.ItemContainerGenerator.ContainerFromItem(this.ViewModel.SelectedItem) as ListBoxItem;
+        if (listBoxItem == null) return;
+
+        // Wait for layout to complete before showing menu
+        _ = this.Dispatcher.BeginInvoke(new Action(() => {
+            // Get fresh container reference after layout completes
+            var freshListBoxItem =
+                this.ItemListBox.ItemContainerGenerator.ContainerFromItem(this.ViewModel.SelectedItem) as ListBoxItem;
+            if (freshListBoxItem == null) return;
+
+            this._actionMenu.Actions = actions;
+            this._actionMenu.Show(freshListBoxItem);
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
-    private void HidePopover() {
-        this.InfoPopup.IsOpen = false;
-        this._isPopoverOpen = false;
+    private void HideActionsPopover() => this._actionMenu.Hide();
+
+    private void ShowTooltipPopover() {
+        if (this.ViewModel?.SelectedItem == null) return;
+        if (string.IsNullOrEmpty(this.ViewModel.SelectedItem.TooltipText)) return;
+
+        // Update tooltip text binding - force update
+        var tooltipText = this.ViewModel.SelectedItem.TooltipText;
+        this.TooltipPanel.TooltipText = tooltipText;
+
+        Debug.WriteLine($"[Palette] Showing tooltip popover with text: '{tooltipText}'");
+
+        this.PositionTooltipPopover();
+        this.TooltipPopup.IsOpen = true;
+
+        // Force update after popup opens
+        this.TooltipPanel.UpdateLayout();
+
+        // Focus the tooltip after a short delay to allow popup to render
+        _ = this.Dispatcher.BeginInvoke(new Action(() => {
+            this.TooltipPanel.TooltipText = tooltipText; // Force update again
+            this.TooltipPanel.FocusTooltip();
+        }), System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
-    private void PositionPopover() {
+    private void HideTooltipPopover() => this.TooltipPopup.IsOpen = false;
+
+    private void PositionTooltipPopover() {
         if (this.ViewModel?.SelectedItem == null) return;
 
         var listBoxItem =
@@ -220,24 +261,23 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
             if (listBoxItem == null) return;
         }
 
-        // Position popover to the right of the selected item
-        this.InfoPopup.PlacementTarget = listBoxItem;
-        this.InfoPopup.Placement = PlacementMode.Right;
-        this.InfoPopup.HorizontalOffset = 0;
-        this.InfoPopup.VerticalOffset = 0;
+        // Position popover to the left of the selected item
+        this.TooltipPopup.PlacementTarget = listBoxItem;
+        this.TooltipPopup.Placement = PlacementMode.Left;
+        this.TooltipPopup.HorizontalOffset = 0;
+        this.TooltipPopup.VerticalOffset = 0;
     }
 
-    private async void InfoPopover_ActionClicked(object _, PaletteAction action) {
+    private async void ActionMenu_ActionClicked(object _, PaletteAction action) {
         if (this.ViewModel?.SelectedItem == null) return;
-
 
         try {
             await this._actionBinding.ExecuteActionAsync(action, this.ViewModel.SelectedItem);
             this.ViewModel.RecordUsage();
-            this.HidePopover();
+            this.HideActionsPopover();
             this.RequestClose();
         } catch (Exception ex) {
-            this.HidePopover();
+            this.HideActionsPopover();
             this.RequestClose();
             _ = MessageBox.Show(
                 ex.Message,

@@ -57,13 +57,11 @@ public static class CommandPaletteService {
         var actions = new List<PaletteAction> {
             new() {
                 Name = "Execute Command",
-                ExecuteAsync = async item => {
+                Execute = item => {
                     if (item is PostableCommandItem cmdItem) {
-                        await Task.Run(() => {
-                            var (success, error) = Commands.Execute(uiApp, cmdItem.Command);
-                            if (error is not null) throw error;
-                            if (success) commandHelper.UpdateCommandUsage(cmdItem.Command);
-                        });
+                        var (success, error) = Commands.Execute(uiApp, cmdItem.Command);
+                        if (error is not null) throw error;
+                        if (success) commandHelper.UpdateCommandUsage(cmdItem.Command);
                     }
                 },
                 CanExecute = item => {

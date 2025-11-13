@@ -20,11 +20,6 @@
     <SolidColorBrush x:Key="ControlFillColorDefaultBrush" Color="#27272A" />
     <SolidColorBrush x:Key="ControlStrokeColorDefaultBrush" Color="#3F3F46" />
 
-    <!-- Shadcn-style pill/badge colors -->
-    <SolidColorBrush x:Key="PillBackgroundBrush" Color="#27272A" />
-    <SolidColorBrush x:Key="PillBorderBrush" Color="#3F3F46" />
-    <SolidColorBrush x:Key="PillTextBrush" Color="#A1A1AA" />
-
     <!-- Configurable font sizes -->
     <system:Double x:Key="PaletteFontSizeSmall">10</system:Double>
     <system:Double x:Key="PaletteFontSizeNormal">11</system:Double>
@@ -39,4 +34,57 @@
 
     <!-- Configurable item padding -->
     <Thickness x:Key="PaletteItemPadding">10,5</Thickness>
+
+    <!-- Popover configuration (colors come from WPF.UI theme) -->
+    <!-- Use BackgroundFillColorSecondaryBrush for popover backgrounds -->
+    <!-- Use ControlStrokeColorDefaultBrush for popover borders -->
+    <Thickness x:Key="PopoverBorderThickness">1</Thickness>
+    <CornerRadius x:Key="PopoverCornerRadius">6</CornerRadius>
+    <Thickness x:Key="PopoverPadding">12,8,12,8</Thickness>
+    <system:Double x:Key="PopoverMinWidth">200</system:Double>
+    <system:Double x:Key="PopoverMaxWidth">500</system:Double>
+    <system:Double x:Key="PopoverShadowDepth">2</system:Double>
+    <system:Double x:Key="PopoverShadowBlur">8</system:Double>
+    <system:Double x:Key="PopoverShadowOpacity">0.5</system:Double>
+
+    <!-- Font family -->
+    <FontFamily x:Key="PaletteFontFamily">Segoe UI Variable</FontFamily>
+
+    <!-- Custom MenuItem Style with Shadcn colors -->
+    <Style TargetType="{x:Type ui:MenuItem}" BasedOn="{StaticResource {x:Type ui:MenuItem}}">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Foreground" Value="{StaticResource TextFillColorPrimaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource PaletteFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource PaletteFontSizeMedium}" />
+        <Setter Property="Padding" Value="12,8,12,8" />
+        <Style.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+                <Setter Property="Background" Value="{StaticResource BackgroundFillColorTertiaryBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Custom ContextMenu Style with Shadcn colors -->
+    <Style TargetType="{x:Type ContextMenu}">
+        <Setter Property="Background" Value="{StaticResource BackgroundFillColorSecondaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource ControlStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="{StaticResource PopoverBorderThickness}" />
+        <Setter Property="Padding" Value="0,4,0,4" />
+        <Setter Property="MinWidth" Value="{StaticResource PopoverMinWidth}" />
+        <Setter Property="MaxWidth" Value="{StaticResource PopoverMaxWidth}" />
+        <Setter Property="HasDropShadow" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ContextMenu}">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="{StaticResource PopoverCornerRadius}"
+                            Padding="{TemplateBinding Padding}">
+                        <ItemsPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

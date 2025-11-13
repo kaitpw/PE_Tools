@@ -35,10 +35,9 @@ public class CmdOpenView : BaseCmdPalette {
         new List<PaletteAction> {
             new() {
                 Name = "Open View",
-                ExecuteAsync = async item => {
+                Execute = item => {
                     if (item is ViewPaletteItem viewItem) {
                         try {
-                            // Must run on main thread, not Task.Run
                             uiApp.ActiveUIDocument.ActiveView = viewItem.View;
                         } catch (Exception ex) {
                             throw new InvalidOperationException(

@@ -31,7 +31,7 @@ public class CmdOpenFamily : BaseCmdPalette {
             // Default action: Open family for editing (no modifiers)
             new() {
                 Name = "Edit Family",
-                ExecuteAsync = async item => {
+                Execute = item => {
                     if (item is FamilyPaletteItem familyItem) {
                         try {
                             var family = familyItem.Family;
@@ -47,8 +47,9 @@ public class CmdOpenFamily : BaseCmdPalette {
                                 var tempPath = Path.Combine(Path.GetTempPath(), $"{famDoc.Title}_{Guid.NewGuid()}.rfa");
                                 famDoc.SaveAs(tempPath);
                                 _ = uiApp.OpenAndActivateDocument(tempPath);
-                            } else
+                            } else {
                                 _ = uiApp.OpenAndActivateDocument(famDoc.PathName);
+                            }
                         } catch (Autodesk.Revit.Exceptions.InvalidOperationException ex) {
                             throw new InvalidOperationException(
                                 $"'{familyItem.Family.Name}' document may be read-only or workshared.", ex);
@@ -69,18 +70,16 @@ public class CmdOpenFamily : BaseCmdPalette {
                 Name = "Select Instances",
                 Modifiers = ModifierKeys.Control,
                 MouseButton = MouseButton.Left,
-                ExecuteAsync = async item => {
+                Execute = item => {
                     if (item is FamilyPaletteItem familyItem) {
                         try {
-                            // Query can run async
-                            var instances = await Task.Run(() => new FilteredElementCollector(doc)
+                            var instances = new FilteredElementCollector(doc)
                                 .OfClass(typeof(FamilyInstance))
                                 .Cast<FamilyInstance>()
                                 .Where(fi => fi.Symbol.Family.Id == familyItem.Family.Id)
                                 .Select(fi => fi.Id)
-                                .ToList());
+                                .ToList();
 
-                            // Selection must be set on main thread
                             uiApp.ActiveUIDocument.Selection.SetElementIds(instances);
                         } catch (Exception ex) {
                             throw new InvalidOperationException(

@@ -19,8 +19,11 @@ public record PaletteAction {
     /// <summary> Keyboard key that triggers this action (null for mouse-only) </summary>
     public Key? Key { get; init; }
 
+    /// <summary> Synchronous execution function </summary>
+    public Action<ISelectableItem>? Execute { get; init; }
+
     /// <summary> Async execution function </summary>
-    public Func<ISelectableItem, Task> ExecuteAsync { get; init; } = null!;
+    public Func<ISelectableItem, Task>? ExecuteAsync { get; init; }
 
     /// <summary> Optional predicate to check if action can execute </summary>
     public Func<ISelectableItem, bool> CanExecute { get; init; } = _ => true;
