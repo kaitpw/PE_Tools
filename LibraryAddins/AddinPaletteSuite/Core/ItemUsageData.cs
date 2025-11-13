@@ -1,4 +1,4 @@
-namespace AddinCmdPalette.Services;
+namespace AddinPaletteSuite.Core;
 
 /// <summary>
 ///     Record representing item usage data for storage

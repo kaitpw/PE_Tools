@@ -1,10 +1,11 @@
-using AddinCmdPalette.Actions;
-using AddinCmdPalette.Commands;
-using AddinCmdPalette.Core;
-using AddinCmdPalette.Helpers;
-using AddinCmdPalette.Services;
+using AddinPaletteSuite.Core.Actions;
+using AddinPaletteSuite.Commands;
+using AddinPaletteSuite.Core;
+using AddinPaletteSuite.Helpers;
+using AddinPaletteSuite.Core.Services;
 using PeRevit.Lib;
 using PeServices.Storage;
+using AddinPaletteSuite.Core.Ui;
 
 namespace PE_Tools;
 
@@ -41,7 +42,7 @@ public static class CommandPaletteService {
 
         // Convert to ISelectableItem adapters
         var selectableItems = commandItems
-            .Cast<ISelectableItem>()
+            .Cast<IPaletteListItem>()
             .ToList();
 
         // Create search filter service

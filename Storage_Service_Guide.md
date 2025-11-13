@@ -83,7 +83,8 @@ var outputPath = storage.Output().GetFolderPath();
 
 ## Global Storage
 
-For cross-addin shared data, use the `Global()` manager. All global data is stored in the `Global\` directory:
+For cross-addin shared data, use the `Global()` manager. All global data is
+stored in the `Global\` directory:
 
 ```csharp
 // Global settings (Global/settings.json)
@@ -204,5 +205,5 @@ if (!cache.IsCacheValid(maxAgeMinutes: 60, validator: c => c.Items.Any())) {
 - `Library/PeServices/Storage/Storage.md` - Detailed design document
 - `LibraryAddins/AddinFamilyFoundrySuite/Cmds/CmdFFManager.cs` - Full command
   example
-- `LibraryAddins/AddinCmdPalette/Helpers/PostableCommandHelper.cs` - CSV state
+- `LibraryAddins/AddinPaletteSuite/Helpers/PostableCommandHelper.cs` - CSV state
   usage example

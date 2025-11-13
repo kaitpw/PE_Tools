@@ -1,15 +1,15 @@
-using AddinCmdPalette.Services;
+using AddinPaletteSuite.Core.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 
-namespace AddinCmdPalette.Core;
+namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
 ///     Generic ViewModel for the SelectablePalette window
 /// </summary>
 public partial class SelectablePaletteViewModel : ObservableObject {
-    private readonly List<ISelectableItem> _allItems;
+    private readonly List<IPaletteListItem> _allItems;
     private readonly SearchFilterService _searchService;
 
     /// <summary> Current search text </summary>
@@ -20,11 +20,11 @@ public partial class SelectablePaletteViewModel : ObservableObject {
 
 #nullable enable
     /// <summary> Currently selected item </summary>
-    [ObservableProperty] private ISelectableItem? _selectedItem;
+    [ObservableProperty] private IPaletteListItem? _selectedItem;
 #nullable disable
 
     public SelectablePaletteViewModel(
-        IEnumerable<ISelectableItem> items,
+        IEnumerable<IPaletteListItem> items,
         SearchFilterService searchService
     ) {
         this._allItems = items.ToList();
@@ -33,7 +33,7 @@ public partial class SelectablePaletteViewModel : ObservableObject {
         // Load usage data if service supports it
         this._searchService.LoadUsageData();
 
-        this.FilteredItems = new ObservableCollection<ISelectableItem>();
+        this.FilteredItems = new ObservableCollection<IPaletteListItem>();
 
         // Initial load - show all items
         this.FilterCommands();
@@ -44,7 +44,7 @@ public partial class SelectablePaletteViewModel : ObservableObject {
     }
 
     /// <summary> Filtered list of items based on search text </summary>
-    public ObservableCollection<ISelectableItem> FilteredItems { get; }
+    public ObservableCollection<IPaletteListItem> FilteredItems { get; }
 
     [RelayCommand]
     private void MoveSelectionUp() {
@@ -85,7 +85,7 @@ public partial class SelectablePaletteViewModel : ObservableObject {
 
     partial void OnSearchTextChanged(string value) => this.FilterCommands();
 
-    partial void OnSelectedItemChanged(ISelectableItem value) {
+    partial void OnSelectedItemChanged(IPaletteListItem value) {
         // Clear previous selection
         foreach (var item in this.FilteredItems) {
             if (item != value)

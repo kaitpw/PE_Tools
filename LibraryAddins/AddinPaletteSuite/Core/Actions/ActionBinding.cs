@@ -1,7 +1,8 @@
-using AddinCmdPalette.Core;
+using AddinPaletteSuite.Core;
+using AddinPaletteSuite.Core.Ui;
 using System.Windows.Input;
 
-namespace AddinCmdPalette.Actions;
+namespace AddinPaletteSuite.Core.Actions;
 
 /// <summary>
 ///     Manages action registration and execution for palette items
@@ -22,7 +23,7 @@ public class ActionBinding {
     /// <summary>
     ///     Finds and executes the matching action for a keyboard event
     /// </summary>
-    public async Task<bool> TryExecuteAsync(ISelectableItem item, Key key, ModifierKeys modifiers) {
+    public async Task<bool> TryExecuteAsync(IPaletteListItem item, Key key, ModifierKeys modifiers) {
         var action = this.FindMatchingAction(key, modifiers, null);
         if (action == null || !action.CanExecute(item)) return false;
 
@@ -33,7 +34,7 @@ public class ActionBinding {
     /// <summary>
     ///     Finds and executes the matching action for a mouse event
     /// </summary>
-    public async Task<bool> TryExecuteAsync(ISelectableItem item, MouseButton button, ModifierKeys modifiers) {
+    public async Task<bool> TryExecuteAsync(IPaletteListItem item, MouseButton button, ModifierKeys modifiers) {
         var action = this.FindMatchingAction(null, modifiers, button);
         if (action == null || !action.CanExecute(item)) return false;
 
@@ -44,13 +45,13 @@ public class ActionBinding {
     /// <summary>
     ///     Gets all available actions for a given item (filtered by CanExecute)
     /// </summary>
-    public IEnumerable<PaletteAction> GetAvailableActions(ISelectableItem item) =>
+    public IEnumerable<PaletteAction> GetAvailableActions(IPaletteListItem item) =>
         this._actions.Where(a => a.CanExecute(item));
 
     /// <summary>
     ///     Executes a specific action for a given item
     /// </summary>
-    public async Task ExecuteActionAsync(PaletteAction action, ISelectableItem item) {
+    public async Task ExecuteActionAsync(PaletteAction action, IPaletteListItem item) {
         if (!action.CanExecute(item))
             throw new InvalidOperationException($"Action '{action.Name}' cannot execute for this item");
 
@@ -60,7 +61,7 @@ public class ActionBinding {
     /// <summary>
     ///     Internal helper that executes either synchronous or asynchronous action
     /// </summary>
-    private async Task ExecuteActionInternalAsync(PaletteAction action, ISelectableItem item) {
+    private async Task ExecuteActionInternalAsync(PaletteAction action, IPaletteListItem item) {
         if (action.ExecuteAsync != null) {
             await action.ExecuteAsync(item);
         } else if (action.Execute != null) {

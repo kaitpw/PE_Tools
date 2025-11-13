@@ -5,17 +5,19 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 
-namespace AddinCmdPalette.Core;
+namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
 ///     Wrapper window that handles all ephemeral window lifecycle management:
 ///     Alt+Tab hiding, window deactivation detection, focus restoration, and closing logic.
 /// </summary>
-public class EphemeralWindow : Window {
+public class EphemeralWindow : Window
+{
     private readonly UserControl _contentControl;
     private bool _isClosing;
 
-    public EphemeralWindow(UserControl content, string title = "Palette") {
+    public EphemeralWindow(UserControl content, string title = "Palette")
+    {
         this._contentControl = content;
         this.Title = title;
         this.Width = 600;
@@ -38,10 +40,13 @@ public class EphemeralWindow : Window {
 
     private void OnContentCloseRequested(object sender, EventArgs e) => this.CloseWindow();
 
-    public void CloseWindow(bool restoreFocus = true) {
+    public void CloseWindow(bool restoreFocus = true)
+    {
         // Debug.WriteLine($"[EphemeralWindow] CloseWindow called: restoreFocus={restoreFocus}, _isClosing={this._isClosing}");
-        try {
-            if (this._isClosing) {
+        try
+        {
+            if (this._isClosing)
+            {
                 // Debug.WriteLine("[EphemeralWindow] CloseWindow: Already closing, aborting");
                 return;
             }
@@ -53,7 +58,8 @@ public class EphemeralWindow : Window {
                 closeable.CloseRequested -= this.OnContentCloseRequested;
 
             // Restore focus to Revit before closing (unless user is switching to another app)
-            if (restoreFocus) {
+            if (restoreFocus)
+            {
                 // Debug.WriteLine("[EphemeralWindow] CloseWindow: Restoring focus to Revit");
                 this.RestoreRevitFocus();
             }
@@ -61,20 +67,25 @@ public class EphemeralWindow : Window {
             // Debug.WriteLine("[EphemeralWindow] CloseWindow: Skipping focus restore (user switching apps)");
             // Debug.WriteLine("[EphemeralWindow] CloseWindow: Calling Window.Close()");
             this.Close();
-        } catch {
+        }
+        catch
+        {
             // Debug.WriteLine($"[EphemeralWindow] CloseWindow: Window already closing exception: {ex.Message}");
         }
     }
 
-    private void RestoreRevitFocus() {
-        try {
+    private void RestoreRevitFocus()
+    {
+        try
+        {
             // Get the main Revit window handle
             var revitProcess = Process.GetCurrentProcess();
             var revitHandle = revitProcess.MainWindowHandle;
 
             // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: Process={revitProcess.ProcessName}, Handle={revitHandle}");
 
-            if (revitHandle != IntPtr.Zero) {
+            if (revitHandle != IntPtr.Zero)
+            {
                 var revitTitle = this.GetWindowTitle(revitHandle);
                 // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: Revit window title='{revitTitle}'");
 
@@ -86,20 +97,24 @@ public class EphemeralWindow : Window {
                 // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: Current foreground window={currentForeground} (expected {revitHandle})");
             }
             // Debug.WriteLine("[EphemeralWindow] RestoreRevitFocus: Revit handle is zero, cannot restore focus");
-        } catch {
+        }
+        catch
+        {
             // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: Exception: {ex.Message}");
             // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: StackTrace: {ex.StackTrace}");
         }
     }
 
-    protected override void OnClosing(CancelEventArgs e) {
+    protected override void OnClosing(CancelEventArgs e)
+    {
         this._isClosing = true;
         base.OnClosing(e);
     }
 
     #region Hiding from Alt+Tab and Window Messages
 
-    protected override void OnSourceInitialized(EventArgs e) {
+    protected override void OnSourceInitialized(EventArgs e)
+    {
         base.OnSourceInitialized(e);
 
         // Remove window from Alt+Tab
@@ -115,15 +130,18 @@ public class EphemeralWindow : Window {
         source?.AddHook(this.WndProc);
     }
 
-    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled) {
+    private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
         const int WM_ACTIVATE = 0x0006;
         const int WA_INACTIVE = 0;
 
-        if (msg == WM_ACTIVATE) {
+        if (msg == WM_ACTIVATE)
+        {
             var activateType = (int)wParam & 0xFFFF;
             // Debug.WriteLine($"[EphemeralWindow] WM_ACTIVATE: type={activateType} (0=inactive, 1=active, 2=click)");
 
-            if (activateType == WA_INACTIVE && !this._isClosing) {
+            if (activateType == WA_INACTIVE && !this._isClosing)
+            {
                 // lParam contains the handle of the window being activated (may be zero)
                 var newActiveWindow = lParam;
                 var revitHandle = Process.GetCurrentProcess().MainWindowHandle;
@@ -154,10 +172,12 @@ public class EphemeralWindow : Window {
 
                 // If target is our own window or still zero, it's likely clicking outside or Alt+Tab
                 // In that case, check if foreground is another app
-                if (targetWindow == ourWindowHandle || targetWindow == IntPtr.Zero) {
+                if (targetWindow == ourWindowHandle || targetWindow == IntPtr.Zero)
+                {
                     if (actualForegroundWindow != IntPtr.Zero &&
                         actualForegroundWindow != ourWindowHandle &&
-                        actualForegroundWindow != revitHandle) {
+                        actualForegroundWindow != revitHandle)
+                    {
                         // Foreground is another app - user is switching away
                         targetWindow = actualForegroundWindow;
                     }
@@ -187,7 +207,8 @@ public class EphemeralWindow : Window {
                 // Debug.WriteLine($"[EphemeralWindow] Action: {actionType} → Close (restoreFocus={shouldRestoreFocus})");
 
                 // Use Dispatcher to avoid issues with closing during message processing
-                _ = this.Dispatcher.BeginInvoke(new Action(() => {
+                _ = this.Dispatcher.BeginInvoke(new Action(() =>
+                {
                     if (!this._isClosing) this.CloseWindow(shouldRestoreFocus);
                 }));
             }
@@ -196,28 +217,36 @@ public class EphemeralWindow : Window {
         return IntPtr.Zero;
     }
 
-    private string GetWindowTitle(IntPtr hwnd) {
+    private string GetWindowTitle(IntPtr hwnd)
+    {
         if (hwnd == IntPtr.Zero) return "null";
 
-        try {
+        try
+        {
             const int maxLength = 256;
             var title = new StringBuilder(maxLength);
             _ = GetWindowText(hwnd, title, maxLength);
             var titleText = title.ToString();
 
-            if (string.IsNullOrEmpty(titleText)) {
+            if (string.IsNullOrEmpty(titleText))
+            {
                 // Try to get process name instead
                 _ = GetWindowThreadProcessId(hwnd, out var processId);
-                try {
+                try
+                {
                     var process = Process.GetProcessById((int)processId);
                     return $"[Process: {process.ProcessName}]";
-                } catch {
+                }
+                catch
+                {
                     return $"[HWND: {hwnd}]";
                 }
             }
 
             return titleText;
-        } catch {
+        }
+        catch
+        {
             return $"[HWND: {hwnd}]";
         }
     }
@@ -253,6 +282,7 @@ public class EphemeralWindow : Window {
 /// <summary>
 ///     Interface for UserControls that can request their parent window to close.
 /// </summary>
-public interface ICloseRequestable {
+public interface ICloseRequestable
+{
     event EventHandler CloseRequested;
 }

@@ -1,4 +1,4 @@
-using AddinCmdPalette.Actions;
+using AddinPaletteSuite.Core.Actions;
 using System.Collections;
 using System.Windows;
 using System.Windows.Controls.Primitives;
@@ -7,17 +7,20 @@ using Wpf.Ui.Controls;
 
 #nullable enable
 
-namespace AddinCmdPalette.Core;
+namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
 ///     Context menu component for displaying available actions with arrow key navigation
 /// </summary>
-public class ActionMenu : IPopoverExit {
+public class ActionMenu : IPopoverExit
+{
     private readonly System.Windows.Controls.ContextMenu _contextMenu;
     private IEnumerable? _actions;
 
-    public ActionMenu() {
-        this._contextMenu = new System.Windows.Controls.ContextMenu {
+    public ActionMenu()
+    {
+        this._contextMenu = new System.Windows.Controls.ContextMenu
+        {
             StaysOpen = false,
             PlacementTarget = null,
             Placement = PlacementMode.Right,
@@ -37,14 +40,17 @@ public class ActionMenu : IPopoverExit {
 
     public UIElement? ReturnFocusTarget { get; set; }
 
-    public void RequestExit() {
+    public void RequestExit()
+    {
         this._contextMenu.IsOpen = false;
         _ = this.ReturnFocusTarget?.Focus();
     }
 
-    public IEnumerable? Actions {
+    public IEnumerable? Actions
+    {
         get => this._actions;
-        set {
+        set
+        {
             this._actions = value;
             this.RebuildMenu();
         }
@@ -53,14 +59,16 @@ public class ActionMenu : IPopoverExit {
     /// <summary>
     ///     Shows the action menu positioned to the right of the target element
     /// </summary>
-    public void Show(UIElement placementTarget) {
+    public void Show(UIElement placementTarget)
+    {
         if (this._actions == null) return;
 
         this._contextMenu.PlacementTarget = placementTarget;
         this._contextMenu.IsOpen = true;
 
         // Focus the first menu item after menu opens
-        _ = this._contextMenu.Dispatcher.BeginInvoke(new Action(() => {
+        _ = this._contextMenu.Dispatcher.BeginInvoke(new Action(() =>
+        {
             if (this._contextMenu.Items.Count > 0 && this._contextMenu.Items[0] is Wpf.Ui.Controls.MenuItem firstItem)
                 _ = firstItem.Focus();
         }), System.Windows.Threading.DispatcherPriority.Loaded);
@@ -71,20 +79,24 @@ public class ActionMenu : IPopoverExit {
     /// </summary>
     public void Hide() => this._contextMenu.IsOpen = false;
 
-    private void RebuildMenu() {
+    private void RebuildMenu()
+    {
         this._contextMenu.Items.Clear();
 
         if (this._actions == null) return;
 
-        foreach (var action in this._actions) {
+        foreach (var action in this._actions)
+        {
             if (action is not PaletteAction paletteAction) continue;
 
-            var menuItem = new Wpf.Ui.Controls.MenuItem {
+            var menuItem = new Wpf.Ui.Controls.MenuItem
+            {
                 Header = paletteAction.Name,
                 InputGestureText = this.FormatShortcut(paletteAction)
             };
 
-            menuItem.Click += (_, _) => {
+            menuItem.Click += (_, _) =>
+            {
                 this.ActionClicked?.Invoke(this, paletteAction);
                 this.Hide();
             };
@@ -93,36 +105,43 @@ public class ActionMenu : IPopoverExit {
         }
     }
 
-    private void ContextMenu_PreviewKeyDown(object sender, KeyEventArgs e) {
-        switch (e.Key) {
-        case Key.Escape:
-            e.Handled = true;
-            this.RequestExit();
-            break;
-        case Key.Left:
-            e.Handled = true;
-            this.RequestExit();
-            break;
+    private void ContextMenu_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Escape:
+                e.Handled = true;
+                this.RequestExit();
+                break;
+            case Key.Left:
+                e.Handled = true;
+                this.RequestExit();
+                break;
         }
     }
 
-    private string FormatShortcut(PaletteAction action) {
+    private string FormatShortcut(PaletteAction action)
+    {
         var parts = new List<string>();
 
-        if (action.Modifiers != ModifierKeys.None) {
+        if (action.Modifiers != ModifierKeys.None)
+        {
             if ((action.Modifiers & ModifierKeys.Control) != 0) parts.Add("Ctrl");
             if ((action.Modifiers & ModifierKeys.Shift) != 0) parts.Add("Shift");
             if ((action.Modifiers & ModifierKeys.Alt) != 0) parts.Add("Alt");
         }
 
-        if (action.Key.HasValue) {
+        if (action.Key.HasValue)
+        {
             var keyStr = action.Key.Value.ToString();
             if (keyStr == "Return") keyStr = "Enter";
             parts.Add(keyStr);
         }
 
-        if (action.MouseButton.HasValue) {
-            var buttonStr = action.MouseButton.Value switch {
+        if (action.MouseButton.HasValue)
+        {
+            var buttonStr = action.MouseButton.Value switch
+            {
                 MouseButton.Left => "Click",
                 MouseButton.Right => "Right-Click",
                 MouseButton.Middle => "Middle-Click",

@@ -1,6 +1,6 @@
 <Project>
   <ItemGroup>
-    <!-- IMPORTANT: Include all .cs files under AddinCmdPalette recursively -->
+    <!-- IMPORTANT: Include all .cs files under AddinPaletteSuite recursively -->
     <Compile Include="$(MSBuildThisFileDirectory)\**\*.cs" />
     
     <!-- WPF: Include XAML files as Page items for proper compilation -->

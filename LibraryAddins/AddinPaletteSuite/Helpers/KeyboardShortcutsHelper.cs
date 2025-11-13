@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Xml.Linq;
 
-namespace AddinCmdPalette.Helpers;
+namespace AddinPaletteSuite.Helpers;
 
 /// <summary>
 ///     Service for parsing and managing Revit keyboard shortcuts from XML file

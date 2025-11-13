@@ -1,9 +1,9 @@
-using AddinCmdPalette.Actions;
-using AddinCmdPalette.Core;
-using AddinCmdPalette.Services;
+using AddinPaletteSuite.Core.Ui;
+using AddinPaletteSuite.Core.Actions;
+using AddinPaletteSuite.Core.Services;
 using PeServices.Storage;
 
-namespace PE_Tools;
+namespace AddinPaletteSuite.Core;
 
 /// <summary>
 ///     Base class for commands that open palette windows
@@ -34,7 +34,7 @@ public abstract class BaseCmdPalette : IExternalCommand {
         }
     }
 
-    public abstract string GetPersistenceKey(ISelectableItem item);
-    public abstract IEnumerable<ISelectableItem> GetItems(Document doc);
+    public abstract string GetPersistenceKey(IPaletteListItem item);
+    public abstract IEnumerable<IPaletteListItem> GetItems(Document doc);
     public abstract IEnumerable<PaletteAction> GetActions(UIApplication uiApp);
 }

@@ -1,11 +1,11 @@
-using AddinCmdPalette.Commands;
-using AddinCmdPalette.Services;
+using AddinPaletteSuite.Commands;
+using AddinPaletteSuite.Core;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeServices.Storage.Core;
 
-namespace AddinCmdPalette.Helpers;
+namespace AddinPaletteSuite.Helpers;
 
 /// <summary>
 ///     Service for managing PostableCommand enumeration values and metadata

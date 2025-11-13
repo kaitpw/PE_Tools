@@ -1,15 +1,16 @@
-using AddinCmdPalette.Actions;
-using AddinCmdPalette.Core;
+using AddinPaletteSuite.Core.Actions;
+using AddinPaletteSuite.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media.Imaging;
-
+using AddinPaletteSuite.Core;
+using AddinPaletteSuite.Core.Ui;
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdOpenSheet : BaseCmdPalette {
     public override string TypeName => "sheet";
 
-    public override IEnumerable<ISelectableItem> GetItems(Document doc) =>
+    public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
         new FilteredElementCollector(doc)
             .OfClass(typeof(ViewSheet))
             .Cast<ViewSheet>()
@@ -17,7 +18,7 @@ public class CmdOpenSheet : BaseCmdPalette {
             .ToList()
             .Select(sheet => new SheetPaletteItem(sheet));
 
-    public override string GetPersistenceKey(ISelectableItem item) {
+    public override string GetPersistenceKey(IPaletteListItem item) {
         if (item is SheetPaletteItem sheetItem)
             return sheetItem.Sheet.Id.ToString();
         return item.PrimaryText;
@@ -45,7 +46,7 @@ public class CmdOpenSheet : BaseCmdPalette {
 /// <summary>
 ///     Adapter that wraps Revit ViewSheet to implement ISelectableItem
 /// </summary>
-public partial class SheetPaletteItem(ViewSheet sheet) : ObservableObject, ISelectableItem {
+public partial class SheetPaletteItem(ViewSheet sheet) : ObservableObject, IPaletteListItem {
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
     public ViewSheet Sheet { get; } = sheet;

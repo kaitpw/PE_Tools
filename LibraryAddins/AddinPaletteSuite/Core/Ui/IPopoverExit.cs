@@ -1,11 +1,12 @@
 using System.Windows;
 
-namespace AddinCmdPalette.Core;
+namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
 ///     Interface for popovers that can exit and return focus to their parent
 /// </summary>
-public interface IPopoverExit {
+public interface IPopoverExit
+{
     /// <summary>
     ///     Event raised when the popover requests to exit
     /// </summary>

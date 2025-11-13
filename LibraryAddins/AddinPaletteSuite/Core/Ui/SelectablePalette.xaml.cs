@@ -1,10 +1,10 @@
-using AddinCmdPalette.Actions;
+using AddinPaletteSuite.Core.Actions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
-namespace AddinCmdPalette.Core;
+namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
 ///     Interaction logic for SelectablePalette.xaml
@@ -39,12 +39,12 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
         this.ItemListBox.ItemMouseLeftButtonUp += async (_, e) => {
             if (e.OriginalSource is not FrameworkElement source) return;
 
-            var item = source.DataContext as ISelectableItem;
+            var item = source.DataContext as IPaletteListItem;
             if (item == null) {
                 // Try to find the ListBoxItem parent
                 var parent = source.Parent as FrameworkElement;
                 while (parent is not null and not ListBoxItem) parent = parent.Parent as FrameworkElement;
-                if (parent is ListBoxItem listBoxItem) item = listBoxItem.DataContext as ISelectableItem;
+                if (parent is ListBoxItem listBoxItem) item = listBoxItem.DataContext as IPaletteListItem;
             }
 
             if (item == null) return;

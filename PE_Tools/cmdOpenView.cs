@@ -1,16 +1,16 @@
-using AddinCmdPalette.Actions;
-using AddinCmdPalette.Core;
+using AddinPaletteSuite.Core.Actions;
+using AddinPaletteSuite.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Nice3point.Revit.Extensions;
 using System.Windows.Media.Imaging;
-
+using AddinPaletteSuite.Core.Ui;
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdOpenView : BaseCmdPalette {
     public override string TypeName => "view";
 
-    public override IEnumerable<ISelectableItem> GetItems(Document doc) =>
+    public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
         // Get all views (excluding view templates, legends, sheets, schedules, drafting views, and groups)
         new FilteredElementCollector(doc)
             .OfClass(typeof(View))
@@ -25,7 +25,7 @@ public class CmdOpenView : BaseCmdPalette {
             .ToList()
             .Select(view => new ViewPaletteItem(view));
 
-    public override string GetPersistenceKey(ISelectableItem item) {
+    public override string GetPersistenceKey(IPaletteListItem item) {
         if (item is ViewPaletteItem viewItem)
             return viewItem.View.Id.ToString();
         return item.PrimaryText;
@@ -60,7 +60,7 @@ public class CmdOpenView : BaseCmdPalette {
 /// <summary>
 ///     Adapter that wraps Revit View to implement ISelectableItem
 /// </summary>
-public partial class ViewPaletteItem(View view) : ObservableObject, ISelectableItem {
+public partial class ViewPaletteItem(View view) : ObservableObject, IPaletteListItem {
     private readonly string _discipline = view.HasViewDiscipline()
         ? view.Discipline.ToString()
         : string.Empty;

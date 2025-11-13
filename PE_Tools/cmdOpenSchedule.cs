@@ -1,16 +1,16 @@
-using AddinCmdPalette.Actions;
-using AddinCmdPalette.Core;
+using AddinPaletteSuite.Core.Actions;
+using AddinPaletteSuite.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Nice3point.Revit.Extensions;
 using System.Windows.Media.Imaging;
-
+using AddinPaletteSuite.Core.Ui;
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdOpenSchedule : BaseCmdPalette {
     public override string TypeName => "Schedule";
 
-    public override IEnumerable<ISelectableItem> GetItems(Document doc) =>
+    public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
         // Get all schedule views (ViewSchedule is a subclass of View). Exclude templates and revision schedules
         new FilteredElementCollector(doc)
             .OfClass(typeof(ViewSchedule))
@@ -20,7 +20,7 @@ public class CmdOpenSchedule : BaseCmdPalette {
             .ToList()
             .Select(schedule => new SchedulePaletteItem(schedule));
 
-    public override string GetPersistenceKey(ISelectableItem item) {
+    public override string GetPersistenceKey(IPaletteListItem item) {
         if (item is SchedulePaletteItem scheduleItem)
             return scheduleItem.Schedule.Id.ToString();
         return item.PrimaryText;
@@ -49,7 +49,7 @@ public class CmdOpenSchedule : BaseCmdPalette {
 /// <summary>
 ///     Adapter that wraps Revit ViewSchedule to implement ISelectableItem
 /// </summary>
-public partial class SchedulePaletteItem(ViewSchedule schedule) : ObservableObject, ISelectableItem {
+public partial class SchedulePaletteItem(ViewSchedule schedule) : ObservableObject, IPaletteListItem {
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;
     public ViewSchedule Schedule { get; } = schedule;

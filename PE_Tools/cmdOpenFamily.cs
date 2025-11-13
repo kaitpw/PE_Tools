@@ -1,16 +1,16 @@
-using AddinCmdPalette.Actions;
-using AddinCmdPalette.Core;
+using AddinPaletteSuite.Core.Actions;
+using AddinPaletteSuite.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-
+using AddinPaletteSuite.Core.Ui;
 namespace PE_Tools;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdOpenFamily : BaseCmdPalette {
     public override string TypeName => "family";
 
-    public override IEnumerable<ISelectableItem> GetItems(Document doc) =>
+    public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
         new FilteredElementCollector(doc)
             .OfClass(typeof(Family))
             .Cast<Family>()
@@ -18,7 +18,7 @@ public class CmdOpenFamily : BaseCmdPalette {
             .ToList()
             .Select(family => new FamilyPaletteItem(family, doc));
 
-    public override string GetPersistenceKey(ISelectableItem item) {
+    public override string GetPersistenceKey(IPaletteListItem item) {
         if (item is FamilyPaletteItem familyItem)
             return familyItem.Family.Id.ToString();
         return item.PrimaryText;
@@ -98,7 +98,7 @@ public class CmdOpenFamily : BaseCmdPalette {
 /// <summary>
 ///     Adapter that wraps Revit Family to implement ISelectableItem
 /// </summary>
-public partial class FamilyPaletteItem : ObservableObject, ISelectableItem {
+public partial class FamilyPaletteItem : ObservableObject, IPaletteListItem {
     private readonly Document _doc;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private double _searchScore;

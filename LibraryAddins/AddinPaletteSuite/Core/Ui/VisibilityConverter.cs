@@ -3,14 +3,16 @@ using System.Windows.Data;
 using System.Windows.Media.Imaging;
 using Visibility = System.Windows.Visibility;
 
-namespace AddinCmdPalette.Core;
+namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary> Coerce value to a display state </summary>
-public class VisibilityConverter : IValueConverter {
+public class VisibilityConverter : IValueConverter
+{
     public static readonly VisibilityConverter Instance = new();
 
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value switch {
+        value switch
+        {
             bool boolValue => boolValue
                 ? Visibility.Visible
                 : Visibility.Collapsed,

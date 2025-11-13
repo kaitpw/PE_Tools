@@ -5,9 +5,10 @@ using System.Windows.Input;
 using System.Windows.Media;
 using WpfUiRichTextBox = Wpf.Ui.Controls.RichTextBox;
 
-namespace AddinCmdPalette.Core;
+namespace AddinPaletteSuite.Core.Ui;
 
-public class SelectableTextBox : UserControl, IPopoverExit {
+public class SelectableTextBox : UserControl, IPopoverExit
+{
     public static readonly DependencyProperty TooltipTextProperty = DependencyProperty.Register(
         nameof(TooltipText),
         typeof(string),
@@ -23,33 +24,39 @@ public class SelectableTextBox : UserControl, IPopoverExit {
     private bool _isInitialized;
     private WpfUiRichTextBox _richTextBox;
 
-    public SelectableTextBox() {
+    public SelectableTextBox()
+    {
         this.Focusable = true;
         this.InitializeControls();
     }
 
-    public string TooltipText {
+    public string TooltipText
+    {
         get => (string)this.GetValue(TooltipTextProperty);
         set => this.SetValue(TooltipTextProperty, value);
     }
 
-    public UIElement? ReturnFocusTarget {
+    public UIElement? ReturnFocusTarget
+    {
         get => (UIElement?)this.GetValue(ReturnFocusTargetProperty);
         set => this.SetValue(ReturnFocusTargetProperty, value);
     }
 
     public event EventHandler? ExitRequested;
 
-    public void RequestExit() {
+    public void RequestExit()
+    {
         this.ExitRequested?.Invoke(this, EventArgs.Empty);
         _ = this.ReturnFocusTarget?.Focus();
     }
 
-    private void InitializeControls() {
+    private void InitializeControls()
+    {
         if (this._isInitialized) return;
 
         // Create Border using theme resources for consistent popover styling
-        var border = new Border {
+        var border = new Border
+        {
             Background =
                 (Brush)(this.TryFindResource("BackgroundFillColorPrimaryBrush") ??
                         new SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 24, 27))),
@@ -62,7 +69,8 @@ public class SelectableTextBox : UserControl, IPopoverExit {
         };
 
         // Use Wpf.Ui RichTextBox with theme-based styling
-        this._richTextBox = new WpfUiRichTextBox {
+        this._richTextBox = new WpfUiRichTextBox
+        {
             IsReadOnly = true,
             Focusable = true,
             IsTextSelectionEnabled = true,
@@ -85,31 +93,36 @@ public class SelectableTextBox : UserControl, IPopoverExit {
         this._isInitialized = true;
     }
 
-    public void FocusTooltip() {
+    public void FocusTooltip()
+    {
         if (this._richTextBox == null) return;
 
         Debug.WriteLine("[Tooltip] Focus");
         _ = this._richTextBox.Focus();
 
         // Select all text for easy copying
-        if (this._richTextBox.Document != null) {
+        if (this._richTextBox.Document != null)
+        {
             this._richTextBox.Selection.Select(
                 this._richTextBox.Document.ContentStart,
                 this._richTextBox.Document.ContentEnd);
         }
     }
 
-    private static void OnTooltipTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
+    private static void OnTooltipTextChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
         if (d is SelectableTextBox panel) panel.UpdateTooltipText();
     }
 
-    private void UpdateTooltipText() {
+    private void UpdateTooltipText()
+    {
         if (this._richTextBox == null) return;
 
         var text = this.TooltipText ?? string.Empty;
 
         // Create a simple FlowDocument with the text
-        var flowDoc = new FlowDocument {
+        var flowDoc = new FlowDocument
+        {
             PagePadding = new Thickness(0),
             TextAlignment = TextAlignment.Left,
             FontFamily = new FontFamily("Segoe UI Variable"),
@@ -117,7 +130,8 @@ public class SelectableTextBox : UserControl, IPopoverExit {
             Foreground = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White)
         };
 
-        var paragraph = new Paragraph(new Run(text)) {
+        var paragraph = new Paragraph(new Run(text))
+        {
             Margin = new Thickness(0),
             LineHeight = double.NaN, // Auto line height
             FontFamily = new FontFamily("Segoe UI Variable"),
@@ -131,25 +145,29 @@ public class SelectableTextBox : UserControl, IPopoverExit {
         Debug.WriteLine($"[Tooltip] Updated text: '{text}' (length: {text.Length})");
     }
 
-    private void RichTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
-        switch (e.Key) {
-        case Key.Escape:
-            e.Handled = true;
-            this.RequestExit();
-            break;
-        case Key.Right:
-            // Right arrow exits if cursor is at end and no selection
-            if (this._richTextBox.Selection.IsEmpty &&
-                this._richTextBox.CaretPosition.CompareTo(this._richTextBox.Document.ContentEnd) >= 0) {
+    private void RichTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case Key.Escape:
                 e.Handled = true;
                 this.RequestExit();
-            }
+                break;
+            case Key.Right:
+                // Right arrow exits if cursor is at end and no selection
+                if (this._richTextBox.Selection.IsEmpty &&
+                    this._richTextBox.CaretPosition.CompareTo(this._richTextBox.Document.ContentEnd) >= 0)
+                {
+                    e.Handled = true;
+                    this.RequestExit();
+                }
 
-            break;
+                break;
         }
     }
 
-    private void RichTextBox_LostFocus(object sender, RoutedEventArgs e) {
+    private void RichTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
         // Close popover when focus is lost
         var newFocus = Keyboard.FocusedElement as DependencyObject;
         if (newFocus != null && !this.IsAncestorOf(newFocus)) this.RequestExit();

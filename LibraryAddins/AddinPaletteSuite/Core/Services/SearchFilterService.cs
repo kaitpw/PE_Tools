@@ -1,22 +1,22 @@
-using AddinCmdPalette.Core;
+using AddinPaletteSuite.Core.Ui;
 using PeServices.Storage;
 using PeServices.Storage.Core;
 
-namespace AddinCmdPalette.Services;
+namespace AddinPaletteSuite.Core.Services;
 
 /// <summary>
 ///     Standard implementation of search/filter service with fuzzy matching and persistence
 /// </summary>
 public class SearchFilterService {
     private readonly bool _enableUsageTracking;
-    private readonly Func<ISelectableItem, string> _keyGenerator;
+    private readonly Func<IPaletteListItem, string> _keyGenerator;
     private readonly double _minFuzzyScore;
     private readonly CsvReadWriter<ItemUsageData> _state;
     private Dictionary<string, ItemUsageData> _usageCache = new();
 
     public SearchFilterService(
         Storage storage,
-        Func<ISelectableItem, string> keyGenerator,
+        Func<IPaletteListItem, string> keyGenerator,
         double minFuzzyScore = 0.7,
         bool enableUsageTracking = true
     ) {
@@ -26,7 +26,7 @@ public class SearchFilterService {
         this._state = storage.StateDir().Csv<ItemUsageData>();
     }
 
-    public List<ISelectableItem> Filter(string searchText, IEnumerable<ISelectableItem> items) {
+    public List<IPaletteListItem> Filter(string searchText, IEnumerable<IPaletteListItem> items) {
         if (string.IsNullOrWhiteSpace(searchText)) {
             return items
                 .OrderByDescending(this.GetUsageCount)
@@ -34,7 +34,7 @@ public class SearchFilterService {
                 .ToList();
         }
 
-        var filtered = new List<ISelectableItem>();
+        var filtered = new List<IPaletteListItem>();
         var searchLower = searchText.ToLowerInvariant();
 
         foreach (var item in items) {
@@ -52,7 +52,7 @@ public class SearchFilterService {
             .ToList();
     }
 
-    public void RecordUsage(ISelectableItem item) {
+    public void RecordUsage(IPaletteListItem item) {
         if (!this._enableUsageTracking) return;
 
         var key = this._keyGenerator(item);
@@ -71,12 +71,12 @@ public class SearchFilterService {
         this._usageCache = this._state.Read();
     }
 
-    private int GetUsageCount(ISelectableItem item) {
+    private int GetUsageCount(IPaletteListItem item) {
         var key = this._keyGenerator(item);
         return this._usageCache.GetValueOrDefault(key)?.UsageCount ?? 0;
     }
 
-    private DateTime GetLastUsed(ISelectableItem item) {
+    private DateTime GetLastUsed(IPaletteListItem item) {
         var key = this._keyGenerator(item);
         return this._usageCache.GetValueOrDefault(key)?.LastUsed ?? DateTime.MinValue;
     }

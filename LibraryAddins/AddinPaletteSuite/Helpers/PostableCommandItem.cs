@@ -1,14 +1,14 @@
-using AddinCmdPalette.Core;
+using AddinPaletteSuite.Core;
 using CommunityToolkit.Mvvm.ComponentModel;
 using PeRevit.Lib;
 using System.Windows.Media.Imaging;
 
-namespace AddinCmdPalette.Commands;
+namespace AddinPaletteSuite.Commands;
 
 /// <summary>
 ///     Represents a PostableCommand item with additional metadata for the command palette
 /// </summary>
-public partial class PostableCommandItem : ObservableObject, ISelectableItem {
+public partial class PostableCommandItem : ObservableObject, IPaletteListItem {
     /// <summary>
     ///     Whether this item is currently selected in the UI
     /// </summary>

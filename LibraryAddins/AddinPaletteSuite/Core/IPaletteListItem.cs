@@ -1,12 +1,12 @@
 using System.ComponentModel;
 using System.Windows.Media.Imaging;
 
-namespace AddinCmdPalette.Core;
+namespace AddinPaletteSuite.Core;
 
 /// <summary>
 ///     Interface that all palette items must implement for display and interaction
 /// </summary>
-public interface ISelectableItem : INotifyPropertyChanged {
+public interface IPaletteListItem : INotifyPropertyChanged {
     /// <summary> Main display text (e.g., command name, view name) </summary>
     string PrimaryText { get; }
 

@@ -1,7 +1,8 @@
-using AddinCmdPalette.Core;
+using AddinPaletteSuite.Core;
+using AddinPaletteSuite.Core.Ui;
 using System.Windows.Input;
 
-namespace AddinCmdPalette.Actions;
+namespace AddinPaletteSuite.Core.Actions;
 
 /// <summary>
 ///     Represents a single action that can be triggered in the palette
@@ -20,11 +21,11 @@ public record PaletteAction {
     public Key? Key { get; init; }
 
     /// <summary> Synchronous execution function </summary>
-    public Action<ISelectableItem>? Execute { get; init; }
+    public Action<IPaletteListItem>? Execute { get; init; }
 
     /// <summary> Async execution function </summary>
-    public Func<ISelectableItem, Task>? ExecuteAsync { get; init; }
+    public Func<IPaletteListItem, Task>? ExecuteAsync { get; init; }
 
     /// <summary> Optional predicate to check if action can execute </summary>
-    public Func<ISelectableItem, bool> CanExecute { get; init; } = _ => true;
+    public Func<IPaletteListItem, bool> CanExecute { get; init; } = _ => true;
 }
