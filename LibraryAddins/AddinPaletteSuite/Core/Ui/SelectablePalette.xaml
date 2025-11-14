@@ -24,11 +24,7 @@
         </Popup>
 
         <!-- Main container -->
-        <Border Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
-                CornerRadius="8"
-                BorderThickness="1"
-                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                Padding="4,0,4,0"
+        <Border x:Name="MainBorder"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch">
             <Grid HorizontalAlignment="Stretch"
@@ -40,22 +36,11 @@
                 </Grid.RowDefinitions>
 
                 <!-- Search Box -->
-                <Border Grid.Row="0"
-                        Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
-                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                        BorderThickness="0,0,0,1"
-                        ClipToBounds="True"
-                        CornerRadius="8,8,0,0">
+                <Border x:Name="SearchBoxBorder"
+                        Grid.Row="0"
+                        ClipToBounds="True">
                     <TextBox x:Name="SearchTextBox"
-                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="{DynamicResource PaletteFontSizeMedium}"
-                             FontFamily="Segoe UI Variable"
-                             Padding="{DynamicResource PalettePaddingMedium}"
-                             Margin="0"
-                             Background="Transparent"
-                             Foreground="{DynamicResource TextFillColorPrimaryBrush}"
-                             BorderThickness="0"
-                             CaretBrush="{DynamicResource TextFillColorPrimaryBrush}">
+                             Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}">
                         <TextBox.InputBindings>
                             <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}" />
                             <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}" />
@@ -91,11 +76,9 @@
                 </Border>
 
                 <!-- Status Bar -->
-                <Border Grid.Row="2"
-                        Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
-                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                        BorderThickness="0,1,0,0">
-                    <Grid Margin="{DynamicResource PalettePaddingMedium}">
+                <Border x:Name="StatusBarBorder"
+                        Grid.Row="2">
+                    <Grid x:Name="StatusBarGrid">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
@@ -104,16 +87,11 @@
                         <StackPanel Grid.Column="1"
                                     Orientation="Horizontal"
                                     VerticalAlignment="Center">
-                            <TextBlock Text="{Binding FilteredItems.Count, StringFormat=\{0\} items}"
-                                       FontFamily="Segoe UI Variable"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       FontSize="{DynamicResource PaletteFontSizeNormal}"
-                                       VerticalAlignment="Center"
-                                       Margin="0,0,12,0" />
-                            <TextBlock Text="↑↓ Navigate • ← Tooltip • → Actions • Click/Enter Execute • Esc Close"
-                                       FontFamily="Segoe UI Variable"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       FontSize="{DynamicResource PaletteFontSizeNormal}"
+                            <TextBlock x:Name="ItemCountText"
+                                       Text="{Binding FilteredItems.Count, StringFormat=\{0\} items}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="HelpText"
+                                       Text="↑↓ Navigate • ← Tooltip • → Actions • Click/Enter Execute • Esc Close"
                                        VerticalAlignment="Center" />
                         </StackPanel>
                     </Grid>

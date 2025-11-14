@@ -46,36 +46,27 @@
             <!-- ListBoxItem Style -->
             <Style x:Key="PaletteListBoxItemStyle" TargetType="ListBoxItem">
                 <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Padding" Value="{DynamicResource PaletteItemPadding}" />
                 <Setter Property="BorderThickness" Value="0" />
                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                 <Setter Property="FocusVisualStyle" Value="{x:Null}" />
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="ListBoxItem">
-                            <Border Background="{TemplateBinding Background}"
+                            <Border x:Name="ItemBorder"
+                                    Background="{TemplateBinding Background}"
                                     BorderBrush="{TemplateBinding BorderBrush}"
                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                    CornerRadius="4"
                                     Padding="{TemplateBinding Padding}">
                                 <ContentPresenter />
                             </Border>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>
-                <Style.Triggers>
-                    <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource BackgroundFillColorSecondaryBrush}" />
-                    </Trigger>
-                    <Trigger Property="IsSelected" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource BackgroundFillColorSecondaryBrush}" />
-                    </Trigger>
-                </Style.Triggers>
             </Style>
 
             <!-- Item Template -->
             <DataTemplate x:Key="PaletteItemTemplate">
-                <Grid ToolTip="{Binding TextInfo}">
+                <Grid x:Name="ItemContainerGrid" ToolTip="{Binding TextInfo}">
                     <Grid.Style>
                         <Style TargetType="Grid">
                             <Setter Property="Opacity" Value="1.0" />
@@ -93,60 +84,42 @@
                     </Grid.ColumnDefinitions>
 
                     <!-- Icon -->
-                    <Image Grid.Column="0"
+                    <Image x:Name="ItemIcon"
+                           Grid.Column="0"
                            Source="{Binding Icon}"
-                           Width="16"
-                           Height="16"
-                           Margin="0,0,10,0"
                            VerticalAlignment="Center"
-                           Opacity="0.8"
                            Visibility="{Binding Icon, Converter={StaticResource VisibilityConverter}}" />
 
                     <!-- Text Stack -->
-                    <Grid Grid.Column="1"
+                    <Grid x:Name="TextStackGrid"
+                          Grid.Column="1"
                           VerticalAlignment="Center">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         
-                        <TextBlock Grid.Row="0"
+                        <TextBlock x:Name="PrimaryTextBlock"
+                                   Grid.Row="0"
                                    Text="{Binding TextPrimary}"
-                                   FontFamily="Segoe UI Variable"
-                                   FontWeight="SemiBold"
-                                   FontSize="{DynamicResource PaletteFontSizeLarge}"
-                                   LineHeight="18"
-                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                                    TextTrimming="CharacterEllipsis" />
 
-                        <TextBlock Grid.Row="1"
+                        <TextBlock x:Name="SecondaryTextBlock"
+                                   Grid.Row="1"
                                    Text="{Binding TextSecondary}"
-                                   FontFamily="Segoe UI Variable"
-                                   FontSize="{DynamicResource PaletteFontSizeSmall}"
-                                   LineHeight="14"
-                                   Margin="0"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Visibility="{Binding TextSecondary, Converter={StaticResource VisibilityConverter}}"
                                    TextTrimming="CharacterEllipsis" />
                     </Grid>
 
                     <!-- Pill Badge (overlays text if needed) -->
-                    <Border Grid.Column="2"
+                    <Border x:Name="PillBorder"
+                            Grid.Column="2"
                             Grid.ColumnSpan="1"
-                            Background="{DynamicResource BackgroundFillColorTertiaryBrush}"
-                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Padding="{DynamicResource PalettePaddingSmall}"
-                            Margin="8,0,0,0"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Right"
                             Visibility="{Binding TextPill, Converter={StaticResource VisibilityConverter}}">
-                        <TextBlock Text="{Binding TextPill}"
-                                   FontFamily="Segoe UI Variable"
-                                   FontSize="{DynamicResource PaletteFontSizeSmall}"
-                                   FontWeight="Medium"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock x:Name="PillTextBlock"
+                                   Text="{Binding TextPill}" />
                     </Border>
                 </Grid>
             </DataTemplate>
@@ -154,8 +127,6 @@
     </UserControl.Resources>
 
     <ListBox x:Name="ItemListBox"
-             Background="{DynamicResource BackgroundFillColorPrimaryBrush}"
-             BorderThickness="0"
              ItemsSource="{Binding ItemsSource, RelativeSource={RelativeSource AncestorType=local:SelectableListBox}}"
              SelectedItem="{Binding SelectedItem, RelativeSource={RelativeSource AncestorType=local:SelectableListBox}, Mode=TwoWay}"
              SelectedIndex="{Binding SelectedIndex, RelativeSource={RelativeSource AncestorType=local:SelectableListBox}, Mode=TwoWay}"

@@ -3,8 +3,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
-using OperationCanceledException = Autodesk.Revit.Exceptions.OperationCanceledException;
+using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
+
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -13,10 +15,6 @@ namespace AddinPaletteSuite.Core.Ui;
 ///     This matches the XAML x:Class declaration and provides access to XAML-defined controls
 /// </summary>
 public partial class SelectablePalette : UserControl, ICloseRequestable {
-    public SelectablePalette() {
-        // Do NOT call InitializeComponent here - let derived class call it after setting DataContext
-    }
-
     public event EventHandler CloseRequested;
 
     protected void RequestClose() => this.CloseRequested?.Invoke(this, EventArgs.Empty);
@@ -38,19 +36,63 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
         // Now initialize XAML components with DataContext already set
         this.InitializeComponent();
- 
-        this._actionBinding = new();
+
+        this._actionBinding = new ActionBinding<TItem>();
         this._actionBinding.RegisterRange(actions);
-        this._actionMenu = new();
+        this._actionMenu = new ActionMenu<TItem>();
 
         // Wire up event handlers
         this.Loaded += this.UserControl_Loaded;
         this.KeyDown += this.UserControl_KeyDown;
         this.PreviewKeyDown += this.UserControl_PreviewKeyDown;
         this.SearchTextBox.PreviewKeyDown += this.SearchTextBox_PreviewKeyDown;
+
+        // Initialize theme and apply styles
+        Theme.Initialize();
+        this.ApplyStyles();
     }
 
     private SelectablePaletteViewModel<TItem> ViewModel => this.DataContext as SelectablePaletteViewModel<TItem>;
+
+    private void ApplyStyles() {
+        this.ApplyMainContainerStyles();
+        this.ApplySearchBoxStyles();
+        this.ApplyStatusBarStyles();
+    }
+
+    private void ApplyMainContainerStyles() {
+        this.MainBorder.Background = Theme.BackgroundFillColorPrimaryBrush;
+        this.MainBorder.BorderBrush = Theme.ControlStrokeColorDefaultBrush;
+        this.MainBorder.BorderThickness = Theme.BorderThicknessThin;
+        this.MainBorder.CornerRadius = Theme.CornerRadiusLarge;
+        this.MainBorder.Padding = new Thickness(4, 0, 4, 0);
+
+        this.SearchTextBox.FontFamily = Theme.FontFamily;
+        this.SearchTextBox.FontSize = Theme.FontSizeNormal;
+        this.SearchTextBox.Foreground = Theme.TextFillColorPrimaryBrush;
+    }
+
+    private void ApplySearchBoxStyles() {
+ 
+        this.SearchTextBox.FontSize = Theme.FontSizeMedium;
+        this.SearchTextBox.Padding = Theme.PaddingMedium;
+        this.SearchTextBox.Margin = new Thickness(0);
+        this.SearchTextBox.Background = Brushes.Transparent;
+        this.SearchTextBox.BorderThickness = Theme.BorderThicknessNone;
+        this.SearchTextBox.CaretBrush = Theme.TextFillColorPrimaryBrush;
+    }
+
+    private void ApplyStatusBarStyles() {
+        this.StatusBarGrid.Margin = Theme.PaddingMedium;
+        
+        this.ItemCountText.Foreground = Theme.TextFillColorTertiaryBrush;
+        this.ItemCountText.Margin = new Thickness(0, 0, 12, 0);
+
+        // Help text
+        this.HelpText.FontFamily = Theme.FontFamily;
+        this.HelpText.FontSize = Theme.FontSizeNormal;
+        this.HelpText.Foreground = Theme.TextFillColorTertiaryBrush;
+    }
 
     private void UpdateCanExecuteForAllItems(SelectablePaletteViewModel<TItem> viewModel) {
         foreach (var item in viewModel.FilteredItems) {
@@ -115,9 +157,10 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
     private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
         // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is DependencyObject focusedElement)
+        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
             if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement)) {
             }
+        }
     }
 
     private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
@@ -166,9 +209,11 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
 
         // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is DependencyObject focusedElement)
+        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
             if (this.TooltipPanel != null && this.TooltipPanel.IsAncestorOf(focusedElement))
                 return; // Let tooltip popover handle its keys
+        }
+
         var selectedItem = this.ViewModel.SelectedItem;
 
         switch (e.Key) {
@@ -212,7 +257,6 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
                 });
             }
 
-            ;
             break;
 
         case Key.Tab: // Prevent tab from changing focus
@@ -256,25 +300,9 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
     private async void ActionMenu_ActionClicked(object _, PaletteAction<TItem> action) {
         if (this.ViewModel?.SelectedItem == null) return;
-
-        try {
-            await this._actionBinding.ExecuteActionAsync(action, this.ViewModel.SelectedItem);
-            this.ViewModel.RecordUsage();
-            this.HideActionsPopover();
-            this.RequestClose();
-        } catch (OperationCanceledException) {
-            // User cancelled the operation (ESC, Cancel, etc.) - this is expected, not an error
-            this.HideActionsPopover();
-            // Don't close the palette, let user continue working
-        } catch (Exception ex) {
-            this.HideActionsPopover();
-            this.RequestClose();
-            _ = MessageBox.Show(
-                ex.Message,
-                "Action Failed",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning
-            );
-        }
+        await this._actionBinding.ExecuteActionAsync(action, this.ViewModel.SelectedItem);
+        this.ViewModel.RecordUsage();
+        this.HideActionsPopover();
+        this.RequestClose();
     }
 }
