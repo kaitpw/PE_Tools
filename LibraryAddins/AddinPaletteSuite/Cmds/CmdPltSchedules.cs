@@ -7,42 +7,20 @@ using AddinPaletteSuite.Core.Ui;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltSchedules : BaseCmdPalette {
+public class CmdPltSchedules : BaseCmdPalette<ViewSchedule, SchedulePaletteItem> {
     public override string TypeName => "Schedule";
-
-    public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
-        // Get all schedule views (ViewSchedule is a subclass of View). Exclude templates and revision schedules
-        new FilteredElementCollector(doc)
-            .OfClass(typeof(ViewSchedule))
-            .Cast<ViewSchedule>()
-            .Where(s => !s.Name.Contains("<Revision Schedule>"))
-            .OrderBy(s => s.Name)
-            .ToList()
+    public override IEnumerable<SchedulePaletteItem> GetItems(IEnumerable<ViewSchedule> schedules, Document doc) =>
+        schedules.Where(s => !s.Name.Contains("<Revision Schedule>"))
             .Select(schedule => new SchedulePaletteItem(schedule));
 
-    public override string GetPersistenceKey(IPaletteListItem item) {
-        if (item is SchedulePaletteItem scheduleItem)
-            return scheduleItem.Schedule.Id.ToString();
-        return item.PrimaryText;
-    }
+    public override string GetPersistenceKey(SchedulePaletteItem item) => item.Schedule.Id.ToString();
 
-    public override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) =>
-        new List<PaletteAction> {
+    public override IEnumerable<PaletteAction<SchedulePaletteItem>> GetActions(UIApplication uiApp) =>
+        new List<PaletteAction<SchedulePaletteItem>> {
             new() {
-                Name = "Open Schedule",
-                ExecuteAsync = item => {
-                    if (item is SchedulePaletteItem scheduleItem) {
-                        try {
-                            uiApp.ActiveUIDocument.ActiveView = scheduleItem.Schedule;
-                        } catch (Exception ex) {
-                            throw new InvalidOperationException(
-                                $"Failed to open schedule '{scheduleItem.Schedule.Name}': {ex.Message}"
-                            );
-                        }
-                    }
-                    return Task.CompletedTask;
-                },
-                CanExecute = item => item is SchedulePaletteItem
+                Name = "Open",
+                Execute = item => uiApp.ActiveUIDocument.ActiveView = item.Schedule,
+                CanExecute = item => item != null && item.Schedule.CanBePrinted
             }
         };
 }
@@ -50,14 +28,11 @@ public class CmdPltSchedules : BaseCmdPalette {
 /// <summary>
 ///     Adapter that wraps Revit ViewSchedule to implement ISelectableItem
 /// </summary>
-public partial class SchedulePaletteItem(ViewSchedule schedule) : ObservableObject, IPaletteListItem {
-    [ObservableProperty] private bool _isSelected;
-    [ObservableProperty] private double _searchScore;
-    [ObservableProperty] private bool _canExecute = true;
+public partial class SchedulePaletteItem(ViewSchedule schedule) : BaseObservableListItem, IPaletteListItem {
     public ViewSchedule Schedule { get; } = schedule;
-    public string PrimaryText => this.Schedule.Name;
+    public string TextPrimary => this.Schedule.Name;
 
-    public string SecondaryText {
+    public string TextSecondary {
         get {
             var sheets = this.GetSheetInfo();
             if (sheets.Count == 0) return string.Empty;
@@ -66,16 +41,16 @@ public partial class SchedulePaletteItem(ViewSchedule schedule) : ObservableObje
         }
     }
 
-    public string PillText { get; } = schedule.FindParameter("Discipline")?.AsValueString();
+    public string TextPill { get; } = schedule.FindParameter("Discipline")?.AsValueString();
 
-    public string TooltipText {
+    public string TextInfo {
         get {
             var sheets = this.GetSheetInfo();
             var sheetText = sheets.Count == 0
                 ? "None"
                 : string.Join("\n  ", sheets.Select(s => $"{s.num} - {s.name}"));
             return $"Id: {this.Schedule.Id}" +
-                   $"\nDiscipline: {this.PillText}" +
+                   $"\nDiscipline: {this.TextPill}" +
                    $"\nSheeted on:\n\t{sheetText}";
         }
     }

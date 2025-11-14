@@ -8,7 +8,7 @@ namespace AddinPaletteSuite.Commands;
 /// <summary>
 ///     Represents a PostableCommand item with additional metadata for the command palette
 /// </summary>
-public partial class PostableCommandItem : ObservableObject, IPaletteListItem {
+public partial class PostableCommandItem : BaseObservableListItem, IPaletteListItem {
     /// <summary>
     ///     Whether this item is currently selected in the UI
     /// </summary>
@@ -86,16 +86,11 @@ public partial class PostableCommandItem : ObservableObject, IPaletteListItem {
         }
     }
 
-    /// <summary>
-    ///     Search relevance score for filtering
-    /// </summary>
-    public double SearchScore { get; set; }
-
     // ISelectableItem implementation
-    public string PrimaryText => this.Name;
-    public string SecondaryText => this.TruncatedPaths;
-    public string PillText => this.PrimaryShortcut;
-    public string TooltipText => this.AllPaths;
+    public string TextPrimary => this.Name;
+    public string TextSecondary => this.TruncatedPaths;
+    public string TextPill => this.PrimaryShortcut;
+    public string TextInfo => this.AllPaths;
     public BitmapImage Icon => null;
 
     public override string ToString() => this.Name;

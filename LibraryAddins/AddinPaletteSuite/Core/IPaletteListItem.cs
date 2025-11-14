@@ -1,3 +1,4 @@
+using CommunityToolkit.Mvvm.ComponentModel;
 using System.ComponentModel;
 using System.Windows.Media.Imaging;
 
@@ -6,18 +7,18 @@ namespace AddinPaletteSuite.Core;
 /// <summary>
 ///     Interface that all palette items must implement for display and interaction
 /// </summary>
-public interface IPaletteListItem : INotifyPropertyChanged {
+public interface IPaletteListItem {
     /// <summary> Main display text (e.g., command name, view name) </summary>
-    string PrimaryText { get; }
+    string TextPrimary { get; }
 
     /// <summary> Subtitle/description text (e.g., menu paths, view type) </summary>
-    string SecondaryText { get; }
+    string TextSecondary { get; }
 
     /// <summary> Badge/pill text (e.g., keyboard shortcuts) </summary>
-    string PillText { get; }
+    string TextPill { get; }
 
     /// <summary> Full tooltip text for detailed information </summary>
-    string TooltipText { get; }
+    string TextInfo { get; }
 
     /// <summary> Item icon (optional, can be null) </summary>
     BitmapImage Icon { get; }
@@ -30,4 +31,10 @@ public interface IPaletteListItem : INotifyPropertyChanged {
 
     /// <summary> Whether this item can be executed (used for visual styling) </summary>
     bool CanExecute { get; set; }
+}
+
+public abstract partial class BaseObservableListItem : ObservableObject, INotifyPropertyChanged {
+    [ObservableProperty] private bool _isSelected = false;
+    [ObservableProperty] private double _searchScore;
+    [ObservableProperty] private bool _canExecute = true;
 }

@@ -6,39 +6,21 @@ using AddinPaletteSuite.Core.Ui;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltSheets : BaseCmdPalette {
+public class CmdPltSheets : BaseCmdPalette<ViewSheet, SheetPaletteItem> {
     public override string TypeName => "sheet";
 
-    public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
-        new FilteredElementCollector(doc)
-            .OfClass(typeof(ViewSheet))
-            .Cast<ViewSheet>()
-            .OrderBy(s => s.SheetNumber)
-            .ToList()
+    public override IEnumerable<SheetPaletteItem> GetItems(IEnumerable<ViewSheet> sheets, Document doc) =>
+        sheets.OrderBy(s => s.SheetNumber)
             .Select(sheet => new SheetPaletteItem(sheet));
 
-    public override string GetPersistenceKey(IPaletteListItem item) {
-        if (item is SheetPaletteItem sheetItem)
-            return sheetItem.Sheet.Id.ToString();
-        return item.PrimaryText;
-    }
+    public override string GetPersistenceKey(SheetPaletteItem item) => item.Sheet.Id.ToString();
 
-    public override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) =>
-        new List<PaletteAction> {
+    public override IEnumerable<PaletteAction<SheetPaletteItem>> GetActions(UIApplication uiApp) =>
+        new List<PaletteAction<SheetPaletteItem>> {
             new() {
                 Name = "Open Sheet",
-                ExecuteAsync = item => {
-                    if (item is SheetPaletteItem sheetItem) {
-                        try {
-                            uiApp.ActiveUIDocument.ActiveView = sheetItem.Sheet;
-                        } catch (Exception ex) {
-                            throw new InvalidOperationException(
-                                $"Failed to open sheet '{sheetItem.Sheet.Name}': {ex.Message}");
-                        }
-                    }
-                    return Task.CompletedTask;
-                },
-                CanExecute = item => item is SheetPaletteItem
+                Execute = item => uiApp.ActiveUIDocument.ActiveView = item.Sheet,
+                CanExecute = item => item != null && item.Sheet.CanBePrinted
             }
         };
 }
@@ -46,23 +28,20 @@ public class CmdPltSheets : BaseCmdPalette {
 /// <summary>
 ///     Adapter that wraps Revit ViewSheet to implement ISelectableItem
 /// </summary>
-public partial class SheetPaletteItem(ViewSheet sheet) : ObservableObject, IPaletteListItem {
-    [ObservableProperty] private bool _isSelected;
-    [ObservableProperty] private double _searchScore;
-    [ObservableProperty] private bool _canExecute = true;
+public partial class SheetPaletteItem(ViewSheet sheet) : BaseObservableListItem, IPaletteListItem {
     public ViewSheet Sheet { get; } = sheet;
-    public string PrimaryText => $"{this.Sheet.SheetNumber} - {this.Sheet.Name}";
+    public string TextPrimary => $"{this.Sheet.SheetNumber} - {this.Sheet.Name}";
 
-    public string SecondaryText => string.Empty;
+    public string TextSecondary => string.Empty;
 
-    public string PillText {
+    public string TextPill {
         get {
             var views = this.GetViewInfo();
             return views.Count == 0 ? string.Empty : $"{views.Count} views";
         }
     }
 
-    public string TooltipText {
+    public string TextInfo {
         get {
             var views = this.GetViewInfo();
             var viewText = views.Count == 0

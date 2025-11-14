@@ -2,6 +2,8 @@ using UIFrameworkServices;
 
 namespace PeExtensions.FamDocument;
 
+
+
 public static class FamilyDocumentProcessFamily {
     public static FamilyDocument GetFamilyDocument(this Document doc, Family family = null) {
         if (doc.IsFamilyDocument) return new FamilyDocument(doc);
@@ -102,5 +104,15 @@ public static class FamilyDocumentProcessFamily {
         return closed
             ? family
             : throw new InvalidOperationException("Failed to close family document after load error.");
+    }
+
+    public static void OpenForUserEditting(this FamilyDocument famDoc, UIApplication uiApp) {
+        if (string.IsNullOrEmpty(famDoc.PathName)) {
+            var tempPath = Path.Combine(Path.GetTempPath(), $"{famDoc.Document.Title}_{Guid.NewGuid()}.rfa");
+            famDoc.Document.SaveAs(tempPath);
+            _ = uiApp.OpenAndActivateDocument(tempPath);
+        } else {
+            _ = uiApp.OpenAndActivateDocument(famDoc.PathName);
+        }
     }
 }

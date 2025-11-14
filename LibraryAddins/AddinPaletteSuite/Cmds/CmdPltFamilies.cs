@@ -4,137 +4,63 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using AddinPaletteSuite.Core.Ui;
+using PeExtensions.FamDocument;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltFamilies : BaseCmdPalette {
+public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
     public override string TypeName => "family";
 
-    public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
-        new FilteredElementCollector(doc)
-            .OfClass(typeof(Family))
-            .Cast<Family>()
-            .OrderBy(f => f.Name)
-            .ToList()
-            .Select(family => new FamilyPaletteItem(family, doc));
+    public override IEnumerable<FamilyPaletteItem> GetItems(IEnumerable<Family> families, Document doc) =>
+       families.Select(family => new FamilyPaletteItem(family, doc));
 
-    public override string GetPersistenceKey(IPaletteListItem item) {
-        if (item is FamilyPaletteItem familyItem)
-            return familyItem.Family.Id.ToString();
-        return item.PrimaryText;
-    }
+    public override string GetPersistenceKey(FamilyPaletteItem item) => item.Family.Id.ToString();
 
-    public override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) {
+    public override IEnumerable<PaletteAction<FamilyPaletteItem>> GetActions(UIApplication uiApp) {
         var doc = uiApp.ActiveUIDocument.Document;
         var activeView = uiApp.ActiveUIDocument.ActiveView;
 
-        return new List<PaletteAction> {
+        return new List<PaletteAction<FamilyPaletteItem>> {
             // Default action: Activate family for placement (Enter or Click)
             new() {
-                Name = "Place Family",
-                ExecuteAsync = async item => {
-                    if (item is not FamilyPaletteItem familyItem) return;
+                Name = "Place",
+                Execute = item => {
 
-                    var family = familyItem.Family;
-                    var symbolIds = family.GetFamilySymbolIds();
-                    if (symbolIds.Count == 0)
-                        throw new InvalidOperationException($"Family '{family.Name}' has no symbols/types.");
-
-                    // Get the first symbol (or you could prompt user to choose)
-                    var symbolId = symbolIds.First();
-                    var symbol = doc.GetElement(symbolId) as FamilySymbol
-                                 ?? throw new InvalidOperationException($"Failed to retrieve symbol from '{family.Name}'.");
-
-                    // Activate the symbol if not already active
-                    if (!symbol.IsActive) {
-                        using var tx = new Transaction(doc, "Activate Family Symbol");
-                        _ = tx.Start();
-                        symbol.Activate();
-                        _ = tx.Commit();
-                    }
-
-                     // Prompt user to place instances (cannot be called inside transaction)
-                    // Let OperationCanceledException propagate naturally - async handles it better
-                    uiApp.ActiveUIDocument.PromptForFamilyInstancePlacement(symbol);
-                    await Task.CompletedTask;
+                    var familyTypes = new PltFamilyTypes(item.Family);
                 },
-                CanExecute = item => {
-                    if (item is not FamilyPaletteItem) return false;
-                    
-                    // Check if active view is valid for placing families
-                    // Same logic as CmdPltViews - exclude templates, legends, sheets, schedules, etc.
-                    return !activeView.IsTemplate
+                CanExecute = item => item != null && !activeView.IsTemplate
                            && activeView.ViewType != ViewType.Legend
                            && activeView.ViewType != ViewType.DrawingSheet
                            && activeView.ViewType != ViewType.DraftingView
                            && activeView.ViewType != ViewType.SystemBrowser
-                           && activeView is not ViewSchedule;
-                }
-            },
+                           && activeView is not ViewSchedule && item.Family.IsEditable
+                                      },
             // Shift+Click: Open family for editing
             new() {
-                Name = "Edit Family",
+                Name = "Open/Edit",
                 Modifiers = ModifierKeys.Shift,
-                MouseButton = MouseButton.Left,
-                Execute = item => {
-                    if (item is FamilyPaletteItem familyItem) {
-                        try {
-                            var family = familyItem.Family;
-                            if (!family.IsEditable)
-                                throw new InvalidOperationException($"Family '{family.Name}' is not editable.");
-                            var famDoc = doc.EditFamily(family)
-                                         ?? throw new InvalidOperationException(
-                                             $"Failed to open family '{family.Name}' for editing.");
-
-                            // EditFamily() opens the document in the background but doesn't activate it
-                            // For families without a PathName (in-memory), we need to save first
-                            if (string.IsNullOrEmpty(famDoc.PathName)) {
-                                var tempPath = Path.Combine(Path.GetTempPath(), $"{famDoc.Title}_{Guid.NewGuid()}.rfa");
-                                famDoc.SaveAs(tempPath);
-                                _ = uiApp.OpenAndActivateDocument(tempPath);
-                            } else {
-                                _ = uiApp.OpenAndActivateDocument(famDoc.PathName);
-                            }
-                        } catch (Autodesk.Revit.Exceptions.InvalidOperationException ex) {
-                            throw new InvalidOperationException(
-                                $"'{familyItem.Family.Name}' document may be read-only or workshared.", ex);
-                        } catch (Exception ex) {
-                            throw new InvalidOperationException(
-                                $"'{familyItem.Family.Name}' failed to open for editing: {ex.Message}", ex);
-                        }
-                    }
-                },
-                CanExecute = item => {
-                    if (item is FamilyPaletteItem familyItem)
-                        return familyItem.Family.IsEditable;
-                    return false;
-                }
+                Execute = item => doc.EditFamily(item.Family).GetFamilyDocument().OpenForUserEditting(uiApp),
+                CanExecute = item => item != null && item.Family.IsEditable
             },
             // Ctrl+Click: Select all instances of the family
             new() {
                 Name = "Select Instances",
                 Modifiers = ModifierKeys.Control,
-                MouseButton = MouseButton.Left,
                 Execute = item => {
-                    if (item is FamilyPaletteItem familyItem) {
-                        try {
-                            var instances = new FilteredElementCollector(doc)
-                                .OfClass(typeof(FamilyInstance))
-                                .Cast<FamilyInstance>()
-                                .Where(fi => fi.Symbol.Family.Id == familyItem.Family.Id)
-                                .Select(fi => fi.Id)
-                                .ToList();
-
-                            uiApp.ActiveUIDocument.Selection.SetElementIds(instances);
-                        } catch (Exception ex) {
-                            throw new InvalidOperationException(
-                                $"Failed to select instances of '{familyItem.Family.Name}': {ex.Message}",
-                                ex
-                            );
-                        }
-                    }
+                    var instances = new FilteredElementCollector(doc)
+                        .OfClass(typeof(FamilyInstance))
+                        .Cast<FamilyInstance>()
+                        .Where(fi => fi.Symbol.Family.Id == item.Family.Id)
+                        .Select(fi => fi.Id)
+                        .ToList();
+                    uiApp.ActiveUIDocument.Selection.SetElementIds(instances);
                 },
-                CanExecute = item => item is FamilyPaletteItem
+                CanExecute = item => item != null && !activeView.IsTemplate
+                           && activeView.ViewType != ViewType.Legend
+                           && activeView.ViewType != ViewType.DrawingSheet
+                           && activeView.ViewType != ViewType.DraftingView
+                           && activeView.ViewType != ViewType.SystemBrowser
+                           && activeView is not ViewSchedule && item.Family.IsEditable
             },
 
         };
@@ -144,12 +70,8 @@ public class CmdPltFamilies : BaseCmdPalette {
 /// <summary>
 ///     Adapter that wraps Revit Family to implement ISelectableItem
 /// </summary>
-public partial class FamilyPaletteItem : ObservableObject, IPaletteListItem {
+public partial class FamilyPaletteItem : BaseObservableListItem, IPaletteListItem {
     private readonly Document _doc;
-    [ObservableProperty] private bool _isSelected;
-    [ObservableProperty] private double _searchScore;
-    [ObservableProperty] private bool _canExecute = true;
-
     public FamilyPaletteItem(Family family, Document doc) {
         this.Family = family;
         this._doc = doc;
@@ -158,9 +80,9 @@ public partial class FamilyPaletteItem : ObservableObject, IPaletteListItem {
     /// <summary> Access to underlying family </summary>
     public Family Family { get; }
 
-    public string PrimaryText => this.Family.Name;
+    public string TextPrimary => this.Family.Name;
 
-    public string SecondaryText {
+    public string TextSecondary {
         get {
             // Get list of family type names
             var symbolIds = this.Family.GetFamilySymbolIds();
@@ -175,9 +97,9 @@ public partial class FamilyPaletteItem : ObservableObject, IPaletteListItem {
         }
     }
 
-    public string PillText => this.Family.FamilyCategory?.Name ?? string.Empty;
+    public string TextPill => this.Family.FamilyCategory?.Name ?? string.Empty;
 
-    public string TooltipText =>
+    public string TextInfo =>
         $"{this.Family.Name}\nCategory: {this.Family.FamilyCategory?.Name}\nId: {this.Family.Id}";
 
     public BitmapImage Icon => null;

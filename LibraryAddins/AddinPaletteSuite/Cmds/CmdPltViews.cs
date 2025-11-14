@@ -7,52 +7,26 @@ using AddinPaletteSuite.Core.Ui;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltViews : BaseCmdPalette {
+public class CmdPltViews : BaseCmdPalette<View, ViewPaletteItem> {
     public override string TypeName => "view";
 
-    public override IEnumerable<IPaletteListItem> GetItems(Document doc) =>
-        // Get all views (excluding view templates, legends, sheets, schedules, drafting views, and groups)
-        new FilteredElementCollector(doc)
-            .OfClass(typeof(View))
-            .Cast<View>()
-            .Where(v => !v.IsTemplate
+    public override IEnumerable<ViewPaletteItem> GetItems(IEnumerable<View> views, Document doc) =>
+        views.Where(v => !v.IsTemplate
                         && v.ViewType != ViewType.Legend
                         && v.ViewType != ViewType.DrawingSheet
                         && v.ViewType != ViewType.DraftingView
                         && v.ViewType != ViewType.SystemBrowser
                         && v is not ViewSchedule)
-            .OrderBy(v => v.Name)
-            .ToList()
             .Select(view => new ViewPaletteItem(view));
 
-    public override string GetPersistenceKey(IPaletteListItem item) {
-        if (item is ViewPaletteItem viewItem)
-            return viewItem.View.Id.ToString();
-        return item.PrimaryText;
-    }
+    public override string GetPersistenceKey(ViewPaletteItem item) => item.View.Id.ToString();
 
-    public override IEnumerable<PaletteAction> GetActions(UIApplication uiApp) =>
-        new List<PaletteAction> {
+    public override IEnumerable<PaletteAction<ViewPaletteItem>> GetActions(UIApplication uiApp) =>
+        new List<PaletteAction<ViewPaletteItem>> {
             new() {
                 Name = "Open View",
-                Execute = item => {
-                    if (item is ViewPaletteItem viewItem) {
-                        try {
-                            uiApp.ActiveUIDocument.ActiveView = viewItem.View;
-                        } catch (Exception ex) {
-                            throw new InvalidOperationException(
-                                $"Failed to open view '{viewItem.View.Name}': {ex.Message}");
-                        }
-                    }
-                },
-                CanExecute = item => {
-                    if (item is ViewPaletteItem viewItem) {
-                        // Check if view can be opened
-                        return viewItem.View.CanBePrinted;
-                    }
-
-                    return false;
-                }
+                Execute = item => uiApp.ActiveUIDocument.ActiveView = item.View,
+                CanExecute = item => item != null && item.View.CanBePrinted
             }
         };
 }
@@ -60,23 +34,19 @@ public class CmdPltViews : BaseCmdPalette {
 /// <summary>
 ///     Adapter that wraps Revit View to implement ISelectableItem
 /// </summary>
-public partial class ViewPaletteItem(View view) : ObservableObject, IPaletteListItem {
+public partial class ViewPaletteItem(View view) : BaseObservableListItem, IPaletteListItem {
     private readonly string _discipline = view.HasViewDiscipline()
         ? view.Discipline.ToString()
         : string.Empty;
 
-    [ObservableProperty] private bool _isSelected;
-    [ObservableProperty] private double _searchScore;
-    [ObservableProperty] private bool _canExecute = true;
-
     // Use HasViewDiscipline to check before accessing to avoid exceptions
 
     public View View { get; } = view;
-    public string PrimaryText => this.View.Name;
-    public string SecondaryText => this.GetSheetInfo() == null ? $"Sheeted on: {this.GetSheetInfo()}" : "Not Sheeted";
-    public string PillText => this.View.FindParameter("View Use")?.AsString() ?? string.Empty;
+    public string TextPrimary => this.View.Name;
+    public string TextSecondary => this.GetSheetInfo() == null ? $"Sheeted on: {this.GetSheetInfo()}" : "Not Sheeted";
+    public string TextPill => this.View.FindParameter("View Use")?.AsString() ?? string.Empty;
 
-    public string TooltipText =>
+    public string TextInfo =>
         $"Assoc. Lvl:{this.View.FindParameter(BuiltInParameter.PLAN_VIEW_LEVEL)?.AsValueString()}" +
         $"\nDetail Lvl: {this.View.DetailLevel}" +
         $"\nDiscipline: {this._discipline}" +

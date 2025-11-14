@@ -7,16 +7,16 @@ namespace AddinPaletteSuite.Core.Services;
 /// <summary>
 ///     Standard implementation of search/filter service with fuzzy matching and persistence
 /// </summary>
-public class SearchFilterService {
+public class SearchFilterService<TItem> where TItem : BaseObservableListItem, IPaletteListItem {
     private readonly bool _enableUsageTracking;
-    private readonly Func<IPaletteListItem, string> _keyGenerator;
+    private readonly Func<TItem, string> _keyGenerator;
     private readonly double _minFuzzyScore;
     private readonly CsvReadWriter<ItemUsageData> _state;
     private Dictionary<string, ItemUsageData> _usageCache = new();
 
     public SearchFilterService(
         Storage storage,
-        Func<IPaletteListItem, string> keyGenerator,
+        Func<TItem, string> keyGenerator,
         double minFuzzyScore = 0.7,
         bool enableUsageTracking = true
     ) {
@@ -26,7 +26,7 @@ public class SearchFilterService {
         this._state = storage.StateDir().Csv<ItemUsageData>();
     }
 
-    public List<IPaletteListItem> Filter(string searchText, IEnumerable<IPaletteListItem> items) {
+    public List<TItem> Filter(string searchText, IEnumerable<TItem> items) {
         if (string.IsNullOrWhiteSpace(searchText)) {
             return items
                 .OrderByDescending(this.GetUsageCount)
@@ -34,11 +34,11 @@ public class SearchFilterService {
                 .ToList();
         }
 
-        var filtered = new List<IPaletteListItem>();
+        var filtered = new List<TItem>();
         var searchLower = searchText.ToLowerInvariant();
 
         foreach (var item in items) {
-            var score = this.CalculateSearchScore(item.PrimaryText.ToLowerInvariant(), searchLower);
+            var score = this.CalculateSearchScore(item.TextPrimary.ToLowerInvariant(), searchLower);
             if (score > 0) {
                 item.SearchScore = score;
                 filtered.Add(item);
@@ -52,7 +52,7 @@ public class SearchFilterService {
             .ToList();
     }
 
-    public void RecordUsage(IPaletteListItem item) {
+    public void RecordUsage(TItem item) {
         if (!this._enableUsageTracking) return;
 
         var key = this._keyGenerator(item);
@@ -71,12 +71,12 @@ public class SearchFilterService {
         this._usageCache = this._state.Read();
     }
 
-    private int GetUsageCount(IPaletteListItem item) {
+    private int GetUsageCount(TItem item) {
         var key = this._keyGenerator(item);
         return this._usageCache.GetValueOrDefault(key)?.UsageCount ?? 0;
     }
 
-    private DateTime GetLastUsed(IPaletteListItem item) {
+    private DateTime GetLastUsed(TItem item) {
         var key = this._keyGenerator(item);
         return this._usageCache.GetValueOrDefault(key)?.LastUsed ?? DateTime.MinValue;
     }

@@ -5,25 +5,22 @@ namespace AddinPaletteSuite.Core;
 /// <summary>
 ///     Represents a single action that can be triggered in the palette
 /// </summary>
-public record PaletteAction {
+public record PaletteAction<TItem> where TItem : BaseObservableListItem, IPaletteListItem {
     /// <summary> Display name for the action (for debugging/logging) </summary>
     public string Name { get; init; } = string.Empty;
 
     /// <summary> Keyboard modifiers required (Ctrl, Shift, Alt, etc.) </summary>
     public ModifierKeys Modifiers { get; init; } = ModifierKeys.None;
 
-    /// <summary> Mouse button that triggers this action (null for keyboard-only) </summary>
-    public MouseButton? MouseButton { get; init; }
-
-    /// <summary> Keyboard key that triggers this action (null for mouse-only) </summary>
+    /// <summary> Keyboard key that triggers this action </summary>
     public Key? Key { get; init; }
 
     /// <summary> Synchronous execution function </summary>
-    public Action<IPaletteListItem>? Execute { get; init; }
+    public Action<TItem> Execute { get; init; }
 
     /// <summary> Async execution function </summary>
-    public Func<IPaletteListItem, Task>? ExecuteAsync { get; init; }
+    public Func<TItem, Task> ExecuteAsync { get; init; }
 
     /// <summary> Optional predicate to check if action can execute </summary>
-    public Func<IPaletteListItem, bool> CanExecute { get; init; } = _ => true;
+    public Func<TItem, bool> CanExecute { get; init; } = _ => true;
 }

@@ -2,13 +2,14 @@ using AddinPaletteSuite.Core.Ui;
 using AddinPaletteSuite.Core.Actions;
 using AddinPaletteSuite.Core.Services;
 using PeServices.Storage;
+using PeRevit.Ui;
 
 namespace AddinPaletteSuite.Core;
 
 /// <summary>
 ///     Base class for commands that open palette windows
 /// </summary>
-public abstract class BaseCmdPalette : IExternalCommand {
+public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where TElement : Element where TItem : BaseObservableListItem, IPaletteListItem {
     public abstract string TypeName { get; }
     public string Title => $"{char.ToUpper(this.TypeName[0])}{this.TypeName[1..]} Palette";
 
@@ -21,20 +22,25 @@ public abstract class BaseCmdPalette : IExternalCommand {
             var uiapp = commandData.Application;
             var doc = uiapp.ActiveUIDocument.Document;
             var persistence = new Storage(this.GetType().Name);
-            var selectableItems = this.GetItems(doc).ToList();
-            var searchService = new SearchFilterService(persistence, this.GetPersistenceKey);
+            var elements = new FilteredElementCollector(doc)
+                .OfClass(typeof(TElement))
+                .Cast<TElement>()
+                .OrderBy(f => f.Name);
+            var selectableItems = this.GetItems(elements, doc);
+            var searchService = new SearchFilterService<TItem>(persistence, this.GetPersistenceKey);
             var actions = this.GetActions(uiapp).ToList();
-            var viewModel = new SelectablePaletteViewModel(selectableItems, searchService);
-            var palette = new SelectablePalette(viewModel, actions);
+            var viewModel = new SelectablePaletteViewModel<TItem>(selectableItems, searchService);
+            var palette = new SelectablePalette<TItem>(viewModel, actions);
             var window = new EphemeralWindow(palette, this.Title);
             window.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
-            throw new InvalidOperationException($"Error opening {this.Title} palette: {ex.Message}");
+            new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
+            return Result.Failed;
         }
     }
 
-    public abstract string GetPersistenceKey(IPaletteListItem item);
-    public abstract IEnumerable<IPaletteListItem> GetItems(Document doc);
-    public abstract IEnumerable<PaletteAction> GetActions(UIApplication uiApp);
+    public abstract string GetPersistenceKey(TItem item);
+    public abstract IEnumerable<TItem> GetItems(IEnumerable<TElement> elements, Document doc);
+    public abstract IEnumerable<PaletteAction<TItem>> GetActions(UIApplication uiApp);
 }

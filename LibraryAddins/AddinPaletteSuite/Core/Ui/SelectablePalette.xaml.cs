@@ -9,29 +9,50 @@ using OperationCanceledException = Autodesk.Revit.Exceptions.OperationCanceledEx
 namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
-///     Interaction logic for SelectablePalette.xaml
+///     Non-generic base class for SelectablePalette.xaml
+///     This matches the XAML x:Class declaration and provides access to XAML-defined controls
 /// </summary>
 public partial class SelectablePalette : UserControl, ICloseRequestable {
-    private readonly ActionBinding _actionBinding;
-    private readonly ActionMenu _actionMenu;
-
-    public SelectablePalette(
-        SelectablePaletteViewModel viewModel,
-        IEnumerable<PaletteAction> actions
-    ) {
-        this.InitializeComponent();
-        this.DataContext = viewModel;
-
-        this._actionBinding = new ActionBinding();
-        this._actionBinding.RegisterRange(actions);
-        this._actionMenu = new ActionMenu();
+    public SelectablePalette() {
+        // Do NOT call InitializeComponent here - let derived class call it after setting DataContext
     }
-
-    private SelectablePaletteViewModel ViewModel => this.DataContext as SelectablePaletteViewModel;
 
     public event EventHandler CloseRequested;
 
-    private void UpdateCanExecuteForAllItems(SelectablePaletteViewModel viewModel) {
+    protected void RequestClose() => this.CloseRequested?.Invoke(this, EventArgs.Empty);
+}
+
+/// <summary>
+///     Generic SelectablePalette implementation with typed item support
+/// </summary>
+public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObservableListItem, IPaletteListItem {
+    private readonly ActionBinding<TItem> _actionBinding;
+    private readonly ActionMenu<TItem> _actionMenu;
+
+    public SelectablePalette(
+        SelectablePaletteViewModel<TItem> viewModel,
+        IEnumerable<PaletteAction<TItem>> actions
+    ) {
+        // Set DataContext BEFORE InitializeComponent so bindings work
+        this.DataContext = viewModel;
+
+        // Now initialize XAML components with DataContext already set
+        this.InitializeComponent();
+ 
+        this._actionBinding = new();
+        this._actionBinding.RegisterRange(actions);
+        this._actionMenu = new();
+
+        // Wire up event handlers
+        this.Loaded += this.UserControl_Loaded;
+        this.KeyDown += this.UserControl_KeyDown;
+        this.PreviewKeyDown += this.UserControl_PreviewKeyDown;
+        this.SearchTextBox.PreviewKeyDown += this.SearchTextBox_PreviewKeyDown;
+    }
+
+    private SelectablePaletteViewModel<TItem> ViewModel => this.DataContext as SelectablePaletteViewModel<TItem>;
+
+    private void UpdateCanExecuteForAllItems(SelectablePaletteViewModel<TItem> viewModel) {
         foreach (var item in viewModel.FilteredItems) {
             var firstAction = this._actionBinding.GetAvailableActions(item).FirstOrDefault();
             if (firstAction != null) item.CanExecute = firstAction.CanExecute(item);
@@ -47,12 +68,12 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
         this.ItemListBox.ItemMouseLeftButtonUp += async (_, e) => {
             if (e.OriginalSource is not FrameworkElement source) return;
 
-            var item = source.DataContext as IPaletteListItem;
+            var item = source.DataContext as TItem;
             if (item == null) {
                 // Try to find the ListBoxItem parent
                 var parent = source.Parent as FrameworkElement;
                 while (parent is not null and not ListBoxItem) parent = parent.Parent as FrameworkElement;
-                if (parent is ListBoxItem listBoxItem) item = listBoxItem.DataContext as IPaletteListItem;
+                if (parent is ListBoxItem listBoxItem) item = listBoxItem.DataContext as TItem;
             }
 
             if (item == null) return;
@@ -63,7 +84,6 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 
             var executed = await this._actionBinding.TryExecuteAsync(
                 item,
-                MouseButton.Left,
                 ModifierKeys.None
             );
 
@@ -104,12 +124,12 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
         // Handle Left arrow key to show tooltip popover
         if (e.Key == Key.Left) {
             if (this.ViewModel?.SelectedItem != null) {
-                this.UpdateCanExecuteForAllItems(this.DataContext as SelectablePaletteViewModel);
+                this.UpdateCanExecuteForAllItems(this.DataContext as SelectablePaletteViewModel<TItem>);
                 this.PositionTooltipPopover();
                 this.TooltipPopup.IsOpen = true;
                 this.TooltipPanel.UpdateLayout();
                 _ = this.Dispatcher.BeginInvoke(new Action(() => {
-                    var tooltipText = this.ViewModel.SelectedItem?.TooltipText;
+                    var tooltipText = this.ViewModel.SelectedItem?.TextInfo;
                     if (tooltipText != null) this.TooltipPanel.Text = tooltipText;
                 }), DispatcherPriority.Loaded);
                 e.Handled = true;
@@ -125,7 +145,7 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
                 if (actions.Count > 0) {
                     this.ItemListBox.ScrollIntoView(this.ViewModel.SelectedItem);
                     this.ItemListBox.UpdateLayout();
-                    this.UpdateCanExecuteForAllItems(this.DataContext as SelectablePaletteViewModel);
+                    this.UpdateCanExecuteForAllItems(this.DataContext as SelectablePaletteViewModel<TItem>);
                     var selectedItem = this.ViewModel.SelectedItem;
                     var freshListBoxItem =
                         this.ItemListBox.ItemContainerGenerator.ContainerFromItem(selectedItem) as ListBoxItem;
@@ -178,7 +198,7 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
             this.TooltipPopup.IsOpen = true;
             this.TooltipPanel.UpdateLayout();
             e.Handled = this.ShowPopover(() => {
-                var tooltipText = selectedItem.TooltipText;
+                var tooltipText = selectedItem.TextInfo;
                 this.TooltipPanel.Text = tooltipText;
             });
             break;
@@ -234,7 +254,7 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
         this.TooltipPopup.VerticalOffset = 0;
     }
 
-    private async void ActionMenu_ActionClicked(object _, PaletteAction action) {
+    private async void ActionMenu_ActionClicked(object _, PaletteAction<TItem> action) {
         if (this.ViewModel?.SelectedItem == null) return;
 
         try {
@@ -257,6 +277,4 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
             );
         }
     }
-
-    private void RequestClose() => this.CloseRequested?.Invoke(this, EventArgs.Empty);
 }

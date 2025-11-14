@@ -42,20 +42,20 @@ public static class CommandPaletteService {
 
         // Convert to ISelectableItem adapters
         var selectableItems = commandItems
-            .Cast<IPaletteListItem>()
+            .Cast<PostableCommandItem>()
             .ToList();
 
         // Create search filter service
-        var searchService = new SearchFilterService(
+        var searchService = new SearchFilterService<PostableCommandItem>(
             persistence,
             item => {
                 if (item is PostableCommandItem cmdItem)
                     return cmdItem.Command.Value.ToString() ?? string.Empty;
-                return item.PrimaryText;
+                return item.TextPrimary;
             });
 
         // Create actions
-        var actions = new List<PaletteAction> {
+        var actions = new List<PaletteAction<PostableCommandItem>> {
             new() {
                 Name = "Execute Command",
                 Execute = item => {
@@ -74,10 +74,10 @@ public static class CommandPaletteService {
         };
 
         // Create view model
-        var viewModel = new SelectablePaletteViewModel(selectableItems, searchService);
+        var viewModel = new SelectablePaletteViewModel<PostableCommandItem>(selectableItems, searchService);
 
         // Create palette UserControl
-        var palette = new SelectablePalette(viewModel, actions);
+        var palette = new SelectablePalette<PostableCommandItem>(viewModel, actions);
 
         // Wrap in EphemeralWindow and return
         return new EphemeralWindow(palette, "Command Palette");

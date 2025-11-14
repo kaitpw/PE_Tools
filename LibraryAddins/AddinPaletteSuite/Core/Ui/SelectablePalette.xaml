@@ -2,9 +2,6 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:AddinPaletteSuite.Core.Ui"
-             KeyDown="UserControl_KeyDown"
-             PreviewKeyDown="UserControl_PreviewKeyDown"
-             Loaded="UserControl_Loaded"
              VerticalAlignment="Top">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -22,7 +19,7 @@
                PopupAnimation="Fade"
                StaysOpen="False">
             <local:SelectableTextBox x:Name="TooltipPanel"
-                                     Text="{Binding SelectedItem.TooltipText}"
+                                     Text="{Binding SelectedItem.TextInfo}"
                                      ReturnFocusTarget="{Binding ElementName=SearchTextBox}" />
         </Popup>
 
@@ -51,7 +48,6 @@
                         CornerRadius="8,8,0,0">
                     <TextBox x:Name="SearchTextBox"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             PreviewKeyDown="SearchTextBox_PreviewKeyDown"
                              FontSize="{DynamicResource PaletteFontSizeMedium}"
                              FontFamily="Segoe UI Variable"
                              Padding="{DynamicResource PalettePaddingMedium}"

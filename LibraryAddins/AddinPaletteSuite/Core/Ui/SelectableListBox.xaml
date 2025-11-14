@@ -75,7 +75,7 @@
 
             <!-- Item Template -->
             <DataTemplate x:Key="PaletteItemTemplate">
-                <Grid ToolTip="{Binding TooltipText}">
+                <Grid ToolTip="{Binding TextInfo}">
                     <Grid.Style>
                         <Style TargetType="Grid">
                             <Setter Property="Opacity" Value="1.0" />
@@ -111,7 +111,7 @@
                         </Grid.RowDefinitions>
                         
                         <TextBlock Grid.Row="0"
-                                   Text="{Binding PrimaryText}"
+                                   Text="{Binding TextPrimary}"
                                    FontFamily="Segoe UI Variable"
                                    FontWeight="SemiBold"
                                    FontSize="{DynamicResource PaletteFontSizeLarge}"
@@ -120,13 +120,13 @@
                                    TextTrimming="CharacterEllipsis" />
 
                         <TextBlock Grid.Row="1"
-                                   Text="{Binding SecondaryText}"
+                                   Text="{Binding TextSecondary}"
                                    FontFamily="Segoe UI Variable"
                                    FontSize="{DynamicResource PaletteFontSizeSmall}"
                                    LineHeight="14"
                                    Margin="0"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                   Visibility="{Binding SecondaryText, Converter={StaticResource VisibilityConverter}}"
+                                   Visibility="{Binding TextSecondary, Converter={StaticResource VisibilityConverter}}"
                                    TextTrimming="CharacterEllipsis" />
                     </Grid>
 
@@ -141,8 +141,8 @@
                             Margin="8,0,0,0"
                             VerticalAlignment="Center"
                             HorizontalAlignment="Right"
-                            Visibility="{Binding PillText, Converter={StaticResource VisibilityConverter}}">
-                        <TextBlock Text="{Binding PillText}"
+                            Visibility="{Binding TextPill, Converter={StaticResource VisibilityConverter}}">
+                        <TextBlock Text="{Binding TextPill}"
                                    FontFamily="Segoe UI Variable"
                                    FontSize="{DynamicResource PaletteFontSizeSmall}"
                                    FontWeight="Medium"

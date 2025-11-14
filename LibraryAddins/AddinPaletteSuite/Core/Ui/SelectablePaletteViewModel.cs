@@ -8,9 +8,9 @@ namespace AddinPaletteSuite.Core.Ui;
 /// <summary>
 ///     Generic ViewModel for the SelectablePalette window
 /// </summary>
-public partial class SelectablePaletteViewModel : ObservableObject {
-    private readonly List<IPaletteListItem> _allItems;
-    private readonly SearchFilterService _searchService;
+public partial class SelectablePaletteViewModel<TItem> : ObservableObject where TItem : BaseObservableListItem, IPaletteListItem {
+    private readonly List<TItem> _allItems;
+    private readonly SearchFilterService<TItem> _searchService;
 
     /// <summary> Current search text </summary>
     [ObservableProperty] private string _searchText = string.Empty;
@@ -20,31 +20,26 @@ public partial class SelectablePaletteViewModel : ObservableObject {
 
 #nullable enable
     /// <summary> Currently selected item </summary>
-    [ObservableProperty] private IPaletteListItem? _selectedItem;
+    [ObservableProperty] private TItem? _selectedItem;
 #nullable disable
 
     public SelectablePaletteViewModel(
-        IEnumerable<IPaletteListItem> items,
-        SearchFilterService searchService
+        IEnumerable<TItem> items,
+        SearchFilterService<TItem> searchService
     ) {
         this._allItems = items.ToList();
         this._searchService = searchService;
 
-        // Load usage data if service supports it
         this._searchService.LoadUsageData();
+        this.FilteredItems = new ObservableCollection<TItem>();
+        this.FilterItems();
 
-        this.FilteredItems = new ObservableCollection<IPaletteListItem>();
-
-        // Initial load - show all items
-        this.FilterCommands();
-
-        // Select first item by default
         if (this.FilteredItems.Count > 0)
             this.SelectedIndex = 0;
     }
 
     /// <summary> Filtered list of items based on search text </summary>
-    public ObservableCollection<IPaletteListItem> FilteredItems { get; }
+    public ObservableCollection<TItem> FilteredItems { get; }
 
     /// <summary> Event raised when filtered items collection changes </summary>
     public event EventHandler FilteredItemsChanged;
@@ -65,7 +60,7 @@ public partial class SelectablePaletteViewModel : ObservableObject {
     /// <summary>
     ///     Filters items based on current search text
     /// </summary>
-    private void FilterCommands() {
+    private void FilterItems() {
         var filtered = this._searchService.Filter(this.SearchText, this._allItems);
 
         this.FilteredItems.Clear();
@@ -89,12 +84,12 @@ public partial class SelectablePaletteViewModel : ObservableObject {
 
     #region Property Change Handlers
 
-    partial void OnSearchTextChanged(string value) => this.FilterCommands();
+    partial void OnSearchTextChanged(string value) => this.FilterItems();
 
-    partial void OnSelectedItemChanged(IPaletteListItem value) {
+    partial void OnSelectedItemChanged(TItem value) {
         // Clear previous selection
         foreach (var item in this.FilteredItems) {
-            if (item != value)
+            if (item.TextPrimary != value.TextPrimary)
                 item.IsSelected = false;
         }
 

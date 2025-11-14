@@ -13,10 +13,10 @@ namespace AddinPaletteSuite.Core.Ui;
 /// <summary>
 ///     Context menu component for displaying available actions with arrow key navigation
 /// </summary>
-public class ActionMenu : IPopoverExit {
+public class ActionMenu<TItem> : IPopoverExit where TItem : BaseObservableListItem, IPaletteListItem {
     private readonly ContextMenu _contextMenu;
     private IEnumerable? _actions;
-    private IPaletteListItem? _currentItem;
+    private TItem? _currentItem;
 
     public ActionMenu() {
         this._contextMenu = new ContextMenu {
@@ -51,12 +51,12 @@ public class ActionMenu : IPopoverExit {
         _ = this.ReturnFocusTarget?.Focus();
     }
 
-    public event EventHandler<PaletteAction>? ActionClicked;
+    public event EventHandler<PaletteAction<TItem>>? ActionClicked;
 
     /// <summary>
     ///     Shows the action menu positioned to the right of the target element
     /// </summary>
-    public void Show(UIElement placementTarget, IPaletteListItem? currentItem = null) {
+    public void Show(UIElement placementTarget, TItem? currentItem = null) {
         if (this._actions == null) return;
 
         this._currentItem = currentItem;
@@ -85,7 +85,7 @@ public class ActionMenu : IPopoverExit {
         if (this._actions == null) return;
 
         foreach (var action in this._actions) {
-            if (action is not PaletteAction paletteAction) continue;
+            if (action is not PaletteAction<TItem> paletteAction) continue;
 
             // Check if action can execute for the current item
             var canExecute = this._currentItem == null || paletteAction.CanExecute(this._currentItem);
@@ -119,7 +119,7 @@ public class ActionMenu : IPopoverExit {
         }
     }
 
-    private string FormatShortcut(PaletteAction action) {
+    private string FormatShortcut(PaletteAction<TItem> action) {
         var parts = new List<string>();
 
         if (action.Modifiers != ModifierKeys.None) {
@@ -133,19 +133,6 @@ public class ActionMenu : IPopoverExit {
             if (keyStr == "Return") keyStr = "Enter";
             parts.Add(keyStr);
         }
-
-        if (action.MouseButton.HasValue) {
-            var buttonStr = action.MouseButton.Value switch {
-                MouseButton.Left => "Click",
-                MouseButton.Right => "Right-Click",
-                MouseButton.Middle => "Middle-Click",
-                MouseButton.XButton1 => "X1-Click",
-                MouseButton.XButton2 => "X2-Click",
-                _ => action.MouseButton.Value.ToString()
-            };
-            parts.Add(buttonStr);
-        }
-
         return parts.Count > 0 ? string.Join("+", parts) : string.Empty;
     }
 }
