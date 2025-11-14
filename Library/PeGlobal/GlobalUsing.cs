@@ -12,6 +12,4 @@ global using Autodesk.Revit.Attributes;
 global using Autodesk.Revit.DB;
 global using Autodesk.Revit.UI;
 global using PeExtensions;
-global using Color = Autodesk.Revit.DB.Color;
-global using TaskDialog = Autodesk.Revit.UI.TaskDialog;
 global using View = Autodesk.Revit.DB.View;

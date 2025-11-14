@@ -21,6 +21,12 @@ public record PaletteAction<TItem> where TItem : BaseObservableListItem, IPalett
     /// <summary> Async execution function </summary>
     public Func<TItem, Task> ExecuteAsync { get; init; }
 
+    /// <summary> Synchronous execution function that opens the next palette (closes current without restoring focus) </summary>
+    public Action<TItem> ExecuteNextPalette { get; init; }
+
+    /// <summary> Async execution function that opens the next palette (closes current without restoring focus) </summary>
+    public Func<TItem, Task> ExecuteNextPaletteAsync { get; init; }
+
     /// <summary> Optional predicate to check if action can execute </summary>
     public Func<TItem, bool> CanExecute { get; init; } = _ => true;
 }

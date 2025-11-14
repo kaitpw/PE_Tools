@@ -1,5 +1,3 @@
-using AddinPaletteSuite.Core;
-using AddinPaletteSuite.Core.Ui;
 using System.Windows.Input;
 
 namespace AddinPaletteSuite.Core.Actions;
@@ -23,32 +21,34 @@ public class ActionBinding<TItem> where TItem : BaseObservableListItem, IPalette
     /// <summary>
     ///     Finds and executes the matching action for a keyboard event
     /// </summary>
-    public async Task<bool> TryExecuteAsync(TItem item, Key key, ModifierKeys modifiers) {
+    public async Task<ExecuteResult> TryExecuteAsync(TItem item, Key key, ModifierKeys modifiers) {
         try {
             var action = this.FindMatchingAction(key, modifiers);
-            if (action == null || !action.CanExecute(item)) return false;
+            if (action == null || !action.CanExecute(item)) return new ExecuteResult(false, false);
 
-            await this.ExecuteActionInternalAsync(action, item);
-            return true;
+            var isNextPalette = await this.ExecuteActionInternalAsync(action, item);
+            return new ExecuteResult(true, isNextPalette);
         } catch (Exception ex) {
+            Debug.WriteLine(item);
+
             Debug.WriteLine($"Error executing action: {ex.Message} : \n{ex.StackTrace}");
-            return false;
+            return new ExecuteResult(false, false);
         }
     }
 
     /// <summary>
     ///     Finds and executes the matching action for a mouse event
     /// </summary>
-    public async Task<bool> TryExecuteAsync(TItem item, ModifierKeys modifiers) {
+    public async Task<ExecuteResult> TryExecuteAsync(TItem item, ModifierKeys modifiers) {
         try {
             var action = this.FindMatchingAction(null, modifiers);
-            if (action == null || !action.CanExecute(item)) return false;
+            if (action == null || !action.CanExecute(item)) return new ExecuteResult(false, false);
 
-            await this.ExecuteActionInternalAsync(action, item);
-            return true;
+            var isNextPalette = await this.ExecuteActionInternalAsync(action, item);
+            return new ExecuteResult(true, isNextPalette);
         } catch (Exception ex) {
             Debug.WriteLine($"Error executing action: {ex.Message} : \n{ex.StackTrace}");
-            return false;
+            return new ExecuteResult(false, false);
         }
     }
 
@@ -66,32 +66,47 @@ public class ActionBinding<TItem> where TItem : BaseObservableListItem, IPalette
     /// <summary>
     ///     Executes a specific action for a given item
     /// </summary>
-    public async Task ExecuteActionAsync(PaletteAction<TItem> action, TItem item) {
+    public async Task<bool> ExecuteActionAsync(PaletteAction<TItem> action, TItem item) {
         if (!action.CanExecute(item))
             throw new InvalidOperationException($"Action '{action.Name}' cannot execute for this item");
 
-        await this.ExecuteActionInternalAsync(action, item);
+        return await this.ExecuteActionInternalAsync(action, item);
     }
 
     /// <summary>
     ///     Internal helper that executes either synchronous or asynchronous action
     /// </summary>
-    private async Task ExecuteActionInternalAsync(PaletteAction<TItem> action, TItem item) {
+    /// <returns>True if this is a next palette action, false otherwise</returns>
+    private async Task<bool> ExecuteActionInternalAsync(PaletteAction<TItem> action, TItem item) {
+        // Check for next palette methods first
+        if (action.ExecuteNextPaletteAsync != null) {
+            await action.ExecuteNextPaletteAsync(item);
+            return true;
+        }
+
+        if (action.ExecuteNextPalette != null) {
+            action.ExecuteNextPalette(item);
+            return true;
+        }
+
+        // Regular execution methods
         if (action.ExecuteAsync != null) {
             await action.ExecuteAsync(item);
-        } else if (action.Execute != null) {
-            action.Execute(item);
-        } else {
-            throw new InvalidOperationException($"Action '{action.Name}' has neither Execute nor ExecuteAsync defined");
+            return false;
         }
+
+        if (action.Execute != null) {
+            action.Execute(item);
+            return false;
+        }
+
+        throw new InvalidOperationException($"Action '{action.Name}' has no execution method defined");
     }
 
     /// <summary>
     ///     Finds the best matching action for the given input combination
     /// </summary>
-
     private PaletteAction<TItem> FindMatchingAction(Key? key, ModifierKeys modifiers) {
-
         // Find exact matches first (most specific)
         var exactMatch = this._actions.FirstOrDefault(a =>
             a.Modifiers == modifiers &&
@@ -104,4 +119,9 @@ public class ActionBinding<TItem> where TItem : BaseObservableListItem, IPalette
             a.Modifiers == ModifierKeys.None &&
             a.Key == null);
     }
+
+    /// <summary>
+    ///     Result of executing an action
+    /// </summary>
+    public record ExecuteResult(bool Success, bool IsNextPalette);
 }

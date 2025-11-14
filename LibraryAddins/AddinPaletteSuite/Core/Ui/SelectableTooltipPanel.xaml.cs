@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -44,8 +45,8 @@ public class SelectableTooltipPanel : UserControl {
         if (this._isInitialized) return;
         // Create Border
         this._border = new Border {
-            Background = (Brush)this.TryFindResource("BackgroundFillColorTertiaryBrush") ?? Brushes.Gray,
-            BorderBrush = (Brush)this.TryFindResource("ControlStrokeColorDefaultBrush") ?? Brushes.DarkGray,
+            Background = new SolidColorBrush(ThemeManager.PrimaryColor),
+            BorderBrush = new SolidColorBrush(ThemeManager.SystemColor),
             BorderThickness = new Thickness(0, 0, 1, 0)
         };
 
@@ -64,9 +65,9 @@ public class SelectableTooltipPanel : UserControl {
             // FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
             FontSize = (double)(this.TryFindResource("PaletteFontSizeMedium") ?? 12.0),
             Background = Brushes.Transparent,
-            Foreground = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White),
+            Foreground = Brushes.White,
             BorderThickness = new Thickness(0),
-            CaretBrush = (Brush)(this.TryFindResource("TextFillColorPrimaryBrush") ?? Brushes.White),
+            CaretBrush = Brushes.White,
             VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
             HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
             Padding = (Thickness)(this.TryFindResource("PalettePaddingMedium") ?? new Thickness(10, 5, 10, 5)),

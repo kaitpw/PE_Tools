@@ -1,10 +1,8 @@
-using AddinPaletteSuite.Core.Actions;
 using AddinPaletteSuite.Core;
-using CommunityToolkit.Mvvm.ComponentModel;
+using PeExtensions.FamDocument;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using AddinPaletteSuite.Core.Ui;
-using PeExtensions.FamDocument;
+
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
@@ -12,7 +10,7 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
     public override string TypeName => "family";
 
     public override IEnumerable<FamilyPaletteItem> GetItems(IEnumerable<Family> families, Document doc) =>
-       families.Select(family => new FamilyPaletteItem(family, doc));
+        families.Select(family => new FamilyPaletteItem(family, doc));
 
     public override string GetPersistenceKey(FamilyPaletteItem item) => item.Family.Id.ToString();
 
@@ -21,20 +19,15 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
         var activeView = uiApp.ActiveUIDocument.ActiveView;
 
         return new List<PaletteAction<FamilyPaletteItem>> {
-            // Default action: Activate family for placement (Enter or Click)
+            // Default action: Open family types palette (Enter or Click)
             new() {
-                Name = "Place",
-                Execute = item => {
-
+                Name = "Types",
+                ExecuteNextPalette = item => {
                     var familyTypes = new PltFamilyTypes(item.Family);
+                    familyTypes.Open(uiApp);
                 },
-                CanExecute = item => item != null && !activeView.IsTemplate
-                           && activeView.ViewType != ViewType.Legend
-                           && activeView.ViewType != ViewType.DrawingSheet
-                           && activeView.ViewType != ViewType.DraftingView
-                           && activeView.ViewType != ViewType.SystemBrowser
-                           && activeView is not ViewSchedule && item.Family.IsEditable
-                                      },
+                CanExecute = item => item != null
+            },
             // Shift+Click: Open family for editing
             new() {
                 Name = "Open/Edit",
@@ -56,13 +49,12 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
                     uiApp.ActiveUIDocument.Selection.SetElementIds(instances);
                 },
                 CanExecute = item => item != null && !activeView.IsTemplate
-                           && activeView.ViewType != ViewType.Legend
-                           && activeView.ViewType != ViewType.DrawingSheet
-                           && activeView.ViewType != ViewType.DraftingView
-                           && activeView.ViewType != ViewType.SystemBrowser
-                           && activeView is not ViewSchedule && item.Family.IsEditable
-            },
-
+                                                  && activeView.ViewType != ViewType.Legend
+                                                  && activeView.ViewType != ViewType.DrawingSheet
+                                                  && activeView.ViewType != ViewType.DraftingView
+                                                  && activeView.ViewType != ViewType.SystemBrowser
+                                                  && activeView is not ViewSchedule && item.Family.IsEditable
+            }
         };
     }
 }
@@ -70,8 +62,9 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
 /// <summary>
 ///     Adapter that wraps Revit Family to implement ISelectableItem
 /// </summary>
-public partial class FamilyPaletteItem : BaseObservableListItem, IPaletteListItem {
+public class FamilyPaletteItem : BaseObservableListItem, IPaletteListItem {
     private readonly Document _doc;
+
     public FamilyPaletteItem(Family family, Document doc) {
         this.Family = family;
         this._doc = doc;
