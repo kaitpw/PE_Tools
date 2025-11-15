@@ -5,8 +5,8 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 using Wpf.Ui.Controls;
+using Grid = System.Windows.Controls.Grid;
 using WpfUiListViewItem = Wpf.Ui.Controls.ListViewItem;
-using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
 
 
 namespace AddinPaletteSuite.Core.Ui;
@@ -40,6 +40,7 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
     private readonly ActionMenu<TItem> _actionMenu;
     private readonly SelectableTextBox _tooltipPanel;
     private readonly Popup _tooltipPopup;
+    private FilterBox<SelectablePaletteViewModel<TItem>> _filterBox;
 
     public SelectablePalette(
         SelectablePaletteViewModel<TItem> viewModel,
@@ -91,7 +92,7 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         // Apply body typography to search box (TextBox)
         ThemeManager.ApplyTypographyStyle(this.SearchTextBox, FontTypography.Body);
 
-        // Remove focus visual (ugly blue halo) - should already be handled by XAML but ensure it's set
+        // Remove focus visual (ugly blue halo) - should already be handled by XAML but ensure it's set 
         this.SearchTextBox.FocusVisualStyle = null;
 
         _ = this.StatusBarBorder
@@ -125,6 +126,9 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
     private void UserControl_Loaded(object sender, RoutedEventArgs e) {
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
+
+        // Add filter UI if filtering is enabled (after control is loaded so templates are available)
+        if (this.ViewModel.IsFilteringEnabled) this.AddFilterBox();
 
         _ = this.SearchTextBox.Focus();
         this.SearchTextBox.SelectAll();
@@ -163,13 +167,21 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
     private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
         // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
+        if (Keyboard.FocusedElement is DependencyObject focusedElement)
             if (this._tooltipPanel.IsAncestorOf(focusedElement)) {
             }
-        }
     }
 
     private async void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
+        // Handle Tab key to focus FilterBox if filtering is enabled
+        if (e.Key == Key.Tab && e.KeyboardDevice.Modifiers == ModifierKeys.None) {
+            if (this.ViewModel?.IsFilteringEnabled == true && this._filterBox != null) {
+                e.Handled = true;
+                _ = this.Dispatcher.BeginInvoke(this._filterBox.Focus, DispatcherPriority.Input);
+                return;
+            }
+        }
+
         // Handle Enter key with modifiers
         if (e.Key == Key.Enter) {
             if (this.ViewModel?.SelectedItem != null) {
@@ -234,6 +246,10 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         if (Keyboard.FocusedElement is DependencyObject focusedElement) {
             if (this._tooltipPanel.IsAncestorOf(focusedElement))
                 return; // Let tooltip popover handle its keys
+
+            // Don't handle keys if focus is in the FilterBox
+            if (this._filterBox != null && this._filterBox.IsAncestorOf(focusedElement))
+                return; // Let FilterBox handle its own keys
         }
 
         var selectedItem = this.ViewModel.SelectedItem;
@@ -332,5 +348,26 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         this.ViewModel.RecordUsage();
         this.HideActionsPopover();
         this.RequestClose(!isNextPalette);
+    }
+
+    /// <summary>
+    ///     Adds filter component to the right of the search box when filtering is enabled
+    /// </summary>
+    private void AddFilterBox() {
+        if (this.ViewModel == null) return;
+
+        // Create the FilterBox component
+        this._filterBox = new FilterBox<SelectablePaletteViewModel<TItem>>(this.ViewModel);
+
+        // Bind to view model properties
+        this._filterBox.BindToViewModel("AvailableFilterValues", "SelectedFilterValue");
+
+        // Set up focus return target and exit handler (like other popovers)
+        this._filterBox.ReturnFocusTarget = this.SearchTextBox;
+        this._filterBox.ExitRequested += (_, _) => _ = this.SearchTextBox.Focus();
+
+        // Find the FilterBoxContainer and add the filter box to it
+        if (this.FindName("FilterBoxContainer") is not Grid filterBoxContainer) return;
+        _ = filterBoxContainer.Children.Add(this._filterBox);
     }
 }

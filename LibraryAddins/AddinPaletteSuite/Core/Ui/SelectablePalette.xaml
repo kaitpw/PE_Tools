@@ -28,39 +28,38 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <!-- Search Box -->
+                <!-- Search Box with Filter -->
                 <Border x:Name="SearchBoxBorder"
                         ClipToBounds="True"
                         Background="{ui:ThemeResource ApplicationBackgroundBrush}">
-                    <ui:TextBox x:Name="SearchTextBox"
-                                Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                                BorderBrush="Transparent"
-                                Background="Transparent"
-                                CaretBrush="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                                Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}">
-                        <ui:TextBox.InputBindings>
-                            <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}" />
-                            <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}" />
-                        </ui:TextBox.InputBindings>
-                        <TextBox.Style>
-                            <Style TargetType="TextBox">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="TextBox">
-                                            <Border Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                                    Padding="{TemplateBinding Padding}">
-                                                <ScrollViewer x:Name="PART_ContentHost"
-                                                              Margin="0"
-                                                              Focusable="False" />
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </TextBox.Style>
-                    </ui:TextBox>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        
+                        <ui:TextBox x:Name="SearchTextBox"
+                                    Grid.Column="0"
+                                    Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                                    BorderBrush="Transparent"
+                                    Background="Transparent"
+                                    CaretBrush="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                    Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}">
+                            <ui:TextBox.InputBindings>
+                                <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}" />
+                                <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}" />
+                            </ui:TextBox.InputBindings>
+                            <TextBox.Style>
+                                <Style TargetType="TextBox" BasedOn="{StaticResource CleanTextBoxStyle}">
+                                    <Setter Property="CaretBrush" Value="{ui:ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
+                                </Style>
+                            </TextBox.Style>
+                        </ui:TextBox>
+                        
+                        <!-- FilterBox will be added here programmatically if filtering is enabled -->
+                        <Grid x:Name="FilterBoxContainer" Grid.Column="1"/>
+                    </Grid>
                 </Border>
 
                 <!-- Item List -->

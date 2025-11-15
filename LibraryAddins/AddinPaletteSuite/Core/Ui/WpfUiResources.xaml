@@ -9,6 +9,124 @@
         <ui:ControlsDictionary />
     </ResourceDictionary.MergedDictionaries>
 
+    <!-- Clean TextBox template for simple rendering without WPF-UI decorations -->
+    <Style x:Key="CleanTextBoxStyle" TargetType="TextBox">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="0"
+                                      Focusable="False" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- AutoSuggestBox Item Style (matches ActionMenu MenuItem appearance) -->
+    <Style x:Key="CleanAutoSuggestBoxItemStyle" TargetType="ui:ListViewItem">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="12,6,12,6" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ui:ListViewItem">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            CornerRadius="4">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="{ui:ThemeResource SubtleFillColorSecondaryBrush}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{ui:ThemeResource SubtleFillColorSecondaryBrush}" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- Clean AutoSuggestBox Style with proper PART_ template parts -->
+    <Style x:Key="CleanAutoSuggestBoxStyle" TargetType="ui:AutoSuggestBox">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Padding" Value="8,0,8,0" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="ItemContainerStyle" Value="{StaticResource CleanAutoSuggestBoxItemStyle}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ui:AutoSuggestBox">
+                    <Grid>
+                        <!-- PART_TextBox: Required template part - using standard TextBox with clean style -->
+                        <ui:TextBox x:Name="PART_TextBox"
+                                 Background="Transparent"
+                                 BorderBrush="Transparent"
+                                 BorderThickness="0"
+                                 Foreground="{TemplateBinding Foreground}"
+                                 Padding="{TemplateBinding Padding}"
+                                 VerticalContentAlignment="Center"
+                                 HorizontalAlignment="Stretch"
+                                 Style="{StaticResource CleanTextBoxStyle}" />
+
+                        <!-- PART_SuggestionsPopup: Required template part -->
+                        <Popup x:Name="PART_SuggestionsPopup"
+                               AllowsTransparency="True"
+                               IsOpen="{TemplateBinding IsSuggestionListOpen}"
+                               Placement="Bottom"
+                               PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
+                               StaysOpen="False"
+                               Focusable="False"
+                               VerticalOffset="4"
+                               MinWidth="{TemplateBinding ActualWidth}">
+                            <Border Background="{ui:ThemeResource ApplicationBackgroundBrush}"
+                                    BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="4">
+                                <!-- PART_SuggestionsList: Required template part (must be ListView) -->
+                                <ui:ListView x:Name="PART_SuggestionsList"
+                                            MaxHeight="{TemplateBinding MaxSuggestionListHeight}"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            ItemContainerStyle="{TemplateBinding ItemContainerStyle}"
+                                            ItemsSource="{TemplateBinding ItemsSource}"
+                                            DisplayMemberPath="{TemplateBinding DisplayMemberPath}"
+                                            ItemTemplate="{TemplateBinding ItemTemplate}"
+                                            ItemTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                            SelectionMode="Single"
+                                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                            ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                    <ui:ListView.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <VirtualizingStackPanel IsItemsHost="True"
+                                                                   IsVirtualizing="True"
+                                                                   VirtualizationMode="Recycling" />
+                                        </ItemsPanelTemplate>
+                                    </ui:ListView.ItemsPanel>
+                                </ui:ListView>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Dynamic colors injected via ThemeManager.CreateWpfUiResourceOverrides() -->
     <!-- This enables type-safe, runtime-customizable theming while leveraging WPF-UI's component styling -->
 </ResourceDictionary>

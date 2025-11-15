@@ -6,11 +6,13 @@ using System.Collections.ObjectModel;
 namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
-///     Generic ViewModel for the SelectablePalette window
+///     Generic ViewModel for the SelectablePalette window with optional filtering support
 /// </summary>
 public partial class SelectablePaletteViewModel<TItem> : ObservableObject where TItem : BaseObservableListItem, IPaletteListItem {
     private readonly List<TItem> _allItems;
     private readonly SearchFilterService<TItem> _searchService;
+    private readonly Func<TItem, string>? _filterKeySelector;
+    private string _selectedFilterValue = string.Empty;
 
     /// <summary> Current search text </summary>
     [ObservableProperty] private string _searchText = string.Empty;
@@ -25,21 +27,50 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject where 
 
     public SelectablePaletteViewModel(
         IEnumerable<TItem> items,
-        SearchFilterService<TItem> searchService
+        SearchFilterService<TItem> searchService,
+        Func<TItem, string>? filterKeySelector = null
     ) {
         this._allItems = items.ToList();
         this._searchService = searchService;
+        this._filterKeySelector = filterKeySelector;
 
         this._searchService.LoadUsageData();
         this.FilteredItems = new ObservableCollection<TItem>();
+
+        // Initialize filter values if filtering is enabled
+        if (this._filterKeySelector != null) {
+            this.AvailableFilterValues = new ObservableCollection<string>(
+                this._allItems
+                    .Select(this._filterKeySelector)
+                    .Where(key => !string.IsNullOrEmpty(key))
+                    .Distinct()
+                    .OrderBy(key => key)
+            );
+        }
+
         this.FilterItems();
 
         if (this.FilteredItems.Count > 0)
             this.SelectedIndex = 0;
     }
 
-    /// <summary> Filtered list of items based on search text </summary>
+    /// <summary> Filtered list of items based on search text and optional filter </summary>
     public ObservableCollection<TItem> FilteredItems { get; }
+
+    /// <summary> Available filter values (only populated if filtering is enabled) </summary>
+    public ObservableCollection<string>? AvailableFilterValues { get; }
+
+    /// <summary> Whether filtering is enabled for this palette </summary>
+    public bool IsFilteringEnabled => this._filterKeySelector != null;
+
+    /// <summary> Currently selected filter value </summary>
+    public string SelectedFilterValue {
+        get => this._selectedFilterValue;
+        set {
+            if (this.SetProperty(ref this._selectedFilterValue, value))
+                this.FilterItems();
+        }
+    }
 
     /// <summary> Event raised when filtered items collection changes </summary>
     public event EventHandler FilteredItemsChanged;
@@ -58,10 +89,19 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject where 
     private void ClearSearch() => this.SearchText = string.Empty;
 
     /// <summary>
-    ///     Filters items based on current search text
+    ///     Filters items based on current search text and optional filter value
     /// </summary>
     private void FilterItems() {
-        var filtered = this._searchService.Filter(this.SearchText, this._allItems);
+        // First filter by filter value if one is selected and filtering is enabled
+        var preFiltered = this._allItems;
+        if (this._filterKeySelector != null && !string.IsNullOrEmpty(this.SelectedFilterValue)) {
+            preFiltered = this._allItems
+                .Where(item => this._filterKeySelector(item) == this.SelectedFilterValue)
+                .ToList();
+        }
+
+        // Then apply search filter
+        var filtered = this._searchService.Filter(this.SearchText, preFiltered);
 
         this.FilteredItems.Clear();
         foreach (var item in filtered)

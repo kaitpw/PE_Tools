@@ -1,3 +1,4 @@
+#nullable enable
 using AddinPaletteSuite.Core;
 using PeExtensions.FamDocument;
 using System.Windows.Input;
@@ -13,6 +14,11 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
         families.Select(family => new FamilyPaletteItem(family, doc));
 
     public override string GetPersistenceKey(FamilyPaletteItem item) => item.Family.Id.ToString();
+
+    /// <summary>
+    ///     Enable filtering by category (TextPill property)
+    /// </summary>
+    protected override Func<FamilyPaletteItem, string>? GetFilterKeySelector() => item => item.TextPill;
 
     public override IEnumerable<PaletteAction<FamilyPaletteItem>> GetActions(UIApplication uiApp) {
         var doc = uiApp.ActiveUIDocument.Document;
@@ -93,5 +99,5 @@ public class FamilyPaletteItem : BaseObservableListItem, IPaletteListItem {
     public string TextInfo =>
         $"{this.Family.Name}\nCategory: {this.Family.FamilyCategory?.Name}\nId: {this.Family.Id}";
 
-    public BitmapImage Icon => null;
+    public BitmapImage? Icon => null;
 }

@@ -41,11 +41,18 @@ public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where T
         var selectableItems = this.GetItems(elements, doc);
         var searchService = new SearchFilterService<TItem>(persistence, this.GetPersistenceKey);
         var actions = this.GetActions(uiapp).ToList();
-        var viewModel = new SelectablePaletteViewModel<TItem>(selectableItems, searchService);
+        var filterKeySelector = this.GetFilterKeySelector();
+        var viewModel = new SelectablePaletteViewModel<TItem>(selectableItems, searchService, filterKeySelector);
         var palette = new SelectablePalette<TItem>(viewModel, actions);
         var window = new EphemeralWindow(palette, this.Title);
         window.Show();
     }
+
+    /// <summary>
+    ///     Optional: Override to provide a filter key selector for filtering support.
+    ///     Return null to disable filtering for this palette.
+    /// </summary>
+    protected virtual Func<TItem, string>? GetFilterKeySelector() => null;
 
     public abstract string GetPersistenceKey(TItem item);
     public abstract IEnumerable<TItem> GetItems(IEnumerable<TElement> elements, Document doc);
