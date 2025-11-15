@@ -28,17 +28,9 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
                 },
                 CanExecute = item => item != null
             },
-            // Shift+Click: Open family for editing
             new() {
-                Name = "Open/Edit",
+                Name = "Select in View",
                 Modifiers = ModifierKeys.Shift,
-                Execute = item => doc.EditFamily(item.Family).GetFamilyDocument().OpenForUserEditting(uiApp),
-                CanExecute = item => item != null && item.Family.IsEditable
-            },
-            // Ctrl+Click: Select all instances of the family
-            new() {
-                Name = "Select Instances",
-                Modifiers = ModifierKeys.Control,
                 Execute = item => {
                     var instances = new FilteredElementCollector(doc)
                         .OfClass(typeof(FamilyInstance))
@@ -54,6 +46,12 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
                                                   && activeView.ViewType != ViewType.DraftingView
                                                   && activeView.ViewType != ViewType.SystemBrowser
                                                   && activeView is not ViewSchedule && item.Family.IsEditable
+            },
+            new() {
+                Name = "Open/Edit",
+                Modifiers = ModifierKeys.Control,
+                Execute = item => doc.EditFamily(item.Family).GetFamilyDocument().OpenForUserEditting(uiApp),
+                CanExecute = item => item != null && item.Family.IsEditable
             }
         };
     }

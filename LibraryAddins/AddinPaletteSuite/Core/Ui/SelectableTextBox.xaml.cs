@@ -7,7 +7,6 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using WpfUiRichTextBox = Wpf.Ui.Controls.RichTextBox;
-using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
 using Visibility = System.Windows.Visibility;
 
 namespace AddinPaletteSuite.Core.Ui;
@@ -40,12 +39,17 @@ public class SelectableTextBox : UserControl, IPopoverExit {
             VerticalAlignment = VerticalAlignment.Top,
             Background = Brushes.Transparent,
             Child = this._richTextBox,
-            Width = 200.0,
-            MinHeight = 100.0
+            Width = 150.0,
+            MinHeight = 50.0
         };
 
         this.Content = border
-            .ApplyBorder(bgColor: Theme.PrimaryAccent)
+            .ApplyBorder(
+                UiSz.ss,
+                UiSz.l,
+                ThemeManager.SecondaryHi(),
+                ThemeManager.PrimaryBg()
+            )
             .WithPadding(UiSz.m, UiSz.m);
     }
 
@@ -83,9 +87,9 @@ public class SelectableTextBox : UserControl, IPopoverExit {
         this._richTextBox.Document = new FlowDocument {
             PagePadding = new Thickness(0),
             TextAlignment = TextAlignment.Left,
-            FontFamily = Theme.FontFamily,
+            FontFamily = ThemeManager.FontFamily(),
             FontSize = (double)TxtSz.normal,
-            Foreground = Theme.SecondaryTextAccent
+            Foreground = ThemeManager.SecondaryTxt()
         };
         this._richTextBox.Document.Blocks.Add(new Paragraph(new Run(text)));
     }

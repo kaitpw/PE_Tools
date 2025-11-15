@@ -1,8 +1,10 @@
 using System.Windows;
+using System.Windows.Documents;
 using System.Windows.Media;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
 using Color = System.Windows.Media.Color;
+using MenuItem = Wpf.Ui.Controls.MenuItem;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -28,22 +30,49 @@ public enum TxtSz {
 ///     Wraps ApplicationAccentColorManager and provides type-safe access to colors, typography, and spacing.
 /// </summary>
 public static class ThemeManager {
+    // Helper method to create SolidColorBrush from hex string
+    private static SolidColorBrush Hex(string hex, double opacity = 1.0) {
+        hex = hex.TrimStart('#');
+        var r = Convert.ToByte(hex[..2], 16);
+        var g = Convert.ToByte(hex[2..4], 16);
+        var b = Convert.ToByte(hex[4..6], 16);
+        return new SolidColorBrush(Color.FromRgb(r, g, b)) { Opacity = opacity };
+    }
+
+    // Helper method to create Color from hex string (for WPF.UI theme manager)
+    private static Color HexColor(string hex) {
+        hex = hex.TrimStart('#');
+        var r = Convert.ToByte(hex[..2], 16);
+        var g = Convert.ToByte(hex[2..4], 16);
+        var b = Convert.ToByte(hex[4..6], 16);
+        return Color.FromRgb(r, g, b);
+    }
+
+    // Shadcn-inspired dark theme with lavender-whitish-blue accents
+    // Background colors (zinc scale from shadcn)
+    public static SolidColorBrush PrimaryBg() => Hex("#09090b"); // zinc-950 - darkest background
+    public static SolidColorBrush SecondaryBg() => Hex("#3b3e3e"); // zinc-900 - elevated surfaces
+    public static SolidColorBrush TertiaryBg() => Hex("#27272a"); // zinc-800 - hover states
+
+    // Accent/Highlight colors (lavender-blue spectrum)
+    public static SolidColorBrush PrimaryHi() => Hex("#fca4fc", 0.5); // primary accent at 50% opacity
+    public static SolidColorBrush SecondaryHi() => Hex("#343946"); // lighter accent/hover at 50% opacity
+
+    // Text colors
+    public static SolidColorBrush PrimaryTxt() => Hex("#e2dde1"); // zinc-50 - primary text
+    public static SolidColorBrush SecondaryTxt() => Hex("#aba2a9"); // zinc-400 - muted text
+
     #region Typography
 
     // Font Sizes
 
 
     // Font Family
-    public static FontFamily FontFamily { get; } = new("Segoe UI Variable");
+    public static FontFamily FontFamily() => new("Segoe UI Variable Text");
+
+    // public static ApplyFont(TextBlock)
 
     #endregion
-
-    public static SolidColorBrush PrimaryAccent => new(PrimaryColor);
-    public static SolidColorBrush SecondaryAccent => new(SecondaryColor);
-    public static SolidColorBrush TertiaryAccent => new(TertiaryColor);
-    public static SolidColorBrush SystemAccent => new(SystemColor);
-    public static SolidColorBrush SecondaryTextAccent => new(TextSecondaryColor);
-    public static SolidColorBrush PrimaryTextAccent => new(TextPrimaryColor);
 
 
     /// <summary>
@@ -54,13 +83,178 @@ public static class ThemeManager {
         ApplicationThemeManager.Apply(
             ApplicationTheme.Dark, WindowBackdropType.Tabbed
         );
-        // Apply custom accent colors (zinc/neutral theme matching our existing palette)
         ApplicationAccentColorManager.Apply(
-            SystemColor, // zinc-700 - primary accent
-            PrimaryColor, // zinc-800 - secondary
-            SecondaryColor, // zinc-900 - tertiary
-            TertiaryColor // zinc-950 - quaternary
+            HexColor("#09090b"),
+            HexColor("#18181b"),
+            HexColor("#27272a"),
+            HexColor("#09090b")
         );
+    }
+
+    /// <summary>
+    ///     Applies implicit styles to a Window's resources for automatic control styling.
+    ///     Call this when creating windows to ensure all controls get proper styling.
+    /// </summary>
+    public static void ApplyStylesToWindow(Window window) {
+        if (window == null) return;
+
+        // Debug: Log existing styles before adding ours
+        Debug.WriteLine("=== Existing Styles in Window Resources ===");
+        LogResourceDictionaryStyles(window.Resources);
+
+        var styleResources = CreateStyleResources();
+
+        // Add styles to the beginning of merged dictionaries so they have lower priority
+        // This way WPF.UI's explicit styles take precedence, but our implicit styles provide defaults
+        window.Resources.MergedDictionaries.Insert(0, styleResources);
+
+        Debug.WriteLine("=== After Adding ThemeManager Styles ===");
+        LogResourceDictionaryStyles(window.Resources);
+    }
+
+    /// <summary>
+    ///     Debug helper to log all styles in a ResourceDictionary and its merged dictionaries.
+    /// </summary>
+    private static void LogResourceDictionaryStyles(ResourceDictionary resources, int level = 0) {
+        var indent = new string(' ', level * 2);
+
+        // Log implicit styles (keyed by Type)
+        foreach (var key in resources.Keys) {
+            if (key is Type type && resources[key] is Style style)
+                Debug.WriteLine($"{indent}Implicit Style: {type.Name} (Setters: {style.Setters.Count})");
+            else if (key is string stringKey && resources[key] is Style namedStyle)
+                Debug.WriteLine($"{indent}Named Style: {stringKey} (Setters: {namedStyle.Setters.Count})");
+        }
+
+        // Recursively log merged dictionaries
+        if (resources.MergedDictionaries.Count > 0) {
+            Debug.WriteLine($"{indent}Merged Dictionaries: {resources.MergedDictionaries.Count}");
+            for (var i = 0; i < resources.MergedDictionaries.Count; i++) {
+                Debug.WriteLine($"{indent}  [Dictionary {i}] Source: {resources.MergedDictionaries[i].Source}");
+                LogResourceDictionaryStyles(resources.MergedDictionaries[i], level + 2);
+            }
+        }
+    }
+
+    /// <summary>
+    ///     Applies standard font styling to a WPF.UI TextBlock control.
+    ///     Use this helper to avoid manual property setting in code-behind.
+    /// </summary>
+    public static T StyleTextBlock<T>(T textBlock, TxtSz fontSize = TxtSz.normal, bool isPrimary = true)
+        where T : TextBlock {
+        textBlock.FontFamily = FontFamily();
+        textBlock.FontSize = (double)fontSize;
+        textBlock.Foreground = isPrimary ? PrimaryTxt() : SecondaryTxt();
+        textBlock.Padding = new Thickness(0);
+        textBlock.Margin = new Thickness(0);
+
+        // Set LineHeight to match font size to prevent extra spacing
+        textBlock.LineHeight = 1.3 * (double)fontSize;
+        textBlock.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+
+        // Debug: Log the actual computed values
+        Debug.WriteLine(
+            $"StyleTextBlock - FontSize: {textBlock.FontSize}, Padding: {textBlock.Padding}, Margin: {textBlock.Margin}, LineHeight: {textBlock.LineHeight}");
+
+        return textBlock;
+    }
+
+    /// <summary>
+    ///     Applies standard font styling to a standard TextBlock control.
+    ///     Use this helper to avoid manual property setting in code-behind.
+    /// </summary>
+    public static System.Windows.Controls.TextBlock StyleTextBlock(System.Windows.Controls.TextBlock textBlock,
+        TxtSz fontSize = TxtSz.normal,
+        bool isPrimary = true) {
+        textBlock.FontFamily = FontFamily();
+        textBlock.FontSize = (double)fontSize;
+        textBlock.Foreground = isPrimary ? PrimaryTxt() : SecondaryTxt();
+        textBlock.Padding = new Thickness(0);
+        textBlock.Margin = new Thickness(0);
+
+        // Set LineHeight to match font size to prevent extra spacing
+        textBlock.LineHeight = (double)fontSize;
+        textBlock.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+
+        // Debug: Log the actual computed values
+        Debug.WriteLine(
+            $"StyleTextBlock (std) - FontSize: {textBlock.FontSize}, Padding: {textBlock.Padding}, Margin: {textBlock.Margin}, LineHeight: {textBlock.LineHeight}");
+
+        return textBlock;
+    }
+
+    /// <summary>
+    ///     Applies standard font styling to a MenuItem control.
+    ///     Use this helper to avoid manual property setting in code-behind.
+    /// </summary>
+    public static MenuItem StyleMenuItem(MenuItem menuItem) {
+        menuItem.FontFamily = FontFamily();
+        menuItem.FontSize = (double)TxtSz.normal;
+        menuItem.FontWeight = FontWeights.SemiBold;
+        // menuItem.MaxHeight = 30; // this is problematic because its cuts off the text in the item. but the menu items are too big
+        menuItem.Foreground = PrimaryTxt();
+        menuItem.Padding = new Thickness(0); // this also doesn't do anything
+        return menuItem;
+    }
+
+    /// <summary>
+    ///     Applies implicit styles to Application resources for automatic control styling.
+    ///     Can be called at initialization or to update theme at runtime.
+    ///     Note: In Revit add-ins, Application.Current may be null, prefer ApplyStylesToWindow instead.
+    /// </summary>
+    private static void ApplyImplicitStyles() {
+        if (Application.Current == null) return;
+
+        var styleResources = CreateStyleResources();
+
+        // Remove old ThemeManager styles if they exist
+        var existingThemeDict = Application.Current.Resources.MergedDictionaries
+            .FirstOrDefault(d => d.Source?.ToString().Contains("ThemeManagerStyles") ?? false);
+        if (existingThemeDict != null) _ = Application.Current.Resources.MergedDictionaries.Remove(existingThemeDict);
+
+        // Add new styles
+        Application.Current.Resources.MergedDictionaries.Add(styleResources);
+    }
+
+    /// <summary>
+    ///     Updates the theme at runtime by regenerating and reapplying implicit styles.
+    ///     Call this after changing theme colors to update all controls without recreating windows.
+    ///     Note: This only works if styles were applied via ApplyImplicitStyles (Application.Current).
+    ///     For window-specific styles, call ApplyStylesToWindow again on each window.
+    /// </summary>
+    public static void UpdateTheme() => ApplyImplicitStyles();
+
+    /// <summary>
+    ///     Creates a ResourceDictionary with implicit styles for WPF.UI controls.
+    ///     These styles automatically apply ThemeManager values to all controls without manual code-behind styling.
+    /// </summary>
+    private static ResourceDictionary CreateStyleResources() {
+        var resources = new ResourceDictionary();
+
+        // Implicit style for standard TextBlock (fallback for non-WPF.UI controls)
+        var textBlockStyle = new Style(typeof(System.Windows.Controls.TextBlock));
+        textBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.FontFamilyProperty, FontFamily()));
+        textBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.FontSizeProperty,
+            (double)TxtSz.normal));
+        textBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.ForegroundProperty, PrimaryTxt()));
+        textBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.TextTrimmingProperty,
+            TextTrimmingMode));
+        resources.Add(typeof(System.Windows.Controls.TextBlock), textBlockStyle);
+
+        // Note: We cannot add implicit styles for Wpf.Ui.Controls.TextBlock or MenuItem here
+        // because WPF.UI already has implicit styles for them in the merged resource dictionaries.
+        // Attempting to add them will cause "Item has already been added" exception.
+        // Instead, controls must explicitly set font properties in code-behind when needed.
+
+        // Implicit style for FlowDocument (used in RichTextBox)
+        var flowDocumentStyle = new Style(typeof(FlowDocument));
+        flowDocumentStyle.Setters.Add(new Setter(FlowDocument.FontFamilyProperty, FontFamily()));
+        flowDocumentStyle.Setters.Add(new Setter(FlowDocument.FontSizeProperty, (double)TxtSz.normal));
+        flowDocumentStyle.Setters.Add(new Setter(FlowDocument.ForegroundProperty, SecondaryTxt()));
+        flowDocumentStyle.Setters.Add(new Setter(FlowDocument.PagePaddingProperty, new Thickness(0)));
+        resources.Add(typeof(FlowDocument), flowDocumentStyle);
+
+        return resources;
     }
 
 
@@ -75,24 +269,6 @@ public static class ThemeManager {
     ///     Applies system accent colors.
     /// </summary>
     public static void ApplySystemAccent() => ApplicationAccentColorManager.ApplySystemAccent();
-
-
-    #region Colors
-
-    // Background Colors (Shadcn-inspired dark palette - zinc scale)
-    public static Color TertiaryColor { get; } = Color.FromRgb(0x18, 0x18, 0x1B); // zinc-950
-
-    public static Color SecondaryColor { get; } = Color.FromRgb(0x1F, 0x1F, 0x23); // zinc-900
-
-    // Control Colors (Shadcn-inspired borders and fills)
-    public static Color PrimaryColor { get; } = Color.FromRgb(0x27, 0x27, 0x2A); // zinc-800
-    public static Color SystemColor { get; } = Color.FromRgb(0x3F, 0x3F, 0x46); // zinc-700
-
-    // Text Colors
-    public static Color TextPrimaryColor { get; } = Color.FromRgb(0xFA, 0xFA, 0xFA); // #FAFAFA
-    public static Color TextSecondaryColor { get; } = Color.FromRgb(0xA1, 0xA1, 0xAA); // #A1A1AA (zinc-400)
-
-    #endregion
 
 
     #region Icon
@@ -123,9 +299,6 @@ public static class ThemeManager {
 
     // Text Trimming
     public static TextTrimming TextTrimmingMode { get; } = TextTrimming.CharacterEllipsis;
-
-    // Corner Radius
-    public static CornerRadius ItemCornerRadius { get; } = new CornerRadius((double)UiSz.s);
 
     #endregion
 }

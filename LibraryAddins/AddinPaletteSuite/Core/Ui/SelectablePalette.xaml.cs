@@ -15,7 +15,17 @@ namespace AddinPaletteSuite.Core.Ui;
 ///     This matches the XAML x:Class declaration and provides access to XAML-defined controls
 /// </summary>
 public partial class SelectablePalette : UserControl, ICloseRequestable {
+    protected SelectablePalette(object dataContext = null) {
+        // Set DataContext before InitializeComponent so bindings work
+        if (dataContext != null)
+            this.DataContext = dataContext;
+        this.InitializeComponent();
+    }
+
     public event EventHandler<CloseRequestedEventArgs> CloseRequested;
+
+    private void InitializeThemeBrushes() {
+    }
 
     protected void RequestClose(bool restoreFocus = true) =>
         this.CloseRequested?.Invoke(this, new CloseRequestedEventArgs { RestoreFocus = restoreFocus });
@@ -33,12 +43,8 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
     public SelectablePalette(
         SelectablePaletteViewModel<TItem> viewModel,
         IEnumerable<PaletteAction<TItem>> actions
-    ) {
-        // Set DataContext BEFORE InitializeComponent so bindings work
-        this.DataContext = viewModel;
-
-        // Now initialize XAML components with DataContext already set 
-        this.InitializeComponent();
+    ) : base(viewModel) {
+        // Base class constructor sets DataContext and calls InitializeComponent()
         this.ApplyStyles();
 
         this._actionBinding = new ActionBinding<TItem>();
@@ -65,17 +71,22 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
     private void ApplyStyles() {
         _ = this.MainBorder
-            .ApplyBorder(bgColor: Theme.PrimaryAccent);
+            .ApplyBorder(bgColor: Theme.PrimaryBg());
         _ = this.SearchBoxBorder
-            .ApplyBorder(bgColor: Theme.PrimaryAccent)
+            .ApplyBorder(bgColor: Theme.PrimaryBg())
             .WithSpacing(0, 0)
             .WithPadding(UiSz.l, UiSz.m, UiSz.ll, UiSz.m);
-        this.SearchTextBox.CaretBrush = Theme.SecondaryTextAccent;
+        this.SearchTextBox.CaretBrush = Theme.SecondaryTxt();
         this.SearchTextBox.FontSize = (double)TxtSz.m;
-        // this.SearchTextBox.Font
-        _ = this.StatusBarBorder
-            .ApplyBorder(bgColor: Theme.SecondaryAccent);
+        this.SearchTextBox.Foreground = Theme.PrimaryTxt();
 
+        _ = this.StatusBarBorder
+            .ApplyBorder(bgColor: Theme.SecondaryBg())
+            .WithPadding(UiSz.l, UiSz.s, UiSz.l, UiSz.s);
+
+        // Apply styling using ThemeManager helpers
+        _ = Theme.StyleTextBlock(this.ItemCountText, TxtSz.s, false);
+        _ = Theme.StyleTextBlock(this.HelpText, TxtSz.s, false);
     }
 
     private void UpdateCanExecuteForVisibleItems() {
@@ -109,12 +120,13 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
             if (e.OriginalSource is not FrameworkElement source) return;
             var item = source.DataContext as TItem;
             if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
+            var modifiers = Keyboard.Modifiers;
             var result = await this._actionBinding.TryExecuteAsync(
-                item, ModifierKeys.None);
+                item, modifiers);
 
             if (result.Success) {
                 this.ViewModel?.RecordUsage();
-                this.RequestClose(restoreFocus: !result.IsNextPalette);
+                this.RequestClose(!result.IsNextPalette);
             }
         };
 
@@ -144,7 +156,24 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         }
     }
 
-    private void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
+    private async void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
+        // Handle Enter key with modifiers
+        if (e.Key == Key.Enter) {
+            if (this.ViewModel?.SelectedItem != null) {
+                var modifiers = e.KeyboardDevice.Modifiers;
+                var result = await this._actionBinding.TryExecuteAsync(
+                    this.ViewModel.SelectedItem, Key.Enter, modifiers);
+
+                if (result.Success) {
+                    this.ViewModel.RecordUsage();
+                    this.RequestClose(!result.IsNextPalette);
+                }
+
+                e.Handled = true;
+                return;
+            }
+        }
+
         // Handle Left arrow key to show tooltip popover
         if (e.Key == Key.Left) {
             if (this.ViewModel?.SelectedItem != null) {
@@ -204,14 +233,16 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
             break;
 
         case Key.Enter:
-
+            // Enter is handled in SearchTextBox_PreviewKeyDown when focus is in search box
+            // This handler is a fallback for when focus is elsewhere
             if (selectedItem != null) {
+                var modifiers = e.KeyboardDevice.Modifiers;
                 var result = await this._actionBinding.TryExecuteAsync(
-                    selectedItem, Key.Enter, ModifierKeys.None);
+                    selectedItem, Key.Enter, modifiers);
 
                 if (result.Success) {
                     this.ViewModel.RecordUsage();
-                    this.RequestClose(restoreFocus: !result.IsNextPalette);
+                    this.RequestClose(!result.IsNextPalette);
                 }
             }
 
@@ -287,6 +318,6 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         var isNextPalette = await this._actionBinding.ExecuteActionAsync(action, this.ViewModel.SelectedItem);
         this.ViewModel.RecordUsage();
         this.HideActionsPopover();
-        this.RequestClose(restoreFocus: !isNextPalette);
+        this.RequestClose(!isNextPalette);
     }
 }

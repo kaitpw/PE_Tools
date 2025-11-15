@@ -108,9 +108,10 @@ public class ActionBinding<TItem> where TItem : BaseObservableListItem, IPalette
     /// </summary>
     private PaletteAction<TItem> FindMatchingAction(Key? key, ModifierKeys modifiers) {
         // Find exact matches first (most specific)
+        // Match if modifiers match AND (key matches OR action has no specific key)
         var exactMatch = this._actions.FirstOrDefault(a =>
             a.Modifiers == modifiers &&
-            ((key.HasValue && a.Key == key) || (!key.HasValue && a.Key == null)));
+            (a.Key == null || (key.HasValue && a.Key == key)));
 
         if (exactMatch != null) return exactMatch;
 

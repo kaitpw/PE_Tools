@@ -1,101 +1,48 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
+using Binding = System.Windows.Data.Binding;
+using Visibility = System.Windows.Visibility;
 
 namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
-///     Pure C# list item control for SelectableListView with no XAML dependency.
+///     List item control for SelectableListView with XAML structure.
 ///     Implements shadcn-inspired styling using ThemeManager.
 /// </summary>
-public class SelectableListViewItem : Border {
-    private readonly Image _iconImage;
-    private readonly TextBlock _primaryText;
-    private readonly TextBlock _secondaryText;
-    private readonly Border _pillBorder;
-    private readonly TextBlock _pillText;
-    private readonly System.Windows.Controls.Grid _textGrid;
-    private readonly System.Windows.Controls.Grid _contentGrid;
-
+public partial class SelectableListViewItem : Border {
     public SelectableListViewItem() {
-        this.CornerRadius = ThemeManager.ItemCornerRadius;
+        this.InitializeComponent();
+        this.ApplyStyling();
         this.DataContextChanged += this.OnDataContextChanged;
+    }
 
-        // Create content grid
-        this._contentGrid = new System.Windows.Controls.Grid {
-            ColumnDefinitions = {
-                new ColumnDefinition { Width = GridLength.Auto },
-                new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) },
-                new ColumnDefinition { Width = GridLength.Auto }
-            }
-        };
-        this.Child = this._contentGrid;
+    private void ApplyStyling() {
+        // Border styling
+        this.CornerRadius = new CornerRadius((double)UiSz.l);
+        _ = this.WithPadding(UiSz.ss, UiSz.s, UiSz.ll, UiSz.m);
 
-        this._iconImage = new Image {
-            Width = (double)UiSz.ll,
-            Height = (double)UiSz.ll, 
-            Margin = new Thickness(0, 0, (double)UiSz.l, 0),
-            Opacity = ThemeManager.IconOpacity,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        System.Windows.Controls.Grid.SetColumn(this._iconImage, 0);
-        _ = this._contentGrid.Children.Add(this._iconImage);
+        // Icon styling
+        this.IconImage.Width = (double)UiSz.ll;
+        this.IconImage.Height = (double)UiSz.ll;
+        this.IconImage.Margin = new Thickness(0, 0, (double)UiSz.l, 0);
+        this.IconImage.Opacity = ThemeManager.IconOpacity;
 
-        // Create Text Stack Grid
-        this._textGrid = new System.Windows.Controls.Grid {
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        this._textGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        this._textGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        System.Windows.Controls.Grid.SetColumn(this._textGrid, 1);
-        _ = this._contentGrid.Children.Add(this._textGrid);
+        // Text styling using ThemeManager helpers
+        _ = ThemeManager.StyleTextBlock(this.PrimaryText);
+        this.PrimaryText.FontWeight = FontWeights.Medium;
 
-        // Primary Text
-        this._primaryText = new TextBlock {
-            FontFamily = ThemeManager.FontFamily,
-            FontSize = (double)TxtSz.m,
-            FontWeight = FontWeights.SemiBold,
-            Foreground = new SolidColorBrush(ThemeManager.TextPrimaryColor),
-            TextTrimming = ThemeManager.TextTrimmingMode
-        };
-        System.Windows.Controls.Grid.SetRow(this._primaryText, 0);
-        _ = this._textGrid.Children.Add(this._primaryText);
+        _ = ThemeManager.StyleTextBlock(this.SecondaryText, TxtSz.s, false);
+        _ = ThemeManager.StyleTextBlock(this.PillText, TxtSz.s, false);
 
-        // Secondary Text
-        this._secondaryText = new TextBlock {
-            FontFamily = ThemeManager.FontFamily,
-            FontSize = (double)TxtSz.s,
-            Foreground = new SolidColorBrush(ThemeManager.TextSecondaryColor),
-            Margin = new Thickness(0),
-            TextTrimming = ThemeManager.TextTrimmingMode
-        };
-        System.Windows.Controls.Grid.SetRow(this._secondaryText, 1);
-        _ = this._textGrid.Children.Add(this._secondaryText);
-
-        // Pill Border
-        this._pillBorder = new Border {
-            Background = new SolidColorBrush(ThemeManager.PrimaryColor),
-            BorderBrush = new SolidColorBrush(ThemeManager.SystemColor),
-            BorderThickness = new Thickness((double)UiSz.ss),
-            CornerRadius = new CornerRadius((double)UiSz.m),
-            Padding = new Thickness((double)UiSz.l, (double)UiSz.s, (double)UiSz.l, (double)UiSz.s),
-            Margin = new Thickness((double)UiSz.l, 0, 0, 0),
-            VerticalAlignment = VerticalAlignment.Center,
-            HorizontalAlignment = HorizontalAlignment.Right
-        };
-        System.Windows.Controls.Grid.SetColumn(this._pillBorder, 2);
-        _ = this._contentGrid.Children.Add(this._pillBorder);
-
-        // Pill Text
-        this._pillText = new TextBlock {
-            FontFamily = ThemeManager.FontFamily,
-            FontSize = (double)TxtSz.s,
-            FontWeight = FontWeights.Medium,
-            Foreground = new SolidColorBrush(ThemeManager.TextSecondaryColor)
-        };
-        this._pillBorder.Child = this._pillText;
+        // Pill border styling
+        var pillBackground = ThemeManager.TertiaryBg().Clone();
+        pillBackground.Opacity = 0.5;
+        this.PillBorder.Background = pillBackground;
+        this.PillBorder.BorderBrush = ThemeManager.PrimaryHi();
+        this.PillBorder.BorderThickness = new Thickness((double)UiSz.ss);
+        this.PillBorder.CornerRadius = new CornerRadius((double)UiSz.m);
+        _ = this.PillBorder.WithPadding(UiSz.m, 0, UiSz.m, UiSz.ss);
     }
 
     /// <summary>
@@ -106,22 +53,22 @@ public class SelectableListViewItem : Border {
             return;
 
         // Update Primary Text
-        this._primaryText.Text = item.TextPrimary ?? string.Empty;
+        this.PrimaryText.Text = item.TextPrimary ?? string.Empty;
 
         // Update Secondary Text and Visibility
         var hasSecondary = !string.IsNullOrWhiteSpace(item.TextSecondary);
-        this._secondaryText.Text = hasSecondary ? item.TextSecondary : string.Empty;
-        this._secondaryText.Visibility = hasSecondary ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        this.SecondaryText.Text = hasSecondary ? item.TextSecondary : string.Empty;
+        this.SecondaryText.Visibility = hasSecondary ? Visibility.Visible : Visibility.Collapsed;
 
         // Update Pill Text and Visibility
         var hasPill = !string.IsNullOrWhiteSpace(item.TextPill);
-        this._pillText.Text = hasPill ? item.TextPill : string.Empty;
-        this._pillBorder.Visibility = hasPill ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        this.PillText.Text = hasPill ? item.TextPill : string.Empty;
+        this.PillBorder.Visibility = hasPill ? Visibility.Visible : Visibility.Collapsed;
 
         // Update Icon and Visibility
         var hasIcon = item.Icon != null;
-        this._iconImage.Source = hasIcon ? item.Icon : null;
-        this._iconImage.Visibility = hasIcon ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        this.IconImage.Source = hasIcon ? item.Icon : null;
+        this.IconImage.Visibility = hasIcon ? Visibility.Visible : Visibility.Collapsed;
 
         // Update Tooltip
         this.ToolTip = !string.IsNullOrWhiteSpace(item.TextInfo) ? item.TextInfo : null;
@@ -135,47 +82,43 @@ public class SelectableListViewItem : Border {
     /// </summary>
     public void SetupBindings() {
         // Bind Primary Text
-        var primaryBinding = new System.Windows.Data.Binding("TextPrimary") { Mode = BindingMode.OneWay };
-        _ = this._primaryText.SetBinding(TextBlock.TextProperty, primaryBinding);
+        var primaryBinding = new Binding("TextPrimary") { Mode = BindingMode.OneWay };
+        _ = this.PrimaryText.SetBinding(TextBlock.TextProperty, primaryBinding);
 
         // Bind Secondary Text
-        var secondaryBinding = new System.Windows.Data.Binding("TextSecondary") { Mode = BindingMode.OneWay };
-        _ = this._secondaryText.SetBinding(TextBlock.TextProperty, secondaryBinding);
+        var secondaryBinding = new Binding("TextSecondary") { Mode = BindingMode.OneWay };
+        _ = this.SecondaryText.SetBinding(TextBlock.TextProperty, secondaryBinding);
 
-        var secondaryVisibilityBinding = new System.Windows.Data.Binding("TextSecondary") {
-            Mode = BindingMode.OneWay,
-            Converter = new VisibilityConverter()
+        var secondaryVisibilityBinding = new Binding("TextSecondary") {
+            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
-        _ = this._secondaryText.SetBinding(VisibilityProperty, secondaryVisibilityBinding);
+        _ = this.SecondaryText.SetBinding(VisibilityProperty, secondaryVisibilityBinding);
 
         // Bind Pill Text
-        var pillTextBinding = new System.Windows.Data.Binding("TextPill") { Mode = BindingMode.OneWay };
-        _ = this._pillText.SetBinding(TextBlock.TextProperty, pillTextBinding);
+        var pillTextBinding = new Binding("TextPill") { Mode = BindingMode.OneWay };
+        _ = this.PillText.SetBinding(TextBlock.TextProperty, pillTextBinding);
 
-        var pillVisibilityBinding = new System.Windows.Data.Binding("TextPill") {
-            Mode = BindingMode.OneWay,
-            Converter = new VisibilityConverter()
+        var pillVisibilityBinding = new Binding("TextPill") {
+            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
-        _ = this._pillBorder.SetBinding(VisibilityProperty, pillVisibilityBinding);
+        _ = this.PillBorder.SetBinding(VisibilityProperty, pillVisibilityBinding);
 
         // Bind Icon
-        var iconBinding = new System.Windows.Data.Binding("Icon") { Mode = BindingMode.OneWay };
-        _ = this._iconImage.SetBinding(Image.SourceProperty, iconBinding);
+        var iconBinding = new Binding("Icon") { Mode = BindingMode.OneWay };
+        _ = this.IconImage.SetBinding(Image.SourceProperty, iconBinding);
 
-        var iconVisibilityBinding = new System.Windows.Data.Binding("Icon") {
-            Mode = BindingMode.OneWay,
-            Converter = new VisibilityConverter()
+        var iconVisibilityBinding = new Binding("Icon") {
+            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
-        _ = this._iconImage.SetBinding(VisibilityProperty, iconVisibilityBinding);
+        _ = this.IconImage.SetBinding(VisibilityProperty, iconVisibilityBinding);
 
         // Bind Tooltip
-        var tooltipBinding = new System.Windows.Data.Binding("TextInfo") { Mode = BindingMode.OneWay };
+        var tooltipBinding = new Binding("TextInfo") { Mode = BindingMode.OneWay };
         _ = this.SetBinding(ToolTipProperty, tooltipBinding);
 
         // Bind Opacity based on CanExecute
-        var opacityBinding = new System.Windows.Data.Binding("CanExecute") {
-            Mode = BindingMode.OneWay,
-            Converter = new CanExecuteToOpacityConverter()
+        var opacityBinding = new Binding("CanExecute") {
+            Mode = BindingMode.OneWay, Converter = new CanExecuteToOpacityConverter()
         };
         _ = this.SetBinding(OpacityProperty, opacityBinding);
     }
@@ -186,5 +129,3 @@ public class SelectableListViewItem : Border {
             this.SetupBindings();
     }
 }
-
-

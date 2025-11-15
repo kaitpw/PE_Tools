@@ -7,10 +7,9 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="WpfUiResources.xaml" />
+                <ResourceDictionary Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            <SolidColorBrush x:Key="TextPrimaryBrush" Color="{x:Static local:ThemeManager.TextPrimaryColor}" />
-            <SolidColorBrush x:Key="TextSecondaryBrush" Color="{x:Static local:ThemeManager.TextSecondaryColor}" />
+            <!-- Note: Brushes are set in code-behind for hot-reload support -->
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -34,9 +33,7 @@
                     <ui:TextBox x:Name="SearchTextBox"
                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                 BorderBrush="Transparent"
-                                Background="Transparent"
-                                Foreground="{StaticResource TextPrimaryBrush}"
-                                CaretBrush="{StaticResource TextSecondaryBrush}">
+                                Background="Transparent">
                         <ui:TextBox.InputBindings>
                             <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}" />
                             <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}" />
@@ -75,20 +72,21 @@
                         Grid.Row="2">
                     <Grid x:Name="StatusBarGrid">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="1"
-                                    Orientation="Horizontal"
-                                    VerticalAlignment="Center">
-                            <TextBlock x:Name="ItemCountText"
-                                       Text="{Binding FilteredItems.Count, StringFormat=\{0\} items}"
-                                       VerticalAlignment="Center" />
-                            <TextBlock x:Name="HelpText"
-                                       Text="↑↓ Navigate • ← Tooltip • → Actions • Click/Enter Execute • Esc Close"
-                                       VerticalAlignment="Center" />
-                        </StackPanel>
+                        <ui:TextBlock x:Name="ItemCountText"
+                                   Grid.Column="0"
+                                   Text="{Binding FilteredItems.Count, StringFormat=\{0\} items}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Left" />
+                        
+                        <ui:TextBlock x:Name="HelpText"
+                                   Grid.Column="1"
+                                   Text="↑↓ Navigate • ← Tooltip • → Actions • Click/Enter Execute • Esc Close"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Right" />
                     </Grid>
                 </Border>
             </Grid>

@@ -45,7 +45,7 @@ public static class ControlExtensions {
 
     public static Border ApplyBorder(this Border border,
         UiSz thickness = UiSz.ss,
-        UiSz radius = UiSz.m,
+        UiSz radius = UiSz.l,
         SolidColorBrush lineColor = null,
         SolidColorBrush bgColor = null) {
         border.BorderThickness = new Thickness((double)thickness);

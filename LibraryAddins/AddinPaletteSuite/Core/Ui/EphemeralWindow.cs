@@ -34,6 +34,9 @@ public class EphemeralWindow : Window {
             MaxHeight = 300,
         };
 
+        // Apply ThemeManager styles to this window
+        ThemeManager.ApplyStylesToWindow(this);
+
         // Subscribe to CloseRequested event if content implements it
         if (content is ICloseRequestable closeable) closeable.CloseRequested += this.OnContentCloseRequested;
     }

@@ -29,6 +29,7 @@ public partial class SelectableListView : UserControl {
         this.ItemListView.ItemTemplate = new DataTemplate {
             VisualTree = new FrameworkElementFactory(typeof(SelectableListViewItem))
         };
+        this.InitializeThemeBrushes();
     }
 
     public IEnumerable ItemsSource {
@@ -48,6 +49,12 @@ public partial class SelectableListView : UserControl {
 
     public ItemContainerGenerator ItemContainerGenerator => this.ItemListView.ItemContainerGenerator;
 
+    private void InitializeThemeBrushes() {
+        // Set theme brushes for hot-reload support (methods instead of static properties)
+        this.Resources["Highlight"] = ThemeManager.SecondaryHi();
+        this.Resources["SeparatorBrush"] = ThemeManager.TertiaryBg();
+    }
+
     public event SelectionChangedEventHandler SelectionChanged;
     public event MouseButtonEventHandler ItemMouseLeftButtonUp;
 
@@ -59,4 +66,3 @@ public partial class SelectableListView : UserControl {
     private void ItemListView_MouseLeftButtonUp(object sender, MouseButtonEventArgs e) =>
         this.ItemMouseLeftButtonUp?.Invoke(this, e);
 }
-

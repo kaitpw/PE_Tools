@@ -1,5 +1,3 @@
-
-
 using AddinPaletteSuite.Commands;
 using AddinPaletteSuite.Core;
 using AddinPaletteSuite.Core.Services;
@@ -42,7 +40,6 @@ public static class CommandPaletteService {
 
         // Convert to ISelectableItem adapters
         var selectableItems = commandItems
-            .Cast<PostableCommandItem>()
             .ToList();
 
         // Create search filter service
@@ -57,7 +54,7 @@ public static class CommandPaletteService {
         // Create actions
         var actions = new List<PaletteAction<PostableCommandItem>> {
             new() {
-                Name = "Execute Command",
+                Name = "Execute",
                 Execute = item => {
                     if (item is PostableCommandItem cmdItem) {
                         var (success, error) = PeRevit.Lib.Commands.Execute(uiApp, cmdItem.Command);

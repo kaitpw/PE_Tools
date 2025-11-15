@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -45,8 +44,8 @@ public class SelectableTooltipPanel : UserControl {
         if (this._isInitialized) return;
         // Create Border
         this._border = new Border {
-            Background = new SolidColorBrush(ThemeManager.PrimaryColor),
-            BorderBrush = new SolidColorBrush(ThemeManager.SystemColor),
+            Background = ThemeManager.PrimaryBg(),
+            BorderBrush = ThemeManager.PrimaryTxt(),
             BorderThickness = new Thickness(0, 0, 1, 0)
         };
 
