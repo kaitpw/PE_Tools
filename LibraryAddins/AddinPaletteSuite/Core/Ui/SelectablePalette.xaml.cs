@@ -86,7 +86,7 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         // Apply component-specific border and spacing styles
         _ = this.SearchBoxBorder
             .WithSpacing(0, 0)
-            .WithPadding(UiSz.l, UiSz.m, UiSz.ll, UiSz.m);
+            .WithPadding(UiSz.ll, UiSz.ll, UiSz.ll, UiSz.ll);
 
         // Apply body typography to search box (TextBox)
         ThemeManager.ApplyTypographyStyle(this.SearchTextBox, FontTypography.Body);

@@ -118,6 +118,47 @@ public static class ThemeManager {
     /// </summary>
     public static string GetTypographyResourceKey(FontTypography typography) => typography.ToResourceValue();
 
+    /// <summary>
+    ///     Applies typography style to a control, merging with any existing style.
+    ///     Handles type compatibility automatically - works with standard WPF controls and WPF.UI controls.
+    /// </summary>
+    public static void ApplyTypographyStyle(Control control, FontTypography typography) {
+        if (control == null) throw new ArgumentNullException(nameof(control));
+
+        var controlType = control.GetType();
+        var typographyStyle = GetTypographyStyle(typography, controlType);
+
+        Style mergedStyle;
+        if (control.Style == null) {
+            // No existing style, use typography style directly
+            mergedStyle = typographyStyle;
+        } else {
+            // Check if existing style's target type is compatible
+            // A style can only be based on a style that targets the same type or a base type
+            var existingStyle = control.Style;
+            var canUseAsBase = existingStyle.TargetType == controlType ||
+                               controlType.IsSubclassOf(existingStyle.TargetType);
+
+            if (canUseAsBase) {
+                // Compatible types, can use as base
+                mergedStyle = new Style(controlType, existingStyle);
+            } else {
+                // Incompatible types, create new style without base and copy setters from existing style
+                mergedStyle = new Style(controlType);
+                foreach (var setter in existingStyle.Setters.OfType<Setter>()) {
+                    mergedStyle.Setters.Add(setter);
+                }
+            }
+
+            // Copy setters from typography style (will override any conflicting setters)
+            foreach (var setter in typographyStyle.Setters.OfType<Setter>()) {
+                mergedStyle.Setters.Add(setter);
+            }
+        }
+
+        control.Style = mergedStyle;
+    }
+
     // Style factory methods - TextBlock overloads for backward compatibility
     private static Style CreateCaptionStyle() => CreateCaptionStyle(typeof(System.Windows.Controls.TextBlock));
     private static Style CreateBodyStyle() => CreateBodyStyle(typeof(System.Windows.Controls.TextBlock));
@@ -135,7 +176,7 @@ public static class ThemeManager {
         style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Regular));
 
         if (targetType == typeof(System.Windows.Controls.TextBlock)) {
-            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, (double)TxtSz.s));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.2*  (double)TxtSz.s));
             style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
         }
 
@@ -149,7 +190,7 @@ public static class ThemeManager {
         style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Regular));
 
         if (targetType == typeof(System.Windows.Controls.TextBlock)) {
-            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.2 * (double)TxtSz.normal));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.5 * (double)TxtSz.normal));
             style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
         }
 
@@ -163,7 +204,7 @@ public static class ThemeManager {
         style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
 
         if (targetType == typeof(System.Windows.Controls.TextBlock)) {
-            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.2 * (double)TxtSz.normal));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.5 * (double)TxtSz.normal));
             style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
         }
 
@@ -177,7 +218,7 @@ public static class ThemeManager {
         style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
 
         if (targetType == typeof(System.Windows.Controls.TextBlock)) {
-            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.2 * (double)TxtSz.m));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.5 * (double)TxtSz.m));
             style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
         }
 
@@ -191,7 +232,7 @@ public static class ThemeManager {
         style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
 
         if (targetType == typeof(System.Windows.Controls.TextBlock)) {
-            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.3 * (double)TxtSz.l));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.6 * (double)TxtSz.l));
             style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
         }
 
@@ -205,7 +246,7 @@ public static class ThemeManager {
         style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
 
         if (targetType == typeof(System.Windows.Controls.TextBlock)) {
-            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.4 * (double)TxtSz.ll));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.7 * (double)TxtSz.ll));
             style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
         }
 

@@ -42,6 +42,24 @@
                             <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}" />
                             <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}" />
                         </ui:TextBox.InputBindings>
+                        <TextBox.Style>
+                            <Style TargetType="TextBox">
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TextBox">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ScrollViewer x:Name="PART_ContentHost"
+                                                              Margin="0"
+                                                              Focusable="False" />
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TextBox.Style>
                     </ui:TextBox>
                 </Border>
 
