@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using AddinPaletteSuite.Commands;
 using AddinPaletteSuite.Core;
 using AddinPaletteSuite.Core.Services;
@@ -38,9 +39,42 @@ public static class CommandPaletteService {
         var commandHelper = new PostableCommandHelper(persistence);
         var commandItems = commandHelper.GetAllCommands();
 
-        // Convert to ISelectableItem adapters
-        var selectableItems = commandItems
-            .ToList();
+        // Split commands with semicolon-separated names into separate items
+        var selectableItems = new List<PostableCommandItem>();
+        foreach (var item in commandItems) {
+            if (string.IsNullOrEmpty(item.Name) || !item.Name.Contains(';')) {
+                var normalizedItem = item;
+                if (!string.IsNullOrEmpty(item.Name) && item.Name.Contains(':')) {
+                    normalizedItem = new PostableCommandItem {
+                        Command = item.Command,
+                        Name = Regex.Replace(item.Name, ":(?! )", ": "),
+                        UsageCount = item.UsageCount,
+                        LastUsed = item.LastUsed,
+                        Shortcuts = new List<string>(item.Shortcuts),
+                        Paths = new List<string>(item.Paths)
+                    };
+                }
+                selectableItems.Add(normalizedItem);
+                continue;
+            }
+
+            // Split name on semicolons and create separate items for each
+            var names = item.Name.Split(';')
+                .Select(n => n.Trim())
+                .Where(n => !string.IsNullOrEmpty(n))
+                .Select(n => Regex.Replace(n, ":(?! )", ": "));
+
+            foreach (var name in names) {
+                selectableItems.Add(new PostableCommandItem {
+                    Command = item.Command,
+                    Name = name,
+                    UsageCount = item.UsageCount,
+                    LastUsed = item.LastUsed,
+                    Shortcuts = new List<string>(item.Shortcuts),
+                    Paths = new List<string>(item.Paths)
+                });
+            }
+        }
 
         // Create search filter service
         var searchService = new SearchFilterService<PostableCommandItem>(

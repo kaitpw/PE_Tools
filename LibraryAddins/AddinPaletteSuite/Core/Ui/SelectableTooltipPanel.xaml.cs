@@ -44,8 +44,8 @@ public class SelectableTooltipPanel : UserControl {
         if (this._isInitialized) return;
         // Create Border
         this._border = new Border {
-            Background = ThemeManager.PrimaryBg(),
-            BorderBrush = ThemeManager.PrimaryTxt(),
+            // Background = ThemeManager.PrimaryBg(),
+            // BorderBrush = ThemeManager.PrimaryTxt(),
             BorderThickness = new Thickness(0, 0, 1, 0)
         };
 

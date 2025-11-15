@@ -9,9 +9,9 @@ namespace AddinPaletteSuite.Core.Ui;
 public class CanExecuteToOpacityConverter : IValueConverter {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
         if (value is bool canExecute) {
-            return canExecute ? ThemeManager.ItemOpacityEnabled : ThemeManager.ItemOpacityDisabled;
+            return canExecute ? 1 : ThemeManager.DisabledOpacity;
         }
-        return ThemeManager.ItemOpacityEnabled;
+        return 1;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {

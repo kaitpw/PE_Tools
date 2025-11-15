@@ -1,0 +1,21 @@
+{
+  "colorize.languages": [
+    "csharp"
+  ],
+  "colorize.enable_search_variables": true,
+  "colorize.hide_current_line_decorations": true,
+  "colorize.decoration_type": "background",
+  "color-picker-universal.disable": false,
+  "color-picker-universal.ignoreVariableName": true,
+  "color-picker-universal.preferLegacy": false,
+  "color-picker-universal.languages": [
+    "*"
+  ],
+  "color-picker-universal.formatsFrom": [
+    "*"
+  ],
+  "color-picker-universal.formatsTo": [
+    "*"
+  ],
+  "color-picker-universal.maxDigits": 2
+}

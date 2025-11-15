@@ -67,11 +67,10 @@ public partial class SelectableListViewItem : Border {
         this.IconImage.Source = hasIcon ? item.Icon : null;
         this.IconImage.Visibility = hasIcon ? Visibility.Visible : Visibility.Collapsed;
 
-        // Update Tooltip
-        this.ToolTip = !string.IsNullOrWhiteSpace(item.TextInfo) ? item.TextInfo : null;
+        // Tooltip disabled - no hover tooltips
 
         // Update Opacity based on CanExecute
-        this.Opacity = item.CanExecute ? ThemeManager.ItemOpacityEnabled : ThemeManager.ItemOpacityDisabled;
+        this.Opacity = item.CanExecute ? 1 : ThemeManager.DisabledOpacity;
     }
 
     /// <summary>
@@ -112,9 +111,7 @@ public partial class SelectableListViewItem : Border {
         };
         _ = this.IconImage.SetBinding(VisibilityProperty, iconVisibilityBinding);
 
-        // Bind Tooltip
-        var tooltipBinding = new Binding("TextInfo") { Mode = BindingMode.OneWay };
-        _ = this.SetBinding(ToolTipProperty, tooltipBinding);
+        // Tooltip disabled - no hover tooltips
 
         // Bind Opacity based on CanExecute
         var opacityBinding = new Binding("CanExecute") {

@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using Wpf.Ui.Markup;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -32,17 +33,8 @@ public class EphemeralWindow : Window {
             MaxHeight = 300,
         };
 
-        // Apply ThemeManager styles to this window
+        // 6. Apply custom implicit styles (focus visual, etc.)
         ThemeManager.ApplyStylesToWindow(this);
-
-        // Apply custom color overrides to WPF.UI theme
-        this.Resources.MergedDictionaries.Add(ThemeManager.CreateWpfUiResourceOverrides());
-
-        // Apply custom typography overrides
-        this.Resources.MergedDictionaries.Add(ThemeManager.CreateTypographyOverrides());
-
-        // Apply custom control dimension overrides
-        this.Resources.MergedDictionaries.Add(ThemeManager.CreateControlDimensionOverrides());
 
         // Subscribe to CloseRequested event if content implements it
         if (content is ICloseRequestable closeable) closeable.CloseRequested += this.OnContentCloseRequested;
