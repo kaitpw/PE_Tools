@@ -85,7 +85,7 @@
         <PackageReference Include="NJsonSchema" Version="11.4.0"/>
         <PackageReference Include="NJsonSchema.NewtonsoftJson" Version="11.4.0"/>
         <PackageReference Include="Revit.Async" Version="2.1.1"/>
-        <PackageReference Include="System.Windows.Forms"/>
+        <!-- <PackageReference Include="System.Windows.Forms"/> -->
         <PackageReference Include="Newtonsoft.Json" Version="13.0.4-beta1"/>
         <PackageReference Include="ricaun.Revit.Github" Version="0.4.1"/>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0"/>

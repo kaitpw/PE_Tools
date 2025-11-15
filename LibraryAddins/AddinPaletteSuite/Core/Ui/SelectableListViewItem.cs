@@ -1,7 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using Wpf.Ui.Controls;
 using Binding = System.Windows.Data.Binding;
+using Image = System.Windows.Controls.Image;
+using TextBlock = System.Windows.Controls.TextBlock;
 using Visibility = System.Windows.Visibility;
 
 namespace AddinPaletteSuite.Core.Ui;
@@ -18,7 +21,7 @@ public partial class SelectableListViewItem : Border {
     }
 
     private void ApplyStyling() {
-        // Border styling
+        // Border styling (layout only, colors from XAML DynamicResources)
         this.CornerRadius = new CornerRadius((double)UiSz.l);
         _ = this.WithPadding(UiSz.ss, UiSz.s, UiSz.ll, UiSz.m);
 
@@ -28,18 +31,12 @@ public partial class SelectableListViewItem : Border {
         this.IconImage.Margin = new Thickness(0, 0, (double)UiSz.l, 0);
         this.IconImage.Opacity = ThemeManager.IconOpacity;
 
-        // Text styling using ThemeManager helpers
-        _ = ThemeManager.StyleTextBlock(this.PrimaryText);
-        this.PrimaryText.FontWeight = FontWeights.Medium;
+        // Text styling - apply typography styles to override WPF.UI defaults
+        this.PrimaryText.Style = ThemeManager.GetTypographyStyle(FontTypography.BodyStrong);
+        this.SecondaryText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
+        this.PillText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
 
-        _ = ThemeManager.StyleTextBlock(this.SecondaryText, TxtSz.s, false);
-        _ = ThemeManager.StyleTextBlock(this.PillText, TxtSz.s, false);
-
-        // Pill border styling
-        var pillBackground = ThemeManager.TertiaryBg().Clone();
-        pillBackground.Opacity = 0.5;
-        this.PillBorder.Background = pillBackground;
-        this.PillBorder.BorderBrush = ThemeManager.PrimaryHi();
+        // Pill border styling (layout only, colors from XAML DynamicResources)
         this.PillBorder.BorderThickness = new Thickness((double)UiSz.ss);
         this.PillBorder.CornerRadius = new CornerRadius((double)UiSz.m);
         _ = this.PillBorder.WithPadding(UiSz.m, 0, UiSz.m, UiSz.ss);
@@ -90,7 +87,8 @@ public partial class SelectableListViewItem : Border {
         _ = this.SecondaryText.SetBinding(TextBlock.TextProperty, secondaryBinding);
 
         var secondaryVisibilityBinding = new Binding("TextSecondary") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new VisibilityConverter()
         };
         _ = this.SecondaryText.SetBinding(VisibilityProperty, secondaryVisibilityBinding);
 
@@ -99,7 +97,8 @@ public partial class SelectableListViewItem : Border {
         _ = this.PillText.SetBinding(TextBlock.TextProperty, pillTextBinding);
 
         var pillVisibilityBinding = new Binding("TextPill") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new VisibilityConverter()
         };
         _ = this.PillBorder.SetBinding(VisibilityProperty, pillVisibilityBinding);
 
@@ -108,7 +107,8 @@ public partial class SelectableListViewItem : Border {
         _ = this.IconImage.SetBinding(Image.SourceProperty, iconBinding);
 
         var iconVisibilityBinding = new Binding("Icon") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new VisibilityConverter()
         };
         _ = this.IconImage.SetBinding(VisibilityProperty, iconVisibilityBinding);
 
@@ -118,7 +118,8 @@ public partial class SelectableListViewItem : Border {
 
         // Bind Opacity based on CanExecute
         var opacityBinding = new Binding("CanExecute") {
-            Mode = BindingMode.OneWay, Converter = new CanExecuteToOpacityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new CanExecuteToOpacityConverter()
         };
         _ = this.SetBinding(OpacityProperty, opacityBinding);
     }

@@ -5,13 +5,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
+using Wpf.Ui.Controls;
+using Wpf.Ui.Markup;
 using ContextMenu = System.Windows.Controls.ContextMenu;
-using Grid = System.Windows.Controls.Grid;
 using MenuItem = Wpf.Ui.Controls.MenuItem;
-using TextBlock = Wpf.Ui.Controls.TextBlock;
-using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -44,22 +42,12 @@ public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem
     public ActionMenu() {
         this.Menu = new ContextMenu {
             StaysOpen = false,
-            PlacementTarget = null,
             Placement = PlacementMode.Right,
-            HorizontalOffset = 0,
-            VerticalOffset = 0,
-            Background = Theme.PrimaryBg(),
-            BorderBrush = Theme.SecondaryHi(),
-            BorderThickness = new Thickness((double)UiSz.ss),
             FocusVisualStyle = null,
-            Style = (Style)this.FindResource("ActionMenuStyle"),
-            Padding = new Thickness(0)
+
         };
 
-        // Handle context menu closing to raise exit event
         this.Menu.Closed += (_, _) => this.OnExitRequested();
-
-        // Add keyboard handler for Left arrow and Escape
         this.Menu.PreviewKeyDown += this.ContextMenu_PreviewKeyDown;
     }
 
@@ -82,12 +70,11 @@ public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem
         if (this._actions == null || this.Menu == null) return;
 
         this._currentItem = currentItem;
-        this.RebuildMenu(); // Rebuild to update enabled/disabled state
+        this.RebuildMenu();
 
         this.Menu.PlacementTarget = placementTarget;
         this.Menu.IsOpen = true;
 
-        // Focus the first enabled menu item after menu opens
         _ = this.Menu.Dispatcher.BeginInvoke(new Action(() => {
             var firstEnabledItem = this.Menu!.Items.OfType<MenuItem>()
                 .FirstOrDefault(mi => mi.IsEnabled);
@@ -110,80 +97,33 @@ public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem
 
         if (this._actions == null) return;
 
-        var isFirst = true;
-        foreach (var action in this._actions) {
-            if (action is not PaletteAction<TItem> paletteAction) continue;
+        var actionsList = this._actions.Cast<PaletteAction<TItem>>().ToList();
 
-            // Add separator before each item except the first
-            if (!isFirst) {
-                var separator = new Separator {
-                    BorderThickness = new Thickness((double)UiSz.ss),
-                    BorderBrush = Theme.PrimaryTxt(),
-                };
-                _ = this.Menu.Items.Add(separator);
-            }
-            isFirst = false;
-
-            // Check if action can execute for the current item
+        for (var i = 0; i < actionsList.Count; i++) {
+            var paletteAction = actionsList[i];
             var canExecute = this._currentItem == null || paletteAction.CanExecute(this._currentItem);
-
-            // Create custom header content with full control over layout
-            var headerBorder = new Border().WithPadding(UiSz.l, UiSz.m, UiSz.l, UiSz.l);
-            headerBorder.CornerRadius = new CornerRadius((double)UiSz.m);
-            headerBorder.Margin = new Thickness(0);
-
-            var headerGrid = new Grid();
-            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            // Action name TextBlock
-            var nameTextBlock = Theme.StyleTextBlock(new TextBlock {
-                Text = paletteAction.Name,
-                VerticalAlignment = VerticalAlignment.Center,
-                FontWeight = FontWeights.SemiBold
-            });
-            Grid.SetColumn(nameTextBlock, 0);
-
-            // Shortcut TextBlock
             var shortcutText = this.FormatShortcut(paletteAction);
-            var shortcutTextBlock =
-                Theme.StyleTextBlock(
-                    new TextBlock { Text = shortcutText, VerticalAlignment = VerticalAlignment.Center }, TxtSz.s,
-                    false);
-            Grid.SetColumn(shortcutTextBlock, 1);
 
-            _ = headerGrid.Children.Add(nameTextBlock);
-            if (!string.IsNullOrEmpty(shortcutText)) _ = headerGrid.Children.Add(shortcutTextBlock);
-
-            headerBorder.Child = headerGrid;
-
-            // Create MenuItem with custom header
             var menuItem = new MenuItem {
-                Header = headerBorder,
+                Header = paletteAction.Name,
+                InputGestureText = shortcutText,
                 IsEnabled = canExecute,
-                Opacity = canExecute ? Theme.ItemOpacityEnabled : Theme.ItemOpacityDisabled,
-                Margin = new Thickness(0),
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                Background = Brushes.Transparent,
-                Style = (Style)this.FindResource("ActionMenuItemStyle"),
-                Width = 110
+                FontFamily = ThemeManager.FontFamily(),
+                FontSize = (double)TxtSz.normal
             };
-            // Set highlight color on mouse enter and focus
-            menuItem.MouseEnter += (_, _) => {
-                if (menuItem.IsEnabled) headerBorder.Background = Theme.SecondaryHi();
-            };
-            menuItem.MouseLeave += (_, _) => headerBorder.Background = Brushes.Transparent;
-            menuItem.GotFocus += (_, _) => {
-                if (menuItem.IsEnabled) headerBorder.Background = Theme.SecondaryHi();
-            };
-            menuItem.LostFocus += (_, _) => headerBorder.Background = Brushes.Transparent;
 
             menuItem.Click += (_, _) => {
                 this.ActionClicked?.Invoke(this, paletteAction);
                 this.Hide();
             };
 
-            _ = this.Menu!.Items.Add(menuItem);
+            _ = this.Menu.Items.Add(menuItem);
+
+            // Add separator between items (but not after the last item)
+            if (i < actionsList.Count - 1) {
+                var separator = new Separator();
+                _ = this.Menu.Items.Add(separator);
+            }
         }
     }
 

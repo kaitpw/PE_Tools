@@ -24,8 +24,6 @@ public class EphemeralWindow : Window {
         this.AllowsTransparency = true;
         this.Background = Brushes.Transparent;
         this.ShowInTaskbar = false;
-
-
         this.Topmost = true;
 
         this.Content = new Border {
@@ -36,6 +34,15 @@ public class EphemeralWindow : Window {
 
         // Apply ThemeManager styles to this window
         ThemeManager.ApplyStylesToWindow(this);
+
+        // Apply custom color overrides to WPF.UI theme
+        this.Resources.MergedDictionaries.Add(ThemeManager.CreateWpfUiResourceOverrides());
+
+        // Apply custom typography overrides
+        this.Resources.MergedDictionaries.Add(ThemeManager.CreateTypographyOverrides());
+
+        // Apply custom control dimension overrides
+        this.Resources.MergedDictionaries.Add(ThemeManager.CreateControlDimensionOverrides());
 
         // Subscribe to CloseRequested event if content implements it
         if (content is ICloseRequestable closeable) closeable.CloseRequested += this.OnContentCloseRequested;

@@ -3,60 +3,12 @@
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
     <!-- Merge Wpf.Ui base theme and control dictionaries -->
+    <!-- These provide beautiful default styling to ui:MenuItem and other WPF.UI controls -->
     <ResourceDictionary.MergedDictionaries>
         <ui:ThemesDictionary Theme="Dark" />
         <ui:ControlsDictionary />
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- ActionMenu ContextMenu Style -->
-    <Style x:Key="ActionMenuStyle" TargetType="ContextMenu">
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ContextMenu">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="6">
-                        <ScrollViewer CanContentScroll="True"
-                                      VerticalScrollBarVisibility="Hidden"
-                                      HorizontalScrollBarVisibility="Hidden">
-                            <ItemsPresenter Margin="0"
-                                            HorizontalAlignment="Stretch"/>
-                        </ScrollViewer>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- ActionMenu MenuItem Style -->
-    <Style x:Key="ActionMenuItemStyle" TargetType="ui:MenuItem">
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ui:MenuItem">
-                    <Border x:Name="Border"
-                            Background="{TemplateBinding Background}"
-                            BorderThickness="0"
-                            Padding="0"
-                            CornerRadius="4"
-                            Margin="4">
-                        <ContentPresenter Content="{TemplateBinding Header}"
-                                          VerticalAlignment="Center"
-                                          HorizontalAlignment="Stretch"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Border" Property="Background" Value="Orange"/>
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="Border" Property="Opacity" Value="0.4"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- NOTE: Implicit control styling (fonts, colors) is now managed by ThemeManager.Initialize() -->
-    <!-- This file contains only named styles for specific components and WPF.UI theme dictionaries -->
+    <!-- Dynamic colors injected via ThemeManager.CreateWpfUiResourceOverrides() -->
+    <!-- This enables type-safe, runtime-customizable theming while leveraging WPF-UI's component styling -->
 </ResourceDictionary>

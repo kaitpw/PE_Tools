@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using Wpf.Ui.Controls;
 using WpfUiListViewItem = Wpf.Ui.Controls.ListViewItem;
 using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
 
@@ -70,23 +71,35 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
     private SelectablePaletteViewModel<TItem> ViewModel => this.DataContext as SelectablePaletteViewModel<TItem>;
 
     private void ApplyStyles() {
-        _ = this.MainBorder
-            .ApplyBorder(bgColor: Theme.PrimaryBg());
+        // Apply corner radius to main border and child borders
+        this.MainBorder.CornerRadius = ThemeManager.Radius;
+        this.MainBorder.ClipToBounds = true;
+
+        // Round top corners of search box
+        var topRadius = ThemeManager.Radius.TopLeft;
+        this.SearchBoxBorder.CornerRadius = new CornerRadius(topRadius, topRadius, 0, 0);
+
+        // Round bottom corners of status bar
+        this.StatusBarBorder.CornerRadius = new CornerRadius(0, 0, topRadius, topRadius);
+        this.StatusBarBorder.ClipToBounds = true;
+
+        // Apply component-specific border and spacing styles
         _ = this.SearchBoxBorder
-            .ApplyBorder(bgColor: Theme.PrimaryBg())
             .WithSpacing(0, 0)
             .WithPadding(UiSz.l, UiSz.m, UiSz.ll, UiSz.m);
-        this.SearchTextBox.CaretBrush = Theme.SecondaryTxt();
-        this.SearchTextBox.FontSize = (double)TxtSz.m;
-        this.SearchTextBox.Foreground = Theme.PrimaryTxt();
+
+        // Apply body typography to search box (TextBox)
+        ThemeManager.ApplyTypographyStyle(this.SearchTextBox, FontTypography.Body);
+
+        // Remove focus visual (ugly blue halo) - should already be handled by XAML but ensure it's set
+        this.SearchTextBox.FocusVisualStyle = null;
 
         _ = this.StatusBarBorder
-            .ApplyBorder(bgColor: Theme.SecondaryBg())
             .WithPadding(UiSz.l, UiSz.s, UiSz.l, UiSz.s);
 
-        // Apply styling using ThemeManager helpers
-        _ = Theme.StyleTextBlock(this.ItemCountText, TxtSz.s, false);
-        _ = Theme.StyleTextBlock(this.HelpText, TxtSz.s, false);
+        // Apply caption typography to status bar text (TextBlock)
+        this.ItemCountText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
+        this.HelpText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
     }
 
     private void UpdateCanExecuteForVisibleItems() {

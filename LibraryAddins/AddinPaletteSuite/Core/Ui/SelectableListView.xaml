@@ -12,9 +12,6 @@
                     Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Theme Brushes (only needed for ListView background and hover states) -->
-            <!-- Note: Brushes are set in code-behind for hot-reload support -->
-
             <!-- ScrollViewer Style with WPF.UI DynamicScrollBar -->
             <Style x:Key="CustomScrollViewerStyle" TargetType="ScrollViewer">
                 <Setter Property="Background" Value="Transparent" />
@@ -75,7 +72,7 @@
                                 
                                 <Separator Grid.Row="1" 
                                           Margin="6,0,6,0"
-                                          Background="{DynamicResource SeparatorBrush}"
+                                          Background="{ui:ThemeResource DividerStrokeColorDefaultBrush}"
                                           Height="1"/>
                             </Grid>
                         </ControlTemplate>
@@ -84,11 +81,11 @@
                 <Style.Triggers>
                     <!-- Hover state -->
                     <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource Highlight}" />
+                        <Setter Property="Background" Value="{ui:ThemeResource SubtleFillColorSecondaryBrush}" />
                     </Trigger>
                     <!-- Selected state -->
                     <Trigger Property="IsSelected" Value="True">
-                        <Setter Property="Background" Value="{DynamicResource Highlight}" />
+                        <Setter Property="Background" Value="{ui:ThemeResource SubtleFillColorSecondaryBrush}" />
                     </Trigger>
                 </Style.Triggers>
             </Style>

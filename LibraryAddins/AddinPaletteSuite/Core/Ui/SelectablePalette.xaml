@@ -18,7 +18,8 @@
         <!-- Main container -->
         <Border x:Name="MainBorder"
                 HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch">
+                VerticalAlignment="Stretch"
+                Background="{ui:ThemeResource ApplicationBackgroundBrush}">
             <Grid HorizontalAlignment="Stretch"
                   VerticalAlignment="Stretch">
                 <Grid.RowDefinitions>
@@ -29,33 +30,18 @@
 
                 <!-- Search Box -->
                 <Border x:Name="SearchBoxBorder"
-                        ClipToBounds="True">
+                        ClipToBounds="True"
+                        Background="{ui:ThemeResource ApplicationBackgroundBrush}">
                     <ui:TextBox x:Name="SearchTextBox"
                                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                                 BorderBrush="Transparent"
-                                Background="Transparent">
+                                Background="Transparent"
+                                CaretBrush="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                                Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}">
                         <ui:TextBox.InputBindings>
                             <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}" />
                             <KeyBinding Key="Up" Command="{Binding MoveSelectionUpCommand}" />
                         </ui:TextBox.InputBindings>
-                        <TextBox.Style>
-                            <Style TargetType="TextBox">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="TextBox">
-                                            <Border Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                                    Padding="{TemplateBinding Padding}">
-                                                <ScrollViewer x:Name="PART_ContentHost"
-                                                              Margin="0"
-                                                              Focusable="False" />
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </TextBox.Style>
                     </ui:TextBox>
                 </Border>
 
@@ -69,24 +55,29 @@
 
                 <!-- Status Bar -->
                 <Border x:Name="StatusBarBorder"
-                        Grid.Row="2">
+                        Grid.Row="2"
+                        Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}">
                     <Grid x:Name="StatusBarGrid">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <ui:TextBlock x:Name="ItemCountText"
-                                   Grid.Column="0"
-                                   Text="{Binding FilteredItems.Count, StringFormat=\{0\} items}"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Left" />
-                        
-                        <ui:TextBlock x:Name="HelpText"
-                                   Grid.Column="1"
-                                   Text="↑↓ Navigate • ← Tooltip • → Actions • Click/Enter Execute • Esc Close"
-                                   VerticalAlignment="Center"
-                                   HorizontalAlignment="Right" />
+                    <ui:TextBlock x:Name="ItemCountText"
+                               Grid.Column="0"
+                               Text="{Binding FilteredItems.Count, StringFormat=\{0\} items}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Style="{DynamicResource CaptionTextBlockStyle}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
+                    
+                    <ui:TextBlock x:Name="HelpText"
+                               Grid.Column="1"
+                               Text="↑↓ Navigate • ← Tooltip • → Actions • Click/Enter Execute • Esc Close"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"
+                               Style="{DynamicResource CaptionTextBlockStyle}"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
                     </Grid>
                 </Border>
             </Grid>

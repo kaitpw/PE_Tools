@@ -37,20 +37,20 @@ public class SelectableTextBox : UserControl, IPopoverExit {
         var border = new Border {
             HorizontalAlignment = HorizontalAlignment.Left,
             VerticalAlignment = VerticalAlignment.Top,
-            Background = Brushes.Transparent,
             Child = this._richTextBox,
             Width = 150.0,
-            MinHeight = 50.0
+            MinHeight = 50.0,
+            BorderThickness = new Thickness((double)UiSz.ss),
+            CornerRadius = new CornerRadius((double)UiSz.l)
         };
 
-        this.Content = border
-            .ApplyBorder(
-                UiSz.ss,
-                UiSz.l,
-                ThemeManager.SecondaryHi(),
-                ThemeManager.PrimaryBg()
-            )
-            .WithPadding(UiSz.m, UiSz.m);
+        // Set border colors from DynamicResources
+        border.SetResourceReference(Border.BorderBrushProperty, "ControlStrokeColorDefaultBrush");
+        border.SetResourceReference(Border.BackgroundProperty, "ApplicationBackgroundBrush");
+
+        _ = border.WithPadding(UiSz.m, UiSz.m);
+
+        this.Content = border;
     }
 
     public UIElement? ReturnFocusTarget { get; set; }
@@ -88,9 +88,12 @@ public class SelectableTextBox : UserControl, IPopoverExit {
             PagePadding = new Thickness(0),
             TextAlignment = TextAlignment.Left,
             FontFamily = ThemeManager.FontFamily(),
-            FontSize = (double)TxtSz.normal,
-            Foreground = ThemeManager.SecondaryTxt()
+            FontSize = 10.0,
+            LineHeight = 14.0
         };
+        // Set foreground from DynamicResource
+        this._richTextBox.Document.SetResourceReference(FlowDocument.ForegroundProperty, "TextFillColorSecondaryBrush");
+
         this._richTextBox.Document.Blocks.Add(new Paragraph(new Run(text)));
     }
 

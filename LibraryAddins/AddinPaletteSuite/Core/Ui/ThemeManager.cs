@@ -1,9 +1,13 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Extensions;
+using Wpf.Ui.Markup;
 using Color = System.Windows.Media.Color;
+using Control = System.Windows.Controls.Control;
 using MenuItem = Wpf.Ui.Controls.MenuItem;
 
 namespace AddinPaletteSuite.Core.Ui;
@@ -64,13 +68,163 @@ public static class ThemeManager {
 
     #region Typography
 
-    // Font Sizes
-
-
     // Font Family
     public static FontFamily FontFamily() => new("Segoe UI Variable Text");
 
-    // public static ApplyFont(TextBlock)
+    // Typography Style Keys (for XAML StaticResource)
+    public const string CaptionTextBlockStyleKey = "CaptionTextBlockStyle";
+    public const string BodyTextBlockStyleKey = "BodyTextBlockStyle";
+    public const string BodyStrongTextBlockStyleKey = "BodyStrongTextBlockStyle";
+    public const string SubtitleTextBlockStyleKey = "SubtitleTextBlockStyle";
+    public const string TitleTextBlockStyleKey = "TitleTextBlockStyle";
+    public const string TitleLargeTextBlockStyleKey = "TitleLargeTextBlockStyle";
+    public const string DisplayTextBlockStyleKey = "DisplayTextBlockStyle";
+
+    // Typography Style Accessors (for code-behind)
+    public static Style CaptionTextBlockStyle() => CreateCaptionStyle();
+    public static Style BodyTextBlockStyle() => CreateBodyStyle();
+    public static Style BodyStrongTextBlockStyle() => CreateBodyStrongStyle();
+    public static Style SubtitleTextBlockStyle() => CreateSubtitleStyle();
+    public static Style TitleTextBlockStyle() => CreateTitleStyle();
+    public static Style TitleLargeTextBlockStyle() => CreateTitleLargeStyle();
+    public static Style DisplayTextBlockStyle() => CreateDisplayStyle();
+
+    /// <summary>
+    ///     Gets a typography style by FontTypography enum for type-safe access.
+    ///     Uses WPF.UI's FontTypography enum for consistency.
+    ///     Creates style for TextBlock by default.
+    /// </summary>
+    public static Style GetTypographyStyle(FontTypography typography) =>
+        GetTypographyStyle(typography, typeof(System.Windows.Controls.TextBlock));
+
+    /// <summary>
+    ///     Gets a typography style by FontTypography enum for a specific control type.
+    ///     Supports TextBlock, TextBox, and other text-based controls.
+    /// </summary>
+    public static Style GetTypographyStyle(FontTypography typography, Type targetType) => typography switch {
+        FontTypography.Caption => CreateCaptionStyle(targetType),
+        FontTypography.Body => CreateBodyStyle(targetType),
+        FontTypography.BodyStrong => CreateBodyStrongStyle(targetType),
+        FontTypography.Subtitle => CreateSubtitleStyle(targetType),
+        FontTypography.Title => CreateTitleStyle(targetType),
+        FontTypography.TitleLarge => CreateTitleLargeStyle(targetType),
+        FontTypography.Display => CreateDisplayStyle(targetType),
+        _ => throw new ArgumentOutOfRangeException(nameof(typography), typography, null)
+    };
+
+    /// <summary>
+    ///     Gets a typography style resource key by FontTypography enum.
+    ///     Uses WPF.UI's ToResourceValue() extension method.
+    /// </summary>
+    public static string GetTypographyResourceKey(FontTypography typography) => typography.ToResourceValue();
+
+    // Style factory methods - TextBlock overloads for backward compatibility
+    private static Style CreateCaptionStyle() => CreateCaptionStyle(typeof(System.Windows.Controls.TextBlock));
+    private static Style CreateBodyStyle() => CreateBodyStyle(typeof(System.Windows.Controls.TextBlock));
+    private static Style CreateBodyStrongStyle() => CreateBodyStrongStyle(typeof(System.Windows.Controls.TextBlock));
+    private static Style CreateSubtitleStyle() => CreateSubtitleStyle(typeof(System.Windows.Controls.TextBlock));
+    private static Style CreateTitleStyle() => CreateTitleStyle(typeof(System.Windows.Controls.TextBlock));
+    private static Style CreateTitleLargeStyle() => CreateTitleLargeStyle(typeof(System.Windows.Controls.TextBlock));
+    private static Style CreateDisplayStyle() => CreateDisplayStyle(typeof(System.Windows.Controls.TextBlock));
+
+    // Style factory methods - with Type parameter
+    private static Style CreateCaptionStyle(Type targetType) {
+        var style = new Style(targetType);
+        style.Setters.Add(new Setter(Control.FontFamilyProperty, FontFamily()));
+        style.Setters.Add(new Setter(Control.FontSizeProperty, (double)TxtSz.s));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Regular));
+
+        if (targetType == typeof(System.Windows.Controls.TextBlock)) {
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, (double)TxtSz.s));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
+        }
+
+        return style;
+    }
+
+    private static Style CreateBodyStyle(Type targetType) {
+        var style = new Style(targetType);
+        style.Setters.Add(new Setter(Control.FontFamilyProperty, FontFamily()));
+        style.Setters.Add(new Setter(Control.FontSizeProperty, (double)TxtSz.normal));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.Regular));
+
+        if (targetType == typeof(System.Windows.Controls.TextBlock)) {
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.2 * (double)TxtSz.normal));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
+        }
+
+        return style;
+    }
+
+    private static Style CreateBodyStrongStyle(Type targetType) {
+        var style = new Style(targetType);
+        style.Setters.Add(new Setter(Control.FontFamilyProperty, FontFamily()));
+        style.Setters.Add(new Setter(Control.FontSizeProperty, (double)TxtSz.normal));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
+
+        if (targetType == typeof(System.Windows.Controls.TextBlock)) {
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.2 * (double)TxtSz.normal));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
+        }
+
+        return style;
+    }
+
+    private static Style CreateSubtitleStyle(Type targetType) {
+        var style = new Style(targetType);
+        style.Setters.Add(new Setter(Control.FontFamilyProperty, FontFamily()));
+        style.Setters.Add(new Setter(Control.FontSizeProperty, (double)TxtSz.m));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
+
+        if (targetType == typeof(System.Windows.Controls.TextBlock)) {
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.2 * (double)TxtSz.m));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
+        }
+
+        return style;
+    }
+
+    private static Style CreateTitleStyle(Type targetType) {
+        var style = new Style(targetType);
+        style.Setters.Add(new Setter(Control.FontFamilyProperty, FontFamily()));
+        style.Setters.Add(new Setter(Control.FontSizeProperty, (double)TxtSz.l));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
+
+        if (targetType == typeof(System.Windows.Controls.TextBlock)) {
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.3 * (double)TxtSz.l));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
+        }
+
+        return style;
+    }
+
+    private static Style CreateTitleLargeStyle(Type targetType) {
+        var style = new Style(targetType);
+        style.Setters.Add(new Setter(Control.FontFamilyProperty, FontFamily()));
+        style.Setters.Add(new Setter(Control.FontSizeProperty, (double)TxtSz.ll));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
+
+        if (targetType == typeof(System.Windows.Controls.TextBlock)) {
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 1.4 * (double)TxtSz.ll));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
+        }
+
+        return style;
+    }
+
+    private static Style CreateDisplayStyle(Type targetType) {
+        var style = new Style(targetType);
+        style.Setters.Add(new Setter(Control.FontFamilyProperty, FontFamily()));
+        style.Setters.Add(new Setter(Control.FontSizeProperty, 48.0));
+        style.Setters.Add(new Setter(Control.FontWeightProperty, FontWeights.SemiBold));
+
+        if (targetType == typeof(System.Windows.Controls.TextBlock)) {
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 64.0));
+            style.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
+        }
+
+        return style;
+    }
 
     #endregion
 
@@ -80,15 +234,6 @@ public static class ThemeManager {
     ///     Should be called once at application startup or when creating palette windows.
     /// </summary>
     public static void Initialize() {
-        ApplicationThemeManager.Apply(
-            ApplicationTheme.Dark, WindowBackdropType.Tabbed
-        );
-        ApplicationAccentColorManager.Apply(
-            HexColor("#09090b"),
-            HexColor("#18181b"),
-            HexColor("#27272a"),
-            HexColor("#09090b")
-        );
     }
 
     /// <summary>
@@ -136,66 +281,8 @@ public static class ThemeManager {
         }
     }
 
-    /// <summary>
-    ///     Applies standard font styling to a WPF.UI TextBlock control.
-    ///     Use this helper to avoid manual property setting in code-behind.
-    /// </summary>
-    public static T StyleTextBlock<T>(T textBlock, TxtSz fontSize = TxtSz.normal, bool isPrimary = true)
-        where T : TextBlock {
-        textBlock.FontFamily = FontFamily();
-        textBlock.FontSize = (double)fontSize;
-        textBlock.Foreground = isPrimary ? PrimaryTxt() : SecondaryTxt();
-        textBlock.Padding = new Thickness(0);
-        textBlock.Margin = new Thickness(0);
 
-        // Set LineHeight to match font size to prevent extra spacing
-        textBlock.LineHeight = 1.3 * (double)fontSize;
-        textBlock.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
 
-        // Debug: Log the actual computed values
-        Debug.WriteLine(
-            $"StyleTextBlock - FontSize: {textBlock.FontSize}, Padding: {textBlock.Padding}, Margin: {textBlock.Margin}, LineHeight: {textBlock.LineHeight}");
-
-        return textBlock;
-    }
-
-    /// <summary>
-    ///     Applies standard font styling to a standard TextBlock control.
-    ///     Use this helper to avoid manual property setting in code-behind.
-    /// </summary>
-    public static System.Windows.Controls.TextBlock StyleTextBlock(System.Windows.Controls.TextBlock textBlock,
-        TxtSz fontSize = TxtSz.normal,
-        bool isPrimary = true) {
-        textBlock.FontFamily = FontFamily();
-        textBlock.FontSize = (double)fontSize;
-        textBlock.Foreground = isPrimary ? PrimaryTxt() : SecondaryTxt();
-        textBlock.Padding = new Thickness(0);
-        textBlock.Margin = new Thickness(0);
-
-        // Set LineHeight to match font size to prevent extra spacing
-        textBlock.LineHeight = (double)fontSize;
-        textBlock.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
-
-        // Debug: Log the actual computed values
-        Debug.WriteLine(
-            $"StyleTextBlock (std) - FontSize: {textBlock.FontSize}, Padding: {textBlock.Padding}, Margin: {textBlock.Margin}, LineHeight: {textBlock.LineHeight}");
-
-        return textBlock;
-    }
-
-    /// <summary>
-    ///     Applies standard font styling to a MenuItem control.
-    ///     Use this helper to avoid manual property setting in code-behind.
-    /// </summary>
-    public static MenuItem StyleMenuItem(MenuItem menuItem) {
-        menuItem.FontFamily = FontFamily();
-        menuItem.FontSize = (double)TxtSz.normal;
-        menuItem.FontWeight = FontWeights.SemiBold;
-        // menuItem.MaxHeight = 30; // this is problematic because its cuts off the text in the item. but the menu items are too big
-        menuItem.Foreground = PrimaryTxt();
-        menuItem.Padding = new Thickness(0); // this also doesn't do anything
-        return menuItem;
-    }
 
     /// <summary>
     ///     Applies implicit styles to Application resources for automatic control styling.
@@ -225,26 +312,11 @@ public static class ThemeManager {
     public static void UpdateTheme() => ApplyImplicitStyles();
 
     /// <summary>
-    ///     Creates a ResourceDictionary with implicit styles for WPF.UI controls.
-    ///     These styles automatically apply ThemeManager values to all controls without manual code-behind styling.
+    ///     Creates a ResourceDictionary with implicit styles for specific controls.
+    ///     Note: TextBlock styles are now handled by CreateTypographyOverrides().
     /// </summary>
     private static ResourceDictionary CreateStyleResources() {
         var resources = new ResourceDictionary();
-
-        // Implicit style for standard TextBlock (fallback for non-WPF.UI controls)
-        var textBlockStyle = new Style(typeof(System.Windows.Controls.TextBlock));
-        textBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.FontFamilyProperty, FontFamily()));
-        textBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.FontSizeProperty,
-            (double)TxtSz.normal));
-        textBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.ForegroundProperty, PrimaryTxt()));
-        textBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.TextTrimmingProperty,
-            TextTrimmingMode));
-        resources.Add(typeof(System.Windows.Controls.TextBlock), textBlockStyle);
-
-        // Note: We cannot add implicit styles for Wpf.Ui.Controls.TextBlock or MenuItem here
-        // because WPF.UI already has implicit styles for them in the merged resource dictionaries.
-        // Attempting to add them will cause "Item has already been added" exception.
-        // Instead, controls must explicitly set font properties in code-behind when needed.
 
         // Implicit style for FlowDocument (used in RichTextBox)
         var flowDocumentStyle = new Style(typeof(FlowDocument));
@@ -253,6 +325,152 @@ public static class ThemeManager {
         flowDocumentStyle.Setters.Add(new Setter(FlowDocument.ForegroundProperty, SecondaryTxt()));
         flowDocumentStyle.Setters.Add(new Setter(FlowDocument.PagePaddingProperty, new Thickness(0)));
         resources.Add(typeof(FlowDocument), flowDocumentStyle);
+
+        // Override default focus visual style to remove outline
+        // Source: https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Styles/Controls/FocusVisual.xaml
+        var focusVisualStyle = CreateFocusVisualStyle();
+        resources.Add("DefaultControlFocusVisualStyle", focusVisualStyle);
+        resources.Add(SystemParameters.FocusVisualStyleKey, focusVisualStyle);
+
+        return resources;
+    }
+
+    /// <summary>
+    ///     Creates a custom FocusVisualStyle with no visible outline.
+    ///     Override WPF.UI's default focus rectangle for a cleaner look.
+    /// </summary>
+    private static Style CreateFocusVisualStyle() {
+        var style = new Style();
+
+        // Create a ControlTemplate with a transparent/invisible rectangle
+        var template = new ControlTemplate(typeof(Control));
+        var rectangleFactory = new FrameworkElementFactory(typeof(System.Windows.Shapes.Rectangle));
+        rectangleFactory.SetValue(System.Windows.Shapes.Rectangle.StrokeProperty, Brushes.Transparent);
+        rectangleFactory.SetValue(System.Windows.Shapes.Rectangle.StrokeThicknessProperty, 0.0);
+        rectangleFactory.SetValue(System.Windows.Shapes.Rectangle.SnapsToDevicePixelsProperty, true);
+        template.VisualTree = rectangleFactory;
+
+        style.Setters.Add(new Setter(Control.TemplateProperty, template));
+
+        return style;
+    }
+
+    /// <summary>
+    ///     Creates a ResourceDictionary with WPF.UI Color resource overrides for custom theming.
+    ///     Sets only base Color resources (not Brushes) - WPF.UI automatically generates corresponding Brush resources.
+    ///     Uses ThemeResource enum for type-safe resource keys with IntelliSense support.
+    ///     
+    ///     Example: Setting TextFillColorPrimary (Color) auto-generates TextFillColorPrimaryBrush (Brush)
+    /// </summary>
+    public static ResourceDictionary CreateWpfUiResourceOverrides() {
+        var resources = new ResourceDictionary {
+            // === Application Background ===
+            [ThemeResource.ApplicationBackgroundColor.ToString()] = HexColor("#09090b"),
+
+            // === Text Colors ===
+            [ThemeResource.TextFillColorPrimary.ToString()] = HexColor("#e2dde1"),
+            [ThemeResource.TextFillColorSecondary.ToString()] = HexColor("#aba2a9"),
+            [ThemeResource.TextFillColorTertiary.ToString()] = HexColor("#aba2a9"),
+            [ThemeResource.TextFillColorDisabled.ToString()] = HexColor("#aba2a9"),
+            [ThemeResource.TextPlaceholderColor.ToString()] = HexColor("#aba2a9"),
+
+            // === Control Fills ===
+            [ThemeResource.ControlFillColorDefault.ToString()] = HexColor("#3b3e3e"),
+            [ThemeResource.ControlFillColorSecondary.ToString()] = HexColor("#343946"),
+            [ThemeResource.ControlFillColorTertiary.ToString()] = HexColor("#27272a"),
+            [ThemeResource.ControlFillColorDisabled.ToString()] = HexColor("#27272a"),
+
+            // === Control Strong Fills ===
+            [ThemeResource.ControlStrongFillColorDefault.ToString()] = HexColor("#343946"),
+
+            // === Solid Backgrounds ===
+            [ThemeResource.SolidBackgroundFillColorBase.ToString()] = HexColor("#09090b"),
+            [ThemeResource.SolidBackgroundFillColorSecondary.ToString()] = HexColor("#27272a"),
+            [ThemeResource.SolidBackgroundFillColorTertiary.ToString()] = HexColor("#27272a"),
+            [ThemeResource.SolidBackgroundFillColorQuarternary.ToString()] = HexColor("#3b3e3e"),
+
+            // === Layer Fills ===
+            [ThemeResource.LayerFillColorDefault.ToString()] = HexColor("#09090b"),
+            [ThemeResource.LayerFillColorAlt.ToString()] = HexColor("#3b3e3e"),
+
+            // === Card Backgrounds ===
+            [ThemeResource.CardBackgroundFillColorDefault.ToString()] = HexColor("#3b3e3e"),
+            [ThemeResource.CardBackgroundFillColorSecondary.ToString()] = HexColor("#27272a"),
+
+            // === Control Strokes ===
+            [ThemeResource.ControlStrokeColorDefault.ToString()] = HexColor("#343946"),
+            [ThemeResource.ControlStrokeColorSecondary.ToString()] = HexColor("#27272a"),
+
+            // === Divider ===
+            [ThemeResource.DividerStrokeColorDefault.ToString()] = HexColor("#27272a"),
+
+            // Note: WPF.UI automatically creates Brush resources from these Color resources
+            // e.g., TextFillColorPrimary → TextFillColorPrimaryBrush
+        };
+
+        return resources;
+    }
+
+    /// <summary>
+    ///     Creates a ResourceDictionary with WPF.UI control dimension and spacing overrides.
+    ///     Provides control-level constants for consistent sizing, padding, and corner radii.
+    ///     Source: https://github.com/lepoco/wpfui/blob/d6862242cb12cd58b5f95b7dbf26b9b9b158f35f/src/Wpf.Ui/Resources/Variables.xaml
+    /// </summary>
+    public static ResourceDictionary CreateControlDimensionOverrides() {
+        var resources = new ResourceDictionary {
+            ["DefaultIconFontSize"] = DefaultIconFontSize,
+            ["ControlContentThemeFontSize"] = ControlContentThemeFontSize,
+            ["ContentControlFontSize"] = ContentControlFontSize,
+            ["ControlCornerRadius"] = Radius,
+            ["OverlayCornerRadius"] = Radius,
+            ["PopupCornerRadius"] = Radius,
+            ["TextControlBorderThemeThickness"] = TextControlBorderThemeThickness,
+            ["TextControlBorderThemeThicknessFocused"] = TextControlBorderThemeThicknessFocused,
+            ["TextControlThemePadding"] = TextControlThemePadding,
+            ["TextControlThemeMinHeight"] = TextControlThemeMinHeight,
+            ["TextControlThemeMinWidth"] = TextControlThemeMinWidth,
+            ["ListViewItemMinHeight"] = ListViewItemMinHeight,
+            ["TreeViewItemMinHeight"] = TreeViewItemMinHeight,
+            ["TreeViewItemMultiSelectCheckBoxMinHeight"] = TreeViewItemMultiSelectCheckBoxMinHeight,
+            ["TreeViewItemPresenterMargin"] = TreeViewItemPresenterMargin,
+            ["TreeViewItemPresenterPadding"] = TreeViewItemPresenterPadding,
+            ["TimePickerHostPadding"] = TimePickerHostPadding,
+            ["DatePickerHostPadding"] = DatePickerHostPadding,
+            ["DatePickerHostMonthPadding"] = DatePickerHostMonthPadding,
+            ["ComboBoxEditableTextPadding"] = ComboBoxEditableTextPadding,
+            ["ComboBoxMinHeight"] = ComboBoxMinHeight,
+            ["ComboBoxPadding"] = ComboBoxPadding,
+            ["NavigationViewItemOnLeftMinHeight"] = NavigationViewItemOnLeftMinHeight
+        };
+
+        return resources;
+    }
+
+    /// <summary>
+    ///     Creates a ResourceDictionary with WPF.UI Typography style overrides.
+    ///     Overrides the default WPF.UI TextBlock styles to customize typography throughout the application.
+    ///     Uses WPF.UI's FontTypography enum for type-safe resource key generation.
+    /// </summary>
+    public static ResourceDictionary CreateTypographyOverrides() {
+        var resources = new ResourceDictionary();
+
+        // Base TextBlock style (implicit) - applies to all TextBlocks without explicit style
+        var baseTextBlockStyle = new Style(typeof(System.Windows.Controls.TextBlock));
+        baseTextBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.FontFamilyProperty, FontFamily()));
+        baseTextBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.FontSizeProperty, 10.0));
+        baseTextBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineHeightProperty, 14.0));
+        baseTextBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.FontWeightProperty, FontWeights.Regular));
+        baseTextBlockStyle.Setters.Add(new Setter(System.Windows.Controls.TextBlock.LineStackingStrategyProperty, LineStackingStrategy.BlockLineHeight));
+        resources.Add(typeof(System.Windows.Controls.TextBlock), baseTextBlockStyle);
+
+        // Add named typography styles using WPF.UI's FontTypography enum for resource keys
+        resources.Add(FontTypography.Caption.ToResourceValue(), CreateCaptionStyle());
+        resources.Add(FontTypography.Body.ToResourceValue(), CreateBodyStyle());
+        resources.Add(FontTypography.BodyStrong.ToResourceValue(), CreateBodyStrongStyle());
+        resources.Add(FontTypography.Subtitle.ToResourceValue(), CreateSubtitleStyle());
+        resources.Add(FontTypography.Title.ToResourceValue(), CreateTitleStyle());
+        resources.Add(FontTypography.TitleLarge.ToResourceValue(), CreateTitleLargeStyle());
+        resources.Add(FontTypography.Display.ToResourceValue(), CreateDisplayStyle());
 
         return resources;
     }
@@ -271,12 +489,51 @@ public static class ThemeManager {
     public static void ApplySystemAccent() => ApplicationAccentColorManager.ApplySystemAccent();
 
 
-    #region Icon
+    #region Control Dimensions & Spacing
 
     // Icon Properties
     public static double IconSize { get; } = 16;
     public static Thickness IconMargin { get; } = new(0, 0, 10, 0);
     public static double IconOpacity { get; } = 0.8;
+
+    // Default Icon Font Size
+    public static double DefaultIconFontSize { get; } = 16;
+
+    // Control Font Sizes
+    public static double ControlContentThemeFontSize { get; } = (double)TxtSz.normal;
+    public static double ContentControlFontSize { get; } = (double)TxtSz.normal;
+
+    // Corner Radii
+    public static CornerRadius ControlCornerRadius { get; } = new(4);
+    public static CornerRadius OverlayCornerRadius { get; } = new(4);
+    public static CornerRadius Radius { get; } = new(6);
+
+    // Text Control Dimensions
+    public static Thickness TextControlBorderThemeThickness { get; } = new(1);
+    public static Thickness TextControlBorderThemeThicknessFocused { get; } = new(2);
+    public static Thickness TextControlThemePadding { get; } = new(10, 8, 10, 7);
+    public static double TextControlThemeMinHeight { get; } = 24;
+    public static double TextControlThemeMinWidth { get; } = 0;
+
+    // List & Tree View Item Heights
+    public static double ListViewItemMinHeight { get; } = 32;
+    public static double TreeViewItemMinHeight { get; } = 24;
+    public static double TreeViewItemMultiSelectCheckBoxMinHeight { get; } = 24;
+    public static double TreeViewItemPresenterMargin { get; } = 0;
+    public static double TreeViewItemPresenterPadding { get; } = 0;
+
+    // Picker Paddings
+    public static Thickness TimePickerHostPadding { get; } = new(0, 1, 0, 2);
+    public static Thickness DatePickerHostPadding { get; } = new(0, 1, 0, 2);
+    public static Thickness DatePickerHostMonthPadding { get; } = new(9, 0, 0, 1);
+    public static Thickness ComboBoxEditableTextPadding { get; } = new(10, 0, 30, 0);
+
+    // ComboBox Dimensions
+    public static double ComboBoxMinHeight { get; } = 24;
+    public static Thickness ComboBoxPadding { get; } = new(12, 1, 0, 3);
+
+    // Navigation View
+    public static double NavigationViewItemOnLeftMinHeight { get; } = 32;
 
     #endregion
 
