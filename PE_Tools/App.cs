@@ -1,6 +1,7 @@
 using AddinApsAuthSuite;
 using AddinFamilyFoundrySuite.Cmds;
 using AddinPaletteSuite.Cmds;
+using AddinPaletteSuite.Core.Services;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
 using Wpf.Ui.Appearance;
@@ -14,6 +15,12 @@ internal class App : IExternalApplication {
 
         // Initialize WPF.UI theme system - defaults to Dark theme
         ApplicationThemeManager.Apply(ApplicationTheme.Dark);
+
+        // Subscribe to ViewActivated event for MRU tracking
+        app.ViewActivated += OnViewActivated;
+
+        // Subscribe to DocumentClosing to clean up MRU buffer
+        app.ControlledApplication.DocumentClosing += OnDocumentClosing;
 
         // 1. Create ribbon tab
         const string tabName = "PE TOOLS";
@@ -54,6 +61,8 @@ internal class App : IExternalApplication {
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
             panelTools.AddPushButton<CmdPltCommands>("Command Palette"),
             panelTools.AddPushButton<CmdPltViews>("View Palette"),
+            panelTools.AddPushButton<CmdPltAllViews>("All Views Palette"),
+            panelTools.AddPushButton<CmdPltMruViews>("MRU Views"),
             panelTools.AddPushButton<CmdPltSchedules>("Schedule Palette"),
             panelTools.AddPushButton<CmdPltSheets>("Sheet Palette"),
             panelTools.AddPushButton<CmdPltFamilies>("Family Palette"),
@@ -63,9 +72,22 @@ internal class App : IExternalApplication {
         return Result.Succeeded;
     }
 
-    public Result OnShutdown(UIControlledApplication a) {
+    public Result OnShutdown(UIControlledApplication app) {
         AppDomain.CurrentDomain.AssemblyResolve -= OnAssemblyResolve;
+        app.ViewActivated -= OnViewActivated;
+        app.ControlledApplication.DocumentClosing -= OnDocumentClosing;
         return Result.Succeeded;
+    }
+
+    private static void OnViewActivated(object sender, Autodesk.Revit.UI.Events.ViewActivatedEventArgs e) {
+        if (e?.CurrentActiveView == null) return;
+        var doc = e.CurrentActiveView.Document;
+        MruViewService.Instance.RecordViewActivation(doc, e.CurrentActiveView.Id);
+    }
+
+    private static void OnDocumentClosing(object sender, Autodesk.Revit.DB.Events.DocumentClosingEventArgs e) {
+        if (e?.Document == null) return;
+        MruViewService.Instance.RemoveDocumentViews(e.Document);
     }
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
@@ -73,7 +95,7 @@ internal class App : IExternalApplication {
         var assemblyName = new AssemblyName(args.Name);
 
         // Only handle assemblies we know about
-        if (assemblyName.Name != "Wpf.Ui" && assemblyName.Name != "Wpf.Ui.Abstractions") return null;
+        if (assemblyName.Name is not "Wpf.Ui" and not "Wpf.Ui.Abstractions") return null;
 
         // Get the directory where this add-in's DLL is located
         var addinPath = typeof(App).Assembly.Location;
@@ -139,6 +161,20 @@ public static class ButtonDataHydrator {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search and open views in the current document."
+            }
+        }, {
+            nameof(CmdPltAllViews),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Search and open all views in the current document (no filtering)."
+            }
+        }, {
+            nameof(CmdPltMruViews),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Open recently visited views in MRU (Most Recently Used) order."
             }
         }, {
             nameof(CmdPltSchedules),
