@@ -32,14 +32,10 @@ public partial class SelectableListViewItem : Border {
         this.IconImage.Opacity = ThemeManager.IconOpacity;
 
         // Text styling - apply typography styles to override WPF.UI defaults
-        this.PrimaryText.Style = ThemeManager.GetTypographyStyle(FontTypography.BodyStrong);
-        this.SecondaryText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
-        this.PillText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
+        // this.PrimaryText.Style = ThemeManager.GetTypographyStyle(FontTypography.BodyStrong);
+        // this.SecondaryText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
 
-        // Pill border styling (layout only, colors from XAML DynamicResources)
-        this.PillBorder.BorderThickness = new Thickness((double)UiSz.ss);
-        this.PillBorder.CornerRadius = new CornerRadius((double)UiSz.m);
-        _ = this.PillBorder.WithPadding(UiSz.m, 0, UiSz.m, UiSz.ss);
+        // Pill styling is now handled by the Pill component itself
     }
 
     /// <summary>
@@ -59,7 +55,7 @@ public partial class SelectableListViewItem : Border {
 
         // Update Pill Text and Visibility
         var hasPill = !string.IsNullOrWhiteSpace(item.TextPill);
-        this.PillText.Text = hasPill ? item.TextPill : string.Empty;
+        this.PillBorder.Text = hasPill ? item.TextPill : string.Empty;
         this.PillBorder.Visibility = hasPill ? Visibility.Visible : Visibility.Collapsed;
 
         // Update Icon and Visibility
@@ -93,7 +89,7 @@ public partial class SelectableListViewItem : Border {
 
         // Bind Pill Text
         var pillTextBinding = new Binding("TextPill") { Mode = BindingMode.OneWay };
-        _ = this.PillText.SetBinding(TextBlock.TextProperty, pillTextBinding);
+        _ = this.PillBorder.SetBinding(Pill.TextProperty, pillTextBinding);
 
         var pillVisibilityBinding = new Binding("TextPill") {
             Mode = BindingMode.OneWay,

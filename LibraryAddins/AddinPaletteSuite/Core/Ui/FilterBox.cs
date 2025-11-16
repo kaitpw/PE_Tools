@@ -8,6 +8,8 @@ using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Wpf.Ui.Controls;
 using Binding = System.Windows.Data.Binding;
+using ListView = Wpf.Ui.Controls.ListView;
+using ListViewItem = Wpf.Ui.Controls.ListViewItem;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -34,14 +36,21 @@ public partial class FilterBox : UserControl, IPopoverExit {
     public new void Focus() => this.Expand();
 
     protected void IconBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) =>
-            _ = this.FilterAutoSuggestBox.Focus();
+        _ = this.FilterAutoSuggestBox.Focus();
 
     protected void FilterAutoSuggestBox_GotFocus(object sender, RoutedEventArgs e) {
+        Debug.WriteLine($"[FilterBox] FilterAutoSuggestBox_GotFocus - Expanded: {this._isExpanded}");
         if (!this._isExpanded) this.Expand();
     }
 
     protected void FilterAutoSuggestBox_LostFocus(object sender, RoutedEventArgs e) {
-        // Always collapse when unfocused
+        var newFocus = Keyboard.FocusedElement;
+        var isListView = newFocus is ListView;
+        var isListViewItem = newFocus is ListViewItem;
+
+        if (isListView || isListViewItem) return;
+
+        // Always collapse when unfocused (but not when navigating to suggestions)
         this.Collapse();
     }
 
@@ -75,44 +84,30 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
     public FilterBox(TViewModel viewModel) {
         this._viewModel = viewModel;
 
-        // Apply styling after InitializeComponent is called
         this.ApplyStyles();
 
-        // Wire up events 
-        this.FilterAutoSuggestBox.QuerySubmitted += this.FilterBox_QuerySubmitted;
+        this.FilterAutoSuggestBox.SuggestionChosen += this.FilterAutoSuggestBox_SuggestionChosen;
         this.FilterAutoSuggestBox.PreviewKeyDown += this.FilterAutoSuggestBox_PreviewKeyDown;
-        this.FilterAutoSuggestBox.KeyDown += this.FilterAutoSuggestBox_KeyDown;
     }
 
+    /// <summary>
+    /// This event fires EVERY time a list item is focused by the keyboard. update view model here.
+    /// </summary>
+    private void FilterAutoSuggestBox_SuggestionChosen(object sender, AutoSuggestBoxSuggestionChosenEventArgs e) {
+        this.UpdateSelectedFilterValue(e.SelectedItem.ToString());
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Handle escaping and unfocusing the FilterBox here.
+    /// </summary>
     private void FilterAutoSuggestBox_PreviewKeyDown(object sender, KeyEventArgs e) {
-        switch (e.Key) {
-        case Key.Tab:
-            if (e.KeyboardDevice.Modifiers == ModifierKeys.Shift) {
-                e.Handled = true;
-                this.RequestExit();
-            }
-
-            break;
-
-        case Key.Escape:
+        if (e.Key is Key.Tab or Key.Escape) {
             e.Handled = true;
             this.RequestExit();
-            break;
-
-        case Key.Enter:
-            _ = this.Dispatcher.BeginInvoke(
-                new Action(this.RequestExit),
-                DispatcherPriority.Background
-            );
-            break;
-        }
-    }
-
-    private void FilterAutoSuggestBox_KeyDown(object sender, KeyEventArgs e) {
-        if (e.Key == Key.Enter) {
-            // Mark as handled at the palette level to prevent item execution
-            // By using KeyDown (not PreviewKeyDown), AutoSuggestBox has already processed it
+        } else if (e.Key == Key.Enter) {
             e.Handled = true;
+            this.RequestExit();
         }
     }
 
@@ -131,52 +126,36 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
     }
 
     public void BindToViewModel(string availableValuesPropertyName, string selectedValuePropertyName) {
-        // Bind to AvailableFilterValues
+        // Bind to AvailableFilterValues for the dropdown suggestions
         _ = this.FilterAutoSuggestBox.SetBinding(
             AutoSuggestBox.OriginalItemsSourceProperty,
             new Binding(availableValuesPropertyName) { Source = this._viewModel, Mode = BindingMode.OneWay }
         );
 
-        // Bind to SelectedFilterValue
-        _ = this.FilterAutoSuggestBox.SetBinding(
-            AutoSuggestBox.TextProperty,
+        // Bind FilterPill Text to SelectedFilterValue (only shows chosen filter, not typed text)
+        _ = this.FilterPill.SetBinding(
+            Pill.TextProperty,
+            new Binding(selectedValuePropertyName) { Source = this._viewModel, Mode = BindingMode.OneWay }
+        );
+
+        // Bind FilterPill Visibility to SelectedFilterValue (show only when a filter is selected)
+        _ = this.FilterPill.SetBinding(
+            VisibilityProperty,
             new Binding(selectedValuePropertyName) {
                 Source = this._viewModel,
-                Mode = BindingMode.TwoWay,
-                UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+                Mode = BindingMode.OneWay,
+                Converter = VisibilityConverter.Instance
             }
         );
     }
 
-    private void FilterBox_QuerySubmitted(object sender, AutoSuggestBoxQuerySubmittedEventArgs e) {
-        var availableValuesProperty = typeof(TViewModel).GetProperty("AvailableFilterValues");
+    private void UpdateSelectedFilterValue(string? value) {
         var selectedValueProperty = typeof(TViewModel).GetProperty("SelectedFilterValue");
+        if (selectedValueProperty == null) return;
 
-        if (availableValuesProperty == null || selectedValueProperty == null) return;
+        var currentValue = selectedValueProperty.GetValue(this._viewModel) as string;
+        if (currentValue == value) return;
 
-        var availableValues = availableValuesProperty.GetValue(this._viewModel) as IEnumerable<string>;
-
-        if (!string.IsNullOrEmpty(e.QueryText)) {
-            // Check if the query matches an available filter value
-            var matchingValue = availableValues
-                ?.FirstOrDefault(val => val.Equals(e.QueryText, StringComparison.OrdinalIgnoreCase));
-
-            if (matchingValue != null) {
-                selectedValueProperty.SetValue(this._viewModel, matchingValue);
-            } else {
-                // If no exact match, try to find first partial match
-                var partialMatch = availableValues
-                    ?.FirstOrDefault(val => val.Contains(e.QueryText, StringComparison.OrdinalIgnoreCase));
-
-                if (partialMatch != null) {
-                    selectedValueProperty.SetValue(this._viewModel, partialMatch);
-                    this.FilterAutoSuggestBox.Text = partialMatch;
-                }
-            }
-        } else {
-            selectedValueProperty.SetValue(this._viewModel, string.Empty);
-        }
-
-        _ = this.Dispatcher.BeginInvoke(new Action(this.RequestExit), DispatcherPriority.Input);
+        selectedValueProperty.SetValue(this._viewModel, value);
     }
 }

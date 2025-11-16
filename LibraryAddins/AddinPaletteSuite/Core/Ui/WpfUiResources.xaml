@@ -81,6 +81,10 @@
                                  Padding="{TemplateBinding Padding}"
                                  VerticalContentAlignment="Center"
                                  HorizontalAlignment="Stretch"
+                                 PlaceholderText="{TemplateBinding PlaceholderText}"
+                                 IsTabStop="{TemplateBinding IsTabStop}"
+                                 TabIndex="{TemplateBinding TabIndex}"
+                                 Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Style="{StaticResource CleanTextBoxStyle}" />
 
                         <!-- PART_SuggestionsPopup: Required template part -->
@@ -89,7 +93,6 @@
                                IsOpen="{TemplateBinding IsSuggestionListOpen}"
                                Placement="Bottom"
                                PlacementTarget="{Binding RelativeSource={RelativeSource TemplatedParent}}"
-                               StaysOpen="False"
                                Focusable="False"
                                VerticalOffset="4"
                                MinWidth="{TemplateBinding ActualWidth}">
@@ -108,6 +111,7 @@
                                             DisplayMemberPath="{TemplateBinding DisplayMemberPath}"
                                             ItemTemplate="{TemplateBinding ItemTemplate}"
                                             ItemTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                            KeyboardNavigation.DirectionalNavigation="Cycle"
                                             SelectionMode="Single"
                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                             ScrollViewer.VerticalScrollBarVisibility="Disabled">

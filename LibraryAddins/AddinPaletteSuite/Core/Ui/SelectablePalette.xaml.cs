@@ -4,8 +4,6 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Wpf.Ui.Controls;
-using Grid = System.Windows.Controls.Grid;
 using WpfUiListViewItem = Wpf.Ui.Controls.ListViewItem;
 
 
@@ -38,9 +36,9 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObservableListItem, IPaletteListItem {
     private readonly ActionBinding<TItem> _actionBinding;
     private readonly ActionMenu<TItem> _actionMenu;
+    private readonly SearchFilterBox _searchFilterBox;
     private readonly SelectableTextBox _tooltipPanel;
     private readonly Popup _tooltipPopup;
-    private readonly SearchFilterBox _searchFilterBox;
     private FilterBox<SelectablePaletteViewModel<TItem>> _filterBox;
 
     public SelectablePalette(
@@ -102,8 +100,8 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
             .WithPadding(UiSz.l, UiSz.s, UiSz.l, UiSz.s);
 
         // Apply caption typography to status bar text (TextBlock)
-        this.ItemCountText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
-        this.HelpText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
+        // this.ItemCountText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
+        // this.HelpText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
     }
 
     private void UpdateCanExecuteForVisibleItems() {
@@ -170,9 +168,10 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
     private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
         // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is DependencyObject focusedElement)
+        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
             if (this._tooltipPanel.IsAncestorOf(focusedElement)) {
             }
+        }
     }
 
     private async void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {

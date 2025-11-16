@@ -54,19 +54,11 @@
             </Grid.ColumnDefinitions>
 
             <!-- Filter Pill Badge (shows selected filter value) -->
-            <Border x:Name="FilterPill"
-                    Grid.Column="0"
-                    Margin="0,0,4,0"
-                    Padding="6,2,6,2"
-                    CornerRadius="12"
-                    Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                    VerticalAlignment="Center"
-                    Visibility="Collapsed">
-                <ui:TextBlock x:Name="FilterPillText"
-                           Style="{DynamicResource CaptionTextBlockStyle}"
-                           Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
-                           VerticalAlignment="Center"/>
-            </Border>
+            <local:Pill x:Name="FilterPill"
+                        Grid.Column="0"
+                        Margin="0,0,4,0"
+                        Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        Visibility="Collapsed"/>
 
             <!-- Filter Icon Button (always visible, smaller size) -->
             <Border x:Name="IconBorder"
