@@ -14,6 +14,11 @@ public class CmdPltSchedules : BaseCmdPalette<ViewSchedule, SchedulePaletteItem>
 
     public override string GetPersistenceKey(SchedulePaletteItem item) => item.Schedule.Id.ToString();
 
+    /// <summary>
+    ///     Enable filtering by discipline (TextPill property)
+    /// </summary>
+    protected override Func<SchedulePaletteItem, string> GetFilterKeySelector() => item => item.TextPill; 
+
     public override IEnumerable<PaletteAction<SchedulePaletteItem>> GetActions(UIApplication uiApp) =>
         new List<PaletteAction<SchedulePaletteItem>> {
             new() {
