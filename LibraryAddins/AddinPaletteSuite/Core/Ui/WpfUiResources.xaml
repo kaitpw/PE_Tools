@@ -7,6 +7,8 @@
     <ResourceDictionary.MergedDictionaries>
         <ui:ThemesDictionary Theme="Dark" />
         <ui:ControlsDictionary />
+        <!-- Typography overrides MUST come after ControlsDictionary to override WPF.UI defaults -->
+        <ResourceDictionary Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/TypographyOverrides.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <!-- Clean TextBox template for simple rendering without WPF-UI decorations -->

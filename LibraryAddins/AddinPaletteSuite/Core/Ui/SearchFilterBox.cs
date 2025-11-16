@@ -25,7 +25,8 @@ public class SearchFilterBox {
     public SearchFilterBox() {
         // Create the main container Grid
         this._container = new Grid {
-            HorizontalAlignment = HorizontalAlignment.Stretch
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            VerticalAlignment = VerticalAlignment.Center
         };
         this._container.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         this._container.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -33,7 +34,8 @@ public class SearchFilterBox {
         // Create the search TextBox
         this._searchTextBox = new TextBox {
             BorderBrush = Brushes.Transparent,
-            Background = Brushes.Transparent
+            Background = Brushes.Transparent,
+            VerticalAlignment = VerticalAlignment.Center
         };
         Grid.SetColumn(this._searchTextBox, 0);
 

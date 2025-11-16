@@ -1,0 +1,81 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=System.Runtime">
+
+    <!-- Define custom font family resource -->
+    <FontFamily x:Key="AppFontFamily">Segoe UI Variable Text</FontFamily>
+
+    <!-- Font size values (matching TxtSz enum) -->
+    <system:Double x:Key="FontSize.Caption">8</system:Double>
+    <system:Double x:Key="FontSize.Body">10</system:Double>
+    <system:Double x:Key="FontSize.Subtitle">12</system:Double>
+    <system:Double x:Key="FontSize.Title">14</system:Double>
+    <system:Double x:Key="FontSize.TitleLarge">16</system:Double>
+    <system:Double x:Key="FontSize.Display">20</system:Double>
+
+    <!-- Override default implicit TextBlock style -->
+    <Style TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+        <Setter Property="LineHeight" Value="15" />
+        <Setter Property="FontWeight" Value="Regular" />
+    </Style>
+
+    <!-- Override Caption style (8px) -->
+    <Style x:Key="CaptionTextBlockStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Caption}" />
+        <Setter Property="LineHeight" Value="12" />
+        <Setter Property="FontWeight" Value="Regular" />
+    </Style>
+
+    <!-- Override Body style (10px) -->
+    <Style x:Key="BodyTextBlockStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+        <Setter Property="LineHeight" Value="15" />
+        <Setter Property="FontWeight" Value="Regular" />
+    </Style>
+
+    <!-- Override BodyStrong style (10px, SemiBold) -->
+    <Style x:Key="BodyStrongTextBlockStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+        <Setter Property="LineHeight" Value="15" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Override Subtitle style (12px) -->
+    <Style x:Key="SubtitleTextBlockStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Subtitle}" />
+        <Setter Property="LineHeight" Value="18" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Override Title style (14px) -->
+    <Style x:Key="TitleTextBlockStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Title}" />
+        <Setter Property="LineHeight" Value="22" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Override TitleLarge style (16px) -->
+    <Style x:Key="TitleLargeTextBlockStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.TitleLarge}" />
+        <Setter Property="LineHeight" Value="26" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+    <!-- Override Display style (20px) -->
+    <Style x:Key="DisplayTextBlockStyle" TargetType="{x:Type TextBlock}">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Display}" />
+        <Setter Property="LineHeight" Value="32" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+
+</ResourceDictionary>
+
