@@ -40,6 +40,7 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
     private readonly ActionMenu<TItem> _actionMenu;
     private readonly SelectableTextBox _tooltipPanel;
     private readonly Popup _tooltipPopup;
+    private readonly SearchFilterBox _searchFilterBox;
     private FilterBox<SelectablePaletteViewModel<TItem>> _filterBox;
 
     public SelectablePalette(
@@ -47,6 +48,14 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         IEnumerable<PaletteAction<TItem>> actions
     ) : base(viewModel) {
         // Base class constructor sets DataContext and calls InitializeComponent()
+
+        // Create SearchFilterBox component
+        this._searchFilterBox = new SearchFilterBox();
+        this._searchFilterBox.BindToViewModel(viewModel);
+
+        // Add SearchFilterBox to SearchBoxBorder
+        this.SearchBoxBorder.Child = this._searchFilterBox.Container;
+
         this.ApplyStyles();
 
         this._actionBinding = new ActionBinding<TItem>();
@@ -66,7 +75,7 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         this.Loaded += this.UserControl_Loaded;
         this.KeyDown += this.UserControl_KeyDown;
         this.PreviewKeyDown += this.UserControl_PreviewKeyDown;
-        this.SearchTextBox.PreviewKeyDown += this.SearchTextBox_PreviewKeyDown;
+        this._searchFilterBox.SearchTextBox.PreviewKeyDown += this.SearchTextBox_PreviewKeyDown;
     }
 
     private SelectablePaletteViewModel<TItem> ViewModel => this.DataContext as SelectablePaletteViewModel<TItem>;
@@ -88,12 +97,6 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         _ = this.SearchBoxBorder
             .WithSpacing(0, 0)
             .WithPadding(UiSz.ll, UiSz.ll, UiSz.ll, UiSz.ll);
-
-        // Apply body typography to search box (TextBox)
-        ThemeManager.ApplyTypographyStyle(this.SearchTextBox, FontTypography.Body);
-
-        // Remove focus visual (ugly blue halo) - should already be handled by XAML but ensure it's set 
-        this.SearchTextBox.FocusVisualStyle = null;
 
         _ = this.StatusBarBorder
             .WithPadding(UiSz.l, UiSz.s, UiSz.l, UiSz.s);
@@ -130,8 +133,8 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         // Add filter UI if filtering is enabled (after control is loaded so templates are available)
         if (this.ViewModel.IsFilteringEnabled) this.AddFilterBox();
 
-        _ = this.SearchTextBox.Focus();
-        this.SearchTextBox.SelectAll();
+        _ = this._searchFilterBox.SearchTextBox.Focus();
+        this._searchFilterBox.SearchTextBox.SelectAll();
 
         this.ItemListView.ItemMouseLeftButtonUp += async (_, e) => {
             if (e.OriginalSource is not FrameworkElement source) return;
@@ -157,12 +160,12 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
         // Set up action menu handlers
         this._actionMenu.ExitRequested += (_, _) => this.HideActionsPopover();
-        this._actionMenu.ReturnFocusTarget = this.SearchTextBox;
+        this._actionMenu.ReturnFocusTarget = this._searchFilterBox.SearchTextBox;
         this._actionMenu.ActionClicked += this.ActionMenu_ActionClicked;
 
         // Set up tooltip popover exit handler
         this._tooltipPanel.ExitRequested += (_, _) => this.HideTooltipPopover();
-        this._tooltipPanel.ReturnFocusTarget = this.SearchTextBox;
+        this._tooltipPanel.ReturnFocusTarget = this._searchFilterBox.SearchTextBox;
     }
 
     private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
@@ -363,11 +366,10 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         this._filterBox.BindToViewModel("AvailableFilterValues", "SelectedFilterValue");
 
         // Set up focus return target and exit handler (like other popovers)
-        this._filterBox.ReturnFocusTarget = this.SearchTextBox;
-        this._filterBox.ExitRequested += (_, _) => _ = this.SearchTextBox.Focus();
+        this._filterBox.ReturnFocusTarget = this._searchFilterBox.SearchTextBox;
+        this._filterBox.ExitRequested += (_, _) => _ = this._searchFilterBox.SearchTextBox.Focus();
 
-        // Find the FilterBoxContainer and add the filter box to it
-        if (this.FindName("FilterBoxContainer") is not Grid filterBoxContainer) return;
-        _ = filterBoxContainer.Children.Add(this._filterBox);
+        // Add the filter box to the FilterBoxContainer
+        _ = this._searchFilterBox.FilterBoxContainer.Children.Add(this._filterBox);
     }
 }

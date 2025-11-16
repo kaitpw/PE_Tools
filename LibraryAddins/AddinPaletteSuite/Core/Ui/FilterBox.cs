@@ -33,22 +33,16 @@ public partial class FilterBox : UserControl, IPopoverExit {
     /// </summary>
     public new void Focus() => this.Expand();
 
-    protected void IconBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) => this.ToggleExpanded();
+    protected void IconBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) =>
+            _ = this.FilterAutoSuggestBox.Focus();
 
     protected void FilterAutoSuggestBox_GotFocus(object sender, RoutedEventArgs e) {
         if (!this._isExpanded) this.Expand();
     }
 
     protected void FilterAutoSuggestBox_LostFocus(object sender, RoutedEventArgs e) {
-        // Only collapse if the text is empty
-        if (string.IsNullOrEmpty(this.FilterAutoSuggestBox.Text)) this.Collapse();
-    }
-
-    protected void ToggleExpanded() {
-        if (this._isExpanded)
-            this.Collapse();
-        else
-            this.Expand();
+        // Always collapse when unfocused
+        this.Collapse();
     }
 
     protected void Expand() {
@@ -126,9 +120,10 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
         // Apply corner radius
         var topRadius = ThemeManager.Radius.TopLeft;
         this.FilterBorder.CornerRadius = new CornerRadius(topRadius, topRadius, 0, 0);
+        // Remove padding to match search box height - padding is handled by SearchBoxBorder
         _ = this.FilterBorder
             .WithSpacing(0, 0)
-            .WithPadding(UiSz.ll, UiSz.ll, UiSz.ll, UiSz.ll);
+            .WithPadding(0, 0, 0, 0);
 
         // Apply typography style
         ThemeManager.ApplyTypographyStyle(this.FilterAutoSuggestBox, FontTypography.Body);

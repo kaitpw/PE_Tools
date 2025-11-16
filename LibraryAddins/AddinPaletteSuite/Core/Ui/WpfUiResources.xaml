@@ -96,7 +96,7 @@
                             <Border Background="{ui:ThemeResource ApplicationBackgroundBrush}"
                                     BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
-                                    CornerRadius="8"
+                                    CornerRadius="6"
                                     Padding="4">
                                 <!-- PART_SuggestionsList: Required template part (must be ListView) -->
                                 <ui:ListView x:Name="PART_SuggestionsList"
@@ -110,7 +110,7 @@
                                             ItemTemplateSelector="{TemplateBinding ItemTemplateSelector}"
                                             SelectionMode="Single"
                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                            ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                            ScrollViewer.VerticalScrollBarVisibility="Disabled">
                                     <ui:ListView.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <VirtualizingStackPanel IsItemsHost="True"
