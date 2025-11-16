@@ -30,7 +30,8 @@
         </Setter>
     </Style>
 
-    <Style x:Key="{x:Static SystemParameters.FocusVisualStyleKey}" BasedOn="{StaticResource DefaultControlFocusVisualStyle}" />
+    <Style x:Key="{x:Static SystemParameters.FocusVisualStyleKey}"
+           BasedOn="{StaticResource DefaultControlFocusVisualStyle}" />
 
     <!-- Override default implicit TextBlock style -->
     <Style TargetType="TextBlock">
@@ -126,4 +127,3 @@
     </Style>
 
 </ResourceDictionary>
-

@@ -17,7 +17,7 @@ public class CmdPltSchedules : BaseCmdPalette<ViewSchedule, SchedulePaletteItem>
     /// <summary>
     ///     Enable filtering by discipline (TextPill property)
     /// </summary>
-    protected override Func<SchedulePaletteItem, string> GetFilterKeySelector() => item => item.TextPill; 
+    protected override Func<SchedulePaletteItem, string> GetFilterKeySelector() => item => item.TextPill;
 
     public override IEnumerable<PaletteAction<SchedulePaletteItem>> GetActions(UIApplication uiApp) =>
         new List<PaletteAction<SchedulePaletteItem>> {

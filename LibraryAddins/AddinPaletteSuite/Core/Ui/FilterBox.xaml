@@ -10,46 +10,6 @@
                 <ResourceDictionary
                     Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml" />
             </ResourceDictionary.MergedDictionaries>
-
-            <!-- Storyboards for expand/collapse animations -->
-            <Storyboard x:Key="ExpandStoryboard">
-                <DoubleAnimation Storyboard.TargetName="FilterAutoSuggestBox"
-                                 Storyboard.TargetProperty="Width"
-                                 To="150"
-                                 Duration="0:0:0.2">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="FilterAutoSuggestBox"
-                                 Storyboard.TargetProperty="Opacity"
-                                 To="1"
-                                 Duration="0:0:0.15">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseOut" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-            </Storyboard>
-
-            <Storyboard x:Key="CollapseStoryboard">
-                <DoubleAnimation Storyboard.TargetName="FilterAutoSuggestBox"
-                                 Storyboard.TargetProperty="Width"
-                                 To="0"
-                                 Duration="0:0:0.15">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseIn" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="FilterAutoSuggestBox"
-                                 Storyboard.TargetProperty="Opacity"
-                                 To="0"
-                                 Duration="0:0:0.1">
-                    <DoubleAnimation.EasingFunction>
-                        <QuadraticEase EasingMode="EaseIn" />
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-            </Storyboard>
-
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -59,6 +19,7 @@
             CornerRadius="4"
             Padding="6,4">
         <Grid VerticalAlignment="Center">
+
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
@@ -119,8 +80,7 @@
                                MaxSuggestionListHeight="300"
                                Style="{StaticResource CleanAutoSuggestBoxStyle}"
                                GotFocus="FilterAutoSuggestBox_GotFocus"
-                               LostFocus="FilterAutoSuggestBox_LostFocus">
-            </ui:AutoSuggestBox>
+                               LostFocus="FilterAutoSuggestBox_LostFocus" />
         </Grid>
     </Border>
 </UserControl>

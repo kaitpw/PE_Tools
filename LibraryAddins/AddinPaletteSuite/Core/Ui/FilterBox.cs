@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -21,8 +22,57 @@ namespace AddinPaletteSuite.Core.Ui;
 /// </summary>
 public partial class FilterBox : UserControl, IPopoverExit {
     private bool _isExpanded;
+    private Storyboard? _expandStoryboard;
+    private Storyboard? _collapseStoryboard;
 
-    protected FilterBox() => this.InitializeComponent();
+    protected FilterBox() {
+        this.InitializeComponent();
+        this.Loaded += this.FilterBox_Loaded;
+    }
+
+    private void FilterBox_Loaded(object sender, RoutedEventArgs e) => this.CreateStoryboards();
+
+    private void CreateStoryboards() {
+        // Create ExpandStoryboard
+        this._expandStoryboard = new Storyboard();
+        var expandWidthAnimation = new DoubleAnimation {
+            To = 150.0,
+            Duration = new Duration(TimeSpan.FromSeconds(0.2)),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        Storyboard.SetTarget(expandWidthAnimation, this.FilterAutoSuggestBox);
+        Storyboard.SetTargetProperty(expandWidthAnimation, new PropertyPath("Width"));
+        this._expandStoryboard.Children.Add(expandWidthAnimation);
+
+        var expandOpacityAnimation = new DoubleAnimation {
+            To = 1.0,
+            Duration = new Duration(TimeSpan.FromSeconds(0.15)),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
+        };
+        Storyboard.SetTarget(expandOpacityAnimation, this.FilterAutoSuggestBox);
+        Storyboard.SetTargetProperty(expandOpacityAnimation, new PropertyPath("Opacity"));
+        this._expandStoryboard.Children.Add(expandOpacityAnimation);
+
+        // Create CollapseStoryboard
+        this._collapseStoryboard = new Storyboard();
+        var collapseWidthAnimation = new DoubleAnimation {
+            To = 0.0,
+            Duration = new Duration(TimeSpan.FromSeconds(0.15)),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+        };
+        Storyboard.SetTarget(collapseWidthAnimation, this.FilterAutoSuggestBox);
+        Storyboard.SetTargetProperty(collapseWidthAnimation, new PropertyPath("Width"));
+        this._collapseStoryboard.Children.Add(collapseWidthAnimation);
+
+        var collapseOpacityAnimation = new DoubleAnimation {
+            To = 0.0,
+            Duration = new Duration(TimeSpan.FromSeconds(0.1)),
+            EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
+        };
+        Storyboard.SetTarget(collapseOpacityAnimation, this.FilterAutoSuggestBox);
+        Storyboard.SetTargetProperty(collapseOpacityAnimation, new PropertyPath("Opacity"));
+        this._collapseStoryboard.Children.Add(collapseOpacityAnimation);
+    }
 
     public UIElement? ReturnFocusTarget { get; set; }
     public event EventHandler? ExitRequested;
@@ -51,13 +101,6 @@ public partial class FilterBox : UserControl, IPopoverExit {
 
     protected void FilterAutoSuggestBox_GotFocus(object sender, RoutedEventArgs e) {
         if (!this._isExpanded) this.Expand();
-
-        // Select all text when focused to make it easy to type a new query
-        _ = this.Dispatcher.BeginInvoke(new Action(() => {
-            // Find the TextBox inside the AutoSuggestBox template
-            if (this.FilterAutoSuggestBox.Template?.FindName("PART_TextBox", this.FilterAutoSuggestBox) is TextBox
-                textBox) textBox.SelectAll();
-        }), DispatcherPriority.Input);
     }
 
     protected void FilterAutoSuggestBox_LostFocus(object sender, RoutedEventArgs e) {
@@ -75,8 +118,7 @@ public partial class FilterBox : UserControl, IPopoverExit {
         if (this._isExpanded) return;
         this._isExpanded = true;
 
-        var storyboard = this.FindResource("ExpandStoryboard") as Storyboard;
-        storyboard?.Begin();
+        this._expandStoryboard?.Begin();
 
         // Focus the AutoSuggestBox after expansion starts
         _ = this.Dispatcher.BeginInvoke(new Action(() => _ = this.FilterAutoSuggestBox.Focus()),
@@ -87,7 +129,7 @@ public partial class FilterBox : UserControl, IPopoverExit {
         if (!this._isExpanded) return;
         this._isExpanded = false;
 
-        (this.FindResource("CollapseStoryboard") as Storyboard)?.Begin();
+        this._collapseStoryboard?.Begin();
     }
 }
 
@@ -151,7 +193,9 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
         _ = this.FilterPill.SetBinding(
             VisibilityProperty,
             new Binding(selectedValuePropertyName) {
-                Source = this._viewModel, Mode = BindingMode.OneWay, Converter = VisibilityConverter.Instance
+                Source = this._viewModel,
+                Mode = BindingMode.OneWay,
+                Converter = VisibilityConverter.Instance
             }
         );
 
@@ -160,7 +204,9 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
             _ = clearFilterBorder.SetBinding(
                 VisibilityProperty,
                 new Binding(selectedValuePropertyName) {
-                    Source = this._viewModel, Mode = BindingMode.OneWay, Converter = VisibilityConverter.Instance
+                    Source = this._viewModel,
+                    Mode = BindingMode.OneWay,
+                    Converter = VisibilityConverter.Instance
                 }
             );
         }
