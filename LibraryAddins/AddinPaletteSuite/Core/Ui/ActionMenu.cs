@@ -6,19 +6,18 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Markup;
 using ContextMenu = System.Windows.Controls.ContextMenu;
 using MenuItem = Wpf.Ui.Controls.MenuItem;
 
 namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
-///     Non-generic base class for ActionMenu.xaml
-///     This matches the XAML x:Class declaration and provides access to resources
+///     Non-generic base class for ActionMenu
+///     Provides popover functionality and resource loading
 /// </summary>
-public partial class ActionMenu : UserControl, IPopoverExit {
-    protected ActionMenu() => this.InitializeComponent();
+public class ActionMenu : UserControl, IPopoverExit {
+    protected ActionMenu() => ThemeManager.LoadWpfUiResources(this);
+
     protected ContextMenu? Menu { get; set; }
     public event EventHandler? ExitRequested;
     public UIElement? ReturnFocusTarget { get; set; }
@@ -40,12 +39,8 @@ public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem
     private TItem? _currentItem;
 
     public ActionMenu() {
-        this.Menu = new ContextMenu {
-            StaysOpen = false,
-            Placement = PlacementMode.Right,
-            FocusVisualStyle = null,
-
-        };
+        // Call base constructor to load XAML resources
+        this.Menu = new ContextMenu { StaysOpen = false, Placement = PlacementMode.Right };
 
         this.Menu.Closed += (_, _) => this.OnExitRequested();
         this.Menu.PreviewKeyDown += this.ContextMenu_PreviewKeyDown;
@@ -105,11 +100,7 @@ public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem
             var shortcutText = this.FormatShortcut(paletteAction);
 
             var menuItem = new MenuItem {
-                Header = paletteAction.Name,
-                InputGestureText = shortcutText,
-                IsEnabled = canExecute,
-                FontFamily = ThemeManager.FontFamily(),
-                FontSize = (double)TxtSz.normal
+                Header = paletteAction.Name, InputGestureText = shortcutText, IsEnabled = canExecute
             };
 
             menuItem.Click += (_, _) => {

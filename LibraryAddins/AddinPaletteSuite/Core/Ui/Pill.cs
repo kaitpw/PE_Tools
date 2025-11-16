@@ -14,8 +14,6 @@ namespace AddinPaletteSuite.Core.Ui;
 ///     Reusable pill component for displaying badges/labels.
 /// </summary>
 public class Pill : Border {
-    private readonly TextBlock _textBlock;
-
     public static readonly DependencyProperty TextProperty =
         DependencyProperty.Register(nameof(Text), typeof(string), typeof(Pill),
             new PropertyMetadata(string.Empty, OnTextChanged));
@@ -24,8 +22,12 @@ public class Pill : Border {
         DependencyProperty.Register(nameof(FontWeight), typeof(FontWeight), typeof(Pill),
             new PropertyMetadata(FontWeights.Medium, OnFontWeightChanged));
 
+    private readonly TextBlock _textBlock;
+
     public Pill() {
-        // Set default Border properties (can be overridden in XAML)
+        // Load WpfUiResources for access to typography styles and theme colors
+        ThemeManager.LoadWpfUiResources(this);
+
         this.VerticalAlignment = VerticalAlignment.Center;
         this.HorizontalAlignment = HorizontalAlignment.Right;
         this.BorderThickness = new Thickness((double)UiSz.ss);
@@ -33,37 +35,22 @@ public class Pill : Border {
         this.Padding = new Thickness((double)UiSz.m, 0, (double)UiSz.m, (double)UiSz.ss);
 
         // Create the TextBlock child
-        this._textBlock = new TextBlock {
-            VerticalAlignment = VerticalAlignment.Center
-        };
+        this._textBlock = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
 
         // Set up theme resource for foreground
         this._textBlock.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
 
-        // Load and apply CaptionTextBlockStyle
-        var resourceDict = new ResourceDictionary {
-            Source = new System.Uri("pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml",
-                System.UriKind.Absolute)
-        };
-
-        if (resourceDict["CaptionTextBlockStyle"] is Style captionStyle) {
-            this._textBlock.Style = captionStyle;
-        } else {
-            // Fallback: apply typography style if resource not found
-            // this._textBlock.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
-        }
+        // Apply Caption typography style - resources are now loaded
+        var captionStyle = ThemeManager.GetTypographyStyle(FontTypography.Caption, null, this);
+        this._textBlock.Style = captionStyle;
 
         // Set up binding for Text property
-        _ = this._textBlock.SetBinding(TextBlock.TextProperty, new Binding(nameof(this.Text)) {
-            Source = this,
-            Mode = BindingMode.OneWay
-        });
+        _ = this._textBlock.SetBinding(TextBlock.TextProperty,
+            new Binding(nameof(this.Text)) { Source = this, Mode = BindingMode.OneWay });
 
         // Set up binding for FontWeight property
-        _ = this._textBlock.SetBinding(TextBlock.FontWeightProperty, new Binding(nameof(this.FontWeight)) {
-            Source = this,
-            Mode = BindingMode.OneWay
-        });
+        _ = this._textBlock.SetBinding(TextBlock.FontWeightProperty,
+            new Binding(nameof(this.FontWeight)) { Source = this, Mode = BindingMode.OneWay });
 
         // Set the TextBlock as the child
         this.Child = this._textBlock;

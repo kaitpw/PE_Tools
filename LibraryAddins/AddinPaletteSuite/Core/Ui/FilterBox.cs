@@ -1,5 +1,6 @@
 #nullable enable
 
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -10,6 +11,7 @@ using Wpf.Ui.Controls;
 using Binding = System.Windows.Data.Binding;
 using ListView = Wpf.Ui.Controls.ListView;
 using ListViewItem = Wpf.Ui.Controls.ListViewItem;
+using TextBox = Wpf.Ui.Controls.TextBox;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -38,9 +40,26 @@ public partial class FilterBox : UserControl, IPopoverExit {
     protected void IconBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) =>
         _ = this.FilterAutoSuggestBox.Focus();
 
+    protected void ClearFilterBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+        Debug.WriteLine("ClearFilterBorder_MouseLeftButtonDown");
+        this.OnClearFilterRequested();
+        e.Handled = true;
+    }
+
+    protected virtual void OnClearFilterRequested() {
+        // Override in derived class to clear filter
+    }
+
     protected void FilterAutoSuggestBox_GotFocus(object sender, RoutedEventArgs e) {
         Debug.WriteLine($"[FilterBox] FilterAutoSuggestBox_GotFocus - Expanded: {this._isExpanded}");
         if (!this._isExpanded) this.Expand();
+
+        // Select all text when focused to make it easy to type a new query
+        _ = this.Dispatcher.BeginInvoke(new Action(() => {
+            // Find the TextBox inside the AutoSuggestBox template
+            if (this.FilterAutoSuggestBox.Template?.FindName("PART_TextBox", this.FilterAutoSuggestBox) is TextBox
+                textBox) textBox.SelectAll();
+        }), DispatcherPriority.Input);
     }
 
     protected void FilterAutoSuggestBox_LostFocus(object sender, RoutedEventArgs e) {
@@ -80,18 +99,19 @@ public partial class FilterBox : UserControl, IPopoverExit {
 /// </summary>
 public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
     private readonly TViewModel _viewModel;
+    private string? _availableValuesPropertyName;
 
     public FilterBox(TViewModel viewModel) {
         this._viewModel = viewModel;
-
-        this.ApplyStyles();
-
         this.FilterAutoSuggestBox.SuggestionChosen += this.FilterAutoSuggestBox_SuggestionChosen;
         this.FilterAutoSuggestBox.PreviewKeyDown += this.FilterAutoSuggestBox_PreviewKeyDown;
     }
 
+
+    protected override void OnClearFilterRequested() => this.UpdateSelectedFilterValue(null);
+
     /// <summary>
-    /// This event fires EVERY time a list item is focused by the keyboard. update view model here.
+    ///     This event fires EVERY time a list item is focused by the keyboard. update view model here.
     /// </summary>
     private void FilterAutoSuggestBox_SuggestionChosen(object sender, AutoSuggestBoxSuggestionChosenEventArgs e) {
         this.UpdateSelectedFilterValue(e.SelectedItem.ToString());
@@ -99,33 +119,24 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
     }
 
     /// <summary>
-    /// Handle escaping and unfocusing the FilterBox here.
+    ///     Handle escaping and unfocusing the FilterBox here.
     /// </summary>
     private void FilterAutoSuggestBox_PreviewKeyDown(object sender, KeyEventArgs e) {
+        // handle return focus to main search box and hanlde return focus to filter searchbox. 
         if (e.Key is Key.Tab or Key.Escape) {
             e.Handled = true;
+            this.UpdateSelectedFilterValue(null);
             this.RequestExit();
-        } else if (e.Key == Key.Enter) {
+        } else if (e.Key is Key.Enter) {
+            this.UpdateSelectedFilterValue(this.FilterAutoSuggestBox.Text);
             e.Handled = true;
             this.RequestExit();
-        }
-    }
-
-    private void ApplyStyles() {
-        // Apply corner radius
-        var topRadius = ThemeManager.Radius.TopLeft;
-        this.FilterBorder.CornerRadius = new CornerRadius(topRadius, topRadius, 0, 0);
-        // Remove padding to match search box height - padding is handled by SearchBoxBorder
-        _ = this.FilterBorder
-            .WithSpacing(0, 0)
-            .WithPadding(0, 0, 0, 0);
-
-        // Apply typography style
-        ThemeManager.ApplyTypographyStyle(this.FilterAutoSuggestBox, FontTypography.Body);
-        this.FilterAutoSuggestBox.FocusVisualStyle = null;
+        } else if (e.Key is not Key.Up and not Key.Down) _ = this.FilterAutoSuggestBox.Focus();
     }
 
     public void BindToViewModel(string availableValuesPropertyName, string selectedValuePropertyName) {
+        this._availableValuesPropertyName = availableValuesPropertyName;
+
         // Bind to AvailableFilterValues for the dropdown suggestions
         _ = this.FilterAutoSuggestBox.SetBinding(
             AutoSuggestBox.OriginalItemsSourceProperty,
@@ -147,15 +158,38 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
                 Converter = VisibilityConverter.Instance
             }
         );
+
+        // Bind ClearFilterBorder Visibility to SelectedFilterValue (show X button when filter is active)
+        if (this.FindName("ClearFilterBorder") is Border clearFilterBorder) {
+            _ = clearFilterBorder.SetBinding(
+                VisibilityProperty,
+                new Binding(selectedValuePropertyName) {
+                    Source = this._viewModel,
+                    Mode = BindingMode.OneWay,
+                    Converter = VisibilityConverter.Instance
+                }
+            );
+        }
     }
 
     private void UpdateSelectedFilterValue(string? value) {
         var selectedValueProperty = typeof(TViewModel).GetProperty("SelectedFilterValue");
-        if (selectedValueProperty == null) return;
-
-        var currentValue = selectedValueProperty.GetValue(this._viewModel) as string;
+        var currentValue = selectedValueProperty?.GetValue(this._viewModel) as string;
         if (currentValue == value) return;
 
-        selectedValueProperty.SetValue(this._viewModel, value);
+        if (string.IsNullOrEmpty(value)) {
+            // enable clearing the value
+            selectedValueProperty?.SetValue(this._viewModel, value);
+            return;
+        }
+
+        // Validate that the value exists in available filter values
+        if (string.IsNullOrEmpty(this._availableValuesPropertyName)) return;
+        var availableValuesProperty = typeof(TViewModel).GetProperty(this._availableValuesPropertyName);
+        if (availableValuesProperty?.GetValue(this._viewModel) is not ObservableCollection<string> availableValues)
+            return;
+
+        if (!availableValues.Contains(value)) return;
+        selectedValueProperty?.SetValue(this._viewModel, value);
     }
 }

@@ -4,122 +4,92 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Media;
-using Wpf.Ui.Controls;
-using Wpf.Ui.Markup;
 using Grid = System.Windows.Controls.Grid;
-using TextBox = System.Windows.Controls.TextBox;
+using TextBox = Wpf.Ui.Controls.TextBox;
 using Binding = System.Windows.Data.Binding;
 
 namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
-///     Component that combines a search TextBox with an optional filter box container
-///     Built entirely in code (no XAML)
+///     Component that combines a search TextBox with an optional FilterBox
+///     Self-contained with automatic filter integration when needed
 /// </summary>
-public class SearchFilterBox {
-    private readonly Grid _container;
-    private readonly TextBox _searchTextBox;
-    private readonly Grid _filterBoxContainer;
+public class SearchFilterBox<TViewModel> where TViewModel : class {
+    private readonly FilterBox<TViewModel>? _filterBox;
 
-    public SearchFilterBox() {
+    public SearchFilterBox(TViewModel viewModel,
+        string? availableValuesPropertyName = null,
+        string? selectedValuePropertyName = null) {
         // Create the main container Grid
-        this._container = new Grid {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Center
+        this.Container = new Grid {
+            HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center
         };
-        this._container.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        this._container.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        this.Container.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        this.Container.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         // Create the search TextBox
-        this._searchTextBox = new TextBox {
-            BorderBrush = Brushes.Transparent,
-            Background = Brushes.Transparent,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(this._searchTextBox, 0);
+        this.SearchTextBox = new TextBox();
+        Grid.SetColumn(this.SearchTextBox, 0);
+        ThemeManager.LoadWpfUiResources(this.SearchTextBox);
+        _ = this.Container.Children.Add(this.SearchTextBox);
 
-        // Apply styling
-        this.ApplySearchBoxStyles();
+        // Bind search text
+        this.BindSearchToViewModel(viewModel);
 
-        // Create the filter box container Grid with small margin for spacing
-        this._filterBoxContainer = new Grid {
-            Margin = new Thickness(4, 0, 0, 0),
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        Grid.SetColumn(this._filterBoxContainer, 1);
+        // If filter properties are provided, create and add FilterBox
+        if (!string.IsNullOrEmpty(availableValuesPropertyName) && !string.IsNullOrEmpty(selectedValuePropertyName)) {
+            this._filterBox = new FilterBox<TViewModel>(viewModel);
+            this._filterBox.BindToViewModel(availableValuesPropertyName, selectedValuePropertyName);
+            this._filterBox.ReturnFocusTarget = this.SearchTextBox;
+            this._filterBox.ExitRequested += (_, _) => _ = this.SearchTextBox.Focus();
 
-        // Add controls to container
-        _ = this._container.Children.Add(this._searchTextBox);
-        _ = this._container.Children.Add(this._filterBoxContainer);
+            Grid.SetColumn(this._filterBox, 1);
+            _ = this.Container.Children.Add(this._filterBox);
+        }
     }
 
     /// <summary>
-    ///     The root container Grid that holds both search and filter boxes
+    ///     The root container Grid
     /// </summary>
-    public Grid Container => this._container;
+    public Grid Container { get; }
 
     /// <summary>
-    ///     The search TextBox control
+    ///     The search TextBox control (for event binding)
     /// </summary>
-    public TextBox SearchTextBox => this._searchTextBox;
+    public TextBox SearchTextBox { get; }
 
     /// <summary>
-    ///     The Grid container for the filter box (add FilterBox as child when filtering is enabled)
+    ///     Whether this SearchFilterBox has filtering enabled
     /// </summary>
-    public Grid FilterBoxContainer => this._filterBoxContainer;
+    public bool HasFilter => this._filterBox != null;
 
     /// <summary>
-    ///     Binds the search TextBox to view model properties and commands
+    ///     Focuses the filter box if filtering is enabled
     /// </summary>
-    public void BindToViewModel(object viewModel) {
+    public void FocusFilter() => this._filterBox?.Focus();
+
+    /// <summary>
+    ///     Checks if the given element is inside the filter box
+    /// </summary>
+    public bool IsFilterFocused(DependencyObject element) =>
+        this._filterBox != null && this._filterBox.IsAncestorOf(element);
+
+    private void BindSearchToViewModel(TViewModel viewModel) {
         // Bind SearchText property
         var searchTextBinding = new Binding("SearchText") {
-            Source = viewModel,
-            Mode = BindingMode.TwoWay,
-            UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
+            Source = viewModel, Mode = BindingMode.TwoWay, UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged
         };
-        _ = this._searchTextBox.SetBinding(TextBox.TextProperty, searchTextBinding);
+        _ = this.SearchTextBox.SetBinding(TextBox.TextProperty, searchTextBinding);
 
         // Bind navigation commands
-        var moveDownBinding = new KeyBinding {
-            Key = Key.Down
-        };
+        var moveDownBinding = new KeyBinding { Key = Key.Down };
         _ = BindingOperations.SetBinding(moveDownBinding, InputBinding.CommandProperty,
             new Binding("MoveSelectionDownCommand") { Source = viewModel });
-        _ = this._searchTextBox.InputBindings.Add(moveDownBinding);
+        _ = this.SearchTextBox.InputBindings.Add(moveDownBinding);
 
-        var moveUpBinding = new KeyBinding {
-            Key = Key.Up
-        };
+        var moveUpBinding = new KeyBinding { Key = Key.Up };
         _ = BindingOperations.SetBinding(moveUpBinding, InputBinding.CommandProperty,
             new Binding("MoveSelectionUpCommand") { Source = viewModel });
-        _ = this._searchTextBox.InputBindings.Add(moveUpBinding);
-    }
-
-    private void ApplySearchBoxStyles() {
-        // Load the CleanTextBoxStyle from resources
-        var resourceDict = new ResourceDictionary {
-            Source = new Uri("pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml",
-                UriKind.Absolute)
-        };
-
-        Style? baseStyle = null;
-        if (resourceDict["CleanTextBoxStyle"] is Style cleanTextBoxStyle) {
-            baseStyle = cleanTextBoxStyle;
-        }
-
-        // Create style based on CleanTextBoxStyle
-        var textBoxStyle = new Style(typeof(TextBox), baseStyle);
-        this._searchTextBox.Style = textBoxStyle;
-
-        // Set theme-aware resource references directly on the TextBox
-        this._searchTextBox.SetResourceReference(TextBox.CaretBrushProperty, "TextFillColorSecondaryBrush");
-        this._searchTextBox.SetResourceReference(TextBox.ForegroundProperty, "TextFillColorPrimaryBrush");
-
-        // Apply typography style
-        ThemeManager.ApplyTypographyStyle(this._searchTextBox, FontTypography.Body);
-        this._searchTextBox.FocusVisualStyle = null;
+        _ = this.SearchTextBox.InputBindings.Add(moveUpBinding);
     }
 }
-

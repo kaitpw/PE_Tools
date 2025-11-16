@@ -12,17 +12,28 @@
     </ResourceDictionary.MergedDictionaries>
 
     <!-- Clean TextBox template for simple rendering without WPF-UI decorations -->
-    <Style x:Key="CleanTextBoxStyle" TargetType="TextBox">
+    <!-- Implicit style (no x:Key) applies to all standard TextBox controls by default -->
+    <Style TargetType="TextBox">
+        <Setter Property="CaretBrush" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+        <Setter Property="FontWeight" Value="Regular" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="TextBox">
                     <Border Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}"
-                            Padding="{TemplateBinding Padding}">
+                            Padding="{TemplateBinding Padding}"
+                            CornerRadius="4">
                         <ScrollViewer x:Name="PART_ContentHost"
                                       Margin="0"
-                                      Focusable="False" />
+                                      Focusable="False"
+                                      VerticalAlignment="Center" />
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -36,7 +47,10 @@
         <Setter Property="Padding" Value="12,6,12,6" />
         <Setter Property="Margin" Value="0" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <!-- Apply typography properties directly (can't use BasedOn with different TargetType) -->
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+        <Setter Property="FontWeight" Value="Regular" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ui:ListViewItem">
@@ -46,7 +60,10 @@
                             Padding="{TemplateBinding Padding}"
                             CornerRadius="4">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          TextElement.FontFamily="{TemplateBinding FontFamily}"
+                                          TextElement.FontSize="{TemplateBinding FontSize}"
+                                          TextElement.FontWeight="{TemplateBinding FontWeight}" />
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
@@ -63,22 +80,20 @@
 
     <!-- Clean AutoSuggestBox Style with proper PART_ template parts -->
     <Style x:Key="CleanAutoSuggestBoxStyle" TargetType="ui:AutoSuggestBox">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Foreground" Value="{ui:ThemeResource TextFillColorPrimaryBrush}" />
         <Setter Property="Padding" Value="8,0,8,0" />
         <Setter Property="Focusable" Value="False" />
+        <!-- Apply typography properties directly (can't use BasedOn with different TargetType) -->
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
+        <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
+        <Setter Property="FontWeight" Value="Regular" />
         <Setter Property="ItemContainerStyle" Value="{StaticResource CleanAutoSuggestBoxItemStyle}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ui:AutoSuggestBox">
                     <Grid>
-                        <!-- PART_TextBox: Required template part - using standard TextBox with clean style -->
+                        <!-- PART_TextBox: Required template part - inherits global transparent style -->
                         <ui:TextBox x:Name="PART_TextBox"
-                                 Background="Transparent"
-                                 BorderBrush="Transparent"
-                                 BorderThickness="0"
                                  Foreground="{TemplateBinding Foreground}"
                                  Padding="{TemplateBinding Padding}"
                                  VerticalContentAlignment="Center"
@@ -86,8 +101,7 @@
                                  PlaceholderText="{TemplateBinding PlaceholderText}"
                                  IsTabStop="{TemplateBinding IsTabStop}"
                                  TabIndex="{TemplateBinding TabIndex}"
-                                 Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Style="{StaticResource CleanTextBoxStyle}" />
+                                 Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                         <!-- PART_SuggestionsPopup: Required template part -->
                         <Popup x:Name="PART_SuggestionsPopup"
@@ -98,7 +112,8 @@
                                Focusable="False"
                                VerticalOffset="4"
                                MinWidth="{TemplateBinding ActualWidth}">
-                            <Border Background="{ui:ThemeResource ApplicationBackgroundBrush}"
+                            <Border x:Name="PART_PopupBorder"
+                                    Background="{ui:ThemeResource ApplicationBackgroundBrush}"
                                     BorderBrush="{ui:ThemeResource CardStrokeColorDefaultBrush}"
                                     BorderThickness="1"
                                     CornerRadius="6"
@@ -128,6 +143,16 @@
                             </Border>
                         </Popup>
                     </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- Hide popup when there are no items -->
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=ItemsSource.Count}" Value="0">
+                            <Setter TargetName="PART_SuggestionsPopup" Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                        <!-- Also hide if ItemsSource is null -->
+                        <Trigger Property="ItemsSource" Value="{x:Null}">
+                            <Setter TargetName="PART_SuggestionsPopup" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
         </Setter>

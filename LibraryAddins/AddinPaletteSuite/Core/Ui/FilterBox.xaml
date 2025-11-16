@@ -45,9 +45,12 @@
 
     <Border x:Name="FilterBorder"
             ClipToBounds="False"
-            Background="Transparent">
+            Background="{ui:ThemeResource ControlFillColorDefaultBrush}"
+            CornerRadius="4"
+            Padding="6,4">
         <Grid VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="Auto"/>
@@ -60,12 +63,30 @@
                         Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
                         Visibility="Collapsed"/>
 
-            <!-- Filter Icon Button (always visible, smaller size) -->
-            <Border x:Name="IconBorder"
+            <!-- Clear Filter Button (X icon, visible only when filter is active) -->
+            <Border x:Name="ClearFilterBorder"
                     Grid.Column="1"
                     Width="16"
                     Height="16"
-                    Background="{ui:ThemeResource ApplicationBackgroundBrush}"
+                    Background="Transparent"
+                    Cursor="Hand"
+                    VerticalAlignment="Center"
+                    Margin="0,0,4,0"
+                    Visibility="Collapsed"
+                    MouseLeftButtonDown="ClearFilterBorder_MouseLeftButtonDown">
+                <ui:SymbolIcon x:Name="ClearFilterIcon"
+                               Symbol="Dismiss24"
+                               Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Center"/>
+            </Border>
+
+            <!-- Filter Icon Button (always visible, smaller size) -->
+            <Border x:Name="IconBorder"
+                    Grid.Column="2"
+                    Width="16"
+                    Height="16"
+                    Background="Transparent"
                     Cursor="Hand"
                     VerticalAlignment="Center"
                     MouseLeftButtonDown="IconBorder_MouseLeftButtonDown">
@@ -78,7 +99,7 @@
 
             <!-- Expandable AutoSuggestBox (collapsed by default) -->
             <ui:AutoSuggestBox x:Name="FilterAutoSuggestBox"
-                               Grid.Column="2"
+                               Grid.Column="3"
                                Width="0"
                                Height="20"
                                Opacity="0"
@@ -88,7 +109,11 @@
                                MaxSuggestionListHeight="300"
                                Style="{StaticResource CleanAutoSuggestBoxStyle}"
                                GotFocus="FilterAutoSuggestBox_GotFocus"
-                               LostFocus="FilterAutoSuggestBox_LostFocus" />
+                               LostFocus="FilterAutoSuggestBox_LostFocus">
+                <ui:AutoSuggestBox.InputBindings>
+                    <!-- These key bindings will be set in code-behind -->
+                </ui:AutoSuggestBox.InputBindings>
+            </ui:AutoSuggestBox>
         </Grid>
     </Border>
 </UserControl>

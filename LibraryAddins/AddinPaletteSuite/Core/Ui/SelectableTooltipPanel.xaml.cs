@@ -61,8 +61,6 @@ public class SelectableTooltipPanel : UserControl {
             IsReadOnly = true,
             IsTextSelectionEnabled = true,
             Focusable = true,
-            // FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
-            FontSize = (double)(this.TryFindResource("PaletteFontSizeMedium") ?? 12.0),
             Background = Brushes.Transparent,
             Foreground = Brushes.White,
             BorderThickness = new Thickness(0),

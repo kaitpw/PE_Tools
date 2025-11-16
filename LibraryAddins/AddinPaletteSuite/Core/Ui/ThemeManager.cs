@@ -1,3 +1,5 @@
+#nullable enable
+
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -47,70 +49,43 @@ public static class ThemeManager {
     public static FontFamily FontFamily() => new("Segoe UI Variable Text");
 
     /// <summary>
-    ///     Gets a typography style by FontTypography enum for type-safe access.
-    ///     Uses WPF.UI's FontTypography enum for consistency.
-    ///     Creates style for TextBlock by default.
+    ///     Gets a typography style by FontTypography enum.
+    ///     Loads the style from XAML resources defined in TypographyOverrides.xaml.
+    ///     The targetType parameter is kept for API compatibility but styles are TextBlock-based.
     /// </summary>
-    public static Style GetTypographyStyle(FontTypography typography) =>
-        GetTypographyStyle(typography, typeof(System.Windows.Controls.TextBlock));
-
-    /// <summary>
-    ///     Gets a typography style by FontTypography enum for a specific control type.
-    ///     Supports TextBlock, TextBox, and other text-based controls.
-    /// </summary>
-    public static Style GetTypographyStyle(FontTypography typography, Type targetType) {
-        var fontFamily = FontFamily();
-        return typography switch {
-            FontTypography.Caption => TypographyStyleFactory.CreateCaptionStyle(targetType, fontFamily),
-            FontTypography.Body => TypographyStyleFactory.CreateBodyStyle(targetType, fontFamily),
-            FontTypography.BodyStrong => TypographyStyleFactory.CreateBodyStrongStyle(targetType, fontFamily),
-            FontTypography.Subtitle => TypographyStyleFactory.CreateSubtitleStyle(targetType, fontFamily),
-            FontTypography.Title => TypographyStyleFactory.CreateTitleStyle(targetType, fontFamily),
-            FontTypography.TitleLarge => TypographyStyleFactory.CreateTitleLargeStyle(targetType, fontFamily),
-            FontTypography.Display => TypographyStyleFactory.CreateDisplayStyle(targetType, fontFamily),
+    /// <param name="typography">The FontTypography level to get</param>
+    /// <param name="_">Unused type parameter for API compatibility</param>
+    /// <param name="searchContext">Optional element to search for resources in its resource chain before Application</param>
+    public static Style GetTypographyStyle(FontTypography typography, Type? _ = null, FrameworkElement? searchContext = null) {
+        // Map FontTypography enum to XAML resource key
+        var styleKey = typography switch {
+            FontTypography.Caption => "CaptionTextBlockStyle",
+            FontTypography.Body => "BodyTextBlockStyle",
+            FontTypography.BodyStrong => "BodyStrongTextBlockStyle",
+            FontTypography.Subtitle => "SubtitleTextBlockStyle",
+            FontTypography.Title => "TitleTextBlockStyle",
+            FontTypography.TitleLarge => "TitleLargeTextBlockStyle",
+            FontTypography.Display => "DisplayTextBlockStyle",
             _ => throw new ArgumentOutOfRangeException(nameof(typography), typography, null)
         };
-    }
 
-    /// <summary>
-    ///     Applies typography style to a control, merging with any existing style.
-    ///     Handles type compatibility automatically - works with standard WPF controls and WPF.UI controls.
-    /// </summary>
-    public static void ApplyTypographyStyle(Control control, FontTypography typography) {
-        if (control == null) throw new ArgumentNullException(nameof(control));
-
-        var controlType = control.GetType();
-        var typographyStyle = GetTypographyStyle(typography, controlType);
-
-        Style mergedStyle;
-        if (control.Style == null) {
-            // No existing style, use typography style directly
-            mergedStyle = typographyStyle;
-        } else {
-            // Check if existing style's target type is compatible
-            // A style can only be based on a style that targets the same type or a base type
-            var existingStyle = control.Style;
-            var canUseAsBase = existingStyle.TargetType == controlType ||
-                               controlType.IsSubclassOf(existingStyle.TargetType);
-
-            if (canUseAsBase) {
-                // Compatible types, can use as base
-                mergedStyle = new Style(controlType, existingStyle);
-            } else {
-                // Incompatible types, create new style without base and copy setters from existing style
-                mergedStyle = new Style(controlType);
-                foreach (var setter in existingStyle.Setters.OfType<Setter>()) {
-                    mergedStyle.Setters.Add(setter);
-                }
-            }
-
-            // Copy setters from typography style (will override any conflicting setters)
-            foreach (var setter in typographyStyle.Setters.OfType<Setter>()) {
-                mergedStyle.Setters.Add(setter);
-            }
+        // Try to find the style - first in searchContext, then in Application.Current
+        Style? style = null;
+        if (searchContext != null) {
+            style = searchContext.TryFindResource(styleKey) as Style;
         }
 
-        control.Style = mergedStyle;
+        if (style == null) {
+            style = Application.Current?.TryFindResource(styleKey) as Style;
+        }
+
+        if (style is null) {
+            throw new InvalidOperationException(
+                $"Typography style '{styleKey}' not found in application resources. " +
+                "Ensure TypographyOverrides.xaml is loaded in WpfUiResources.xaml.");
+        }
+
+        return style;
     }
 
     /// <summary>
@@ -128,31 +103,24 @@ public static class ThemeManager {
         flowDocumentStyle.Setters.Add(new Setter(FlowDocument.PagePaddingProperty, new Thickness(0)));
         resources.Add(typeof(FlowDocument), flowDocumentStyle);
 
-        // Override default focus visual style to remove outline
-        // Source: https://github.com/lepoco/wpfui/blob/main/src/Wpf.Ui/Styles/Controls/FocusVisual.xaml
-        var focusVisualStyle = CreateFocusVisualStyle();
-        resources.Add("DefaultControlFocusVisualStyle", focusVisualStyle);
-        resources.Add(SystemParameters.FocusVisualStyleKey, focusVisualStyle);
-
         return resources;
     }
 
     /// <summary>
-    ///     Creates a custom FocusVisualStyle with no visible outline.
-    ///     Override WPF.UI's default focus rectangle for a cleaner look.
+    ///     Loads and merges the WpfUiResources dictionary into a FrameworkElement's resources.
+    ///     This provides access to implicit styles, typography styles, and theme colors.
+    ///     Use this for code-behind controls that need access to the centralized styling.
     /// </summary>
-    private static Style CreateFocusVisualStyle() {
-        var style = new Style();
+    /// <param name="element">The FrameworkElement to merge resources into</param>
+    public static void LoadWpfUiResources(FrameworkElement element) {
+        if (element == null) throw new ArgumentNullException(nameof(element));
 
-        // Create a ControlTemplate with a transparent/invisible rectangle
-        var template = new ControlTemplate(typeof(Control));
-        var rectangleFactory = new FrameworkElementFactory(typeof(System.Windows.Shapes.Rectangle));
-        rectangleFactory.SetValue(System.Windows.Shapes.Rectangle.StrokeProperty, Brushes.Transparent);
-        rectangleFactory.SetValue(System.Windows.Shapes.Rectangle.StrokeThicknessProperty, 0.0);
-        rectangleFactory.SetValue(System.Windows.Shapes.Rectangle.SnapsToDevicePixelsProperty, true);
-        template.VisualTree = rectangleFactory;
-        style.Setters.Add(new Setter(Control.TemplateProperty, template));
-        return style;
+        var resourceDict = new ResourceDictionary {
+            Source = new Uri("pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml",
+                UriKind.Absolute)
+        };
+
+        element.Resources.MergedDictionaries.Add(resourceDict);
     }
 
     /// <summary>
