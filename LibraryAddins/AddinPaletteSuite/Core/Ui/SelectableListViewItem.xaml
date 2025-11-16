@@ -6,40 +6,40 @@
         Background="Transparent">
     <Grid x:Name="ContentGrid">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
-        
-        <Image x:Name="IconImage" 
+
+        <Image x:Name="IconImage"
                Grid.Column="0"
-               VerticalAlignment="Center"/>
-        
-        <Grid x:Name="TextGrid" 
+               VerticalAlignment="Center" />
+
+        <Grid x:Name="TextGrid"
               Grid.Column="1"
               VerticalAlignment="Center">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            
-            <ui:TextBlock x:Name="PrimaryText" 
+
+            <ui:TextBlock x:Name="PrimaryText"
                           Grid.Row="0"
                           Style="{DynamicResource BodyStrongTextBlockStyle}"
                           TextTrimming="CharacterEllipsis"
-                          Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}"/>
-            
-            <ui:TextBlock x:Name="SecondaryText" 
+                          Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+
+            <ui:TextBlock x:Name="SecondaryText"
                           Grid.Row="1"
                           Style="{DynamicResource CaptionTextBlockStyle}"
                           TextTrimming="CharacterEllipsis"
-                          Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"/>
+                          Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}" />
         </Grid>
-        
-        <local:Pill x:Name="PillBorder" 
-                  Grid.Column="2"
-                  Background="{ui:ThemeResource ControlAltFillColorTertiaryBrush}"
-                  BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
-                  Opacity="0.7"/>
+
+        <local:Pill x:Name="PillBorder"
+                    Grid.Column="2"
+                    Background="{ui:ThemeResource ControlAltFillColorTertiaryBrush}"
+                    BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
+                    Opacity="0.7" />
     </Grid>
 </Border>

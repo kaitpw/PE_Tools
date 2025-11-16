@@ -1,10 +1,10 @@
-using System.Text.RegularExpressions;
 using AddinPaletteSuite.Commands;
 using AddinPaletteSuite.Core;
 using AddinPaletteSuite.Core.Services;
 using AddinPaletteSuite.Core.Ui;
 using AddinPaletteSuite.Helpers;
 using PeServices.Storage;
+using System.Text.RegularExpressions;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -54,6 +54,7 @@ public static class CommandPaletteService {
                         Paths = new List<string>(item.Paths)
                     };
                 }
+
                 selectableItems.Add(normalizedItem);
                 continue;
             }

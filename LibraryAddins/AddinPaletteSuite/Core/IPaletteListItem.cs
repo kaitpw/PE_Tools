@@ -34,7 +34,7 @@ public interface IPaletteListItem {
 }
 
 public abstract partial class BaseObservableListItem : ObservableObject, INotifyPropertyChanged {
-    [ObservableProperty] private bool _isSelected = false;
-    [ObservableProperty] private double _searchScore;
     [ObservableProperty] private bool _canExecute = true;
+    [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private double _searchScore;
 }

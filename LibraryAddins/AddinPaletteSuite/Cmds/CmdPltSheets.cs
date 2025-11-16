@@ -1,8 +1,6 @@
-using AddinPaletteSuite.Core.Actions;
 using AddinPaletteSuite.Core;
-using CommunityToolkit.Mvvm.ComponentModel;
 using System.Windows.Media.Imaging;
-using AddinPaletteSuite.Core.Ui;
+
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
@@ -28,7 +26,7 @@ public class CmdPltSheets : BaseCmdPalette<ViewSheet, SheetPaletteItem> {
 /// <summary>
 ///     Adapter that wraps Revit ViewSheet to implement ISelectableItem
 /// </summary>
-public partial class SheetPaletteItem(ViewSheet sheet) : BaseObservableListItem, IPaletteListItem {
+public class SheetPaletteItem(ViewSheet sheet) : BaseObservableListItem, IPaletteListItem {
     public ViewSheet Sheet { get; } = sheet;
     public string TextPrimary => $"{this.Sheet.SheetNumber} - {this.Sheet.Name}";
 

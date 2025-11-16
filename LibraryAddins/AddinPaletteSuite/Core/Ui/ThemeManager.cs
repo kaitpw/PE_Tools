@@ -1,16 +1,9 @@
 #nullable enable
 
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
-using Wpf.Ui.Appearance;
 using Wpf.Ui.Controls;
-using Wpf.Ui.Extensions;
-using Wpf.Ui.Markup;
-using Color = System.Windows.Media.Color;
-using Control = System.Windows.Controls.Control;
-using MenuItem = Wpf.Ui.Controls.MenuItem;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -45,6 +38,11 @@ internal static class ThemeSettings {
 ///     Wraps ApplicationAccentColorManager and provides type-safe access to colors, typography, and spacing.
 /// </summary>
 public static class ThemeManager {
+    public static double IconOpacity => ThemeSettings.IconOpacity;
+    public static CornerRadius Radius => ThemeSettings.Radius;
+
+    public static double DisabledOpacity => ThemeSettings.DisabledOpacity;
+
     // Font Family
     public static FontFamily FontFamily() => new("Segoe UI Variable Text");
 
@@ -56,7 +54,9 @@ public static class ThemeManager {
     /// <param name="typography">The FontTypography level to get</param>
     /// <param name="_">Unused type parameter for API compatibility</param>
     /// <param name="searchContext">Optional element to search for resources in its resource chain before Application</param>
-    public static Style GetTypographyStyle(FontTypography typography, Type? _ = null, FrameworkElement? searchContext = null) {
+    public static Style GetTypographyStyle(FontTypography typography,
+        Type? _ = null,
+        FrameworkElement? searchContext = null) {
         // Map FontTypography enum to XAML resource key
         var styleKey = typography switch {
             FontTypography.Caption => "CaptionTextBlockStyle",
@@ -71,13 +71,9 @@ public static class ThemeManager {
 
         // Try to find the style - first in searchContext, then in Application.Current
         Style? style = null;
-        if (searchContext != null) {
-            style = searchContext.TryFindResource(styleKey) as Style;
-        }
+        if (searchContext != null) style = searchContext.TryFindResource(styleKey) as Style;
 
-        if (style == null) {
-            style = Application.Current?.TryFindResource(styleKey) as Style;
-        }
+        if (style == null) style = Application.Current?.TryFindResource(styleKey) as Style;
 
         if (style is null) {
             throw new InvalidOperationException(
@@ -187,7 +183,4 @@ public static class ThemeManager {
             }
         }
     }
-    public static double IconOpacity => ThemeSettings.IconOpacity;
-    public static CornerRadius Radius => ThemeSettings.Radius;
-    public static double DisabledOpacity => ThemeSettings.DisabledOpacity;
 }

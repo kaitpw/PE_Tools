@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
-using Wpf.Ui.Markup;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -27,11 +26,7 @@ public class EphemeralWindow : Window {
         this.ShowInTaskbar = false;
         this.Topmost = true;
 
-        this.Content = new Border {
-            Child = content,
-            Width = 400,
-            MaxHeight = 300,
-        };
+        this.Content = new Border { Child = content, Width = 400, MaxHeight = 300 };
 
         // 6. Apply custom implicit styles (focus visual, etc.)
         ThemeManager.ApplyStylesToWindow(this);

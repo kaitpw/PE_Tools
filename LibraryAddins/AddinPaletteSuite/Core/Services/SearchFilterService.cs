@@ -1,4 +1,3 @@
-using AddinPaletteSuite.Core.Ui;
 using PeServices.Storage;
 using PeServices.Storage.Core;
 

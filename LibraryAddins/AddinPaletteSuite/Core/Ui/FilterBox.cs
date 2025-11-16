@@ -41,7 +41,6 @@ public partial class FilterBox : UserControl, IPopoverExit {
         _ = this.FilterAutoSuggestBox.Focus();
 
     protected void ClearFilterBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-        Debug.WriteLine("ClearFilterBorder_MouseLeftButtonDown");
         this.OnClearFilterRequested();
         e.Handled = true;
     }
@@ -51,7 +50,6 @@ public partial class FilterBox : UserControl, IPopoverExit {
     }
 
     protected void FilterAutoSuggestBox_GotFocus(object sender, RoutedEventArgs e) {
-        Debug.WriteLine($"[FilterBox] FilterAutoSuggestBox_GotFocus - Expanded: {this._isExpanded}");
         if (!this._isExpanded) this.Expand();
 
         // Select all text when focused to make it easy to type a new query
@@ -153,9 +151,7 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
         _ = this.FilterPill.SetBinding(
             VisibilityProperty,
             new Binding(selectedValuePropertyName) {
-                Source = this._viewModel,
-                Mode = BindingMode.OneWay,
-                Converter = VisibilityConverter.Instance
+                Source = this._viewModel, Mode = BindingMode.OneWay, Converter = VisibilityConverter.Instance
             }
         );
 
@@ -164,9 +160,7 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
             _ = clearFilterBorder.SetBinding(
                 VisibilityProperty,
                 new Binding(selectedValuePropertyName) {
-                    Source = this._viewModel,
-                    Mode = BindingMode.OneWay,
-                    Converter = VisibilityConverter.Instance
+                    Source = this._viewModel, Mode = BindingMode.OneWay, Converter = VisibilityConverter.Instance
                 }
             );
         }

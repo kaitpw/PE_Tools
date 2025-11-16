@@ -8,7 +8,8 @@
         <ui:ThemesDictionary Theme="Dark" />
         <ui:ControlsDictionary />
         <!-- Typography overrides MUST come after ControlsDictionary to override WPF.UI defaults -->
-        <ResourceDictionary Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/TypographyOverrides.xaml" />
+        <ResourceDictionary
+            Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/TypographyOverrides.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <!-- Clean TextBox template for simple rendering without WPF-UI decorations -->
@@ -94,14 +95,14 @@
                     <Grid>
                         <!-- PART_TextBox: Required template part - inherits global transparent style -->
                         <ui:TextBox x:Name="PART_TextBox"
-                                 Foreground="{TemplateBinding Foreground}"
-                                 Padding="{TemplateBinding Padding}"
-                                 VerticalContentAlignment="Center"
-                                 HorizontalAlignment="Stretch"
-                                 PlaceholderText="{TemplateBinding PlaceholderText}"
-                                 IsTabStop="{TemplateBinding IsTabStop}"
-                                 TabIndex="{TemplateBinding TabIndex}"
-                                 Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    Foreground="{TemplateBinding Foreground}"
+                                    Padding="{TemplateBinding Padding}"
+                                    VerticalContentAlignment="Center"
+                                    HorizontalAlignment="Stretch"
+                                    PlaceholderText="{TemplateBinding PlaceholderText}"
+                                    IsTabStop="{TemplateBinding IsTabStop}"
+                                    TabIndex="{TemplateBinding TabIndex}"
+                                    Text="{Binding RelativeSource={RelativeSource TemplatedParent}, Path=Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                         <!-- PART_SuggestionsPopup: Required template part -->
                         <Popup x:Name="PART_SuggestionsPopup"
@@ -120,23 +121,23 @@
                                     Padding="4">
                                 <!-- PART_SuggestionsList: Required template part (must be ListView) -->
                                 <ui:ListView x:Name="PART_SuggestionsList"
-                                            MaxHeight="{TemplateBinding MaxSuggestionListHeight}"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            ItemContainerStyle="{TemplateBinding ItemContainerStyle}"
-                                            ItemsSource="{TemplateBinding ItemsSource}"
-                                            DisplayMemberPath="{TemplateBinding DisplayMemberPath}"
-                                            ItemTemplate="{TemplateBinding ItemTemplate}"
-                                            ItemTemplateSelector="{TemplateBinding ItemTemplateSelector}"
-                                            KeyboardNavigation.DirectionalNavigation="Cycle"
-                                            SelectionMode="Single"
-                                            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                            ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                                             MaxHeight="{TemplateBinding MaxSuggestionListHeight}"
+                                             Background="Transparent"
+                                             BorderThickness="0"
+                                             ItemContainerStyle="{TemplateBinding ItemContainerStyle}"
+                                             ItemsSource="{TemplateBinding ItemsSource}"
+                                             DisplayMemberPath="{TemplateBinding DisplayMemberPath}"
+                                             ItemTemplate="{TemplateBinding ItemTemplate}"
+                                             ItemTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                             KeyboardNavigation.DirectionalNavigation="Cycle"
+                                             SelectionMode="Single"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             ScrollViewer.VerticalScrollBarVisibility="Disabled">
                                     <ui:ListView.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <VirtualizingStackPanel IsItemsHost="True"
-                                                                   IsVirtualizing="True"
-                                                                   VirtualizationMode="Recycling" />
+                                                                    IsVirtualizing="True"
+                                                                    VirtualizationMode="Recycling" />
                                         </ItemsPanelTemplate>
                                     </ui:ListView.ItemsPanel>
                                 </ui:ListView>
@@ -145,7 +146,8 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <!-- Hide popup when there are no items -->
-                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=ItemsSource.Count}" Value="0">
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource Self}, Path=ItemsSource.Count}"
+                                     Value="0">
                             <Setter TargetName="PART_SuggestionsPopup" Property="Visibility" Value="Collapsed" />
                         </DataTrigger>
                         <!-- Also hide if ItemsSource is null -->

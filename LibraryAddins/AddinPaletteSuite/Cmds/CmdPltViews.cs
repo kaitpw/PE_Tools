@@ -1,9 +1,7 @@
-using AddinPaletteSuite.Core.Actions;
 using AddinPaletteSuite.Core;
-using CommunityToolkit.Mvvm.ComponentModel;
 using Nice3point.Revit.Extensions;
 using System.Windows.Media.Imaging;
-using AddinPaletteSuite.Core.Ui;
+
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
@@ -12,11 +10,11 @@ public class CmdPltViews : BaseCmdPalette<View, ViewPaletteItem> {
 
     public override IEnumerable<ViewPaletteItem> GetItems(IEnumerable<View> views, Document doc) =>
         views.Where(v => !v.IsTemplate
-                        && v.ViewType != ViewType.Legend
-                        && v.ViewType != ViewType.DrawingSheet
-                        && v.ViewType != ViewType.DraftingView
-                        && v.ViewType != ViewType.SystemBrowser
-                        && v is not ViewSchedule)
+                         && v.ViewType != ViewType.Legend
+                         && v.ViewType != ViewType.DrawingSheet
+                         && v.ViewType != ViewType.DraftingView
+                         && v.ViewType != ViewType.SystemBrowser
+                         && v is not ViewSchedule)
             .Select(view => new ViewPaletteItem(view));
 
     public override string GetPersistenceKey(ViewPaletteItem item) => item.View.Id.ToString();
@@ -34,7 +32,7 @@ public class CmdPltViews : BaseCmdPalette<View, ViewPaletteItem> {
 /// <summary>
 ///     Adapter that wraps Revit View to implement ISelectableItem
 /// </summary>
-public partial class ViewPaletteItem(View view) : BaseObservableListItem, IPaletteListItem {
+public class ViewPaletteItem(View view) : BaseObservableListItem, IPaletteListItem {
     private readonly string _discipline = view.HasViewDiscipline()
         ? view.Discipline.ToString()
         : string.Empty;

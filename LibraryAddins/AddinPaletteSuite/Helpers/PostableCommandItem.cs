@@ -10,14 +10,14 @@ namespace AddinPaletteSuite.Commands;
 /// </summary>
 public partial class PostableCommandItem : BaseObservableListItem, IPaletteListItem {
     /// <summary>
-    ///     Whether this item is currently selected in the UI
-    /// </summary>
-    [ObservableProperty] private bool _isSelected;
-
-    /// <summary>
     ///     Whether this item can be executed (used for visual styling)
     /// </summary>
     [ObservableProperty] private bool _canExecute = true;
+
+    /// <summary>
+    ///     Whether this item is currently selected in the UI
+    /// </summary>
+    [ObservableProperty] private bool _isSelected;
 
     /// <summary>
     ///     For internal commands, the actual PostableCommand enum value

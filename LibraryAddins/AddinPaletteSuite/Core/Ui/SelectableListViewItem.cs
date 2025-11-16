@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using Wpf.Ui.Controls;
 using Binding = System.Windows.Data.Binding;
 using Image = System.Windows.Controls.Image;
 using TextBlock = System.Windows.Controls.TextBlock;
@@ -82,8 +81,7 @@ public partial class SelectableListViewItem : Border {
         _ = this.SecondaryText.SetBinding(TextBlock.TextProperty, secondaryBinding);
 
         var secondaryVisibilityBinding = new Binding("TextSecondary") {
-            Mode = BindingMode.OneWay,
-            Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
         _ = this.SecondaryText.SetBinding(VisibilityProperty, secondaryVisibilityBinding);
 
@@ -92,8 +90,7 @@ public partial class SelectableListViewItem : Border {
         _ = this.PillBorder.SetBinding(Pill.TextProperty, pillTextBinding);
 
         var pillVisibilityBinding = new Binding("TextPill") {
-            Mode = BindingMode.OneWay,
-            Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
         _ = this.PillBorder.SetBinding(VisibilityProperty, pillVisibilityBinding);
 
@@ -102,8 +99,7 @@ public partial class SelectableListViewItem : Border {
         _ = this.IconImage.SetBinding(Image.SourceProperty, iconBinding);
 
         var iconVisibilityBinding = new Binding("Icon") {
-            Mode = BindingMode.OneWay,
-            Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
         _ = this.IconImage.SetBinding(VisibilityProperty, iconVisibilityBinding);
 
@@ -111,8 +107,7 @@ public partial class SelectableListViewItem : Border {
 
         // Bind Opacity based on CanExecute
         var opacityBinding = new Binding("CanExecute") {
-            Mode = BindingMode.OneWay,
-            Converter = new CanExecuteToOpacityConverter()
+            Mode = BindingMode.OneWay, Converter = new CanExecuteToOpacityConverter()
         };
         _ = this.SetBinding(OpacityProperty, opacityBinding);
     }

@@ -2,8 +2,6 @@ using UIFrameworkServices;
 
 namespace PeExtensions.FamDocument;
 
-
-
 public static class FamilyDocumentProcessFamily {
     public static FamilyDocument GetFamilyDocument(this Document doc, Family family = null) {
         if (doc.IsFamilyDocument) return new FamilyDocument(doc);
@@ -111,8 +109,7 @@ public static class FamilyDocumentProcessFamily {
             var tempPath = Path.Combine(Path.GetTempPath(), $"{famDoc.Document.Title}_{Guid.NewGuid()}.rfa");
             famDoc.Document.SaveAs(tempPath);
             _ = uiApp.OpenAndActivateDocument(tempPath);
-        } else {
+        } else
             _ = uiApp.OpenAndActivateDocument(famDoc.PathName);
-        }
     }
 }

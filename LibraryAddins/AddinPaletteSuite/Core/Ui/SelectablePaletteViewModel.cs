@@ -8,14 +8,16 @@ namespace AddinPaletteSuite.Core.Ui;
 /// <summary>
 ///     Generic ViewModel for the SelectablePalette window with optional filtering support
 /// </summary>
-public partial class SelectablePaletteViewModel<TItem> : ObservableObject where TItem : BaseObservableListItem, IPaletteListItem {
+public partial class SelectablePaletteViewModel<TItem> : ObservableObject
+    where TItem : BaseObservableListItem, IPaletteListItem {
     private readonly List<TItem> _allItems;
-    private readonly SearchFilterService<TItem> _searchService;
     private readonly Func<TItem, string>? _filterKeySelector;
-    private string _selectedFilterValue = string.Empty;
+    private readonly SearchFilterService<TItem> _searchService;
 
     /// <summary> Current search text </summary>
     [ObservableProperty] private string _searchText = string.Empty;
+
+    private string _selectedFilterValue = string.Empty;
 
     /// <summary> Currently selected index in the filtered list </summary>
     [ObservableProperty] private int _selectedIndex = -1;

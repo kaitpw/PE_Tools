@@ -1,14 +1,13 @@
-using AddinPaletteSuite.Core.Actions;
 using AddinPaletteSuite.Core;
-using CommunityToolkit.Mvvm.ComponentModel;
 using Nice3point.Revit.Extensions;
 using System.Windows.Media.Imaging;
-using AddinPaletteSuite.Core.Ui;
+
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdPltSchedules : BaseCmdPalette<ViewSchedule, SchedulePaletteItem> {
     public override string TypeName => "Schedule";
+
     public override IEnumerable<SchedulePaletteItem> GetItems(IEnumerable<ViewSchedule> schedules, Document doc) =>
         schedules.Where(s => !s.Name.Contains("<Revision Schedule>"))
             .Select(schedule => new SchedulePaletteItem(schedule));
@@ -28,7 +27,7 @@ public class CmdPltSchedules : BaseCmdPalette<ViewSchedule, SchedulePaletteItem>
 /// <summary>
 ///     Adapter that wraps Revit ViewSchedule to implement ISelectableItem
 /// </summary>
-public partial class SchedulePaletteItem(ViewSchedule schedule) : BaseObservableListItem, IPaletteListItem {
+public class SchedulePaletteItem(ViewSchedule schedule) : BaseObservableListItem, IPaletteListItem {
     public ViewSchedule Schedule { get; } = schedule;
     public string TextPrimary => this.Schedule.Name;
 

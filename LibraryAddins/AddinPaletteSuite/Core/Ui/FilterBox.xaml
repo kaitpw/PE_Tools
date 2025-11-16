@@ -7,39 +7,12 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml" />
+                <ResourceDictionary
+                    Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml" />
             </ResourceDictionary.MergedDictionaries>
-            
+
             <!-- Storyboards for expand/collapse animations -->
-            <Storyboard x:Key="ExpandStoryboard">
-                <DoubleAnimation Storyboard.TargetName="FilterAutoSuggestBox"
-                                 Storyboard.TargetProperty="Width"
-                                 To="200"
-                                 Duration="0:0:0.2">
-                    <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseOut"/>
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="FilterAutoSuggestBox"
-                                 Storyboard.TargetProperty="Opacity"
-                                 To="1.0"
-                                 Duration="0:0:0.15"/>
-            </Storyboard>
-            
-            <Storyboard x:Key="CollapseStoryboard">
-                <DoubleAnimation Storyboard.TargetName="FilterAutoSuggestBox"
-                                 Storyboard.TargetProperty="Width"
-                                 To="0"
-                                 Duration="0:0:0.2">
-                    <DoubleAnimation.EasingFunction>
-                        <CubicEase EasingMode="EaseIn"/>
-                    </DoubleAnimation.EasingFunction>
-                </DoubleAnimation>
-                <DoubleAnimation Storyboard.TargetName="FilterAutoSuggestBox"
-                                 Storyboard.TargetProperty="Opacity"
-                                 To="0.0"
-                                 Duration="0:0:0.15"/>
-            </Storyboard>
+
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -50,10 +23,10 @@
             Padding="6,4">
         <Grid VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
             <!-- Filter Pill Badge (shows selected filter value) -->
@@ -61,7 +34,7 @@
                         Grid.Column="0"
                         Margin="0,0,4,0"
                         Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                        Visibility="Collapsed"/>
+                        Visibility="Collapsed" />
 
             <!-- Clear Filter Button (X icon, visible only when filter is active) -->
             <Border x:Name="ClearFilterBorder"
@@ -78,7 +51,7 @@
                                Symbol="Dismiss24"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                VerticalAlignment="Center"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center" />
             </Border>
 
             <!-- Filter Icon Button (always visible, smaller size) -->
@@ -94,7 +67,7 @@
                                Symbol="Filter24"
                                Foreground="{ui:ThemeResource TextFillColorSecondaryBrush}"
                                VerticalAlignment="Center"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center" />
             </Border>
 
             <!-- Expandable AutoSuggestBox (collapsed by default) -->
@@ -110,11 +83,7 @@
                                Style="{StaticResource CleanAutoSuggestBoxStyle}"
                                GotFocus="FilterAutoSuggestBox_GotFocus"
                                LostFocus="FilterAutoSuggestBox_LostFocus">
-                <ui:AutoSuggestBox.InputBindings>
-                    <!-- These key bindings will be set in code-behind -->
-                </ui:AutoSuggestBox.InputBindings>
             </ui:AutoSuggestBox>
         </Grid>
     </Border>
 </UserControl>
-

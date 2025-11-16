@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 using WpfUiRichTextBox = Wpf.Ui.Controls.RichTextBox;
 using Visibility = System.Windows.Visibility;
@@ -26,7 +25,7 @@ public class SelectableTextBox : UserControl, IPopoverExit {
             IsTextSelectionEnabled = true,
             AutoWordSelection = false,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
 
         this._richTextBox.PreviewKeyDown += this.RichTextBox_PreviewKeyDown;
@@ -86,8 +85,8 @@ public class SelectableTextBox : UserControl, IPopoverExit {
             PagePadding = new Thickness(0),
             TextAlignment = TextAlignment.Left,
             FontFamily = ThemeManager.FontFamily(),
-            FontSize = (double)TxtSz.normal,  // 10px from TxtSz enum
-            LineHeight = 15.0  // Matching Body style line height
+            FontSize = (double)TxtSz.normal, // 10px from TxtSz enum
+            LineHeight = 15.0 // Matching Body style line height
         };
         // Set foreground from DynamicResource
         this._richTextBox.Document.SetResourceReference(FlowDocument.ForegroundProperty, "TextFillColorSecondaryBrush");

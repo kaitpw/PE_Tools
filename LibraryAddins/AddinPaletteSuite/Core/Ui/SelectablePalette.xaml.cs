@@ -165,9 +165,10 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
 
     private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
         // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is DependencyObject focusedElement)
+        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
             if (this._tooltipPanel.IsAncestorOf(focusedElement)) {
             }
+        }
     }
 
     private async void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
