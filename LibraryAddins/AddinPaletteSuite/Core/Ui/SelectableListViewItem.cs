@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Media;
 using Binding = System.Windows.Data.Binding;
 using Image = System.Windows.Controls.Image;
 using TextBlock = System.Windows.Controls.TextBlock;
@@ -19,7 +20,7 @@ public partial class SelectableListViewItem : Border {
         this.DataContextChanged += this.OnDataContextChanged;
     }
 
-    private void ApplyStyling() {
+    private void ApplyStyling() { 
         // Border styling (layout only, colors from XAML DynamicResources)
         this.CornerRadius = new CornerRadius((double)UiSz.l);
         _ = this.WithPadding(UiSz.ss, UiSz.s, UiSz.ll, UiSz.m);
@@ -62,6 +63,14 @@ public partial class SelectableListViewItem : Border {
         this.IconImage.Source = hasIcon ? item.Icon : null;
         this.IconImage.Visibility = hasIcon ? Visibility.Visible : Visibility.Collapsed;
 
+        // Update Color Indicator
+        if (item.ItemColor.HasValue) {
+            this.ColorIndicator.Background = new SolidColorBrush(item.ItemColor.Value);
+            this.ColorIndicator.Visibility = Visibility.Visible;
+        } else {
+            this.ColorIndicator.Visibility = Visibility.Collapsed;
+        }
+
         // Tooltip disabled - no hover tooltips
 
         // Update Opacity based on CanExecute
@@ -102,6 +111,19 @@ public partial class SelectableListViewItem : Border {
             Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
         _ = this.IconImage.SetBinding(VisibilityProperty, iconVisibilityBinding);
+
+        // Bind Color Indicator Background and Visibility
+        var colorBackgroundBinding = new Binding("ItemColor") {
+            Mode = BindingMode.OneWay,
+            Converter = new ColorToBrushConverter()
+        };
+        _ = this.ColorIndicator.SetBinding(Border.BackgroundProperty, colorBackgroundBinding);
+
+        var colorVisibilityBinding = new Binding("ItemColor") {
+            Mode = BindingMode.OneWay,
+            Converter = new NullableColorToVisibilityConverter()
+        };
+        _ = this.ColorIndicator.SetBinding(VisibilityProperty, colorVisibilityBinding);
 
         // Tooltip disabled - no hover tooltips
 

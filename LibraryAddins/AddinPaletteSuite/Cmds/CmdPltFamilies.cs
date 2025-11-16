@@ -100,4 +100,5 @@ public class FamilyPaletteItem : BaseObservableListItem, IPaletteListItem {
         $"{this.Family.Name}\nCategory: {this.Family.FamilyCategory?.Name}\nId: {this.Family.Id}";
 
     public BitmapImage? Icon => null;
+    public System.Windows.Media.Color? ItemColor => null;
 }

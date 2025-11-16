@@ -60,6 +60,7 @@ public class SchedulePaletteItem(ViewSchedule schedule) : BaseObservableListItem
     }
 
     public BitmapImage Icon => null;
+    public System.Windows.Media.Color? ItemColor => null;
 
     private List<(string num, string name)> GetSheetInfo() {
         var sheetInfo = new List<(string num, string name)>();

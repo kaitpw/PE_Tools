@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.ComponentModel;
 using System.Windows.Media.Imaging;
+using WpfColor = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Core;
 
@@ -22,6 +23,9 @@ public interface IPaletteListItem {
 
     /// <summary> Item icon (optional, can be null) </summary>
     BitmapImage Icon { get; }
+
+    /// <summary> Optional color indicator for the item (e.g., document color) </summary>
+    WpfColor? ItemColor { get; }
 
     /// <summary> Whether this item is currently selected in the UI </summary>
     bool IsSelected { get; set; }

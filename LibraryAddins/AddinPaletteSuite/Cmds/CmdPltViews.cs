@@ -52,6 +52,7 @@ public class ViewPaletteItem(View view) : BaseObservableListItem, IPaletteListIt
         $"\nId: {this.View.Id}";
 
     public BitmapImage Icon => null;
+    public System.Windows.Media.Color? ItemColor => null;
 
     private string GetSheetInfo() {
         var doc = this.View.Document;

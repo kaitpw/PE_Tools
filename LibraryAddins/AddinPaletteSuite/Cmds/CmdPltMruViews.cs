@@ -4,6 +4,7 @@ using AddinPaletteSuite.Core.Ui;
 using PeServices.Storage;
 using System.Windows.Media.Imaging;
 using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
+using WpfColor = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -80,12 +81,18 @@ public class CmdPltMruViews : IExternalCommand {
 /// <summary>
 ///     Adapter that wraps Revit View to implement IPaletteListItem for MRU views
 /// </summary>
-public class MruViewPaletteItem(View view) : BaseObservableListItem, IPaletteListItem {
-    public View View { get; } = view;
+public class MruViewPaletteItem : BaseObservableListItem, IPaletteListItem {
+    public MruViewPaletteItem(View view) {
+        this.View = view;
+        this.ItemColor = DocumentColorService.Instance.GetOrCreateDocumentColor(view.Document);
+    }
+
+    public View View { get; }
     public string TextPrimary => this.View.Name;
     public string TextSecondary => this.View.Document.Title;
     public string TextPill => this.View.ViewType.ToString();
     public string TextInfo => $"Document: {this.View.Document.Title}\nView Type: {this.View.ViewType}\nId: {this.View.Id}";
     public BitmapImage Icon => null;
+    public WpfColor? ItemColor { get; }
 }
 

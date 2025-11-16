@@ -92,6 +92,7 @@ public partial class PostableCommandItem : BaseObservableListItem, IPaletteListI
     public string TextPill => this.PrimaryShortcut;
     public string TextInfo => this.AllPaths;
     public BitmapImage Icon => null;
+    public System.Windows.Media.Color? ItemColor => null;
 
     public override string ToString() => this.Name;
 }

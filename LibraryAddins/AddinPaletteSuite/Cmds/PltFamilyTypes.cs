@@ -61,4 +61,5 @@ public class FamilyTypePaletteItem(FamilySymbol familySymbol) : BaseObservableLi
         $"{this.FamilySymbol.Name} - {this.FamilySymbol.Family.Name} - {this.FamilySymbol.Family.FamilyCategory?.Name ?? string.Empty}";
 
     public BitmapImage Icon => null;
+    public System.Windows.Media.Color? ItemColor => null;
 }

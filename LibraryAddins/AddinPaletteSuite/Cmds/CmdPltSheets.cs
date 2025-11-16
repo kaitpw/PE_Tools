@@ -51,6 +51,7 @@ public class SheetPaletteItem(ViewSheet sheet) : BaseObservableListItem, IPalett
     }
 
     public BitmapImage Icon => null;
+    public System.Windows.Media.Color? ItemColor => null;
 
     public List<(string type, string name)> GetViewInfo() {
         var viewInfo = new List<(string type, string name)>();

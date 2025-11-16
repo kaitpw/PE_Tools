@@ -35,5 +35,6 @@ public class AllViewPaletteItem(View view) : BaseObservableListItem, IPaletteLis
     public string TextPill => this.View.ViewType.ToString();
     public string TextInfo => $"View Type: {this.View.ViewType}\nId: {this.View.Id}";
     public BitmapImage Icon => null;
+    public System.Windows.Media.Color? ItemColor => null;
 }
 

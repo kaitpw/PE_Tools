@@ -7,16 +7,25 @@
     <Grid x:Name="ContentGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
+        <Border x:Name="ColorIndicator"
+                Grid.Column="0"
+                Width="6"
+                MinHeight="20"
+                CornerRadius="3,0,0,3"
+                Margin="0,4,12,4"
+                Visibility="Collapsed" />
+
         <Image x:Name="IconImage"
-               Grid.Column="0"
+               Grid.Column="1"
                VerticalAlignment="Center" />
 
         <Grid x:Name="TextGrid"
-              Grid.Column="1"
+              Grid.Column="2"
               VerticalAlignment="Center">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -37,7 +46,7 @@
         </Grid>
 
         <local:Pill x:Name="PillBorder"
-                    Grid.Column="2"
+                    Grid.Column="3"
                     Background="{ui:ThemeResource ControlAltFillColorTertiaryBrush}"
                     BorderBrush="{ui:ThemeResource ControlStrokeColorDefaultBrush}"
                     Opacity="0.7" />

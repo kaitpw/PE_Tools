@@ -81,13 +81,24 @@ internal class App : IExternalApplication {
 
     private static void OnViewActivated(object sender, Autodesk.Revit.UI.Events.ViewActivatedEventArgs e) {
         if (e?.CurrentActiveView == null) return;
+
         var doc = e.CurrentActiveView.Document;
+
+        // Record view activation for MRU tracking
         MruViewService.Instance.RecordViewActivation(doc, e.CurrentActiveView.Id);
+
+        // Note: We no longer colorize tabs here. Instead, we READ colors from the UI
+        // that pyRevit (or other addins) have already set.
     }
 
     private static void OnDocumentClosing(object sender, Autodesk.Revit.DB.Events.DocumentClosingEventArgs e) {
         if (e?.Document == null) return;
+
+        // Clean up MRU buffer
         MruViewService.Instance.RemoveDocumentViews(e.Document);
+
+        // Clean up document color cache
+        DocumentColorService.Instance.RemoveDocument(e.Document);
     }
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
