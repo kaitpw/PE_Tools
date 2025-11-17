@@ -2,6 +2,7 @@ using AddinPaletteSuite.Core;
 using AddinPaletteSuite.Core.Services;
 using AddinPaletteSuite.Core.Ui;
 using PeServices.Storage;
+using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
 using WpfColor = System.Windows.Media.Color;
@@ -17,9 +18,6 @@ public class CmdPltMruViews : IExternalCommand {
     ) {
         try {
             var uiapp = commandData.Application;
-
-            Theme.Initialize();
-
             // Get MRU ordered views from all open documents
             var mruViews = MruViewService.Instance.GetMruOrderedViews(uiapp);
             var selectableItems = mruViews.Select(v => new MruViewPaletteItem(v)).ToList();
@@ -41,10 +39,10 @@ public class CmdPltMruViews : IExternalCommand {
                             var docPath = !string.IsNullOrEmpty(targetDoc.PathName)
                                 ? targetDoc.PathName
                                 : targetDoc.Title;
-                            
+
                             // OpenAndActivateDocument activates the document if already open
                             var activatedUIDoc = uiapp.OpenAndActivateDocument(docPath);
-                            
+
                             // Now set the view
                             activatedUIDoc.ActiveView = item.View;
                         }
@@ -63,16 +61,46 @@ public class CmdPltMruViews : IExternalCommand {
             // Create view model
             var viewModel = new SelectablePaletteViewModel<MruViewPaletteItem>(selectableItems, searchService);
 
+            // Select second item (index 1) instead of first for MRU behavior
+            if (viewModel.FilteredItems.Count > 1) viewModel.SelectedIndex = 1;
+
             // Create custom key bindings for MRU navigation
             var customKeys = new CustomKeyBindings();
-            customKeys.Add(System.Windows.Input.Key.Add, NavigationAction.MoveDown);      // Plus key moves forward
-            customKeys.Add(System.Windows.Input.Key.Subtract, NavigationAction.MoveUp);   // Minus key moves backward
+            customKeys.Add(Key.OemTilde, NavigationAction.MoveDown, ModifierKeys.Control); // Ctrl+` cycles forward
+            customKeys.Add(Key.OemTilde, NavigationAction.MoveUp,
+                ModifierKeys.Control | ModifierKeys.Shift); // Ctrl+Shift+` cycles backward
 
             // Create palette UserControl with custom key bindings
             var palette = new SelectablePalette<MruViewPaletteItem>(viewModel, actions, customKeys);
 
-            // Wrap in EphemeralWindow and show
-            var window = new EphemeralWindow(palette, "MRU Views");
+            // Hide search box for MRU views (we only navigate with keyboard)
+            palette.HideSearchBox();
+
+            // Callback to execute selected view when Ctrl is released
+            void OnCtrlReleased() {
+                try {
+                    var selectedItem = viewModel.SelectedItem;
+                    if (selectedItem?.View == null) return;
+                    var targetDoc = selectedItem.View.Document;
+                    var currentDoc = uiapp.ActiveUIDocument?.Document;
+
+                    if (currentDoc != null && targetDoc.Equals(currentDoc))
+                        uiapp.ActiveUIDocument.ActiveView = selectedItem.View;
+                    else {
+                        var docPath = !string.IsNullOrEmpty(targetDoc.PathName)
+                            ? targetDoc.PathName
+                            : targetDoc.Title;
+                        var activatedUiDoc = uiapp.OpenAndActivateDocument(docPath);
+                        activatedUiDoc.ActiveView = selectedItem.View;
+                    }
+
+                    EphemeralWindow.RestoreRevitFocus();
+                } catch {
+                }
+            }
+
+            // Wrap in EphemeralWindow with Ctrl key monitoring and show
+            var window = new EphemeralWindow(palette, "MRU Views", true, OnCtrlReleased);
             window.Show();
 
             return Result.Succeeded;
@@ -89,15 +117,18 @@ public class CmdPltMruViews : IExternalCommand {
 public class MruViewPaletteItem : BaseObservableListItem, IPaletteListItem {
     public MruViewPaletteItem(View view) {
         this.View = view;
-        this.ItemColor = DocumentColorService.Instance.GetOrCreateDocumentColor(view.Document);
+        var color = DocumentColorService.Instance.GetOrCreateDocumentColor(view.Document);
+        this.ItemColor = color;
     }
 
     public View View { get; }
     public string TextPrimary => this.View.Name;
     public string TextSecondary => this.View.Document.Title;
     public string TextPill => this.View.ViewType.ToString();
-    public string TextInfo => $"Document: {this.View.Document.Title}\nView Type: {this.View.ViewType}\nId: {this.View.Id}";
+
+    public string TextInfo =>
+        $"Document: {this.View.Document.Title}\nView Type: {this.View.ViewType}\nId: {this.View.Id}";
+
     public BitmapImage Icon => null;
     public WpfColor? ItemColor { get; }
 }
-

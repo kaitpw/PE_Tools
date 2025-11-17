@@ -31,7 +31,6 @@ public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where T
 
     public void Open(UIApplication uiapp) {
         Debug.WriteLine("Opening " + this.Title);
-        Theme.Initialize();
         var doc = uiapp.ActiveUIDocument.Document;
         var persistence = new Storage(this.GetType().Name);
         var elements = new FilteredElementCollector(doc)

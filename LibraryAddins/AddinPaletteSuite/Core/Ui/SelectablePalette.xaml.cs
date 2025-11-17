@@ -26,6 +26,13 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
     protected void RequestClose(bool restoreFocus = true) =>
         this.CloseRequested?.Invoke(this, new CloseRequestedEventArgs { RestoreFocus = restoreFocus });
 
+    /// <summary>
+    ///     Hides the search box from the palette
+    /// </summary>
+    public void HideSearchBox() {
+        this.SearchBoxBorder.Visibility = System.Windows.Visibility.Collapsed;
+    }
+
     // Note: SearchBoxBorder, MainBorder, StatusBarBorder, ItemListView, StatusBarBorder
     // are defined in the XAML and accessible via the partial class generated code
 }
@@ -40,6 +47,7 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
     private readonly SearchFilterBox<SelectablePaletteViewModel<TItem>> _searchFilterBox;
     private readonly SelectableTextBox _tooltipPanel;
     private readonly Popup _tooltipPopup;
+    private bool _isSearchBoxHidden;
 
     public SelectablePalette(
         SelectablePaletteViewModel<TItem> viewModel,
@@ -83,6 +91,17 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
     }
 
     private SelectablePaletteViewModel<TItem> ViewModel => this.DataContext as SelectablePaletteViewModel<TItem>;
+
+    /// <summary>
+    ///     Hides the search box and sets up alternative focus handling for keyboard-only navigation
+    /// </summary>
+    public void HideSearchBox() {
+        this._isSearchBoxHidden = true;
+        this.SearchBoxBorder.Visibility = System.Windows.Visibility.Collapsed;
+
+        // Make the UserControl itself focusable so it can receive keyboard input
+        this.Focusable = true;
+    }
 
     private void ApplyStyles() {
         // Apply corner radius to main border and child borders
@@ -134,8 +153,15 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
     private void UserControl_Loaded(object sender, RoutedEventArgs e) {
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
 
-        _ = this._searchFilterBox.SearchTextBox.Focus();
-        this._searchFilterBox.SearchTextBox.SelectAll();
+        // Focus on appropriate element based on whether search box is hidden
+        if (this._isSearchBoxHidden) {
+            // Search box is hidden - focus on the UserControl itself to receive keyboard input
+            _ = this.Focus();
+        } else {
+            // Normal behavior - focus on search box
+            _ = this._searchFilterBox.SearchTextBox.Focus();
+            this._searchFilterBox.SearchTextBox.SelectAll();
+        }
 
         this.ItemListView.ItemMouseLeftButtonUp += async (_, e) => {
             if (e.OriginalSource is not FrameworkElement source) return;
@@ -169,10 +195,20 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         this._tooltipPanel.ReturnFocusTarget = this._searchFilterBox.SearchTextBox;
     }
 
-    private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
+    private async void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
         // Don't handle keys if focus is in a popover - let the popover handle its own keys
         if (Keyboard.FocusedElement is not DependencyObject focusedElement) return;
         if (this._tooltipPanel.IsAncestorOf(focusedElement)) {
+            return;
+        }
+
+        // If search box is hidden, handle custom key bindings here at the UserControl level
+        if (this._isSearchBoxHidden && this._customKeyBindings != null) {
+            var modifiers = e.KeyboardDevice.Modifiers;
+            if (this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction)) {
+                e.Handled = await this.HandleNavigationAction(navAction);
+                return;
+            }
         }
     }
 
@@ -180,7 +216,7 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         var modifiers = e.KeyboardDevice.Modifiers;
 
         // Check custom key bindings first
-        if (this._customKeyBindings != null && 
+        if (this._customKeyBindings != null &&
             this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction)) {
             e.Handled = await this.HandleNavigationAction(navAction);
             return;

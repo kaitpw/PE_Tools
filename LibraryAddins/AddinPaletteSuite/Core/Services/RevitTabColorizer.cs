@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -12,10 +12,6 @@ namespace AddinPaletteSuite.Core.Services;
 ///     Instead of setting colors ourselves, we read what's already in the UI.
 /// </summary>
 public static class RevitTabColorReader {
-    private static Visual _cachedMainWindow;
-    private static DateTime _lastCacheTime = DateTime.MinValue;
-    private static readonly TimeSpan CacheExpiry = TimeSpan.FromSeconds(2);
-
     /// <summary>
     ///     Gets the tab color for a specific document by reading it from the Revit UI.
     ///     Returns null if no color is found or if pyRevit colorization is not active.
@@ -24,23 +20,23 @@ public static class RevitTabColorReader {
         if (doc == null) return null;
 
         try {
-            var mainWindow = GetCachedMainRevitWindow();
+            var mainWindow = GetMainRevitWindow();
             if (mainWindow == null) return null;
 
             var dockingManager = mainWindow.FindDescendantsByTypeName("DockingManager").FirstOrDefault();
             if (dockingManager == null) return null;
 
-            var docPanes = dockingManager.FindDescendantsByTypeName("LayoutDocumentPaneControl");
+            var docPanes = dockingManager.FindDescendantsByTypeName("LayoutDocumentPaneControl").ToList();
 
             // Build possible document name patterns
-            // For family files, the tooltip includes .rfa extension
+            // Revit adds file extensions to tab tooltips (.rfa for families, .rvt for projects)
             var docTitleWithExt = doc.Title;
-            if (doc.IsFamilyDocument && !doc.Title.EndsWith(".rfa")) {
+            if (doc.IsFamilyDocument && !doc.Title.EndsWith(".rfa"))
                 docTitleWithExt = doc.Title + ".rfa";
-            }
+            else if (!doc.IsFamilyDocument && !doc.Title.EndsWith(".rvt")) docTitleWithExt = doc.Title + ".rvt";
 
             foreach (var pane in docPanes) {
-                var tabs = pane.FindDescendants<TabItem>();
+                var tabs = pane.FindDescendants<TabItem>().ToList();
 
                 foreach (var tab in tabs) {
                     var tooltip = tab.ToolTip?.ToString();
@@ -52,47 +48,30 @@ public static class RevitTabColorReader {
                                   tooltip.StartsWith($"{docTitleWithExt} - ");
 
                     if (isMatch) {
-                        Debug.WriteLine($"[RevitTabColorReader] Found matching tab: '{tooltip}'");
-                        Debug.WriteLine($"[RevitTabColorReader]   Background: {tab.Background?.GetType().Name ?? "null"}");
-                        Debug.WriteLine($"[RevitTabColorReader]   BorderBrush: {tab.BorderBrush?.GetType().Name ?? "null"}");
-                        Debug.WriteLine($"[RevitTabColorReader]   BorderThickness: {tab.BorderThickness}");
-
                         WpfColor? backgroundColorValue = null;
                         WpfColor? borderColorValue = null;
 
-                        if (tab.Background is SolidColorBrush backgroundBrush) {
+                        if (tab.Background is SolidColorBrush backgroundBrush)
                             backgroundColorValue = backgroundBrush.Color;
-                            Debug.WriteLine($"[RevitTabColorReader]   Background color: R={backgroundBrush.Color.R} G={backgroundBrush.Color.G} B={backgroundBrush.Color.B}");
-                        }
 
-                        if (tab.BorderBrush is SolidColorBrush borderBrush) {
-                            borderColorValue = borderBrush.Color;
-                            Debug.WriteLine($"[RevitTabColorReader]   BorderBrush color: R={borderBrush.Color.R} G={borderBrush.Color.G} B={borderBrush.Color.B}");
-                        }
+                        if (tab.BorderBrush is SolidColorBrush borderBrush) borderColorValue = borderBrush.Color;
 
-                        // In border mode, pyRevit uses BorderBrush for color and background is theme-based (white in light, dark in dark mode)
+                        // In border mode, pyRevit uses BorderBrush for color and background is theme-based
                         // Detect border mode: BorderThickness > 0 AND BorderBrush is significantly different from Background
                         if (borderColorValue.HasValue && backgroundColorValue.HasValue && tab.BorderThickness.Top > 0) {
                             var bg = backgroundColorValue.Value;
                             var border = borderColorValue.Value;
 
                             // Calculate color difference between background and border
-                            var colorDiff = Math.Abs(bg.R - border.R) + Math.Abs(bg.G - border.G) + Math.Abs(bg.B - border.B);
+                            var colorDiff = Math.Abs(bg.R - border.R) + Math.Abs(bg.G - border.G) +
+                                            Math.Abs(bg.B - border.B);
 
                             // If border is significantly different from background (diff > 100), use border color
-                            if (colorDiff > 100) {
-                                Debug.WriteLine($"[RevitTabColorReader]   Color difference: {colorDiff} - Using BorderBrush (border mode detected)");
-                                return borderColorValue.Value;
-                            }
+                            if (colorDiff > 100) return borderColorValue.Value;
                         }
 
                         // Otherwise use background color (fill mode)
-                        if (backgroundColorValue.HasValue) {
-                            Debug.WriteLine($"[RevitTabColorReader]   ✓ Using Background color (fill mode)");
-                            return backgroundColorValue.Value;
-                        }
-
-                        Debug.WriteLine($"[RevitTabColorReader]   ✗ No usable color found");
+                        if (backgroundColorValue.HasValue) return backgroundColorValue.Value;
                     }
                 }
             }
@@ -104,33 +83,59 @@ public static class RevitTabColorReader {
     }
 
     /// <summary>
-    ///     Gets the main Revit window with caching to avoid repeated lookups
+    ///     Gets the main Revit window by enumerating all HWNDs and finding the one with DockingManager
     /// </summary>
-    private static Visual GetCachedMainRevitWindow() {
-        var now = DateTime.UtcNow;
-
-        // Return cached window if still valid
-        if (_cachedMainWindow != null && (now - _lastCacheTime) < CacheExpiry)
-            return _cachedMainWindow;
-
-        // Cache expired or not set, get fresh window
+    private static Visual GetMainRevitWindow() {
         try {
-            var revitHandle = Process.GetCurrentProcess().MainWindowHandle;
-            if (revitHandle == IntPtr.Zero) return null;
+            var currentProcessId = Process.GetCurrentProcess().Id;
+            var windowsWithDockingManager = new List<IntPtr>();
 
-            var hwndSource = HwndSource.FromHwnd(revitHandle);
-            var window = hwndSource?.RootVisual as Visual;
+            // Enumerate all top-level windows
+            EnumWindows((hwnd, lParam) => {
+                GetWindowThreadProcessId(hwnd, out var processId);
 
-            if (window != null) {
-                _cachedMainWindow = window;
-                _lastCacheTime = now;
+                // Only check windows belonging to our process
+                if (processId != currentProcessId) return true;
+
+                try {
+                    // Try to get HwndSource for this window
+                    var source = HwndSource.FromHwnd(hwnd);
+                    if (source?.RootVisual == null) return true;
+
+                    // Check if this window contains a DockingManager
+                    var hasDockingManager = source.RootVisual
+                        ?.FindDescendantsByTypeName("DockingManager")
+                        .Any() ?? false;
+
+                    if (hasDockingManager) {
+                        windowsWithDockingManager.Add(hwnd);
+                        return false; // Stop enumeration
+                    }
+                } catch {
+                    // Ignore windows we can't access
+                }
+
+                return true; // Continue enumeration
+            }, IntPtr.Zero);
+
+            // Return the first window with DockingManager
+            if (windowsWithDockingManager.Count > 0) {
+                var hwnd = windowsWithDockingManager[0];
+                var source = HwndSource.FromHwnd(hwnd);
+                return source?.RootVisual;
             }
 
-            return window;
+            return null;
         } catch {
             return null;
         }
     }
+
+    [DllImport("user32.dll")]
+    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 
     /// <summary>
     ///     Extension method to find all descendants of a specific type in the WPF visual tree
@@ -153,7 +158,8 @@ public static class RevitTabColorReader {
     /// <summary>
     ///     Find descendants by type name (for types we don't have references to, like DockingManager)
     /// </summary>
-    private static IEnumerable<DependencyObject> FindDescendantsByTypeName(this DependencyObject parent, string typeName) {
+    private static IEnumerable<DependencyObject> FindDescendantsByTypeName(this DependencyObject parent,
+        string typeName) {
         if (parent == null) yield break;
 
         var childCount = VisualTreeHelper.GetChildrenCount(parent);
@@ -167,5 +173,7 @@ public static class RevitTabColorReader {
                 yield return descendant;
         }
     }
-}
 
+    // P/Invoke declarations
+    private delegate bool EnumWindowsProc(IntPtr hwnd, IntPtr lParam);
+}

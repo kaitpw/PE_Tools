@@ -37,7 +37,14 @@ public class PaletteKeyBinding {
     public override bool Equals(object? obj) =>
         obj is PaletteKeyBinding other && this.Key == other.Key && this.Modifiers == other.Modifiers;
 
-    public override int GetHashCode() => HashCode.Combine(this.Key, this.Modifiers);
+    public override int GetHashCode() {
+        unchecked {
+            var hash = 17;
+            hash = hash * 31 + this.Key.GetHashCode();
+            hash = hash * 31 + this.Modifiers.GetHashCode();
+            return hash;
+        }
+    }
 
     public override string ToString() {
         var modifierStr = this.Modifiers != ModifierKeys.None ? $"{this.Modifiers}+" : "";

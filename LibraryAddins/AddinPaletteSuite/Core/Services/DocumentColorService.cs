@@ -1,25 +1,20 @@
-using PeServices.Storage;
-using PeServices.Storage.Core;
+using System.Windows.Media;
 using WpfColor = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Core.Services;
 
 /// <summary>
-///     Singleton service that manages color assignments for documents.
-///     Each document gets a unique, persistent color used for tab colorization and UI indicators.
+///     Singleton service that provides color assignments for documents.
+///     Colors are read from Revit UI (pyRevit tab colors) and cached in-memory for the session.
+///     Cache is cleared when documents are closed to handle color reassignment.
 ///     Note: No locking needed as Revit API is single-threaded.
 /// </summary>
 public class DocumentColorService {
     private static DocumentColorService _instance;
-    private readonly CsvReadWriter<DocumentColorData> _state;
-    private Dictionary<string, WpfColor> _colorCache = new();
+    private readonly Dictionary<string, WpfColor> _colorCache = new();
     private readonly Random _random = new();
 
-    private DocumentColorService() {
-        var storage = new Storage(nameof(DocumentColorService));
-        this._state = storage.StateDir().Csv<DocumentColorData>();
-        this.LoadColors();
-    }
+    private DocumentColorService() { }
 
     public static DocumentColorService Instance {
         get {
@@ -29,59 +24,38 @@ public class DocumentColorService {
     }
 
     /// <summary>
-    ///     Gets or creates a color for the specified document.
-    ///     First tries to read from Revit UI (pyRevit colorization), then falls back to generated colors.
+    ///     Gets the color for the specified document from cache or by reading from Revit UI.
+    ///     Falls back to generating a new color if UI read fails.
     /// </summary>
     public WpfColor GetOrCreateDocumentColor(Document doc) {
-        if (doc == null) return System.Windows.Media.Colors.Gray;
+        if (doc == null) return Colors.Gray;
 
         var docKey = GetDocumentKey(doc);
 
-        // Try to read color from Revit UI (pyRevit or other addin)
+        // Check cache first
+        if (this._colorCache.TryGetValue(docKey, out var cachedColor)) return cachedColor;
+
+        // Try reading from Revit UI
         var uiColor = RevitTabColorReader.GetDocumentColorFromUI(doc);
         if (uiColor.HasValue) {
             this._colorCache[docKey] = uiColor.Value;
             return uiColor.Value;
         }
 
-        // No UI color found, check our cache
-        if (this._colorCache.TryGetValue(docKey, out var existingColor))
-            return existingColor;
-
-        // Generate new color as last resort
+        // Fallback to generated color
         var newColor = this.GenerateVibrantColor();
         this._colorCache[docKey] = newColor;
-
-        // Persist to storage
-        var colorData = new DocumentColorData {
-            DocumentKey = docKey,
-            R = newColor.R,
-            G = newColor.G,
-            B = newColor.B
-        };
-        this._state.WriteRow(docKey, colorData);
-
         return newColor;
     }
 
     /// <summary>
-    ///     Removes a document from the color cache when it's closed
+    ///     Removes a document from the color cache when it's closed.
+    ///     This allows colors to be reassigned if the document is reopened.
     /// </summary>
     public void RemoveDocument(Document doc) {
         if (doc == null) return;
         var docKey = GetDocumentKey(doc);
-        _ = this._colorCache.Remove(docKey);
-    }
-
-    /// <summary>
-    ///     Loads persisted colors from storage
-    /// </summary>
-    private void LoadColors() {
-        var storedColors = this._state.Read();
-        foreach (var kvp in storedColors) {
-            var data = kvp.Value;
-            this._colorCache[kvp.Key] = WpfColor.FromRgb(data.R, data.G, data.B);
-        }
+        this._colorCache.Remove(docKey);
     }
 
     /// <summary>
@@ -108,14 +82,14 @@ public class DocumentColorService {
 
         double r, g, b;
 
-        if (s == 0) {
+        if (s == 0)
             r = g = b = l; // achromatic
-        } else {
-            var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-            var p = 2 * l - q;
-            r = HueToRgb(p, q, h + 1.0 / 3.0);
+        else {
+            var q = l < 0.5 ? l * (1 + s) : l + s - (l * s);
+            var p = (2 * l) - q;
+            r = HueToRgb(p, q, h + (1.0 / 3.0));
             g = HueToRgb(p, q, h);
-            b = HueToRgb(p, q, h - 1.0 / 3.0);
+            b = HueToRgb(p, q, h - (1.0 / 3.0));
         }
 
         return WpfColor.FromRgb(
@@ -128,23 +102,12 @@ public class DocumentColorService {
     private static double HueToRgb(double p, double q, double t) {
         if (t < 0) t += 1;
         if (t > 1) t -= 1;
-        if (t < 1.0 / 6.0) return p + (q - p) * 6 * t;
+        if (t < 1.0 / 6.0) return p + ((q - p) * 6 * t);
         if (t < 1.0 / 2.0) return q;
-        if (t < 2.0 / 3.0) return p + (q - p) * (2.0 / 3.0 - t) * 6;
+        if (t < 2.0 / 3.0) return p + ((q - p) * ((2.0 / 3.0) - t) * 6);
         return p;
     }
 
     private static string GetDocumentKey(Document doc) =>
         !string.IsNullOrEmpty(doc.PathName) ? doc.PathName : doc.Title;
 }
-
-/// <summary>
-///     Data structure for persisting document colors
-/// </summary>
-public record DocumentColorData {
-    public string DocumentKey { get; init; }
-    public byte R { get; init; }
-    public byte G { get; init; }
-    public byte B { get; init; }
-}
-

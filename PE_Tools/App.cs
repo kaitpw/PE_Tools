@@ -86,9 +86,6 @@ internal class App : IExternalApplication {
 
         // Record view activation for MRU tracking
         MruViewService.Instance.RecordViewActivation(doc, e.CurrentActiveView.Id);
-
-        // Note: We no longer colorize tabs here. Instead, we READ colors from the UI
-        // that pyRevit (or other addins) have already set.
     }
 
     private static void OnDocumentClosing(object sender, Autodesk.Revit.DB.Events.DocumentClosingEventArgs e) {

@@ -127,7 +127,14 @@ public class MruViewService {
             return this.DocumentKey == other.DocumentKey && this.ViewId.Equals(other.ViewId);
         }
 
-        public override int GetHashCode() => HashCode.Combine(this.DocumentKey, this.ViewId);
+        public override int GetHashCode() {
+            unchecked {
+                var hash = 17;
+                hash = hash * 31 + this.DocumentKey.GetHashCode();
+                hash = hash * 31 + this.ViewId.GetHashCode();
+                return hash;
+            }
+        }
     }
 }
 

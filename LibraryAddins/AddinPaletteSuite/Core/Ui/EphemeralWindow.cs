@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -13,10 +14,18 @@ namespace AddinPaletteSuite.Core.Ui;
 /// </summary>
 public class EphemeralWindow : Window {
     private readonly UserControl _contentControl;
+    private readonly bool _monitorCtrlKey;
+    private readonly Action _onCtrlReleased;
+    private readonly DispatcherTimer _ctrlKeyMonitor;
     private bool _isClosing;
 
-    public EphemeralWindow(UserControl content, string title = "Palette") {
+    public EphemeralWindow(UserControl content,
+        string title = "Palette",
+        bool monitorCtrlKey = false,
+        Action onCtrlReleased = null) {
         this._contentControl = content;
+        this._monitorCtrlKey = monitorCtrlKey;
+        this._onCtrlReleased = onCtrlReleased;
         this.Title = title;
         this.SizeToContent = SizeToContent.Manual;
         this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -33,67 +42,62 @@ public class EphemeralWindow : Window {
 
         // Subscribe to CloseRequested event if content implements it
         if (content is ICloseRequestable closeable) closeable.CloseRequested += this.OnContentCloseRequested;
+
+        // Set up Ctrl key monitoring if requested
+        if (this._monitorCtrlKey) {
+            this._ctrlKeyMonitor = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+            this._ctrlKeyMonitor.Tick += this.OnCtrlKeyMonitorTick;
+            this.Loaded += (_, _) => this._ctrlKeyMonitor.Start();
+        }
     }
 
     private void OnContentCloseRequested(object sender, CloseRequestedEventArgs e) =>
         this.CloseWindow(e.RestoreFocus);
 
-    public void CloseWindow(bool restoreFocus = true) {
-        // Debug.WriteLine($"[EphemeralWindow] CloseWindow called: restoreFocus={restoreFocus}, _isClosing={this._isClosing}");
-        try {
-            if (this._isClosing) {
-                // Debug.WriteLine("[EphemeralWindow] CloseWindow: Already closing, aborting");
-                return;
-            }
+    private void OnCtrlKeyMonitorTick(object sender, EventArgs e) {
+        // Check if Ctrl key is still pressed (VK_CONTROL = 0x11)
+        const int VK_CONTROL = 0x11;
+        var isCtrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
 
-            this._isClosing = true;
-
-            // Unsubscribe from close events
-            if (this._contentControl is ICloseRequestable closeable)
-                closeable.CloseRequested -= this.OnContentCloseRequested;
-
-            // Restore focus to Revit before closing (unless user is switching to another app)
-            if (restoreFocus) {
-                // Debug.WriteLine("[EphemeralWindow] CloseWindow: Restoring focus to Revit");
-                this.RestoreRevitFocus();
-            }
-
-            // Debug.WriteLine("[EphemeralWindow] CloseWindow: Skipping focus restore (user switching apps)");
-            // Debug.WriteLine("[EphemeralWindow] CloseWindow: Calling Window.Close()");
-            this.Close();
-        } catch {
-            // Debug.WriteLine($"[EphemeralWindow] CloseWindow: Window already closing exception: {ex.Message}");
+        if (!isCtrlPressed) {
+            // Ctrl key released - execute callback (if provided) then close the window
+            this._ctrlKeyMonitor?.Stop();
+            this._onCtrlReleased?.Invoke();
+            this.CloseWindow(true);
         }
     }
 
-    private void RestoreRevitFocus() {
+    public void CloseWindow(bool restoreFocus = true) {
+        // Debug.WriteLine($"[EphemeralWindow] CloseWindow called: restoreFocus={restoreFocus}, _isClosing={this._isClosing}");
         try {
-            // Get the main Revit window handle
+            if (this._isClosing) return;
+            this._isClosing = true;
+
+            if (this._contentControl is ICloseRequestable closeable)
+                closeable.CloseRequested -= this.OnContentCloseRequested;
+
+            if (restoreFocus) RestoreRevitFocus();
+            this.Close();
+        } catch { }
+    }
+
+    /// <summary>
+    ///     Restores focus to the main Revit window. Can be called from external code.
+    /// </summary>
+    public static void RestoreRevitFocus() {
+        try {
             var revitProcess = Process.GetCurrentProcess();
             var revitHandle = revitProcess.MainWindowHandle;
-
-            // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: Process={revitProcess.ProcessName}, Handle={revitHandle}");
-
             if (revitHandle != IntPtr.Zero) {
-                var revitTitle = this.GetWindowTitle(revitHandle);
-                // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: Revit window title='{revitTitle}'");
-
                 var success = SetForegroundWindow(revitHandle);
-                // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: SetForegroundWindow returned {success}");
-
-                // Verify focus was restored
-                var currentForeground = GetForegroundWindow();
-                // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: Current foreground window={currentForeground} (expected {revitHandle})");
             }
-            // Debug.WriteLine("[EphemeralWindow] RestoreRevitFocus: Revit handle is zero, cannot restore focus");
         } catch {
-            // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: Exception: {ex.Message}");
-            // Debug.WriteLine($"[EphemeralWindow] RestoreRevitFocus: StackTrace: {ex.StackTrace}");
         }
     }
 
     protected override void OnClosing(CancelEventArgs e) {
         this._isClosing = true;
+        this._ctrlKeyMonitor?.Stop();
         base.OnClosing(e);
     }
 
@@ -133,16 +137,6 @@ public class EphemeralWindow : Window {
 
                 // Check if Alt key is pressed (Alt+Tab is active)
                 var isAltTabActive = (GetAsyncKeyState(0x12) & 0x8000) != 0; // VK_MENU = 0x12
-
-                // Get window info for debugging
-                var newWindowTitle = this.GetWindowTitle(newActiveWindow);
-                var revitWindowTitle = this.GetWindowTitle(revitHandle);
-                var foregroundWindowTitle = this.GetWindowTitle(actualForegroundWindow);
-
-                // Debug.WriteLine($"[EphemeralWindow] WM_ACTIVATE: NewActiveWindow={newActiveWindow} ({newWindowTitle})");
-                // Debug.WriteLine($"[EphemeralWindow] WM_ACTIVATE: ActualForegroundWindow={actualForegroundWindow} ({foregroundWindowTitle})");
-                // Debug.WriteLine($"[EphemeralWindow] WM_ACTIVATE: RevitWindow={revitHandle} ({revitWindowTitle})");
-                // Debug.WriteLine($"[EphemeralWindow] WM_ACTIVATE: Alt+Tab active={isAltTabActive}");
 
                 // Determine the actual target window
                 // If lParam is zero, use foreground window to determine what's actually being activated

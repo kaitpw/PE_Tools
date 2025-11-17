@@ -97,12 +97,26 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
 
     [RelayCommand]
     private void MoveSelectionUp() {
-        if (this.SelectedIndex > 0) this.SelectedIndex--;
+        if (this.FilteredItems.Count == 0) return;
+        
+        if (this.SelectedIndex > 0) {
+            this.SelectedIndex--;
+        } else {
+            // Wrap to bottom
+            this.SelectedIndex = this.FilteredItems.Count - 1;
+        }
     }
 
     [RelayCommand]
     private void MoveSelectionDown() {
-        if (this.SelectedIndex < this.FilteredItems.Count - 1) this.SelectedIndex++;
+        if (this.FilteredItems.Count == 0) return;
+        
+        if (this.SelectedIndex < this.FilteredItems.Count - 1) {
+            this.SelectedIndex++;
+        } else {
+            // Wrap to top
+            this.SelectedIndex = 0;
+        }
     }
 
     [RelayCommand]

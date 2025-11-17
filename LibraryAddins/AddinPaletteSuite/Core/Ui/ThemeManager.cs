@@ -83,7 +83,7 @@ public static class ThemeManager {
 
         return style;
     }
-
+ 
     /// <summary>
     ///     Creates a ResourceDictionary with implicit styles for specific controls.
     ///     Note: TextBlock styles are now handled by CreateTypographyOverrides().
@@ -120,35 +120,18 @@ public static class ThemeManager {
     }
 
     /// <summary>
-    ///     Initializes the theme manager and applies accent colors.
-    ///     Should be called once at application startup or when creating palette windows.
-    /// </summary>
-    public static void Initialize() {
-    }
-
-    /// <summary>
     ///     Applies implicit styles to a Window's resources for automatic control styling.
     ///     Call this when creating windows to ensure all controls get proper styling.
     /// </summary>
     public static void ApplyStylesToWindow(Window window) {
         if (window == null) return;
-
-        // Debug: Log existing styles before adding ours
-        Debug.WriteLine("=== Existing Styles in Window Resources ===");
-        LogResourceDictionaryStyles(window.Resources);
-
         var styleResources = CreateStyleResources();
-
-        // Add styles to the beginning of merged dictionaries so they have lower priority 
-        // This way WPF.UI's explicit styles take precedence, but our implicit styles provide defaults
         window.Resources.MergedDictionaries.Insert(0, styleResources);
-
-        Debug.WriteLine("=== After Adding ThemeManager Styles ===");
-        LogResourceDictionaryStyles(window.Resources);
     }
 
     /// <summary>
     ///     Debug helper to log all styles in a ResourceDictionary and its merged dictionaries.
+    /// Keep for later debugging
     /// </summary>
     private static void LogResourceDictionaryStyles(ResourceDictionary resources, int level = 0) {
         var indent = new string(' ', level * 2);
