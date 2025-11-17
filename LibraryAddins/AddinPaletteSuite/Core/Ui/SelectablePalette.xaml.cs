@@ -25,6 +25,9 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 
     protected void RequestClose(bool restoreFocus = true) =>
         this.CloseRequested?.Invoke(this, new CloseRequestedEventArgs { RestoreFocus = restoreFocus });
+
+    // Note: SearchBoxBorder, MainBorder, StatusBarBorder, ItemListView, StatusBarBorder
+    // are defined in the XAML and accessible via the partial class generated code
 }
 
 /// <summary>
@@ -33,14 +36,17 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObservableListItem, IPaletteListItem {
     private readonly ActionBinding<TItem> _actionBinding;
     private readonly ActionMenu<TItem> _actionMenu;
+    private readonly CustomKeyBindings? _customKeyBindings;
     private readonly SearchFilterBox<SelectablePaletteViewModel<TItem>> _searchFilterBox;
     private readonly SelectableTextBox _tooltipPanel;
     private readonly Popup _tooltipPopup;
 
     public SelectablePalette(
         SelectablePaletteViewModel<TItem> viewModel,
-        IEnumerable<PaletteAction<TItem>> actions
+        IEnumerable<PaletteAction<TItem>> actions,
+        CustomKeyBindings? customKeyBindings = null
     ) : base(viewModel) {
+        this._customKeyBindings = customKeyBindings;
         // Base class constructor sets DataContext and calls InitializeComponent()
 
         // Create SearchFilterBox with optional filter (auto-detects if filtering is enabled)
@@ -171,8 +177,17 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
     }
 
     private async void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
+        var modifiers = e.KeyboardDevice.Modifiers;
+
+        // Check custom key bindings first
+        if (this._customKeyBindings != null && 
+            this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction)) {
+            e.Handled = await this.HandleNavigationAction(navAction);
+            return;
+        }
+
         // Handle Tab key to focus FilterBox if filtering is enabled
-        if (e.Key == Key.Tab && e.KeyboardDevice.Modifiers == ModifierKeys.None) {
+        if (e.Key == Key.Tab && modifiers == ModifierKeys.None) {
             if (this._searchFilterBox.HasFilter) {
                 e.Handled = true;
                 _ = this.Dispatcher.BeginInvoke(this._searchFilterBox.FocusFilter, DispatcherPriority.Input);
@@ -183,7 +198,6 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         // Handle Enter key with modifiers
         if (e.Key == Key.Enter) {
             if (this.ViewModel?.SelectedItem != null) {
-                var modifiers = e.KeyboardDevice.Modifiers;
                 var result = await this._actionBinding.TryExecuteAsync(
                     this.ViewModel.SelectedItem, Key.Enter, modifiers);
 
@@ -338,6 +352,45 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         this._tooltipPopup.Placement = PlacementMode.Left;
         this._tooltipPopup.HorizontalOffset = 0;
         this._tooltipPopup.VerticalOffset = 0;
+    }
+
+    /// <summary>
+    ///     Handles custom navigation actions triggered by key bindings
+    /// </summary>
+    private async Task<bool> HandleNavigationAction(NavigationAction action) {
+        if (this.ViewModel == null) return false;
+
+        switch (action) {
+        case NavigationAction.MoveUp:
+            this.ViewModel.MoveSelectionUpCommand.Execute(null);
+            return true;
+
+        case NavigationAction.MoveDown:
+            this.ViewModel.MoveSelectionDownCommand.Execute(null);
+            return true;
+
+        case NavigationAction.Execute:
+            if (this.ViewModel.SelectedItem != null) {
+                var result = await this._actionBinding.TryExecuteAsync(
+                    this.ViewModel.SelectedItem, Key.Enter, ModifierKeys.None);
+
+                if (result.Success) {
+                    this.ViewModel.RecordUsage();
+                    this.RequestClose(!result.IsNextPalette);
+                }
+
+                return true;
+            }
+
+            return false;
+
+        case NavigationAction.Cancel:
+            this.RequestClose();
+            return true;
+
+        default:
+            return false;
+        }
     }
 
     private async void ActionMenu_ActionClicked(object _, PaletteAction<TItem> action) {

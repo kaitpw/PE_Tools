@@ -63,8 +63,13 @@ public class CmdPltMruViews : IExternalCommand {
             // Create view model
             var viewModel = new SelectablePaletteViewModel<MruViewPaletteItem>(selectableItems, searchService);
 
-            // Create palette UserControl
-            var palette = new SelectablePalette<MruViewPaletteItem>(viewModel, actions);
+            // Create custom key bindings for MRU navigation
+            var customKeys = new CustomKeyBindings();
+            customKeys.Add(System.Windows.Input.Key.Add, NavigationAction.MoveDown);      // Plus key moves forward
+            customKeys.Add(System.Windows.Input.Key.Subtract, NavigationAction.MoveUp);   // Minus key moves backward
+
+            // Create palette UserControl with custom key bindings
+            var palette = new SelectablePalette<MruViewPaletteItem>(viewModel, actions, customKeys);
 
             // Wrap in EphemeralWindow and show
             var window = new EphemeralWindow(palette, "MRU Views");

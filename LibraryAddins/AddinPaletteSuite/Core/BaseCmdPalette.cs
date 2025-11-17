@@ -39,11 +39,13 @@ public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where T
             .Cast<TElement>()
             .OrderBy(f => f.Name);
         var selectableItems = this.GetItems(elements, doc);
-        var searchService = new SearchFilterService<TItem>(persistence, this.GetPersistenceKey);
+        var searchConfig = this.GetSearchConfig();
+        var searchService = new SearchFilterService<TItem>(persistence, this.GetPersistenceKey, searchConfig);
         var actions = this.GetActions(uiapp).ToList();
         var filterKeySelector = this.GetFilterKeySelector();
+        var customKeyBindings = this.GetCustomKeyBindings();
         var viewModel = new SelectablePaletteViewModel<TItem>(selectableItems, searchService, filterKeySelector);
-        var palette = new SelectablePalette<TItem>(viewModel, actions);
+        var palette = new SelectablePalette<TItem>(viewModel, actions, customKeyBindings);
         var window = new EphemeralWindow(palette, this.Title);
         window.Show();
     }
@@ -53,6 +55,18 @@ public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where T
     ///     Return null to disable filtering for this palette.
     /// </summary>
     protected virtual Func<TItem, string>? GetFilterKeySelector() => null;
+
+    /// <summary>
+    ///     Optional: Override to customize search behavior (which fields to search, scoring weights, etc.)
+    ///     Default searches TextPrimary only.
+    /// </summary>
+    protected virtual SearchConfig GetSearchConfig() => SearchConfig.Default();
+
+    /// <summary>
+    ///     Optional: Override to provide custom keyboard navigation bindings.
+    ///     Return null or empty to use only default key bindings.
+    /// </summary>
+    protected virtual CustomKeyBindings? GetCustomKeyBindings() => null;
 
     public abstract string GetPersistenceKey(TItem item);
     public abstract IEnumerable<TItem> GetItems(IEnumerable<TElement> elements, Document doc);

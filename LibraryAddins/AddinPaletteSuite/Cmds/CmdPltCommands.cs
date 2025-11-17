@@ -77,14 +77,16 @@ public static class CommandPaletteService {
             }
         }
 
-        // Create search filter service
+        // Create search filter service with config to search primary (name) and secondary (paths)
+        var searchConfig = SearchConfig.PrimaryAndSecondary();
         var searchService = new SearchFilterService<PostableCommandItem>(
             persistence,
             item => {
                 if (item is PostableCommandItem cmdItem)
                     return cmdItem.Command.Value.ToString() ?? string.Empty;
                 return item.TextPrimary;
-            });
+            },
+            searchConfig);
 
         // Create actions
         var actions = new List<PaletteAction<PostableCommandItem>> {

@@ -15,6 +15,12 @@ public class CmdPltAllViews : BaseCmdPalette<View, AllViewPaletteItem> {
     protected override Func<AllViewPaletteItem, string>? GetFilterKeySelector() =>
         item => item.View.ViewType.ToString();
 
+    /// <summary>
+    ///     TODO: Eventually search all fields (Primary, Secondary, Pill, Info) for comprehensive search
+    ///     For now, use default (TextPrimary only)
+    /// </summary>
+    protected override SearchConfig GetSearchConfig() => SearchConfig.Default();
+
     public override IEnumerable<PaletteAction<AllViewPaletteItem>> GetActions(UIApplication uiApp) =>
         new List<PaletteAction<AllViewPaletteItem>> {
             new() {

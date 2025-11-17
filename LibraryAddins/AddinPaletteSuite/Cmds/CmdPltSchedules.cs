@@ -19,6 +19,11 @@ public class CmdPltSchedules : BaseCmdPalette<ViewSchedule, SchedulePaletteItem>
     /// </summary>
     protected override Func<SchedulePaletteItem, string> GetFilterKeySelector() => item => item.TextPill;
 
+    /// <summary>
+    ///     Search both primary (schedule name) and secondary (sheet info)
+    /// </summary>
+    protected override SearchConfig GetSearchConfig() => SearchConfig.PrimaryAndSecondary();
+
     public override IEnumerable<PaletteAction<SchedulePaletteItem>> GetActions(UIApplication uiApp) =>
         new List<PaletteAction<SchedulePaletteItem>> {
             new() {

@@ -18,6 +18,7 @@
           VerticalAlignment="Stretch">
         <!-- Main container -->
         <Border x:Name="MainBorder"
+                x:FieldModifier="protected"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Background="{ui:ThemeResource ApplicationBackgroundBrush}">
@@ -31,6 +32,7 @@
 
                 <!-- Search Box with Filter (created programmatically) -->
                 <Border x:Name="SearchBoxBorder"
+                        x:FieldModifier="protected"
                         ClipToBounds="True"
                         Background="{ui:ThemeResource ApplicationBackgroundBrush}">
                     <!-- SearchFilterBox component will be added here programmatically -->
@@ -39,6 +41,7 @@
                 <!-- Item List -->
                 <Border Grid.Row="1" Padding="4,0,4,0">
                     <local:SelectableListView x:Name="ItemListView"
+                                              x:FieldModifier="protected"
                                               ItemsSource="{Binding FilteredItems}"
                                               SelectedItem="{Binding SelectedItem}"
                                               SelectedIndex="{Binding SelectedIndex}" />
@@ -46,6 +49,7 @@
 
                 <!-- Status Bar -->
                 <Border x:Name="StatusBarBorder"
+                        x:FieldModifier="protected"
                         Grid.Row="2"
                         Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}">
                     <Grid x:Name="StatusBarGrid">

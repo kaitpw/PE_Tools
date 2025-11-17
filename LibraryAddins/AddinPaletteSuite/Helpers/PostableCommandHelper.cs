@@ -66,7 +66,6 @@ public class PostableCommandHelper(Storage storage) {
                 Command = command.Id,
                 UsageCount = usageData?.UsageCount ?? 0,
                 LastUsed = usageData?.LastUsed ?? DateTime.MinValue,
-                SearchScore = 0
             };
             // Try to get shortcut info from XML
             var (shortcutInfo, infoErr) = shortcutsService.GetShortcutInfo(command.Id);

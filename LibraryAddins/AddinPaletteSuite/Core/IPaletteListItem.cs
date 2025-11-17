@@ -30,9 +30,6 @@ public interface IPaletteListItem {
     /// <summary> Whether this item is currently selected in the UI </summary>
     bool IsSelected { get; set; }
 
-    /// <summary> Search relevance score for filtering/ranking (set by search service) </summary>
-    double SearchScore { get; set; }
-
     /// <summary> Whether this item can be executed (used for visual styling) </summary>
     bool CanExecute { get; set; }
 }
@@ -40,5 +37,4 @@ public interface IPaletteListItem {
 public abstract partial class BaseObservableListItem : ObservableObject, INotifyPropertyChanged {
     [ObservableProperty] private bool _canExecute = true;
     [ObservableProperty] private bool _isSelected;
-    [ObservableProperty] private double _searchScore;
 }

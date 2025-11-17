@@ -2,17 +2,19 @@ using AddinPaletteSuite.Core.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
+using System.Windows.Threading;
 
 namespace AddinPaletteSuite.Core.Ui;
 
 /// <summary>
 ///     Generic ViewModel for the SelectablePalette window with optional filtering support
-/// </summary>
+/// </summary> 
 public partial class SelectablePaletteViewModel<TItem> : ObservableObject
     where TItem : BaseObservableListItem, IPaletteListItem {
     private readonly List<TItem> _allItems;
     private readonly Func<TItem, string>? _filterKeySelector;
     private readonly SearchFilterService<TItem> _searchService;
+    private readonly DispatcherTimer _debounceTimer;
 
     /// <summary> Current search text </summary>
     [ObservableProperty] private string _searchText = string.Empty;
@@ -25,6 +27,9 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
 #nullable enable
     /// <summary> Currently selected item </summary>
     [ObservableProperty] private TItem? _selectedItem;
+
+    /// <summary> Previously selected item for efficient selection updates </summary>
+    private TItem? _previousSelectedItem;
 #nullable disable
 
     public SelectablePaletteViewModel(
@@ -36,7 +41,20 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
         this._searchService = searchService;
         this._filterKeySelector = filterKeySelector;
 
+        // Initialize debounce timer (200ms delay)
+        this._debounceTimer = new DispatcherTimer {
+            Interval = TimeSpan.FromMilliseconds(100)
+        };
+        this._debounceTimer.Tick += (_, _) => {
+            this._debounceTimer.Stop();
+            this.FilterItems();
+        };
+
         this._searchService.LoadUsageData();
+
+        // Build search cache for all items (pre-compute lowercase strings and metadata)
+        this._searchService.BuildSearchCache(this._allItems);
+
         this.FilteredItems = new ObservableCollection<TItem>();
 
         // Initialize filter values if filtering is enabled
@@ -105,15 +123,38 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
         // Then apply search filter
         var filtered = this._searchService.Filter(this.SearchText, preFiltered);
 
-        this.FilteredItems.Clear();
-        foreach (var item in filtered)
-            this.FilteredItems.Add(item);
+        // Use efficient differential update instead of Clear/Add
+        this.UpdateCollectionEfficiently(this.FilteredItems, filtered);
 
         // Reset selection to first item
         this.SelectedIndex = this.FilteredItems.Count > 0 ? 0 : -1;
 
         // Notify that filtered items have changed
         this.FilteredItemsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    ///     Efficiently updates an ObservableCollection to match a target list.
+    ///     Uses differential updates to minimize CollectionChanged notifications.
+    /// </summary>
+    private void UpdateCollectionEfficiently(ObservableCollection<TItem> target, List<TItem> source) {
+        // Remove items not in source (iterate backwards to avoid index shifting)
+        for (var i = target.Count - 1; i >= 0; i--) {
+            if (!source.Contains(target[i]))
+                target.RemoveAt(i);
+        }
+
+        // Add/reorder items from source
+        for (var i = 0; i < source.Count; i++) {
+            if (i >= target.Count) {
+                // Need to add new item
+                target.Add(source[i]);
+            } else if (!EqualityComparer<TItem>.Default.Equals(target[i], source[i])) {
+                // Item at this position is different, update it
+                target[i] = source[i];
+            }
+            // else: item is already in the correct position, no action needed
+        }
     }
 
     /// <summary>
@@ -126,17 +167,28 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
 
     #region Property Change Handlers
 
-    partial void OnSearchTextChanged(string value) => this.FilterItems();
-
-    partial void OnSelectedItemChanged(TItem value) {
-        // Clear previous selection
-        foreach (var item in this.FilteredItems) {
-            if (item.TextPrimary != value.TextPrimary)
-                item.IsSelected = false;
+    partial void OnSearchTextChanged(string value) {
+        // If search is cleared, filter immediately (no debounce)
+        if (string.IsNullOrWhiteSpace(value)) {
+            this._debounceTimer.Stop();
+            this.FilterItems();
+            return;
         }
 
-        // Set new selection
-        if (value != null) value.IsSelected = true;
+        // Otherwise, restart debounce timer
+        this._debounceTimer.Stop();
+        this._debounceTimer.Start();
+    }
+
+    partial void OnSelectedItemChanged(TItem value) {
+        // Only update previous and current items (O(1) instead of O(n))
+        if (this._previousSelectedItem != null && this._previousSelectedItem != value)
+            this._previousSelectedItem.IsSelected = false;
+
+        if (value != null)
+            value.IsSelected = true;
+
+        this._previousSelectedItem = value;
     }
 
     partial void OnSelectedIndexChanged(int value) {

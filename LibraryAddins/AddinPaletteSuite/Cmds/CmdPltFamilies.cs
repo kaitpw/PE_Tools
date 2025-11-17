@@ -20,6 +20,11 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
     /// </summary>
     protected override Func<FamilyPaletteItem, string>? GetFilterKeySelector() => item => item.TextPill;
 
+    /// <summary>
+    ///     Search both primary (family name) and secondary (family type names)
+    /// </summary>
+    protected override SearchConfig GetSearchConfig() => SearchConfig.PrimaryAndSecondary();
+
     public override IEnumerable<PaletteAction<FamilyPaletteItem>> GetActions(UIApplication uiApp) {
         var doc = uiApp.ActiveUIDocument.Document;
         var activeView = uiApp.ActiveUIDocument.ActiveView;
