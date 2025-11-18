@@ -45,7 +45,8 @@ public class EphemeralWindow : Window {
 
         // Create main container grid with centered alignment
         var containerGrid = new Grid {
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
         };
 
         // Add to grid (both at same location so pill floats over content)
@@ -56,7 +57,10 @@ public class EphemeralWindow : Window {
                 .Height(350, 350, 350)
                 .DropShadow()
                 .CreateAround(content));
-        _ = containerGrid.Children.Add(this.CreateTitlePill(title));
+
+        var titlePill = this.CreateTitlePill(title);
+        titlePill.MouseLeftButtonDown += (_, _) => this.DragMove();
+        _ = containerGrid.Children.Add(titlePill);
 
         this.Content = containerGrid;
 

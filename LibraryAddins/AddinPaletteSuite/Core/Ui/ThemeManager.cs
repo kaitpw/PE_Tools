@@ -73,18 +73,6 @@ public static class ThemeManager {
         return Brushes.Red;
     }
 
-    private static Brush GetFallbackBrush(ThemeResource themeResource) =>
-        // Provide reasonable fallbacks for common theme resources
-        themeResource.ToString() switch {
-            var s when s.Contains("Background") => new SolidColorBrush(
-                Color.FromRgb(32, 32, 32)), // Dark background
-            var s when s.Contains("Foreground") || s.Contains("Text") => new SolidColorBrush(
-                Color.FromRgb(255, 255, 255)), // White text
-            var s when s.Contains("Border") || s.Contains("Stroke") => new SolidColorBrush(
-                Color.FromRgb(60, 60, 60)), // Subtle border
-            _ => Brushes.Transparent
-        };
-
     /// <summary>
     ///     Gets a WPF.UI theme brush from the Application's resource dictionary by string key.
     /// </summary>
