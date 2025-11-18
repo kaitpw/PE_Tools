@@ -1,27 +1,20 @@
 #nullable enable
 
 using System.Windows;
-using System.Windows.Documents;
 using System.Windows.Media;
 using Wpf.Ui.Controls;
+using Wpf.Ui.Markup;
+using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Core.Ui;
 
 public enum UiSz {
+    none = 0,
     ss = 1,
     s = 2,
     m = 4,
     l = 6,
     ll = 9
-}
-
-public enum TxtSz {
-    ss = 6,
-    s = 8,
-    normal = 10,
-    m = 12,
-    l = 14,
-    ll = 16
 }
 
 /// <summary>
@@ -38,6 +31,8 @@ internal static class ThemeSettings {
 ///     Wraps ApplicationAccentColorManager and provides type-safe access to colors, typography, and spacing.
 /// </summary>
 public static class ThemeManager {
+    private static bool _resourcesLogged;
+
     public static double IconOpacity => ThemeSettings.IconOpacity;
     public static CornerRadius Radius => ThemeSettings.Radius;
 
@@ -47,6 +42,76 @@ public static class ThemeManager {
     public static FontFamily FontFamily() => new("Segoe UI Variable Text");
 
     /// <summary>
+    ///     Gets a WPF.UI theme brush from the Application's resource dictionary.
+    /// </summary>
+    /// <param name="themeResource">The theme resource enum value</param>
+    /// <returns>The brush from the current theme</returns>
+    public static Brush GetThemeBrush(ThemeResource themeResource) {
+        if (themeResource == ThemeResource.Unknown) return Brushes.Transparent;
+
+        // Log available resources once for debugging
+        if (!_resourcesLogged) {
+            _resourcesLogged = true;
+            LogAvailableThemeResources();
+        }
+
+        // Get the resource key string from the enum
+        var resourceKey = themeResource.ToString();
+        Debug.WriteLine($"[ThemeManager] Looking for resource: '{resourceKey}'");
+
+        // Try to find the resource in Application resources
+        if (Application.Current?.TryFindResource(resourceKey) is Brush brush) {
+            Debug.WriteLine($"[ThemeManager] Found brush for '{resourceKey}': {brush}");
+            return brush;
+        }
+
+        Debug.WriteLine($"[ThemeManager] Resource '{resourceKey}' NOT FOUND in Application.Current.TryFindResource");
+
+        // WPF.UI resources aren't always directly accessible via TryFindResource
+        // They're resolved dynamically through DynamicResource bindings
+        // For now, return a sensible fallback based on the resource type
+        return Brushes.Red;
+    }
+
+    private static Brush GetFallbackBrush(ThemeResource themeResource) =>
+        // Provide reasonable fallbacks for common theme resources
+        themeResource.ToString() switch {
+            var s when s.Contains("Background") => new SolidColorBrush(
+                Color.FromRgb(32, 32, 32)), // Dark background
+            var s when s.Contains("Foreground") || s.Contains("Text") => new SolidColorBrush(
+                Color.FromRgb(255, 255, 255)), // White text
+            var s when s.Contains("Border") || s.Contains("Stroke") => new SolidColorBrush(
+                Color.FromRgb(60, 60, 60)), // Subtle border
+            _ => Brushes.Transparent
+        };
+
+    /// <summary>
+    ///     Gets a WPF.UI theme brush from the Application's resource dictionary by string key.
+    /// </summary>
+    /// <param name="resourceKey">The resource key string (e.g., "ApplicationBackgroundBrush")</param>
+    /// <returns>The brush from the current theme</returns>
+    public static Brush GetThemeBrush(string resourceKey) {
+        if (string.IsNullOrEmpty(resourceKey)) return Brushes.Transparent;
+
+        // Try to find the resource in Application resources
+        if (Application.Current?.TryFindResource(resourceKey) is Brush brush) return brush;
+
+        return Brushes.Red;
+    }
+
+    /// <summary>
+    ///     Gets the default application background brush.
+    /// </summary>
+    public static Brush ApplicationBackground() =>
+        GetThemeBrush(ThemeResource.ApplicationBackgroundBrush);
+
+    /// <summary>
+    ///     Gets the primary text foreground brush.
+    /// </summary>
+    public static Brush TextFillColorPrimaryBrush() =>
+        GetThemeBrush(ThemeResource.TextFillColorPrimaryBrush);
+
+    /// <summary>
     ///     Gets a typography style by FontTypography enum.
     ///     Loads the style from XAML resources defined in TypographyOverrides.xaml.
     ///     The targetType parameter is kept for API compatibility but styles are TextBlock-based.
@@ -54,9 +119,10 @@ public static class ThemeManager {
     /// <param name="typography">The FontTypography level to get</param>
     /// <param name="_">Unused type parameter for API compatibility</param>
     /// <param name="searchContext">Optional element to search for resources in its resource chain before Application</param>
-    public static Style GetTypographyStyle(FontTypography typography,
-        Type? _ = null,
-        FrameworkElement? searchContext = null) {
+    public static Style GetTypographyStyle(
+        FontTypography typography,
+        FrameworkElement? searchContext = null
+    ) {
         // Map FontTypography enum to XAML resource key
         var styleKey = typography switch {
             FontTypography.Caption => "CaptionTextBlockStyle",
@@ -83,24 +149,7 @@ public static class ThemeManager {
 
         return style;
     }
- 
-    /// <summary>
-    ///     Creates a ResourceDictionary with implicit styles for specific controls.
-    ///     Note: TextBlock styles are now handled by CreateTypographyOverrides().
-    /// </summary>
-    private static ResourceDictionary CreateStyleResources() {
-        var resources = new ResourceDictionary();
 
-        // Implicit style for FlowDocument (used in RichTextBox)
-        var flowDocumentStyle = new Style(typeof(FlowDocument));
-        flowDocumentStyle.Setters.Add(new Setter(FlowDocument.FontFamilyProperty, FontFamily()));
-        flowDocumentStyle.Setters.Add(new Setter(FlowDocument.FontSizeProperty, (double)TxtSz.normal));
-        flowDocumentStyle.Setters.Add(new Setter(FlowDocument.ForegroundProperty, Brushes.Transparent));
-        flowDocumentStyle.Setters.Add(new Setter(FlowDocument.PagePaddingProperty, new Thickness(0)));
-        resources.Add(typeof(FlowDocument), flowDocumentStyle);
-
-        return resources;
-    }
 
     /// <summary>
     ///     Loads and merges the WpfUiResources dictionary into a FrameworkElement's resources.
@@ -120,18 +169,40 @@ public static class ThemeManager {
     }
 
     /// <summary>
-    ///     Applies implicit styles to a Window's resources for automatic control styling.
-    ///     Call this when creating windows to ensure all controls get proper styling.
+    ///     Debug helper to log available brush resources in Application.
     /// </summary>
-    public static void ApplyStylesToWindow(Window window) {
-        if (window == null) return;
-        var styleResources = CreateStyleResources();
-        window.Resources.MergedDictionaries.Insert(0, styleResources);
+    public static void LogAvailableThemeResources() {
+        if (Application.Current == null) {
+            Debug.WriteLine("[ThemeManager] Application.Current is null!");
+            return;
+        }
+
+        Debug.WriteLine("[ThemeManager] ===== Available Brush Resources =====");
+        LogBrushesInDictionary(Application.Current.Resources, 0);
+    }
+
+    private static void LogBrushesInDictionary(ResourceDictionary resources, int level) {
+        var indent = new string(' ', level * 2);
+
+        // Log brush resources (keyed by string)
+        foreach (var key in resources.Keys) {
+            try {
+                if (key is string stringKey && resources.Contains(stringKey)) {
+                    var value = resources[stringKey];
+                    if (value is Brush) Debug.WriteLine($"{indent}Brush: {stringKey}");
+                }
+            } catch {
+                // Skip resources that can't be accessed
+            }
+        }
+
+        // Recursively log merged dictionaries
+        foreach (var mergedDict in resources.MergedDictionaries) LogBrushesInDictionary(mergedDict, level + 1);
     }
 
     /// <summary>
     ///     Debug helper to log all styles in a ResourceDictionary and its merged dictionaries.
-    /// Keep for later debugging
+    ///     Keep for later debugging
     /// </summary>
     private static void LogResourceDictionaryStyles(ResourceDictionary resources, int level = 0) {
         var indent = new string(' ', level * 2);

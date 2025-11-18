@@ -100,7 +100,9 @@ public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem
             var shortcutText = this.FormatShortcut(paletteAction);
 
             var menuItem = new MenuItem {
-                Header = paletteAction.Name, InputGestureText = shortcutText, IsEnabled = canExecute
+                Header = paletteAction.Name,
+                InputGestureText = shortcutText,
+                IsEnabled = canExecute
             };
 
             menuItem.Click += (_, _) => {

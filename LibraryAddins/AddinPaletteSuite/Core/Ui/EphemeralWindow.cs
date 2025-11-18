@@ -5,6 +5,11 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Wpf.Ui.Controls;
+using Wpf.Ui.Markup;
+using Color = System.Windows.Media.Color;
+using Grid = System.Windows.Controls.Grid;
+using TextBlock = Wpf.Ui.Controls.TextBlock;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -14,15 +19,17 @@ namespace AddinPaletteSuite.Core.Ui;
 /// </summary>
 public class EphemeralWindow : Window {
     private readonly UserControl _contentControl;
+    private readonly DispatcherTimer _ctrlKeyMonitor;
     private readonly bool _monitorCtrlKey;
     private readonly Action _onCtrlReleased;
-    private readonly DispatcherTimer _ctrlKeyMonitor;
     private bool _isClosing;
 
-    public EphemeralWindow(UserControl content,
+    public EphemeralWindow(
+        UserControl content,
         string title = "Palette",
         bool monitorCtrlKey = false,
-        Action onCtrlReleased = null) {
+        Action onCtrlReleased = null
+    ) {
         this._contentControl = content;
         this._monitorCtrlKey = monitorCtrlKey;
         this._onCtrlReleased = onCtrlReleased;
@@ -34,11 +41,26 @@ public class EphemeralWindow : Window {
         this.Background = Brushes.Transparent;
         this.ShowInTaskbar = false;
         this.Topmost = true;
+        ThemeManager.LoadWpfUiResources(this);
 
-        this.Content = new Border { Child = content, Width = 400, MaxHeight = 300 };
+        // Create main container grid with centered alignment
+        var containerGrid = new Grid {
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+        };
+
+        // Add to grid (both at same location so pill floats over content)
+        _ = containerGrid.Children.Add(
+            new BorderSpec()
+                .Border(UiSz.l, UiSz.ss)
+                .Width(450, 450, 450)
+                .Height(350, 350, 350)
+                .DropShadow()
+                .CreateAround(content));
+        _ = containerGrid.Children.Add(this.CreateTitlePill(title));
+
+        this.Content = containerGrid;
 
         // 6. Apply custom implicit styles (focus visual, etc.)
-        ThemeManager.ApplyStylesToWindow(this);
 
         // Subscribe to CloseRequested event if content implements it
         if (content is ICloseRequestable closeable) closeable.CloseRequested += this.OnContentCloseRequested;
@@ -49,6 +71,28 @@ public class EphemeralWindow : Window {
             this._ctrlKeyMonitor.Tick += this.OnCtrlKeyMonitorTick;
             this.Loaded += (_, _) => this._ctrlKeyMonitor.Start();
         }
+    }
+
+    private Border CreateTitlePill(string title) {
+        var border = new BorderSpec()
+            .Background(ThemeResource.ApplicationBackgroundBrush)
+            .Border(UiSz.l, UiSz.ss)
+            .HorizontalAlign(HorizontalAlignment.Left)
+            .VerticalAlign(VerticalAlignment.Top)
+            .Margin(0, -35, 0, 0) // More left and up positioning
+            .Padding(UiSz.m, UiSz.l, UiSz.m, UiSz.l)
+            .Width(200)
+            .DropShadow()
+            .CreateAround(new TextBlock {
+                Text = title,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Foreground = new SolidColorBrush(Color.FromRgb(250, 250, 250)),
+                Style = ThemeManager.GetTypographyStyle(FontTypography.Subtitle, this),
+                Padding = new Thickness(0)
+            });
+
+        return border;
     }
 
     private void OnContentCloseRequested(object sender, CloseRequestedEventArgs e) =>
@@ -63,7 +107,7 @@ public class EphemeralWindow : Window {
             // Ctrl key released - execute callback (if provided) then close the window
             this._ctrlKeyMonitor?.Stop();
             this._onCtrlReleased?.Invoke();
-            this.CloseWindow(true);
+            this.CloseWindow();
         }
     }
 

@@ -4,7 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Threading;
+using Wpf.Ui.Markup;
 using WpfUiRichTextBox = Wpf.Ui.Controls.RichTextBox;
 using Visibility = System.Windows.Visibility;
 
@@ -31,23 +31,15 @@ public class SelectableTextBox : UserControl, IPopoverExit {
         this._richTextBox.PreviewKeyDown += this.RichTextBox_PreviewKeyDown;
         this._richTextBox.LostFocus += this.RichTextBox_LostFocus;
 
-        var border = new Border {
-            HorizontalAlignment = HorizontalAlignment.Left,
-            VerticalAlignment = VerticalAlignment.Top,
-            Child = this._richTextBox,
-            Width = 150.0,
-            MinHeight = 50.0,
-            BorderThickness = new Thickness((double)UiSz.ss),
-            CornerRadius = new CornerRadius((double)UiSz.l)
-        };
-
-        // Set border colors from DynamicResources
-        border.SetResourceReference(Border.BorderBrushProperty, "ControlStrokeColorDefaultBrush");
-        border.SetResourceReference(Border.BackgroundProperty, "ApplicationBackgroundBrush");
-
-        _ = border.WithPadding(UiSz.m, UiSz.m);
-
-        this.Content = border;
+        this.Content = new BorderSpec()
+            .Background(ThemeResource.ApplicationBackgroundBrush)
+            .HorizontalAlign(HorizontalAlignment.Left)
+            .VerticalAlign(VerticalAlignment.Top)
+            .Width(150)
+            .Height(50, 75, 400)
+            .Border(thickness: UiSz.ss)
+            .Padding(UiSz.m)
+            .CreateAround(this._richTextBox);
     }
 
     public UIElement? ReturnFocusTarget { get; set; }
@@ -65,14 +57,6 @@ public class SelectableTextBox : UserControl, IPopoverExit {
     public void Show(string? text = null) {
         this.UpdateContent(text);
         this.Visibility = Visibility.Visible;
-
-        // Focus and select all text after render
-        _ = this.Dispatcher.BeginInvoke(new Action(() => {
-            _ = this._richTextBox.Focus();
-            this._richTextBox.Selection.Select(
-                this._richTextBox.Document.ContentStart,
-                this._richTextBox.Document.ContentEnd);
-        }), DispatcherPriority.Loaded);
     }
 
     /// <summary>
@@ -85,7 +69,7 @@ public class SelectableTextBox : UserControl, IPopoverExit {
             PagePadding = new Thickness(0),
             TextAlignment = TextAlignment.Left,
             FontFamily = ThemeManager.FontFamily(),
-            FontSize = (double)TxtSz.normal, // 10px from TxtSz enum
+            FontSize = 11,
             LineHeight = 15.0 // Matching Body style line height
         };
         // Set foreground from DynamicResource

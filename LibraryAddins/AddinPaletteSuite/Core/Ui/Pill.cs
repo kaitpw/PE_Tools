@@ -41,7 +41,7 @@ public class Pill : Border {
         this._textBlock.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorSecondaryBrush");
 
         // Apply Caption typography style - resources are now loaded
-        var captionStyle = ThemeManager.GetTypographyStyle(FontTypography.Caption, null, this);
+        var captionStyle = ThemeManager.GetTypographyStyle(FontTypography.Caption, this);
         this._textBlock.Style = captionStyle;
 
         // Set up binding for Text property

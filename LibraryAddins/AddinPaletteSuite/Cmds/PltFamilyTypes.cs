@@ -1,4 +1,5 @@
 using AddinPaletteSuite.Core;
+using PeRevit.Ui;
 using System.Windows.Media.Imaging;
 
 namespace AddinPaletteSuite.Cmds;
@@ -17,7 +18,6 @@ public class PltFamilyTypes(Family family) : BaseCmdPalette<FamilySymbol, Family
 
     public override IEnumerable<PaletteAction<FamilyTypePaletteItem>> GetActions(UIApplication uiApp) {
         var activeView = uiApp.ActiveUIDocument.ActiveView;
-        var currentDoc = uiApp.ActiveUIDocument.Document;
 
         return new List<PaletteAction<FamilyTypePaletteItem>> {
             new() {
@@ -30,12 +30,12 @@ public class PltFamilyTypes(Family family) : BaseCmdPalette<FamilySymbol, Family
                         uiApp.ActiveUIDocument.PromptForFamilyInstancePlacement(symbol);
                     } catch (OperationCanceledException) {
                         // User canceled placement - this is expected behavior, not an error
-                    } catch (Exception ex) when (ex.Message.Contains("aborted") || ex.Message.Contains("canceled")) {
-                        // Handle Revit-specific cancellation exceptions
+                    } catch (Exception ex) {
+                        new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
                     }
                 },
                 CanExecute = item => {
-                    if (item is not FamilyTypePaletteItem familyTypeItem) return false;
+                    if (item == null) return false;
 
                     // Check if active view is valid for placing families
                     // Same logic as CmdPltViews - exclude templates, legends, sheets, schedules, etc.
