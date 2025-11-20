@@ -25,7 +25,9 @@ public partial class SelectableListViewItem : Border {
     private void ApplyStyling() {
         // Border styling (layout only, colors from XAML DynamicResources)
         this.CornerRadius = new CornerRadius((double)UiSz.l);
-        _ = this.WithPadding(UiSz.ss, UiSz.s, UiSz.ll, UiSz.m);
+        new BorderSpec()
+            .Padding(UiSz.ss, UiSz.s, UiSz.ll, UiSz.m)
+            .ApplyToBorder(this);
 
         // Icon styling
         this.IconImage.Width = (double)UiSz.ll;

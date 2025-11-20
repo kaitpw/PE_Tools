@@ -128,12 +128,13 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : class, I
         this.StatusBarBorder.ClipToBounds = true;
 
         // Apply component-specific border and spacing styles
-        _ = this.SearchBoxBorder
-            .WithSpacing(0, 0)
-            .WithPadding(UiSz.ll, UiSz.ll, UiSz.ll, UiSz.ll);
+        new BorderSpec()
+            .Padding(UiSz.ll, UiSz.ll, UiSz.ll, UiSz.ll)
+            .ApplyToBorder(this.SearchBoxBorder);
 
-        _ = this.StatusBarBorder
-            .WithPadding(UiSz.l, UiSz.s, UiSz.l, UiSz.s);
+        new BorderSpec()
+            .Padding(UiSz.l, UiSz.s, UiSz.l, UiSz.s)
+            .ApplyToBorder(this.StatusBarBorder);
 
         // Apply caption typography to status bar text (TextBlock)
         // this.ItemCountText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);

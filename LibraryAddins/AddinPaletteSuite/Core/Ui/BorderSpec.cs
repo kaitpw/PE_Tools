@@ -209,4 +209,30 @@ public class BorderSpec {
 
         return border;
     }
+
+    /// <summary>
+    ///     Applies all configured properties to an existing Border.
+    /// </summary>
+    public void ApplyToBorder(Border border) {
+        border.CornerRadius = this._cornerRadius;
+        border.BorderThickness = this._borderThickness;
+        border.Padding = this._padding;
+        border.Margin = this._margin;
+        border.HorizontalAlignment = this._horizontalAlignment;
+        border.VerticalAlignment = this._verticalAlignment;
+        border.MinWidth = this._widths.minWidth;
+        border.Width = this._widths.width;
+        border.MaxWidth = this._widths.maxWidth;
+        border.MinHeight = this._heights.minHeight;
+        border.Height = this._heights.height;
+        border.MaxHeight = this._heights.maxHeight;
+        border.Effect = this._dropShadowEffect;
+
+        // Apply brushes - use SetResourceReference for dynamic resources
+        if (!string.IsNullOrEmpty(this._borderBrushResourceKey))
+            border.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, this._borderBrushResourceKey);
+
+        if (!string.IsNullOrEmpty(this._backgroundResourceKey))
+            border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, this._backgroundResourceKey);
+    }
 }
