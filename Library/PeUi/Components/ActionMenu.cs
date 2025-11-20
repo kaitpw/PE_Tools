@@ -16,19 +16,20 @@ namespace PeUi.Components;
 ///     Non-generic base class for ActionMenu
 ///     Provides popover functionality and resource loading
 /// </summary>
-public class ActionMenu : UserControl, IPopoverExit {
-    protected ActionMenu() => ThemeManager.LoadWpfUiResources(this);
-
+public class ActionMenu : RevitHostedUserControl, IPopoverExit {
+    protected IEnumerable? _actions;
     protected ContextMenu? Menu { get; set; }
     public event EventHandler? ExitRequested;
-    public UIElement? ReturnFocusTarget { get; set; }
+    public IEnumerable<Key> CloseKeys { get; set; } = Array.Empty<Key>();
 
     public virtual void RequestExit() {
         if (this.Menu != null) this.Menu.IsOpen = false;
-        _ = this.ReturnFocusTarget?.Focus();
+        this.OnExitRequested();
     }
 
-    protected virtual void OnExitRequested() => this.ExitRequested?.Invoke(this, EventArgs.Empty);
+    public bool ShouldCloseOnKey(Key key) => this.CloseKeys.Contains(key);
+
+    protected void OnExitRequested() => this.ExitRequested?.Invoke(this, EventArgs.Empty);
 }
 
 /// <summary>
@@ -36,12 +37,13 @@ public class ActionMenu : UserControl, IPopoverExit {
 ///     Context menu component for displaying available actions with arrow key navigation
 /// </summary>
 public class ActionMenu<TItem> : ActionMenu where TItem : class, IPaletteListItem {
-    private IEnumerable? _actions;
     private TItem? _currentItem;
 
-    public ActionMenu() {
+    public ActionMenu(IEnumerable<Key> closeKeys) {
         // Call base constructor to load XAML resources
         this.Menu = new ContextMenu { StaysOpen = false, Placement = PlacementMode.Right };
+
+        this.CloseKeys = closeKeys;
 
         this.Menu.Closed += (_, _) => this.OnExitRequested();
         this.Menu.PreviewKeyDown += this.ContextMenu_PreviewKeyDown;
@@ -54,8 +56,6 @@ public class ActionMenu<TItem> : ActionMenu where TItem : class, IPaletteListIte
             this.RebuildMenu();
         }
     }
-
-    public override void RequestExit() => base.RequestExit();
 
     public event EventHandler<PaletteAction<TItem>>? ActionClicked;
 
@@ -120,15 +120,9 @@ public class ActionMenu<TItem> : ActionMenu where TItem : class, IPaletteListIte
     }
 
     private void ContextMenu_PreviewKeyDown(object sender, KeyEventArgs e) {
-        switch (e.Key) {
-        case Key.Escape:
+        if (this.ShouldCloseOnKey(e.Key)) {
             e.Handled = true;
             this.RequestExit();
-            break;
-        case Key.Left:
-            e.Handled = true;
-            this.RequestExit();
-            break;
         }
     }
 

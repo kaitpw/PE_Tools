@@ -1,5 +1,5 @@
 #nullable enable
-using System.Windows;
+using System.Windows.Input;
 
 namespace PeUi.Core;
 
@@ -8,9 +8,9 @@ namespace PeUi.Core;
 /// </summary>
 public interface IPopoverExit {
     /// <summary>
-    ///     Sets the target element to return focus to when exiting
+    ///     Keys that will trigger the popover to close when pressed
     /// </summary>
-    UIElement? ReturnFocusTarget { get; set; }
+    IEnumerable<Key> CloseKeys { get; set; }
 
     /// <summary>
     ///     Event raised when the popover requests to exit
@@ -21,4 +21,9 @@ public interface IPopoverExit {
     ///     Requests the popover to exit and return focus
     /// </summary>
     void RequestExit();
+
+    /// <summary>
+    ///     Checks if the given key should close the popover
+    /// </summary>
+    bool ShouldCloseOnKey(Key key);
 }

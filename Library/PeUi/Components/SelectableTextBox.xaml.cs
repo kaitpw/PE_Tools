@@ -3,22 +3,27 @@
 using PeUi.Core;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Wpf.Ui.Markup;
 using WpfUiRichTextBox = Wpf.Ui.Controls.RichTextBox;
-using Visibility = System.Windows.Visibility;
 
 namespace PeUi.Components;
 
 /// <summary>
 ///     Selectable text display component with keyboard navigation
+///     Popover component that displays text content positioned relative to a target element
 /// </summary>
-public class SelectableTextBox : UserControl, IPopoverExit {
+public class SelectableTextBox : RevitHostedUserControl, IPopoverExit {
+    private readonly Popup _popup;
     private readonly WpfUiRichTextBox _richTextBox;
 
-    public SelectableTextBox() {
+    public SelectableTextBox(IEnumerable<Key> closeKeys) {
         this.Focusable = true;
+
+        this.CloseKeys = closeKeys;
 
         this._richTextBox = new WpfUiRichTextBox {
             IsReadOnly = true,
@@ -32,7 +37,7 @@ public class SelectableTextBox : UserControl, IPopoverExit {
         this._richTextBox.PreviewKeyDown += this.RichTextBox_PreviewKeyDown;
         this._richTextBox.LostFocus += this.RichTextBox_LostFocus;
 
-        this.Content = new BorderSpec()
+        var border = new BorderSpec()
             .Background(ThemeResource.ApplicationBackgroundBrush)
             .HorizontalAlign(HorizontalAlignment.Left)
             .VerticalAlign(VerticalAlignment.Top)
@@ -41,29 +46,60 @@ public class SelectableTextBox : UserControl, IPopoverExit {
             .Border(thickness: UiSz.ss)
             .Padding(UiSz.m)
             .CreateAround(this._richTextBox);
-    }
 
-    public UIElement? ReturnFocusTarget { get; set; }
+        this._popup = new Popup {
+            AllowsTransparency = true,
+            PopupAnimation = PopupAnimation.Fade,
+            StaysOpen = false,
+            Placement = PlacementMode.Left,
+            HorizontalOffset = 0,
+            VerticalOffset = 0,
+            Child = border
+        };
+
+        this._popup.Closed += (_, _) => this.OnExitRequested();
+        this._popup.PreviewKeyDown += this.Popup_PreviewKeyDown;
+
+        // The UserControl's Content is the Popup - it only appears when IsOpen = true
+        this.Content = this._popup;
+    }
 
     public event EventHandler? ExitRequested;
+    public IEnumerable<Key> CloseKeys { get; set; } = Array.Empty<Key>();
+
+    public bool IsOpen => this._popup.IsOpen;
 
     public void RequestExit() {
-        this.ExitRequested?.Invoke(this, EventArgs.Empty);
-        _ = this.ReturnFocusTarget?.Focus();
+        this.Hide();
+        this.OnExitRequested();
     }
 
+    public bool ShouldCloseOnKey(Key key) => this.CloseKeys.Contains(key);
+
+    protected void OnExitRequested() => this.ExitRequested?.Invoke(this, EventArgs.Empty);
+
     /// <summary>
-    ///     Shows the text box with the specified text and focuses it
+    ///     Shows the text box positioned to the left of the target element
     /// </summary>
-    public void Show(string? text = null) {
+    public void Show(UIElement placementTarget, string? text = null, bool takeFocus = true) {
+        if (placementTarget == null) return;
+
         this.UpdateContent(text);
-        this.Visibility = Visibility.Visible;
+        this._popup.PlacementTarget = placementTarget;
+        this._popup.IsOpen = true;
+
+        if (takeFocus) {
+            _ = this.Dispatcher.BeginInvoke(new Action(() => _ = this._richTextBox.Focus()),
+                DispatcherPriority.Loaded);
+        }
     }
 
     /// <summary>
-    ///     Hides the text box
+    ///     Hides the text box popover
     /// </summary>
-    public void Hide() => this.Visibility = Visibility.Collapsed;
+    public void Hide() {
+        if (this._popup != null) this._popup.IsOpen = false;
+    }
 
     private void UpdateContent(string? text) {
         this._richTextBox.Document = new FlowDocument {
@@ -76,12 +112,22 @@ public class SelectableTextBox : UserControl, IPopoverExit {
         // Set foreground from DynamicResource
         this._richTextBox.Document.SetResourceReference(FlowDocument.ForegroundProperty, "TextFillColorSecondaryBrush");
 
-        this._richTextBox.Document.Blocks.Add(new Paragraph(new Run(text)));
+        this._richTextBox.Document.Blocks.Clear();
+        if (!string.IsNullOrEmpty(text)) this._richTextBox.Document.Blocks.Add(new Paragraph(new Run(text)));
+    }
+
+    private void Popup_PreviewKeyDown(object sender, KeyEventArgs e) {
+        if (this.ShouldCloseOnKey(e.Key)) {
+            e.Handled = true;
+            this.RequestExit();
+        }
     }
 
     private void RichTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
-        e.Handled = true;
-        this.RequestExit();
+        if (this.ShouldCloseOnKey(e.Key)) {
+            e.Handled = true;
+            this.RequestExit();
+        }
     }
 
     private void RichTextBox_LostFocus(object sender, RoutedEventArgs e) {

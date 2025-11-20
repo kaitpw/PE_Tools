@@ -18,23 +18,23 @@ namespace PeUi.Components;
 ///     Non-generic base class for FilterBox.xaml
 ///     This matches the XAML x:Class declaration and provides access to XAML-defined controls
 /// </summary>
-public partial class FilterBox : UserControl, IPopoverExit {
+public partial class FilterBox : RevitHostedUserControl, IPopoverExit {
     private Storyboard? _collapseStoryboard;
     private Storyboard? _expandStoryboard;
     private bool _isExpanded;
 
-    protected FilterBox() {
+    protected FilterBox(IEnumerable<Key> closeKeys) {
+        this.CloseKeys = closeKeys;
         this.InitializeComponent();
         this.Loaded += this.FilterBox_Loaded;
     }
 
-    public UIElement? ReturnFocusTarget { get; set; }
     public event EventHandler? ExitRequested;
+    public IEnumerable<Key> CloseKeys { get; set; } = Array.Empty<Key>();
 
-    public void RequestExit() {
-        this.ExitRequested?.Invoke(this, EventArgs.Empty);
-        _ = this.ReturnFocusTarget?.Focus();
-    }
+    public void RequestExit() => this.ExitRequested?.Invoke(this, EventArgs.Empty);
+
+    public bool ShouldCloseOnKey(Key key) => this.CloseKeys.Contains(key);
 
     private void FilterBox_Loaded(object sender, RoutedEventArgs e) => this.CreateStoryboards();
 
@@ -81,9 +81,10 @@ public partial class FilterBox : UserControl, IPopoverExit {
     }
 
     /// <summary>
-    ///     Focuses the FilterBox by expanding and focusing the AutoSuggestBox
+    ///     Shows the FilterBox (expands and focuses)
     /// </summary>
-    public new void Focus() => this.Expand();
+    public void Show() => this.Expand();
+
 
     protected void IconBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) =>
         _ = this.FilterAutoSuggestBox.Focus();
@@ -139,7 +140,7 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
     private readonly TViewModel _viewModel;
     private string? _availableValuesPropertyName;
 
-    public FilterBox(TViewModel viewModel) {
+    public FilterBox(TViewModel viewModel, IEnumerable<Key> closeKeys) : base(closeKeys) {
         this._viewModel = viewModel;
         this.FilterAutoSuggestBox.SuggestionChosen += this.FilterAutoSuggestBox_SuggestionChosen;
         this.FilterAutoSuggestBox.PreviewKeyDown += this.FilterAutoSuggestBox_PreviewKeyDown;
@@ -160,12 +161,13 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
     ///     Handle escaping and unfocusing the FilterBox here.
     /// </summary>
     private void FilterAutoSuggestBox_PreviewKeyDown(object sender, KeyEventArgs e) {
-        // handle return focus to main search box and hanlde return focus to filter searchbox. 
-        if (e.Key is Key.Tab or Key.Escape) {
+        // Check if this key should close the popover
+        if (this.ShouldCloseOnKey(e.Key)) {
             e.Handled = true;
             this.UpdateSelectedFilterValue(null);
             this.RequestExit();
         } else if (e.Key is Key.Enter) {
+            // Enter also closes but updates the value first
             this.UpdateSelectedFilterValue(this.FilterAutoSuggestBox.Text);
             e.Handled = true;
             this.RequestExit();

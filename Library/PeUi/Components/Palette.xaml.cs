@@ -1,12 +1,11 @@
 using PeUi.Core;
 using PeUi.ViewModels;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Visibility = System.Windows.Visibility;
-using WpfUiListViewItem = Wpf.Ui.Controls.ListViewItem;
+using Grid = System.Windows.Controls.Grid;
 
 
 namespace PeUi.Components;
@@ -15,7 +14,7 @@ namespace PeUi.Components;
 ///     Non-generic base class for SelectablePalette.xaml
 ///     This matches the XAML x:Class declaration and provides access to XAML-defined controls
 /// </summary>
-public partial class Palette : UserControl, ICloseRequestable {
+public partial class Palette : RevitHostedUserControl, ICloseRequestable {
     /// <summary>
     ///     Attached property to store ActionBinding for child controls to access
     /// </summary>
@@ -54,9 +53,8 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
     private readonly ActionBinding<TItem> _actionBinding;
     private readonly ActionMenu<TItem> _actionMenu;
     private readonly CustomKeyBindings? _customKeyBindings;
-    private readonly SearchFilterBox<PaletteViewModel<TItem>> _searchFilterBox;
+    private readonly FilterBox<PaletteViewModel<TItem>>? _filterBox;
     private readonly SelectableTextBox _tooltipPanel;
-    private readonly Popup _tooltipPopup;
     private bool _isSearchBoxHidden;
 
     public Palette(
@@ -67,43 +65,73 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
         this._customKeyBindings = customKeyBindings;
         // Base class constructor sets DataContext and calls InitializeComponent()
 
-        // Create SearchFilterBox with optional filter (auto-detects if filtering is enabled)
+        // Load resources for SearchTextBox
+        ThemeManager.LoadWpfUiResources(this.SearchTextBox);
+
+        // Create FilterBox if filtering is enabled
         var hasFiltering = viewModel.AvailableFilterValues != null;
-        this._searchFilterBox = new SearchFilterBox<PaletteViewModel<TItem>>(
-            viewModel,
-            hasFiltering ? "AvailableFilterValues" : null,
-            hasFiltering ? "SelectedFilterValue" : null
-        );
+        if (hasFiltering) {
+            this._filterBox = new FilterBox<PaletteViewModel<TItem>>(viewModel, new[] { Key.Tab, Key.Escape });
+            this._filterBox.BindToViewModel("AvailableFilterValues", "SelectedFilterValue");
+            this._filterBox.ExitRequested += (_, _) => _ = this.SearchTextBox.Focus();
 
-        // Add SearchFilterBox to SearchBoxBorder
-        this.SearchBoxBorder.Child = this._searchFilterBox.Container;
+            Grid.SetColumn(this._filterBox, 1);
+            _ = this.SearchBoxGrid.Children.Add(this._filterBox);
+        }
 
-        this.ApplyStyles();
+        new BorderSpec()
+            .Border()
+            .ApplyToBorder(this.MainBorder);
+        this.MainBorder.ClipToBounds = true;
+
+        new BorderSpec()
+            .Border((UiSz.l, UiSz.l, UiSz.none, UiSz.none))
+            .Padding(UiSz.ll, UiSz.ll, UiSz.ll, UiSz.ll)
+            .ApplyToBorder(this.SearchBoxBorder);
+
+        new BorderSpec()
+            .Border((UiSz.none, UiSz.none, UiSz.l, UiSz.l))
+            .Padding(UiSz.l, UiSz.s, UiSz.l, UiSz.s)
+            .ApplyToBorder(this.StatusBarBorder);
+        this.StatusBarBorder.ClipToBounds = true;
 
         this._actionBinding = new ActionBinding<TItem>();
         this._actionBinding.RegisterRange(actions);
-        this._actionMenu = new ActionMenu<TItem>();
+        this._actionMenu = new ActionMenu<TItem>([Key.Escape, Key.Left]);
 
         // Store ActionBinding as attached property so child controls can access it
         SetActionBinding(this, this._actionBinding);
 
-        // Create tooltip popup and panel programmatically
-        this._tooltipPanel = new SelectableTextBox();
-        this._tooltipPopup = new Popup {
-            AllowsTransparency = true,
-            PopupAnimation = PopupAnimation.Fade,
-            StaysOpen = false,
-            Child = this._tooltipPanel
-        };
+        // Create tooltip panel programmatically
+        this._tooltipPanel = new SelectableTextBox([Key.Escape, Key.Up, Key.Down, Key.Right]);
 
         // Wire up event handlers
         this.Loaded += this.UserControl_Loaded;
-        this.KeyDown += this.UserControl_KeyDown;
         this.PreviewKeyDown += this.UserControl_PreviewKeyDown;
-        this._searchFilterBox.SearchTextBox.PreviewKeyDown += this.SearchTextBox_PreviewKeyDown;
     }
 
+
     private PaletteViewModel<TItem> ViewModel => this.DataContext as PaletteViewModel<TItem>;
+
+    /// <summary>
+    ///     Executes the selected item with the given modifiers
+    /// </summary>
+    private async Task<bool> ExecuteItem(
+        TItem selectedItem,
+        ModifierKeys modifiers = ModifierKeys.None,
+        Key key = Key.Enter
+    ) {
+        var result = await this._actionBinding.TryExecuteAsync(
+            selectedItem, key, modifiers);
+
+        if (result.Success) {
+            this.ViewModel.RecordUsage();
+            this.RequestClose(!result.IsNextPalette);
+            return true;
+        }
+
+        return false;
+    }
 
     /// <summary>
     ///     Hides the search box and sets up alternative focus handling for keyboard-only navigation
@@ -116,268 +144,125 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
         this.Focusable = true;
     }
 
-    private void ApplyStyles() {
-        // Apply corner radius to main border and child borders
-        this.MainBorder.CornerRadius = ThemeManager.Radius;
-        this.MainBorder.ClipToBounds = true;
-
-        // Round top corners of search box
-        var topRadius = ThemeManager.Radius.TopLeft;
-        this.SearchBoxBorder.CornerRadius = new CornerRadius(topRadius, topRadius, 0, 0);
-
-        // Round bottom corners of status bar
-        this.StatusBarBorder.CornerRadius = new CornerRadius(0, 0, topRadius, topRadius);
-        this.StatusBarBorder.ClipToBounds = true;
-
-        // Apply component-specific border and spacing styles
-        new BorderSpec()
-            .Padding(UiSz.ll, UiSz.ll, UiSz.ll, UiSz.ll)
-            .ApplyToBorder(this.SearchBoxBorder);
-
-        new BorderSpec()
-            .Padding(UiSz.l, UiSz.s, UiSz.l, UiSz.s)
-            .ApplyToBorder(this.StatusBarBorder);
-
-        // Apply caption typography to status bar text (TextBlock)
-        // this.ItemCountText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
-        // this.HelpText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
-    }
-
-
     private void UserControl_Loaded(object sender, RoutedEventArgs e) {
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
 
-        // Focus on appropriate element based on whether search box is hidden
-        if (this._isSearchBoxHidden) {
-            // Search box is hidden - focus on the UserControl itself to receive keyboard input
+        // If search box is hidden - focus on the UserControl itself to receive keyboard input
+        if (this._isSearchBoxHidden)
             _ = this.Focus();
-        } else {
-            // Normal behavior - focus on search box
-            _ = this._searchFilterBox.SearchTextBox.Focus();
-            this._searchFilterBox.SearchTextBox.SelectAll();
+        else {
+            _ = this.SearchTextBox.Focus();
+            this.SearchTextBox.SelectAll();
         }
 
         this.ItemListView.ItemMouseLeftButtonUp += async (_, e) => {
             if (e.OriginalSource is not FrameworkElement source) return;
             var item = source.DataContext as TItem;
             if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
-            var modifiers = Keyboard.Modifiers;
-            var result = await this._actionBinding.TryExecuteAsync(
-                item, modifiers);
+            _ = await this.ExecuteItem(item, Keyboard.Modifiers);
+        };
 
-            if (result.Success) {
-                this.ViewModel?.RecordUsage();
-                this.RequestClose(!result.IsNextPalette);
+        this.ItemListView.ItemMouseRightButtonUp += (_, e) => {
+            if (e.OriginalSource is not FrameworkElement source) return;
+            var item = source.DataContext as TItem;
+            if (item == null) return;
+            if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
+
+            e.Handled = this.ShowPopover(placementTarget => {
+                this._actionMenu.Actions = this._actionBinding.GetAllActions().ToList();
+                this._actionMenu.Show(placementTarget, item);
+            });
+        };
+
+        // Track last shown tooltip item to prevent flickering
+        TItem lastTooltipItem = null;
+
+        this.ItemListView.ItemMouseMove += (_, e) => {
+            if (e.OriginalSource is not FrameworkElement source) return;
+            var item = source.DataContext as TItem;
+
+            // Hide tooltip if mouse moved away from items
+            if (item == null) {
+                lastTooltipItem = null;
+                this._tooltipPanel.Hide();
+                return;
             }
+
+            // Skip if no tooltip text or already showing for this item
+            if (string.IsNullOrEmpty(item.TextInfo) || item == lastTooltipItem) return;
+
+            // Update ViewModel selection and show tooltip
+            if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
+            _ = this.ShowPopover(placementTarget => {
+                lastTooltipItem = item;
+                this._tooltipPanel.Show(placementTarget, item.TextInfo);
+            });
+        };
+
+        this.ItemListView.ItemMouseLeave += (_, e) => {
+            lastTooltipItem = null;
+            this._tooltipPanel.Hide();
         };
 
         this.ItemListView.SelectionChanged += (_, e) => {
             if (this.ViewModel.SelectedItem != null) this.ItemListView.ScrollIntoView(this.ViewModel.SelectedItem);
-
-            // Close popovers when selection changes
-            this.HideActionsPopover();
-            this.HideTooltipPopover();
         };
 
         // Set up action menu handlers
-        this._actionMenu.ExitRequested += (_, _) => this.HideActionsPopover();
-        this._actionMenu.ReturnFocusTarget = this._searchFilterBox.SearchTextBox;
+        this._actionMenu.ExitRequested += (_, _) => this.Focus();
         this._actionMenu.ActionClicked += this.ActionMenu_ActionClicked;
 
         // Set up tooltip popover exit handler
-        this._tooltipPanel.ExitRequested += (_, _) => this.HideTooltipPopover();
-        this._tooltipPanel.ReturnFocusTarget = this._searchFilterBox.SearchTextBox;
+        this._tooltipPanel.ExitRequested += (_, _) => this.Focus();
     }
 
     private async void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
-        // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is not DependencyObject focusedElement) return;
-        if (this._tooltipPanel.IsAncestorOf(focusedElement)) return;
+        try {
+            // Don't handle keys if focus is in a child RevitHostedUserControl (popover or FilterBox)
+            if (Keyboard.FocusedElement is not DependencyObject focusedElement) return;
 
-        // If search box is hidden, handle custom key bindings here at the UserControl level
-        if (this._isSearchBoxHidden && this._customKeyBindings != null) {
+            // Walk up the visual tree to find if focus is inside another RevitHostedUserControl
+            var current = focusedElement;
+            while (current != null) {
+                if (current is RevitHostedUserControl control && control != this)
+                    return; // Focus is in a child component, let it handle its own keys
+                current = VisualTreeHelper.GetParent(current);
+            }
+
             var modifiers = e.KeyboardDevice.Modifiers;
-            if (this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction))
+            var selectedItem = this.ViewModel.SelectedItem;
+
+            // Check custom key bindings first (and handle no search box palettes)
+            if (this._customKeyBindings != null &&
+                this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction))
                 e.Handled = await this.HandleNavigationAction(navAction);
-        }
-    }
-
-    private async void SearchTextBox_PreviewKeyDown(object sender, KeyEventArgs e) {
-        var modifiers = e.KeyboardDevice.Modifiers;
-
-        // Check custom key bindings first
-        if (this._customKeyBindings != null &&
-            this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction)) {
-            e.Handled = await this.HandleNavigationAction(navAction);
-            return;
-        }
-
-        // Handle Tab key to focus FilterBox if filtering is enabled
-        if (e.Key == Key.Tab && modifiers == ModifierKeys.None) {
-            if (this._searchFilterBox.HasFilter) {
+            else if (e.Key == Key.Escape) {
+                this.RequestClose();
                 e.Handled = true;
-                _ = this.Dispatcher.BeginInvoke(this._searchFilterBox.FocusFilter, DispatcherPriority.Input);
-                return;
-            }
-        }
-
-        // Handle Enter key with modifiers
-        if (e.Key == Key.Enter) {
-            if (this.ViewModel?.SelectedItem != null) {
-                var result = await this._actionBinding.TryExecuteAsync(
-                    this.ViewModel.SelectedItem, Key.Enter, modifiers);
-
-                if (result.Success) {
-                    this.ViewModel.RecordUsage();
-                    this.RequestClose(!result.IsNextPalette);
-                }
-
-                e.Handled = true;
-                return;
-            }
-        }
-
-        // Handle Left arrow key to show tooltip popover
-        if (e.Key == Key.Left) {
-            if (this.ViewModel?.SelectedItem != null) {
-                this.PositionTooltipPopover();
-                this._tooltipPopup.IsOpen = true;
-                _ = this.Dispatcher.BeginInvoke(new Action(() => {
-                    var tooltipText = this.ViewModel.SelectedItem?.TextInfo;
-                    this._tooltipPanel.Show(tooltipText);
-                }), DispatcherPriority.Loaded);
-                e.Handled = true;
-            }
-
-            return;
-        }
-
-        // Handle Right arrow key to show actions popover
-        if (e.Key == Key.Right) {
-            if (this.ViewModel?.SelectedItem != null) {
-                var actions = this._actionBinding.GetAllActions().ToList();
-                if (actions.Count > 0) {
-                    this.ItemListView.ScrollIntoView(this.ViewModel.SelectedItem);
-                    this.ItemListView.UpdateLayout();
-                    var selectedItem = this.ViewModel.SelectedItem;
-                    var freshListViewItem =
-                        this.ItemListView.ItemContainerGenerator.ContainerFromItem(selectedItem) as WpfUiListViewItem;
-                    _ = this.Dispatcher.BeginInvoke(new Action(() => {
-                        if (freshListViewItem != null) {
-                            this._actionMenu.Actions = actions;
-                            this._actionMenu.Show(freshListViewItem, selectedItem);
-                        }
-                    }), DispatcherPriority.Loaded);
-                }
-
-                e.Handled = true;
-            }
-        }
-    }
-
-    private async void UserControl_KeyDown(object sender, KeyEventArgs e) {
-        if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
-
-        // Don't handle keys if focus is in a popover - let the popover handle its own keys
-        if (Keyboard.FocusedElement is DependencyObject focusedElement) {
-            if (this._tooltipPanel.IsAncestorOf(focusedElement))
-                return; // Let tooltip popover handle its keys
-
-            // Don't handle keys if focus is in the FilterBox
-            if (this._searchFilterBox.IsFilterFocused(focusedElement))
-                return; // Let FilterBox handle its own keys
-        }
-
-        var selectedItem = this.ViewModel.SelectedItem;
-
-        switch (e.Key) {
-        case Key.Escape:
-            // If no popover is open, close the palette
-            this.RequestClose();
-            e.Handled = true;
-            break;
-
-        case Key.Enter:
-            // Enter is handled in SearchTextBox_PreviewKeyDown when focus is in search box
-            // This handler is a fallback for when focus is elsewhere
-            if (selectedItem != null) {
-                var modifiers = e.KeyboardDevice.Modifiers;
-                var result = await this._actionBinding.TryExecuteAsync(
-                    selectedItem, Key.Enter, modifiers);
-
-                if (result.Success) {
-                    this.ViewModel.RecordUsage();
-                    this.RequestClose(!result.IsNextPalette);
-                }
-            }
-
-            e.Handled = true;
-            break;
-
-        case Key.Left:
-            if (selectedItem != null) this.PositionTooltipPopover();
-            this._tooltipPopup.IsOpen = true;
-            e.Handled = this.ShowPopover(() => {
-                var tooltipText = selectedItem.TextInfo;
-                this._tooltipPanel.Show(tooltipText);
-            });
-            break;
-
-        case Key.Right:
-            if (selectedItem != null) {
-                e.Handled = this.ShowPopover(() => {
-                    var actions = this._actionBinding.GetAllActions().ToList();
-                    this._actionMenu.Actions = actions;
-                    var listViewItem =
-                        this.ItemListView.ItemContainerGenerator.ContainerFromItem(selectedItem) as WpfUiListViewItem;
-                    if (listViewItem != null) this._actionMenu.Show(listViewItem, selectedItem);
+            } else if (e.Key == Key.Enter && selectedItem != null)
+                e.Handled = await this.ExecuteItem(selectedItem, modifiers);
+            else if (e.Key == Key.Tab && modifiers == ModifierKeys.None && this._filterBox != null)
+                e.Handled = this.ShowPopover(_ => this._filterBox?.Show());
+            else if (e.Key == Key.Left && selectedItem != null) {
+                e.Handled = this.ShowPopover(placementTarget =>
+                    this._tooltipPanel.Show(placementTarget, selectedItem.TextInfo));
+            } else if (e.Key == Key.Right && selectedItem != null) {
+                e.Handled = this.ShowPopover(placementTarget => {
+                    this._actionMenu.Actions = this._actionBinding.GetAllActions().ToList();
+                    this._actionMenu.Show(placementTarget, selectedItem);
                 });
             }
-
-            break;
-
-        case Key.Tab: // Prevent tab from changing focus
-            e.Handled = true;
-            break;
-        }
+        } catch { }
     }
 
-    private bool ShowPopover(Action action) {
+    private bool ShowPopover(Action<UIElement> action) {
         var selectedItem = this.ViewModel?.SelectedItem;
         if (selectedItem == null) return false;
-        this.ItemListView.ScrollIntoView(this.ViewModel.SelectedItem);
         this.ItemListView.UpdateLayout();
-        _ = this.Dispatcher.BeginInvoke(new Action(() => action()), DispatcherPriority.Loaded);
+        var container = this.ItemListView.ContainerFromItem(selectedItem);
+        if (container == null) return false;
+        _ = this.Dispatcher.BeginInvoke(() => action(container), DispatcherPriority.Loaded);
         return true;
-    }
-
-    private void HideActionsPopover() => this._actionMenu.Hide();
-
-    private void HideTooltipPopover() {
-        this._tooltipPanel.Hide();
-        this._tooltipPopup.IsOpen = false;
-    }
-
-    private void PositionTooltipPopover() {
-        if (this.ViewModel?.SelectedItem == null) return;
-
-        var listViewItem =
-            this.ItemListView.ItemContainerGenerator
-                .ContainerFromItem(this.ViewModel.SelectedItem) as WpfUiListViewItem;
-        if (listViewItem == null) {
-            // Try to generate container if it doesn't exist yet
-            this.ItemListView.UpdateLayout();
-            listViewItem =
-                this.ItemListView.ItemContainerGenerator.ContainerFromItem(this.ViewModel.SelectedItem) as
-                    WpfUiListViewItem;
-            if (listViewItem == null) return;
-        }
-
-        // Position popover to the left of the selected item
-        this._tooltipPopup.PlacementTarget = listViewItem;
-        this._tooltipPopup.Placement = PlacementMode.Left;
-        this._tooltipPopup.HorizontalOffset = 0;
-        this._tooltipPopup.VerticalOffset = 0;
     }
 
     /// <summary>
@@ -396,19 +281,7 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
             return true;
 
         case NavigationAction.Execute:
-            if (this.ViewModel.SelectedItem != null) {
-                var result = await this._actionBinding.TryExecuteAsync(
-                    this.ViewModel.SelectedItem, Key.Enter, ModifierKeys.None);
-
-                if (result.Success) {
-                    this.ViewModel.RecordUsage();
-                    this.RequestClose(!result.IsNextPalette);
-                }
-
-                return true;
-            }
-
-            return false;
+            return await this.ExecuteItem(this.ViewModel.SelectedItem);
 
         case NavigationAction.Cancel:
             this.RequestClose();
@@ -423,7 +296,6 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
         if (this.ViewModel?.SelectedItem == null) return;
         var isNextPalette = await this._actionBinding.ExecuteActionAsync(action, this.ViewModel.SelectedItem);
         this.ViewModel.RecordUsage();
-        this.HideActionsPopover();
         this.RequestClose(!isNextPalette);
     }
 }

@@ -59,6 +59,27 @@ public class BorderSpec {
     }
 
     /// <summary>
+    ///     Sets the border line properties using a WPF.UI theme resource for the line color.
+    /// </summary>
+    public BorderSpec Border(
+        (UiSz tl, UiSz tr, UiSz br, UiSz bl) radius,
+        UiSz thickness = UiSz.none,
+        ThemeResource lineColor = ThemeResource.Unknown
+    ) {
+        (double tl, double tr, double br, double bl) radii = (0, 0, 0, 0);
+        if (radius.tl != UiSz.none) radii.tl = (double)radius.tl;
+        if (radius.tr != UiSz.none) radii.tr = (double)radius.tr;
+        if (radius.br != UiSz.none) radii.br = (double)radius.br;
+        if (radius.bl != UiSz.none) radii.bl = (double)radius.bl;
+        this._cornerRadius = new CornerRadius(radii.tl, radii.tr, radii.br, radii.bl);
+
+        this._borderThickness = new Thickness((double)thickness);
+        if (lineColor != ThemeResource.Unknown) this._borderBrushResourceKey = lineColor.ToString();
+
+        return this;
+    }
+
+    /// <summary>
     ///     Sets the background color using a WPF.UI theme resource.
     /// </summary>
     public BorderSpec Background(ThemeResource bgFillColor) {
@@ -229,9 +250,10 @@ public class BorderSpec {
         border.Effect = this._dropShadowEffect;
 
         // Apply brushes - use SetResourceReference for dynamic resources
-        if (!string.IsNullOrEmpty(this._borderBrushResourceKey))
+        if (!string.IsNullOrEmpty(this._borderBrushResourceKey)) {
             border.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty,
                 this._borderBrushResourceKey);
+        }
 
         if (!string.IsNullOrEmpty(this._backgroundResourceKey))
             border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, this._backgroundResourceKey);
