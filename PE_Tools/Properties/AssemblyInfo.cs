@@ -14,4 +14,4 @@
 // The following GUID is for the ID of the typeRevit.Lib if this project is exposed to COM
 [assembly: Guid("04b918ec-6956-4fd9-ac34-1018929b7763")]
 
-[assembly: AssemblyVersion("1.9.0")]
+[assembly: AssemblyVersion("1.10.0")]
