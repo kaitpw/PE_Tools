@@ -207,9 +207,6 @@ public class BorderSpec {
         if (this._backgroundResourceKey != null)
             border.SetResourceReference(System.Windows.Controls.Border.BackgroundProperty, this._backgroundResourceKey);
 
-        Debug.WriteLine(
-            $"Border created with \n\tbackground: {this._backgroundResourceKey}, \n\tborder: {this._borderBrushResourceKey}");
-
         return border;
     }
 }

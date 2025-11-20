@@ -92,7 +92,7 @@ public class EphemeralWindow : Window {
                 VerticalAlignment = VerticalAlignment.Center,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Foreground = new SolidColorBrush(Color.FromRgb(250, 250, 250)),
-                Style = ThemeManager.GetTypographyStyle(FontTypography.Subtitle, this),
+                Style = ThemeManager.GetTypographyStyle(FontTypography.Subtitle),
                 Padding = new Thickness(0)
             });
 

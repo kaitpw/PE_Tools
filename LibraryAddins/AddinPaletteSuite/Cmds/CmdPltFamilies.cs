@@ -71,7 +71,7 @@ public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
 /// <summary>
 ///     Adapter that wraps Revit Family to implement ISelectableItem
 /// </summary>
-public class FamilyPaletteItem : BaseObservableListItem, IPaletteListItem {
+public class FamilyPaletteItem : IPaletteListItem {
     private readonly Document _doc;
 
     public FamilyPaletteItem(Family family, Document doc) {

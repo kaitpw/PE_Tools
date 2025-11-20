@@ -26,7 +26,7 @@ public class CmdPltSheets : BaseCmdPalette<ViewSheet, SheetPaletteItem> {
 /// <summary>
 ///     Adapter that wraps Revit ViewSheet to implement ISelectableItem
 /// </summary>
-public class SheetPaletteItem(ViewSheet sheet) : BaseObservableListItem, IPaletteListItem {
+public class SheetPaletteItem(ViewSheet sheet) : IPaletteListItem {
     public ViewSheet Sheet { get; } = sheet;
     public string TextPrimary => $"{this.Sheet.SheetNumber} - {this.Sheet.Name}";
 

@@ -1,3 +1,5 @@
+using AddinPaletteSuite.Core;
+using AddinPaletteSuite.Core.Actions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -20,7 +22,7 @@ public partial class SelectableListViewItem : Border {
         this.DataContextChanged += this.OnDataContextChanged;
     }
 
-    private void ApplyStyling() { 
+    private void ApplyStyling() {
         // Border styling (layout only, colors from XAML DynamicResources)
         this.CornerRadius = new CornerRadius((double)UiSz.l);
         _ = this.WithPadding(UiSz.ss, UiSz.s, UiSz.ll, UiSz.m);
@@ -71,10 +73,9 @@ public partial class SelectableListViewItem : Border {
             this.ColorIndicator.Visibility = Visibility.Collapsed;
         }
 
-        // Tooltip disabled - no hover tooltips
-
-        // Update Opacity based on CanExecute
-        this.Opacity = item.CanExecute ? 1 : ThemeManager.DisabledOpacity;
+        // Update Opacity based on actions (compute executability from actions)
+        var canExecute = this.ComputeCanExecute(item);
+        this.Opacity = canExecute ? 1 : ThemeManager.DisabledOpacity;
     }
 
     /// <summary>
@@ -90,7 +91,8 @@ public partial class SelectableListViewItem : Border {
         _ = this.SecondaryText.SetBinding(TextBlock.TextProperty, secondaryBinding);
 
         var secondaryVisibilityBinding = new Binding("TextSecondary") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new VisibilityConverter()
         };
         _ = this.SecondaryText.SetBinding(VisibilityProperty, secondaryVisibilityBinding);
 
@@ -99,7 +101,8 @@ public partial class SelectableListViewItem : Border {
         _ = this.PillBorder.SetBinding(Pill.TextProperty, pillTextBinding);
 
         var pillVisibilityBinding = new Binding("TextPill") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new VisibilityConverter()
         };
         _ = this.PillBorder.SetBinding(VisibilityProperty, pillVisibilityBinding);
 
@@ -108,7 +111,8 @@ public partial class SelectableListViewItem : Border {
         _ = this.IconImage.SetBinding(Image.SourceProperty, iconBinding);
 
         var iconVisibilityBinding = new Binding("Icon") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new VisibilityConverter()
         };
         _ = this.IconImage.SetBinding(VisibilityProperty, iconVisibilityBinding);
 
@@ -127,16 +131,49 @@ public partial class SelectableListViewItem : Border {
 
         // Tooltip disabled - no hover tooltips
 
-        // Bind Opacity based on CanExecute
-        var opacityBinding = new Binding("CanExecute") {
-            Mode = BindingMode.OneWay, Converter = new CanExecuteToOpacityConverter()
-        };
-        _ = this.SetBinding(OpacityProperty, opacityBinding);
+        // Compute opacity from actions (no binding needed since CanExecute doesn't change after palette opens)
+        var item = this.DataContext as IPaletteListItem;
+        if (item != null) {
+            var canExecute = this.ComputeCanExecute(item);
+            this.Opacity = canExecute ? 1 : ThemeManager.DisabledOpacity;
+        }
     }
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e) {
         // Set up bindings once when DataContext is first set
         if (e.NewValue != null && e.OldValue == null)
             this.SetupBindings();
+    }
+
+    /// <summary>
+    ///     Computes whether an item can be executed by checking available actions
+    /// </summary>
+    private bool ComputeCanExecute(IPaletteListItem item) {
+        var actionBinding = this.FindActionBinding();
+        if (actionBinding == null) return true; // Default to executable if no actions found
+
+        // Use reflection to call HasAvailableActions method
+        var hasAvailableActionsMethod = actionBinding.GetType().GetMethod("HasAvailableActions");
+        if (hasAvailableActionsMethod != null) {
+            var result = hasAvailableActionsMethod.Invoke(actionBinding, new object[] { item });
+            return result is bool canExecute && canExecute;
+        }
+
+        return true; // Default to executable if method not found
+    }
+
+    /// <summary>
+    ///     Finds the ActionBinding by walking up the visual tree to find SelectablePalette
+    /// </summary>
+    private object FindActionBinding() {
+        var current = this.Parent as DependencyObject;
+        while (current != null) {
+            var actionBinding = SelectablePalette.GetActionBinding(current);
+            if (actionBinding != null) return actionBinding;
+
+            current = current is FrameworkElement fe ? fe.Parent as DependencyObject : null;
+        }
+
+        return null;
     }
 }

@@ -14,6 +14,21 @@ namespace AddinPaletteSuite.Core.Ui;
 ///     This matches the XAML x:Class declaration and provides access to XAML-defined controls
 /// </summary>
 public partial class SelectablePalette : UserControl, ICloseRequestable {
+    /// <summary>
+    ///     Attached property to store ActionBinding for child controls to access
+    /// </summary>
+    public static readonly DependencyProperty ActionBindingProperty = DependencyProperty.RegisterAttached(
+        "ActionBinding",
+        typeof(object),
+        typeof(SelectablePalette),
+        new PropertyMetadata(null));
+
+    public static void SetActionBinding(DependencyObject element, object value) =>
+        element.SetValue(ActionBindingProperty, value);
+
+    public static object GetActionBinding(DependencyObject element) =>
+        element.GetValue(ActionBindingProperty);
+
     protected SelectablePalette(object dataContext = null) {
         // Set DataContext before InitializeComponent so bindings work
         if (dataContext != null)
@@ -26,13 +41,6 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
     protected void RequestClose(bool restoreFocus = true) =>
         this.CloseRequested?.Invoke(this, new CloseRequestedEventArgs { RestoreFocus = restoreFocus });
 
-    /// <summary>
-    ///     Hides the search box from the palette
-    /// </summary>
-    public void HideSearchBox() {
-        this.SearchBoxBorder.Visibility = System.Windows.Visibility.Collapsed;
-    }
-
     // Note: SearchBoxBorder, MainBorder, StatusBarBorder, ItemListView, StatusBarBorder
     // are defined in the XAML and accessible via the partial class generated code
 }
@@ -40,7 +48,7 @@ public partial class SelectablePalette : UserControl, ICloseRequestable {
 /// <summary>
 ///     Generic SelectablePalette implementation with typed item support
 /// </summary>
-public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObservableListItem, IPaletteListItem {
+public class SelectablePalette<TItem> : SelectablePalette where TItem : class, IPaletteListItem {
     private readonly ActionBinding<TItem> _actionBinding;
     private readonly ActionMenu<TItem> _actionMenu;
     private readonly CustomKeyBindings? _customKeyBindings;
@@ -73,6 +81,9 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         this._actionBinding = new ActionBinding<TItem>();
         this._actionBinding.RegisterRange(actions);
         this._actionMenu = new ActionMenu<TItem>();
+
+        // Store ActionBinding as attached property so child controls can access it
+        SetActionBinding(this, this._actionBinding);
 
         // Create tooltip popup and panel programmatically
         this._tooltipPanel = new SelectableTextBox();
@@ -129,26 +140,6 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         // this.HelpText.Style = ThemeManager.GetTypographyStyle(FontTypography.Caption);
     }
 
-    private void UpdateCanExecuteForVisibleItems() {
-        if (this.ViewModel == null) return;
-
-        // Only update CanExecute for items that have generated containers (visible or recently visible)
-        foreach (var item in this.ViewModel.FilteredItems) {
-            var container = this.ItemListView.ItemContainerGenerator.ContainerFromItem(item);
-            if (container != null) {
-                var firstAction = this._actionBinding.GetAvailableActions(item).FirstOrDefault();
-                if (firstAction != null) item.CanExecute = firstAction.CanExecute(item);
-            }
-        }
-    }
-
-    private void UpdateCanExecuteForSelectedItem() {
-        if (this.ViewModel?.SelectedItem == null) return;
-
-        var firstAction = this._actionBinding.GetAvailableActions(this.ViewModel.SelectedItem).FirstOrDefault();
-        if (firstAction != null)
-            this.ViewModel.SelectedItem.CanExecute = firstAction.CanExecute(this.ViewModel.SelectedItem);
-    }
 
     private void UserControl_Loaded(object sender, RoutedEventArgs e) {
         if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
@@ -250,7 +241,6 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
         // Handle Left arrow key to show tooltip popover
         if (e.Key == Key.Left) {
             if (this.ViewModel?.SelectedItem != null) {
-                this.UpdateCanExecuteForSelectedItem();
                 this.PositionTooltipPopover();
                 this._tooltipPopup.IsOpen = true;
                 _ = this.Dispatcher.BeginInvoke(new Action(() => {
@@ -270,7 +260,6 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
                 if (actions.Count > 0) {
                     this.ItemListView.ScrollIntoView(this.ViewModel.SelectedItem);
                     this.ItemListView.UpdateLayout();
-                    this.UpdateCanExecuteForVisibleItems();
                     var selectedItem = this.ViewModel.SelectedItem;
                     var freshListViewItem =
                         this.ItemListView.ItemContainerGenerator.ContainerFromItem(selectedItem) as WpfUiListViewItem;
@@ -340,7 +329,11 @@ public class SelectablePalette<TItem> : SelectablePalette where TItem : BaseObse
                 e.Handled = this.ShowPopover(() => {
                     var actions = this._actionBinding.GetAllActions().ToList();
                     this._actionMenu.Actions = actions;
-                    this._actionMenu.Show(selectedItem as UIElement);
+                    var listViewItem =
+                        this.ItemListView.ItemContainerGenerator.ContainerFromItem(selectedItem) as WpfUiListViewItem;
+                    if (listViewItem != null) {
+                        this._actionMenu.Show(listViewItem, selectedItem);
+                    }
                 });
             }
 

@@ -8,12 +8,7 @@ namespace AddinPaletteSuite.Commands;
 /// <summary>
 ///     Represents a PostableCommand item with additional metadata for the command palette
 /// </summary>
-public partial class PostableCommandItem : BaseObservableListItem, IPaletteListItem {
-    /// <summary>
-    ///     Whether this item can be executed (used for visual styling)
-    /// </summary>
-    [ObservableProperty] private bool _canExecute = true;
-
+public partial class PostableCommandItem : IPaletteListItem {
     /// <summary>
     ///     Whether this item is currently selected in the UI
     /// </summary>

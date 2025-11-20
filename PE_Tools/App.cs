@@ -99,6 +99,8 @@ internal class App : IExternalApplication {
     }
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
+        Debug.WriteLine($"Assembly Resolution Failes: \n\t Failed Assembly: {args.Name}");
+
         // Get the assembly name being requested
         var assemblyName = new AssemblyName(args.Name);
 

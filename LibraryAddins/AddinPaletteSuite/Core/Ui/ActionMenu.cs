@@ -34,7 +34,7 @@ public class ActionMenu : UserControl, IPopoverExit {
 ///     Generic ActionMenu implementation with typed item support
 ///     Context menu component for displaying available actions with arrow key navigation
 /// </summary>
-public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem, IPaletteListItem {
+public class ActionMenu<TItem> : ActionMenu where TItem : class, IPaletteListItem {
     private IEnumerable? _actions;
     private TItem? _currentItem;
 
@@ -61,7 +61,7 @@ public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem
     /// <summary>
     ///     Shows the action menu positioned to the right of the target element
     /// </summary>
-    public void Show(UIElement placementTarget, TItem? currentItem = null) {
+    public void Show(UIElement placementTarget, TItem? currentItem) {
         if (this._actions == null || this.Menu == null) return;
 
         this._currentItem = currentItem;
@@ -100,9 +100,7 @@ public class ActionMenu<TItem> : ActionMenu where TItem : BaseObservableListItem
             var shortcutText = this.FormatShortcut(paletteAction);
 
             var menuItem = new MenuItem {
-                Header = paletteAction.Name,
-                InputGestureText = shortcutText,
-                IsEnabled = canExecute
+                Header = paletteAction.Name, InputGestureText = shortcutText, IsEnabled = canExecute
             };
 
             menuItem.Click += (_, _) => {

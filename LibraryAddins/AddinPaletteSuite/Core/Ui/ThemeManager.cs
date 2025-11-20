@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Media;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Markup;
-using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Core.Ui;
 
@@ -31,12 +30,16 @@ internal static class ThemeSettings {
 ///     Wraps ApplicationAccentColorManager and provides type-safe access to colors, typography, and spacing.
 /// </summary>
 public static class ThemeManager {
-    private static bool _resourcesLogged;
-
     public static double IconOpacity => ThemeSettings.IconOpacity;
     public static CornerRadius Radius => ThemeSettings.Radius;
 
     public static double DisabledOpacity => ThemeSettings.DisabledOpacity;
+
+    public static ResourceDictionary WpfUiResources =>
+        new() {
+            Source = new Uri("pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml",
+                UriKind.Absolute)
+        };
 
     // Font Family
     public static FontFamily FontFamily() => new("Segoe UI Variable Text");
@@ -48,42 +51,7 @@ public static class ThemeManager {
     /// <returns>The brush from the current theme</returns>
     public static Brush GetThemeBrush(ThemeResource themeResource) {
         if (themeResource == ThemeResource.Unknown) return Brushes.Transparent;
-
-        // Log available resources once for debugging
-        if (!_resourcesLogged) {
-            _resourcesLogged = true;
-            LogAvailableThemeResources();
-        }
-
-        // Get the resource key string from the enum
-        var resourceKey = themeResource.ToString();
-        Debug.WriteLine($"[ThemeManager] Looking for resource: '{resourceKey}'");
-
-        // Try to find the resource in Application resources
-        if (Application.Current?.TryFindResource(resourceKey) is Brush brush) {
-            Debug.WriteLine($"[ThemeManager] Found brush for '{resourceKey}': {brush}");
-            return brush;
-        }
-
-        Debug.WriteLine($"[ThemeManager] Resource '{resourceKey}' NOT FOUND in Application.Current.TryFindResource");
-
-        // WPF.UI resources aren't always directly accessible via TryFindResource
-        // They're resolved dynamically through DynamicResource bindings
-        // For now, return a sensible fallback based on the resource type
-        return Brushes.Red;
-    }
-
-    /// <summary>
-    ///     Gets a WPF.UI theme brush from the Application's resource dictionary by string key.
-    /// </summary>
-    /// <param name="resourceKey">The resource key string (e.g., "ApplicationBackgroundBrush")</param>
-    /// <returns>The brush from the current theme</returns>
-    public static Brush GetThemeBrush(string resourceKey) {
-        if (string.IsNullOrEmpty(resourceKey)) return Brushes.Transparent;
-
-        // Try to find the resource in Application resources
-        if (Application.Current?.TryFindResource(resourceKey) is Brush brush) return brush;
-
+        if (WpfUiResources[themeResource.ToString()] is Brush brush) return brush;
         return Brushes.Red;
     }
 
@@ -123,11 +91,9 @@ public static class ThemeManager {
             _ => throw new ArgumentOutOfRangeException(nameof(typography), typography, null)
         };
 
-        // Try to find the style - first in searchContext, then in Application.Current
         Style? style = null;
         if (searchContext != null) style = searchContext.TryFindResource(styleKey) as Style;
-
-        if (style == null) style = Application.Current?.TryFindResource(styleKey) as Style;
+        if (style == null) style = WpfUiResources[styleKey] as Style;
 
         if (style is null) {
             throw new InvalidOperationException(
@@ -147,26 +113,7 @@ public static class ThemeManager {
     /// <param name="element">The FrameworkElement to merge resources into</param>
     public static void LoadWpfUiResources(FrameworkElement element) {
         if (element == null) throw new ArgumentNullException(nameof(element));
-
-        var resourceDict = new ResourceDictionary {
-            Source = new Uri("pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml",
-                UriKind.Absolute)
-        };
-
-        element.Resources.MergedDictionaries.Add(resourceDict);
-    }
-
-    /// <summary>
-    ///     Debug helper to log available brush resources in Application.
-    /// </summary>
-    public static void LogAvailableThemeResources() {
-        if (Application.Current == null) {
-            Debug.WriteLine("[ThemeManager] Application.Current is null!");
-            return;
-        }
-
-        Debug.WriteLine("[ThemeManager] ===== Available Brush Resources =====");
-        LogBrushesInDictionary(Application.Current.Resources, 0);
+        element.Resources.MergedDictionaries.Add(WpfUiResources);
     }
 
     private static void LogBrushesInDictionary(ResourceDictionary resources, int level) {

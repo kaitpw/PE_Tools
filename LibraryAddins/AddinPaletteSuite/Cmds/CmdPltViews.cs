@@ -32,7 +32,7 @@ public class CmdPltViews : BaseCmdPalette<View, ViewPaletteItem> {
 /// <summary>
 ///     Adapter that wraps Revit View to implement ISelectableItem
 /// </summary>
-public class ViewPaletteItem(View view) : BaseObservableListItem, IPaletteListItem {
+public class ViewPaletteItem(View view) : IPaletteListItem {
     private readonly string _discipline = view.HasViewDiscipline()
         ? view.Discipline.ToString()
         : string.Empty;

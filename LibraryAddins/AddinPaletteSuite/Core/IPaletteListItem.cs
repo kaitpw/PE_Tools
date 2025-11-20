@@ -26,15 +26,4 @@ public interface IPaletteListItem {
 
     /// <summary> Optional color indicator for the item (e.g., document color) </summary>
     WpfColor? ItemColor { get; }
-
-    /// <summary> Whether this item is currently selected in the UI </summary>
-    bool IsSelected { get; set; }
-
-    /// <summary> Whether this item can be executed (used for visual styling) </summary>
-    bool CanExecute { get; set; }
-}
-
-public abstract partial class BaseObservableListItem : ObservableObject, INotifyPropertyChanged {
-    [ObservableProperty] private bool _canExecute = true;
-    [ObservableProperty] private bool _isSelected;
 }

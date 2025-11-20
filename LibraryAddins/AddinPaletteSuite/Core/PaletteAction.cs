@@ -5,7 +5,7 @@ namespace AddinPaletteSuite.Core;
 /// <summary>
 ///     Represents a single action that can be triggered in the palette
 /// </summary>
-public record PaletteAction<TItem> where TItem : BaseObservableListItem, IPaletteListItem {
+public record PaletteAction<TItem> where TItem : IPaletteListItem {
     /// <summary> Display name for the action (for debugging/logging) </summary>
     public string Name { get; init; } = string.Empty;
 

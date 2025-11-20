@@ -10,7 +10,7 @@ namespace AddinPaletteSuite.Core.Ui;
 ///     Generic ViewModel for the SelectablePalette window with optional filtering support
 /// </summary> 
 public partial class SelectablePaletteViewModel<TItem> : ObservableObject
-    where TItem : BaseObservableListItem, IPaletteListItem {
+    where TItem : class, IPaletteListItem {
     private readonly List<TItem> _allItems;
     private readonly Func<TItem, string>? _filterKeySelector;
     private readonly SearchFilterService<TItem> _searchService;
@@ -35,7 +35,7 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
     public SelectablePaletteViewModel(
         IEnumerable<TItem> items,
         SearchFilterService<TItem> searchService,
-        Func<TItem, string>? filterKeySelector = null
+        Func<TItem, string> filterKeySelector = null
     ) {
         this._allItems = items.ToList();
         this._searchService = searchService;
@@ -98,7 +98,7 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
     [RelayCommand]
     private void MoveSelectionUp() {
         if (this.FilteredItems.Count == 0) return;
-        
+
         if (this.SelectedIndex > 0) {
             this.SelectedIndex--;
         } else {
@@ -110,7 +110,7 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
     [RelayCommand]
     private void MoveSelectionDown() {
         if (this.FilteredItems.Count == 0) return;
-        
+
         if (this.SelectedIndex < this.FilteredItems.Count - 1) {
             this.SelectedIndex++;
         } else {
@@ -195,13 +195,6 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
     }
 
     partial void OnSelectedItemChanged(TItem value) {
-        // Only update previous and current items (O(1) instead of O(n))
-        if (this._previousSelectedItem != null && this._previousSelectedItem != value)
-            this._previousSelectedItem.IsSelected = false;
-
-        if (value != null)
-            value.IsSelected = true;
-
         this._previousSelectedItem = value;
     }
 
@@ -210,7 +203,7 @@ public partial class SelectablePaletteViewModel<TItem> : ObservableObject
         if (value >= 0 && value < this.FilteredItems.Count)
             this.SelectedItem = this.FilteredItems[value];
         else
-            this.SelectedItem = null;
+            this.SelectedItem = default(TItem);
     }
 
     #endregion

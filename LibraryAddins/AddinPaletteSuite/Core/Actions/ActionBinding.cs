@@ -5,7 +5,7 @@ namespace AddinPaletteSuite.Core.Actions;
 /// <summary>
 ///     Manages action registration and execution for palette items
 /// </summary>
-public class ActionBinding<TItem> where TItem : BaseObservableListItem, IPaletteListItem {
+public class ActionBinding<TItem> where TItem : IPaletteListItem {
     private readonly List<PaletteAction<TItem>> _actions = new();
 
     /// <summary>
@@ -57,6 +57,15 @@ public class ActionBinding<TItem> where TItem : BaseObservableListItem, IPalette
     /// </summary>
     public IEnumerable<PaletteAction<TItem>> GetAvailableActions(TItem item) =>
         this._actions.Where(a => a.CanExecute(item));
+
+    /// <summary>
+    ///     Non-generic helper to check if any action can execute for an item
+    ///     Used by UI controls that don't know the generic type
+    /// </summary>
+    public bool HasAvailableActions(IPaletteListItem item) {
+        if (item is not TItem typedItem) return false;
+        return this.GetAvailableActions(typedItem).Any();
+    }
 
     /// <summary>
     ///     Gets all registered actions (not filtered by CanExecute)

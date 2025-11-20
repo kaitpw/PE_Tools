@@ -51,7 +51,7 @@ public class PltFamilyTypes(Family family) : BaseCmdPalette<FamilySymbol, Family
     }
 }
 
-public class FamilyTypePaletteItem(FamilySymbol familySymbol) : BaseObservableListItem, IPaletteListItem {
+public class FamilyTypePaletteItem(FamilySymbol familySymbol) : IPaletteListItem {
     public FamilySymbol FamilySymbol { get; } = familySymbol;
     public string TextPrimary => this.FamilySymbol.Name;
     public string TextSecondary => string.Empty;

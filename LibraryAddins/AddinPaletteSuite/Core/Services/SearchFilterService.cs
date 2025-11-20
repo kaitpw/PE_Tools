@@ -7,7 +7,7 @@ namespace AddinPaletteSuite.Core.Services;
 /// <summary> 
 ///     Standard implementation of search/filter service with fuzzy matching and persistence
 /// </summary>
-public class SearchFilterService<TItem> where TItem : BaseObservableListItem, IPaletteListItem {
+public class SearchFilterService<TItem> where TItem : IPaletteListItem {
     private readonly bool _enableUsageTracking;
     private readonly Func<TItem, string> _keyGenerator;
     private readonly SearchConfig _searchConfig;

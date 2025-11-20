@@ -10,7 +10,7 @@ namespace AddinPaletteSuite.Core;
 ///     Base class for commands that open palette windows
 /// </summary>
 public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where TElement : Element
-    where TItem : BaseObservableListItem, IPaletteListItem {
+    where TItem : class, IPaletteListItem {
     public abstract string TypeName { get; }
     public string Title => $"{char.ToUpper(this.TypeName[0])}{this.TypeName[1..]} Palette";
 
@@ -31,6 +31,7 @@ public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where T
 
     public void Open(UIApplication uiapp) {
         Debug.WriteLine("Opening " + this.Title);
+        var color = Theme.ApplicationBackground();
         var doc = uiapp.ActiveUIDocument.Document;
         var persistence = new Storage(this.GetType().Name);
         var elements = new FilteredElementCollector(doc)

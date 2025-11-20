@@ -114,7 +114,7 @@ public class CmdPltMruViews : IExternalCommand {
 /// <summary>
 ///     Adapter that wraps Revit View to implement IPaletteListItem for MRU views
 /// </summary>
-public class MruViewPaletteItem : BaseObservableListItem, IPaletteListItem {
+public class MruViewPaletteItem : IPaletteListItem {
     public MruViewPaletteItem(View view) {
         this.View = view;
         var color = DocumentColorService.Instance.GetOrCreateDocumentColor(view.Document);

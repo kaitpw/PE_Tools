@@ -37,7 +37,7 @@ public class CmdPltSchedules : BaseCmdPalette<ViewSchedule, SchedulePaletteItem>
 /// <summary>
 ///     Adapter that wraps Revit ViewSchedule to implement ISelectableItem
 /// </summary>
-public class SchedulePaletteItem(ViewSchedule schedule) : BaseObservableListItem, IPaletteListItem {
+public class SchedulePaletteItem(ViewSchedule schedule) : IPaletteListItem {
     public ViewSchedule Schedule { get; } = schedule;
     public string TextPrimary => this.Schedule.Name;
 

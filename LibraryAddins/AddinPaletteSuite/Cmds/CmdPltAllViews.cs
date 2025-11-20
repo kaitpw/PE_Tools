@@ -1,5 +1,6 @@
 using AddinPaletteSuite.Core;
 using System.Windows.Media.Imaging;
+using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -34,13 +35,12 @@ public class CmdPltAllViews : BaseCmdPalette<View, AllViewPaletteItem> {
 /// <summary>
 ///     Adapter that wraps Revit View to implement ISelectableItem for all views (no filtering)
 /// </summary>
-public class AllViewPaletteItem(View view) : BaseObservableListItem, IPaletteListItem {
+public class AllViewPaletteItem(View view) : IPaletteListItem {
     public View View { get; } = view;
     public string TextPrimary => this.View.Name;
     public string TextSecondary => string.Empty;
     public string TextPill => this.View.ViewType.ToString();
     public string TextInfo => $"View Type: {this.View.ViewType}\nId: {this.View.Id}";
     public BitmapImage Icon => null;
-    public System.Windows.Media.Color? ItemColor => null;
+    public Color? ItemColor => null;
 }
-
