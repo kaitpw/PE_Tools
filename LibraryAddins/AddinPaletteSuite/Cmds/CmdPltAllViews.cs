@@ -1,4 +1,6 @@
 using AddinPaletteSuite.Core;
+using PeUi.Core;
+using PeUi.Core.Services;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
 

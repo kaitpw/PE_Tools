@@ -1,8 +1,11 @@
 #nullable enable
 using AddinPaletteSuite.Core;
 using PeExtensions.FamDocument;
+using PeUi.Core;
+using PeUi.Core.Services;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
+using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -105,5 +108,5 @@ public class FamilyPaletteItem : IPaletteListItem {
         $"{this.Family.Name}\nCategory: {this.Family.FamilyCategory?.Name}\nId: {this.Family.Id}";
 
     public BitmapImage? Icon => null;
-    public System.Windows.Media.Color? ItemColor => null;
+    public Color? ItemColor => null;
 }

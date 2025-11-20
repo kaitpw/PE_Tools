@@ -1,5 +1,7 @@
 using AddinPaletteSuite.Core;
+using PeUi.Core;
 using System.Windows.Media.Imaging;
+using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -51,7 +53,7 @@ public class SheetPaletteItem(ViewSheet sheet) : IPaletteListItem {
     }
 
     public BitmapImage Icon => null;
-    public System.Windows.Media.Color? ItemColor => null;
+    public Color? ItemColor => null;
 
     public List<(string type, string name)> GetViewInfo() {
         var viewInfo = new List<(string type, string name)>();

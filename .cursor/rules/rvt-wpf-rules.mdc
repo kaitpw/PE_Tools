@@ -26,7 +26,11 @@ Because we have chosen to have revit host the wpf window on its own thread, thus
 extension the the application's `.Resources` property is always an empty
 enumeration.
 
-TODO: add note abouut assembly resolution.
+Other important notes related to compilation troubleshooting are:
+
+1. `Shared.props` setup. It must explicitly export xaml
+2. OnAssemblyResolve in `App.cs` is crucial because wpf-ui is cannot be resolved
+   on its own. (This is a problem I'd like to fix at some point)
 
 ## Tips
 
@@ -73,7 +77,7 @@ ThemeManager.LoadWpfUiResources();
 <UserControl.Resources>
     <ResourceDictionary>
         <ResourceDictionary.MergedDictionaries>
-            <ResourceDictionary Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml" />
+            <ResourceDictionary Source="pack://application:,,,/PE_Tools;component/peui/core/wpfuiresources.xaml" />
 ...
 ```
 

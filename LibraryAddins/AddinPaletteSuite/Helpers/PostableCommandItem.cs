@@ -1,19 +1,14 @@
-using AddinPaletteSuite.Core;
-using CommunityToolkit.Mvvm.ComponentModel;
 using PeRevit.Lib;
+using PeUi.Core;
 using System.Windows.Media.Imaging;
+using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Commands;
 
 /// <summary>
 ///     Represents a PostableCommand item with additional metadata for the command palette
 /// </summary>
-public partial class PostableCommandItem : IPaletteListItem {
-    /// <summary>
-    ///     Whether this item is currently selected in the UI
-    /// </summary>
-    [ObservableProperty] private bool _isSelected;
-
+public class PostableCommandItem : IPaletteListItem {
     /// <summary>
     ///     For internal commands, the actual PostableCommand enum value
     ///     For external (addin) commands, the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
@@ -87,7 +82,7 @@ public partial class PostableCommandItem : IPaletteListItem {
     public string TextPill => this.PrimaryShortcut;
     public string TextInfo => this.AllPaths;
     public BitmapImage Icon => null;
-    public System.Windows.Media.Color? ItemColor => null;
+    public Color? ItemColor => null;
 
     public override string ToString() => this.Name;
 }

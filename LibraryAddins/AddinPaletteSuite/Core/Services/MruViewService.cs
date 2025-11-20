@@ -60,12 +60,9 @@ public class MruViewService {
             try {
                 var uiDoc = new UIDocument(doc);
                 var openUIViews = uiDoc.GetOpenUIViews();
-                foreach (var uiView in openUIViews) {
-                    _ = openViewIds.Add(uiView.ViewId);
-                }
+                foreach (var uiView in openUIViews) _ = openViewIds.Add(uiView.ViewId);
             } catch {
                 // Skip documents that can't create UIDocument (shouldn't happen for open docs)
-                continue;
             }
         }
 
@@ -81,6 +78,7 @@ public class MruViewService {
 
             views.Add(view);
         }
+
         return views;
     }
 
@@ -97,9 +95,7 @@ public class MruViewService {
     /// <summary>
     ///     Clears the MRU buffer (useful for testing or reset scenarios)
     /// </summary>
-    public void Clear() {
-        this._mruBuffer.Clear();
-    }
+    public void Clear() => this._mruBuffer.Clear();
 
     // Use PathName if available (saved documents), otherwise use Title
     private static string GetDocumentKey(Document doc) =>
@@ -130,11 +126,10 @@ public class MruViewService {
         public override int GetHashCode() {
             unchecked {
                 var hash = 17;
-                hash = hash * 31 + this.DocumentKey.GetHashCode();
-                hash = hash * 31 + this.ViewId.GetHashCode();
+                hash = (hash * 31) + this.DocumentKey.GetHashCode();
+                hash = (hash * 31) + this.ViewId.GetHashCode();
                 return hash;
             }
         }
     }
 }
-

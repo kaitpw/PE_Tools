@@ -22,9 +22,9 @@ public class CmdUpdate : IExternalCommand {
         new Ballogger()
             .Add(Log.INFO, null, $"Download: {result}")
             .Show(() => { }, "None"
-            // TODO: Figure out how to get the request to rerun
-            // RunRequest(request),
-            // "Click to Retry Download"
+                // TODO: Figure out how to get the request to rerun
+                // RunRequest(request),
+                // "Click to Retry Download"
             );
 
         return Result.Succeeded;

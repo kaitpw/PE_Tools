@@ -1,8 +1,11 @@
-using AddinPaletteSuite.Core.Services;
-using AddinPaletteSuite.Core.Ui;
+using Autodesk.Internal.Windows;
 using PeRevit.Ui;
 using PeServices.Storage;
-using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
+using PeUi.Components;
+using PeUi.Core;
+using PeUi.Core.Services;
+using PeUi.ViewModels;
+using Theme = PeUi.Core.ThemeManager;
 
 namespace AddinPaletteSuite.Core;
 
@@ -44,8 +47,8 @@ public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where T
         var actions = this.GetActions(uiapp).ToList();
         var filterKeySelector = this.GetFilterKeySelector();
         var customKeyBindings = this.GetCustomKeyBindings();
-        var viewModel = new SelectablePaletteViewModel<TItem>(selectableItems, searchService, filterKeySelector);
-        var palette = new SelectablePalette<TItem>(viewModel, actions, customKeyBindings);
+        var viewModel = new PaletteViewModel<TItem>(selectableItems, searchService, filterKeySelector);
+        var palette = new Palette<TItem>(viewModel, actions, customKeyBindings);
         var window = new EphemeralWindow(palette, this.Title);
         window.Show();
     }

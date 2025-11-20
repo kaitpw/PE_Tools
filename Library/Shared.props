@@ -2,5 +2,12 @@
   <ItemGroup>
     <!-- IMPORTANT: Include all .cs files under SharedLibrary/ recursively -->
     <Compile Include="$(MSBuildThisFileDirectory)\**\*.cs" />
+
+    <!-- WPF: Include XAML files as Page items for proper compilation -->
+    <Page Include="$(MSBuildThisFileDirectory)\**\*.xaml" 
+          Generator="MSBuild:Compile" />
+
+    <!-- WPF: Exclude XAML code-behind files from Page compilation -->
+    <Compile Update="$(MSBuildThisFileDirectory)\**\*.xaml.cs" />
   </ItemGroup>
 </Project>

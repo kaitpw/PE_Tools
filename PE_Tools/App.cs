@@ -2,6 +2,8 @@ using AddinApsAuthSuite;
 using AddinFamilyFoundrySuite.Cmds;
 using AddinPaletteSuite.Cmds;
 using AddinPaletteSuite.Core.Services;
+using Autodesk.Revit.DB.Events;
+using Autodesk.Revit.UI.Events;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
 using Wpf.Ui.Appearance;
@@ -79,7 +81,7 @@ internal class App : IExternalApplication {
         return Result.Succeeded;
     }
 
-    private static void OnViewActivated(object sender, Autodesk.Revit.UI.Events.ViewActivatedEventArgs e) {
+    private static void OnViewActivated(object sender, ViewActivatedEventArgs e) {
         if (e?.CurrentActiveView == null) return;
 
         var doc = e.CurrentActiveView.Document;
@@ -88,7 +90,7 @@ internal class App : IExternalApplication {
         MruViewService.Instance.RecordViewActivation(doc, e.CurrentActiveView.Id);
     }
 
-    private static void OnDocumentClosing(object sender, Autodesk.Revit.DB.Events.DocumentClosingEventArgs e) {
+    private static void OnDocumentClosing(object sender, DocumentClosingEventArgs e) {
         if (e?.Document == null) return;
 
         // Clean up MRU buffer

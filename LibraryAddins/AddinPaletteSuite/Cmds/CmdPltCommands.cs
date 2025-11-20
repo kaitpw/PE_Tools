@@ -1,9 +1,10 @@
 using AddinPaletteSuite.Commands;
-using AddinPaletteSuite.Core;
-using AddinPaletteSuite.Core.Services;
-using AddinPaletteSuite.Core.Ui;
 using AddinPaletteSuite.Helpers;
 using PeServices.Storage;
+using PeUi.Components;
+using PeUi.Core;
+using PeUi.Core.Services;
+using PeUi.ViewModels;
 using System.Text.RegularExpressions;
 
 namespace AddinPaletteSuite.Cmds;
@@ -108,10 +109,10 @@ public static class CommandPaletteService {
         };
 
         // Create view model
-        var viewModel = new SelectablePaletteViewModel<PostableCommandItem>(selectableItems, searchService);
+        var viewModel = new PaletteViewModel<PostableCommandItem>(selectableItems, searchService);
 
         // Create palette UserControl
-        var palette = new SelectablePalette<PostableCommandItem>(viewModel, actions);
+        var palette = new Palette<PostableCommandItem>(viewModel, actions);
 
         // Wrap in EphemeralWindow and return
         return new EphemeralWindow(palette, "Command Palette");

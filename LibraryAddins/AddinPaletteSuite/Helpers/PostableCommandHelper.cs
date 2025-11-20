@@ -1,9 +1,9 @@
 using AddinPaletteSuite.Commands;
-using AddinPaletteSuite.Core;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeServices.Storage.Core;
+using PeUi.Core;
 
 namespace AddinPaletteSuite.Helpers;
 
@@ -65,7 +65,7 @@ public class PostableCommandHelper(Storage storage) {
             var commandItem = new PostableCommandItem {
                 Command = command.Id,
                 UsageCount = usageData?.UsageCount ?? 0,
-                LastUsed = usageData?.LastUsed ?? DateTime.MinValue,
+                LastUsed = usageData?.LastUsed ?? DateTime.MinValue
             };
             // Try to get shortcut info from XML
             var (shortcutInfo, infoErr) = shortcutsService.GetShortcutInfo(command.Id);

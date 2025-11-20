@@ -1,6 +1,8 @@
 using AddinPaletteSuite.Core;
 using Nice3point.Revit.Extensions;
+using PeUi.Core;
 using System.Windows.Media.Imaging;
+using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -52,7 +54,7 @@ public class ViewPaletteItem(View view) : IPaletteListItem {
         $"\nId: {this.View.Id}";
 
     public BitmapImage Icon => null;
-    public System.Windows.Media.Color? ItemColor => null;
+    public Color? ItemColor => null;
 
     private string GetSheetInfo() {
         var doc = this.View.Document;

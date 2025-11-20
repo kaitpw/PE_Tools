@@ -1,10 +1,11 @@
-using AddinPaletteSuite.Core;
 using AddinPaletteSuite.Core.Services;
-using AddinPaletteSuite.Core.Ui;
 using PeServices.Storage;
+using PeUi.Components;
+using PeUi.Core;
+using PeUi.Core.Services;
+using PeUi.ViewModels;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
-using Theme = AddinPaletteSuite.Core.Ui.ThemeManager;
 using WpfColor = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
@@ -59,7 +60,7 @@ public class CmdPltMruViews : IExternalCommand {
                 enableUsageTracking: false);
 
             // Create view model
-            var viewModel = new SelectablePaletteViewModel<MruViewPaletteItem>(selectableItems, searchService);
+            var viewModel = new PaletteViewModel<MruViewPaletteItem>(selectableItems, searchService);
 
             // Select second item (index 1) instead of first for MRU behavior
             if (viewModel.FilteredItems.Count > 1) viewModel.SelectedIndex = 1;
@@ -71,7 +72,7 @@ public class CmdPltMruViews : IExternalCommand {
                 ModifierKeys.Control | ModifierKeys.Shift); // Ctrl+Shift+` cycles backward
 
             // Create palette UserControl with custom key bindings
-            var palette = new SelectablePalette<MruViewPaletteItem>(viewModel, actions, customKeys);
+            var palette = new Palette<MruViewPaletteItem>(viewModel, actions, customKeys);
 
             // Hide search box for MRU views (we only navigate with keyboard)
             palette.HideSearchBox();

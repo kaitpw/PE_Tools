@@ -1,6 +1,8 @@
 using AddinPaletteSuite.Core;
 using PeRevit.Ui;
+using PeUi.Core;
 using System.Windows.Media.Imaging;
+using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -61,5 +63,5 @@ public class FamilyTypePaletteItem(FamilySymbol familySymbol) : IPaletteListItem
         $"{this.FamilySymbol.Name} - {this.FamilySymbol.Family.Name} - {this.FamilySymbol.Family.FamilyCategory?.Name ?? string.Empty}";
 
     public BitmapImage Icon => null;
-    public System.Windows.Media.Color? ItemColor => null;
+    public Color? ItemColor => null;
 }

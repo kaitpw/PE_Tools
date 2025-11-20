@@ -1,6 +1,9 @@
 using AddinPaletteSuite.Core;
 using Nice3point.Revit.Extensions;
+using PeUi.Core;
+using PeUi.Core.Services;
 using System.Windows.Media.Imaging;
+using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -65,7 +68,7 @@ public class SchedulePaletteItem(ViewSchedule schedule) : IPaletteListItem {
     }
 
     public BitmapImage Icon => null;
-    public System.Windows.Media.Color? ItemColor => null;
+    public Color? ItemColor => null;
 
     private List<(string num, string name)> GetSheetInfo() {
         var sheetInfo = new List<(string num, string name)>();
