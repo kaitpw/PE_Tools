@@ -1,0 +1,138 @@
+---
+globs: *.xaml,*.xaml.cs
+alwaysApply: false
+---
+
+# WPF Development Guide for PE_Tools
+
+WPF windows created for PE_Tools are meant to be minimal UI's that allow users
+to configure/choose their settings for a specific revit addin. Thus their visual
+design should be minimal and easy to parse (like a Shadcn aesthetic) and
+keyboard navigation support for essential/high-traffic UI features is
+non-negotiable. The stack is WPF, WPF.Ui, and CommunityToolkit.Mvvm. As you
+develop please respect the patterns of the codebase.
+
+## The Revit environment
+
+Revit API code can only run on the Revit main thread. Thus why we don't attempt
+to make a conventional WPF application. Having completed project-setup already,
+this is only a minor concern, however occasionally it effects architecture. We
+will deal with the edge cases as they come, do not code defensively for this
+limitation of Revit.
+
+Because we have chosen to have revit host the wpf window on its own thread, thus
+`Application.Current` has no use to us. Specifically
+`Application.Current.TryFindResource(<key>)` will always return null, and by
+extension the the application's `.Resources` property is always an empty
+enumeration.
+
+TODO: add note abouut assembly resolution.
+
+## Tips
+
+- use the "wpfui Docs" and "rvt-docs-mcp" MCP servers at your disposal to verify
+  that what you are doing is valid.
+- When drafting up a component, implement a method with simple logging for every
+  handler of the wpf.ui component. Then prompt the user to show you the logs and
+  explain what actions in the UI caused each type of log. Its often best to
+  record this information in a doc comment for that method because handlers
+  often do not behave the way you'd expect.
+
+## Guidelines
+
+### General Guidelines
+
+- Components are usually best as inheiritors of `UserControl` (or sometimes
+  Border) with optional generic typing whenever the component needs high
+  reusability.
+- Keybindings, listeners, and other input handlers should be handled IN CODE
+  (rather than XAML) as much as possible. This makes debugging and generally
+  reasoning about behavior related code much easier since it is inherently buggy
+  code.
+- When XAML is necessary, most XAML elements should recieve an `x:Name` so they
+  can be used in the code-behind
+- Components should generally be all code based. Exceptions should be made
+  tastefully, for example for layout-heavy components such as a list item with a
+  primary text, secondary text, pill, etc.
+- Use dependency injection and the strategy pattern wherever you can
+
+### Styling Guidelines
+
+#### Resource Loading
+
+Explicitly loading resources is essential given our special enviroment of
+running inside Revit. Resources must be loaded for every Control. The
+ThemeMananager's utility for this should generally be prioritized, however you
+can also merge the dictionary in the XAML.
+
+```csharp
+ThemeManager.LoadWpfUiResources();
+```
+
+```xaml
+<UserControl.Resources>
+    <ResourceDictionary>
+        <ResourceDictionary.MergedDictionaries>
+            <ResourceDictionary Source="pack://application:,,,/PE_Tools;component/addinpalettesuite/core/ui/wpfuiresources.xaml" />
+...
+```
+
+#### Leveraging WPF-UI
+
+Lean on Wpf.Ui's design system and components wherever possible. For example
+prefer `ui:TextBox` over normal System's `TextBox`. Furthermore Prefer
+overriding Wpf.Ui's templates over creating new components from scratch.
+
+- Use `{ui:ThemeResource ResourceName}` markup extension in XAML
+- Common resources: `ApplicationBackgroundBrush`, `TextFillColorPrimaryBrush`,
+  `TextFillColorSecondaryBrush`
+- Typography styles: `CaptionTextBlockStyle`, `BodyTextBlockStyle`,
+  `BodyStrongTextBlockStyle`, `SubtitleTextBlockStyle`
+- Override WPF-UI styles in like `TypographyOverrides.xaml` and
+  `WpfUiResources.xaml` do. use common sense to decide whether to make new xaml
+  override files, the current organization is no ideal and should be improved
+  over time.
+- Any Theme related constants or utilities should be added to the ThemeManager.
+  Components should be mostly unaware of specific style preferences.
+
+```xaml
+<Border Background="{ui:ThemeResource ApplicationBackgroundBrush}">
+    <ui:TextBlock Text="Hello" Style="{DynamicResource BodyStrongTextBlockStyle}" 
+                  Foreground="{ui:ThemeResource TextFillColorPrimaryBrush}" />
+</Border>
+```
+
+## Code-First Architecture
+
+### Styling
+
+Styling in code allows for hot reloading and better debuggability. Use and
+create patterns like the `BorderSpec` to enable easy defaults, predictability,
+and consistency.
+
+### Custom Interactions & Component Communication
+
+- Use `event EventHandler<CustomEventArgs>` for most parent-child communication
+- Unless the situation specifically calls for it, components should handle all
+  their keybindings themselves and pass no unhandled events upwards.
+- Strategy pattern is your friend, particularly in hotkey heavy circumstances
+  like ours.
+- Orchestration patterns for handling hotkeys and "navigation" (more like manual
+  focusing behavior) often work best. Decentralizes state management is a pain.
+
+### Bindings
+
+- Use `DependencyProperty` for bindable properties
+- Load theme resources in constructor: `ThemeManager.LoadWpfUiResources(this)`
+- Set up important bindings programmatically with `SetBinding()` or
+  `SetResourceReference()`
+
+## Key Anti-Patterns
+
+❌ **Don't** create standard `TextBlock` - use `ui:TextBlock` for theme
+consistency\
+❌ **Don't** hardcode colors - always use `{ui:ThemeResource}` or
+`ThemeManager`\
+❌ **Don't** create timers for UI updates - use events or
+`Dispatcher.BeginInvoke()`\
+❌ **Don't** use multi-thread locks (Revit is single-threaded)
