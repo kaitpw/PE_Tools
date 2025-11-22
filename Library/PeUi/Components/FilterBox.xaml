@@ -4,8 +4,10 @@
                              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                              xmlns:local="clr-namespace:PeUi.Components"
                              xmlns:core="clr-namespace:PeUi.Core"
+                             xmlns:converters="clr-namespace:PeUi.Core.Converters"
                              x:Name="Root">
     <UserControl.Resources>
+        <converters:VisibilityConverter x:Key="VisibilityConverter" />
     </UserControl.Resources>
 
     <Border x:Name="FilterBorder"
@@ -27,7 +29,8 @@
                         Grid.Column="0"
                         Margin="0,0,4,0"
                         Background="{ui:ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                        Visibility="Collapsed" />
+                        Text="{Binding SelectedFilterValue, Mode=OneWay}"
+                        Visibility="{Binding SelectedFilterValue, Mode=OneWay, Converter={StaticResource VisibilityConverter}}" />
 
             <!-- Clear Filter Button (X icon, visible only when filter is active) -->
             <Border x:Name="ClearFilterBorder"
@@ -38,7 +41,7 @@
                     Cursor="Hand"
                     VerticalAlignment="Center"
                     Margin="0,0,4,0"
-                    Visibility="Collapsed"
+                    Visibility="{Binding SelectedFilterValue, Mode=OneWay, Converter={StaticResource VisibilityConverter}}"
                     MouseLeftButtonDown="ClearFilterBorder_MouseLeftButtonDown">
                 <ui:SymbolIcon x:Name="ClearFilterIcon"
                                Symbol="Dismiss24"
@@ -73,6 +76,7 @@
                                PlaceholderText="Filter..."
                                UpdateTextOnSelect="True"
                                MaxSuggestionListHeight="300"
+                               OriginalItemsSource="{Binding AvailableFilterValues, Mode=OneWay}"
                                Style="{DynamicResource CleanAutoSuggestBoxStyle}"
                                GotFocus="FilterAutoSuggestBox_GotFocus"
                                LostFocus="FilterAutoSuggestBox_LostFocus" />

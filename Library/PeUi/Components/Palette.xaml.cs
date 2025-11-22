@@ -71,8 +71,11 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
         // Create FilterBox if filtering is enabled
         var hasFiltering = viewModel.AvailableFilterValues != null;
         if (hasFiltering) {
-            this._filterBox = new FilterBox<PaletteViewModel<TItem>>(viewModel, new[] { Key.Tab, Key.Escape });
-            this._filterBox.BindToViewModel("AvailableFilterValues", "SelectedFilterValue");
+            this._filterBox = new FilterBox<PaletteViewModel<TItem>>(
+                viewModel,
+                new[] { Key.Tab, Key.Escape },
+                viewModel.AvailableFilterValues
+            );
             this._filterBox.ExitRequested += (_, _) => _ = this.SearchTextBox.Focus();
 
             Grid.SetColumn(this._filterBox, 1);

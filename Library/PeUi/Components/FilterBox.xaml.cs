@@ -1,16 +1,13 @@
 #nullable enable
 
 using PeUi.Core;
-using PeUi.Core.Converters;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using Wpf.Ui.Controls;
-using Binding = System.Windows.Data.Binding;
 
 namespace PeUi.Components;
 
@@ -138,10 +135,12 @@ public partial class FilterBox : RevitHostedUserControl, IPopoverExit {
 /// </summary>
 public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
     private readonly TViewModel _viewModel;
-    private string? _availableValuesPropertyName;
+    private readonly ObservableCollection<string>? _availableFilterValues;
 
-    public FilterBox(TViewModel viewModel, IEnumerable<Key> closeKeys) : base(closeKeys) {
+    public FilterBox(TViewModel viewModel, IEnumerable<Key> closeKeys, ObservableCollection<string>? availableFilterValues = null) : base(closeKeys) {
         this._viewModel = viewModel;
+        this._availableFilterValues = availableFilterValues;
+        this.DataContext = viewModel;
         this.FilterAutoSuggestBox.SuggestionChosen += this.FilterAutoSuggestBox_SuggestionChosen;
         this.FilterAutoSuggestBox.PreviewKeyDown += this.FilterAutoSuggestBox_PreviewKeyDown;
     }
@@ -174,44 +173,6 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
         } else if (e.Key is not Key.Up and not Key.Down) _ = this.FilterAutoSuggestBox.Focus();
     }
 
-    public void BindToViewModel(string availableValuesPropertyName, string selectedValuePropertyName) {
-        this._availableValuesPropertyName = availableValuesPropertyName;
-
-        // Bind to AvailableFilterValues for the dropdown suggestions
-        _ = this.FilterAutoSuggestBox.SetBinding(
-            AutoSuggestBox.OriginalItemsSourceProperty,
-            new Binding(availableValuesPropertyName) { Source = this._viewModel, Mode = BindingMode.OneWay }
-        );
-
-        // Bind FilterPill Text to SelectedFilterValue (only shows chosen filter, not typed text)
-        _ = this.FilterPill.SetBinding(
-            Pill.TextProperty,
-            new Binding(selectedValuePropertyName) { Source = this._viewModel, Mode = BindingMode.OneWay }
-        );
-
-        // Bind FilterPill Visibility to SelectedFilterValue (show only when a filter is selected)
-        _ = this.FilterPill.SetBinding(
-            VisibilityProperty,
-            new Binding(selectedValuePropertyName) {
-                Source = this._viewModel,
-                Mode = BindingMode.OneWay,
-                Converter = VisibilityConverter.Instance
-            }
-        );
-
-        // Bind ClearFilterBorder Visibility to SelectedFilterValue (show X button when filter is active)
-        if (this.FindName("ClearFilterBorder") is Border clearFilterBorder) {
-            _ = clearFilterBorder.SetBinding(
-                VisibilityProperty,
-                new Binding(selectedValuePropertyName) {
-                    Source = this._viewModel,
-                    Mode = BindingMode.OneWay,
-                    Converter = VisibilityConverter.Instance
-                }
-            );
-        }
-    }
-
     private void UpdateSelectedFilterValue(string? value) {
         var selectedValueProperty = typeof(TViewModel).GetProperty("SelectedFilterValue");
         var currentValue = selectedValueProperty?.GetValue(this._viewModel) as string;
@@ -224,12 +185,8 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
         }
 
         // Validate that the value exists in available filter values
-        if (string.IsNullOrEmpty(this._availableValuesPropertyName)) return;
-        var availableValuesProperty = typeof(TViewModel).GetProperty(this._availableValuesPropertyName);
-        if (availableValuesProperty?.GetValue(this._viewModel) is not ObservableCollection<string> availableValues)
-            return;
-
-        if (!availableValues.Contains(value)) return;
+        if (this._availableFilterValues == null) return;
+        if (!this._availableFilterValues.Contains(value)) return;
         selectedValueProperty?.SetValue(this._viewModel, value);
     }
 }
