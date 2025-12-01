@@ -4,10 +4,10 @@
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
 
     <!-- Define custom font family resource -->
-    <FontFamily x:Key="AppFontFamily">Segoe UI Variable Text</FontFamily>
+    <!-- <FontFamily x:Key="AppFontFamily">Segoe UI Variable Text</FontFamily> -->
 
     <!-- Font size values (matching TxtSz enum) -->
-    <system:Double x:Key="FontSize.Caption">9</system:Double>
+    <!-- <system:Double x:Key="FontSize.Caption">9</system:Double>
     <system:Double x:Key="FontHeight.Caption">12</system:Double>
 
     <system:Double x:Key="FontSize.Body">11</system:Double>
@@ -23,29 +23,10 @@
     <system:Double x:Key="FontHeight.TitleLarge">24</system:Double>
 
     <system:Double x:Key="FontSize.Display">22</system:Double>
-    <system:Double x:Key="FontHeight.Display">28</system:Double>
+    <system:Double x:Key="FontHeight.Display">28</system:Double> -->
 
-    <!-- Override WPF.UI's focus visual style to be invisible -->
-    <Style x:Key="DefaultControlFocusVisualStyle">
-        <Setter Property="Control.Template">
-            <Setter.Value>
-                <ControlTemplate>
-                    <Rectangle
-                        RadiusX="0"
-                        RadiusY="0"
-                        SnapsToDevicePixels="True"
-                        Stroke="Transparent"
-                        StrokeThickness="0" />
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <Style x:Key="{x:Static SystemParameters.FocusVisualStyleKey}"
-           BasedOn="{StaticResource DefaultControlFocusVisualStyle}" />
-
-    <!-- Override default implicit TextBlock style -->
-    <Style TargetType="TextBlock">
+    <!-- Override default implicit TextBlock style, this worked at one point but now it's not, idk why -->
+    <!-- <Style TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
         <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
         <Setter Property="LineHeight" Value="{StaticResource FontHeight.Body}" />
@@ -99,35 +80,5 @@
         <Setter Property="FontSize" Value="{StaticResource FontSize.Display}" />
         <Setter Property="LineHeight" Value="{StaticResource FontHeight.Display}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-    </Style>
-
-    <!-- Global override for WPF.UI TextBox to set caret color and clean appearance -->
-    <!-- Note: We don't use BasedOn to avoid inheriting WPF.UI's hover/focus visual states -->
-    <Style TargetType="{x:Type ui:TextBox}">
-        <Setter Property="CaretBrush" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}" />
-        <Setter Property="FontSize" Value="{StaticResource FontSize.Body}" />
-        <Setter Property="FontWeight" Value="Regular" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type ui:TextBox}">
-                    <Border Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            Padding="{TemplateBinding Padding}"
-                            CornerRadius="4">
-                        <ScrollViewer x:Name="PART_ContentHost"
-                                      Margin="0"
-                                      Focusable="False"
-                                      VerticalAlignment="Center" />
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
+    </Style> -->
 </ResourceDictionary>

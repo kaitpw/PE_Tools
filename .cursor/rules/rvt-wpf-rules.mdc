@@ -1,4 +1,5 @@
 ---
+globs: *.xaml
 alwaysApply: false
 ---
 
@@ -68,6 +69,52 @@ overriding Wpf.Ui's templates over creating new components from scratch.
 </Border>
 ```
 
+### Overriding WPF-UI Styles
+
+Because of our environment, WPF's normal resource lookup chain is broken. We
+work around this by explicitly merging `WpfUiResources.xaml` into each
+window/control via `ThemeManager.LoadWpfUiResources()`. However, this creates a
+resource hierarchy where merged dictionaries can't find sibling dictionaries
+during `StaticResource` resolution at parse time. Standalone WPF apps don't face
+this because Application-level resources are always searchable. Our solution -
+merging `ControlsDictionary` into each override file - compensates for this
+broken lookup chain.
+
+#### Global overrides (all controls), put in WpfUiResources.xaml:
+
+```xaml
+<!-- Library/PeUi/Core/WpfUiResources.xaml -->
+<ResourceDictionary>
+    <ResourceDictionary.MergedDictionaries>
+        <ui:ThemesDictionary Theme="Dark" />
+        <ui:ControlsDictionary />
+        <ResourceDictionary Source=".../TextBox.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <!-- Global overrides that affect ALL controls -->
+    <SolidColorBrush x:Key="TextControlFocusedBorderBrush" Color="Transparent" />
+</ResourceDictionary>
+```
+
+#### Per component/control overrides, make a specific override file
+
+1. Create `Library/PeUi/Core/WpfOverrides/{ControlName}.xaml`
+2. Merge `ControlsDictionary` at the top
+   - This makes all Wpf.Ui Resources available to the override file, this
+     enables using them as StaticResources (for perf reasons) and also makes all
+     the internal Styles of the library available to override with `BasedOn`.
+     Not doing this may also result in a XamlParseException.
+3. Override resources if needed (for template/trigger behavior)
+   - use StaticResource as much as possible. (if using a color, then this must
+     be dynamic)
+   - write the minimal code. For simple style overrides, only write setters for
+     properties that we are changing from the default. For complex overrides
+     involving templates this is less applicable, but remember it still.
+4. Override style using `BasedOn="{StaticResource <StyleName>}"`
+   - Style name must be found in the Wpf.Ui source code. Rely on the user or the
+     wpfui docs mcp to find this name.
+5. Add merge reference in `WpfUiResources.xaml`
+
 ### Key Anti-Patterns
 
 ❌ **Don't** create standard `TextBlock` - use `ui:TextBlock` for theme
@@ -87,10 +134,11 @@ to make a conventional WPF application. Having completed project-setup, this is
 only a minor concern, however it may occasionally effect architecture. Do not
 code defensively for this limitation, we'll cross that bridge when we're there.
 
-Because Revit hosts the wpf window, `Application.Current` only contains Revits.
-Specifically `Application.Current.TryFindResource(<key>)` will always return
-null, where `<key>` is a Wpf.Ui `ThemeResource`. Our `RevitHostedUserControl`
-and `ThemeManager.LoadWpfUiResources()` are the solution to this problem.
+Because Revit hosts the wpf window, `Application.Current` only contains Revits
+resources. Specifically `Application.Current.TryFindResource(<key>)` will always
+return null, where `<key>` is a Wpf.Ui `ThemeResource`. Our
+`RevitHostedUserControl`, `ThemeManager.LoadWpfUiResources()`, and
+`WpfUiResources.xaml` are the solution to this problem.
 
 Other important notes related to compilation troubleshooting are:
 

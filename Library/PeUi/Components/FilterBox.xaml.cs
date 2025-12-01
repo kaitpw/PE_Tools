@@ -7,7 +7,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
-using Wpf.Ui.Controls;
 
 namespace PeUi.Components;
 
@@ -84,7 +83,7 @@ public partial class FilterBox : RevitHostedUserControl, IPopoverExit {
 
 
     protected void IconBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) =>
-        _ = this.FilterAutoSuggestBox.Focus();
+        this.FilterAutoSuggestBox.Focus();
 
     protected void ClearFilterBorder_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
         this.OnClearFilterRequested();
@@ -117,7 +116,7 @@ public partial class FilterBox : RevitHostedUserControl, IPopoverExit {
         this._expandStoryboard?.Begin();
 
         // Focus the AutoSuggestBox after expansion starts
-        _ = this.Dispatcher.BeginInvoke(new Action(() => _ = this.FilterAutoSuggestBox.Focus()),
+        _ = this.Dispatcher.BeginInvoke(new Action(this.FilterAutoSuggestBox.Focus),
             DispatcherPriority.Input);
     }
 
@@ -134,14 +133,16 @@ public partial class FilterBox : RevitHostedUserControl, IPopoverExit {
 ///     Provides filtering functionality with AutoSuggestBox
 /// </summary>
 public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
-    private readonly TViewModel _viewModel;
     private readonly ObservableCollection<string>? _availableFilterValues;
+    private readonly TViewModel _viewModel;
 
-    public FilterBox(TViewModel viewModel, IEnumerable<Key> closeKeys, ObservableCollection<string>? availableFilterValues = null) : base(closeKeys) {
+    public FilterBox(TViewModel viewModel,
+        IEnumerable<Key> closeKeys,
+        ObservableCollection<string>? availableFilterValues = null) : base(closeKeys) {
         this._viewModel = viewModel;
         this._availableFilterValues = availableFilterValues;
         this.DataContext = viewModel;
-        this.FilterAutoSuggestBox.SuggestionChosen += this.FilterAutoSuggestBox_SuggestionChosen;
+        this.FilterAutoSuggestBox.SelectionChanged += this.FilterAutoSuggestBox_SelectionChanged;
         this.FilterAutoSuggestBox.PreviewKeyDown += this.FilterAutoSuggestBox_PreviewKeyDown;
     }
 
@@ -151,8 +152,8 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
     /// <summary>
     ///     This event fires EVERY time a list item is focused by the keyboard. update view model here.
     /// </summary>
-    private void FilterAutoSuggestBox_SuggestionChosen(object sender, AutoSuggestBoxSuggestionChosenEventArgs e) {
-        this.UpdateSelectedFilterValue(e.SelectedItem.ToString());
+    private void FilterAutoSuggestBox_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+        if (e.AddedItems.Count > 0) this.UpdateSelectedFilterValue(e.AddedItems[0]?.ToString());
         e.Handled = true;
     }
 
@@ -170,7 +171,7 @@ public class FilterBox<TViewModel> : FilterBox where TViewModel : class {
             this.UpdateSelectedFilterValue(this.FilterAutoSuggestBox.Text);
             e.Handled = true;
             this.RequestExit();
-        } else if (e.Key is not Key.Up and not Key.Down) _ = this.FilterAutoSuggestBox.Focus();
+        }
     }
 
     private void UpdateSelectedFilterValue(string? value) {

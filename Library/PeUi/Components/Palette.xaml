@@ -5,9 +5,6 @@
                              xmlns:local="clr-namespace:PeUi.Components"
                              xmlns:core="clr-namespace:PeUi.Core"
                              VerticalAlignment="Top">
-    <UserControl.Resources>
-    </UserControl.Resources>
-
     <Grid HorizontalAlignment="Stretch"
           VerticalAlignment="Stretch">
         <!-- Main container -->
@@ -41,6 +38,7 @@
                         <ui:TextBox x:Name="SearchTextBox"
                                     x:FieldModifier="protected"
                                     Grid.Column="0"
+                                    Style="{StaticResource TransparentTextBoxStyle}"
                                     Text="{Binding SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
                             <ui:TextBox.InputBindings>
                                 <KeyBinding Key="Down" Command="{Binding MoveSelectionDownCommand}" />
