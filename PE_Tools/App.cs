@@ -6,7 +6,6 @@ using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI.Events;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
-using Wpf.Ui.Appearance;
 
 namespace PE_Tools;
 
@@ -14,9 +13,6 @@ internal class App : IExternalApplication {
     public Result OnStartup(UIControlledApplication app) {
         // Set up assembly resolver for Wpf.Ui and other dependencies
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
-
-        // Initialize WPF.UI theme system - defaults to Dark theme
-        ApplicationThemeManager.Apply(ApplicationTheme.Dark);
 
         // Subscribe to ViewActivated event for MRU tracking
         app.ViewActivated += OnViewActivated;
@@ -59,6 +55,7 @@ internal class App : IExternalApplication {
             panelMigration.AddPushButton<CmdFFMakeATVariants>("Make AT Variants"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
+            manageStackButton.AddPushButton<CmdTestSettingsEditor>("Test Settings Editor"),
 
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
             panelTools.AddPushButton<CmdPltCommands>("Command Palette"),
@@ -101,17 +98,20 @@ internal class App : IExternalApplication {
     }
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
-        Debug.WriteLine($"Assembly Resolution Failes: \n\t Failed Assembly: {args.Name}");
+        Debug.WriteLine($"Assembly Resolution Failed: \n\t Failed Assembly: {args.Name}");
 
         // Get the assembly name being requested
         var assemblyName = new AssemblyName(args.Name);
 
         // Only handle assemblies we know about
-        if (assemblyName.Name is not "Wpf.Ui" and not "Wpf.Ui.Abstractions") return null;
+        var knownProblemAssemblyNames =
+            new List<string> { "Wpf.Ui", "Wpf.Ui.Abstractions", "Microsoft.Extensions.Options" };
+        if (knownProblemAssemblyNames.Contains(assemblyName.Name)) return null;
 
         // Get the directory where this add-in's DLL is located
         var addinPath = typeof(App).Assembly.Location;
         var addinDirectory = Path.GetDirectoryName(addinPath);
+        if (addinDirectory is null) return null;
 
         // Construct the path to the requested assembly
         var assemblyPath = Path.Combine(addinDirectory, $"{assemblyName.Name}.dll");
@@ -258,6 +258,13 @@ public static class ButtonDataHydrator {
                 LargeImage = "Red_32.png",
                 ToolTip =
                     "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
+            }
+        }, {
+            nameof(CmdTestSettingsEditor),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Test the generic settings editor POC with Family Foundry settings."
             }
         }
     };

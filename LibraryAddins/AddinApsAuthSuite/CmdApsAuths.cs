@@ -11,9 +11,7 @@ public class CmdApsAuthNormal : IExternalCommand {
         ref string message,
         ElementSet elements) {
         try {
-            var storage = new Storage(nameof(CmdApsAuthNormal));
-            var settings = storage.SettingsDir().Json<ApsAuthNormal>().Read();
-            var auth = new Aps(settings);
+            var auth = new Aps(new ApsAuthNormal());
             var token = auth.GetToken();
             new Ballogger().AddDebug(Log.INFO, new StackFrame(), token).Show();
             return Result.Succeeded;
@@ -24,15 +22,14 @@ public class CmdApsAuthNormal : IExternalCommand {
     }
 }
 
+[Transaction(TransactionMode.Manual)]
 public class CmdApsAuthPKCE : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
         ElementSet elements) {
         try {
-            var storage = new Storage(nameof(CmdApsAuthPKCE));
-            var settings = storage.SettingsDir().Json<ApsAuthPkce>().Read();
-            var aps = new Aps(settings);
+            var aps = new Aps(new ApsAuthPkce());
             var token = aps.GetToken();
             new Ballogger().AddDebug(Log.INFO, new StackFrame(), token).Show();
             return Result.Succeeded;
