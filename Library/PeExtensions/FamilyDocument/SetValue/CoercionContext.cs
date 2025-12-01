@@ -26,14 +26,7 @@ public record CoercionContext {
     /// <summary>
     ///     The storage type of the source value, derived from the value's type.
     /// </summary>
-    public StorageType SourceStorageType =>
-        this.SourceValue switch {
-            double => StorageType.Double,
-            int => StorageType.Integer,
-            string => StorageType.String,
-            ElementId => StorageType.ElementId,
-            _ => throw new ArgumentException($"Invalid source value type ({this.SourceValue.GetType().Name})")
-        };
+    public StorageType SourceStorageType { get; init; }
 
     /// <summary>
     ///     The storage type of the target parameter from FamilyParameter.StorageType
@@ -73,7 +66,17 @@ public record CoercionContext {
             FamilyDocument = new FamilyDocument(doc),
             FamilyManager = doc.FamilyManager,
             SourceValue = sourceValue,
+            SourceStorageType = DeriveStorageTypeFromValue(sourceValue),
             TargetParam = targetParam
+        };
+
+    private static StorageType DeriveStorageTypeFromValue(object value) =>
+        value switch {
+            double => StorageType.Double,
+            int => StorageType.Integer,
+            string => StorageType.String,
+            ElementId => StorageType.ElementId,
+            _ => StorageType.None
         };
 
     /// <summary>
@@ -88,6 +91,7 @@ public record CoercionContext {
             SourceValue = doc.GetValue(sourceParam),
             SourceValueString = doc.FamilyManager.CurrentType.AsValueString(sourceParam),
             SourceDataType = sourceParam.Definition.GetDataType(),
+            SourceStorageType = sourceParam.StorageType,
             TargetParam = targetParam
         };
 }
