@@ -18,7 +18,6 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter() },
         ContractResolver = new OrderedContractResolver(),
         NullValueHandling = NullValueHandling.Ignore,
-        DefaultValueHandling = DefaultValueHandling.Ignore
     };
 
     private readonly DateTime _instanceCreationTime;
@@ -29,7 +28,6 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter() },
         ContractResolver = new RequiredAwareContractResolver(),
         NullValueHandling = NullValueHandling.Ignore,
-        DefaultValueHandling = DefaultValueHandling.Ignore
     };
 
     public Json(string filePath, bool throwIfDefaultCreated, bool saveSchema) {

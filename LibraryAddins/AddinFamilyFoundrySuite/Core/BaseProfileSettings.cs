@@ -49,18 +49,36 @@ public class BaseProfileSettings {
             var familyName = f.Name;
             var categoryName = f.FamilyCategory?.Name;
 
-            var anyIncludeNameFilters = this.IncludeNames.Equaling.Any() ||
-                                        this.IncludeNames.Containing.Any() ||
-                                        this.IncludeNames.StartingWith.Any();
+            // Step 1: Filter by category if specified
+            if (this.IncludeCategoriesEqualing.Any()) {
+                if (categoryName == null || !this.IncludeCategoriesEqualing.Any(categoryName.Equals)) {
+                    return false;
+                }
+            }
 
-            var nameIncluded = !anyIncludeNameFilters || this.IsNameIncluded(familyName);
-            var namePasses = nameIncluded && !this.IsNameExcluded(familyName);
+            // Step 2: Filter by includes if specified (otherwise all pass)
+            var hasIncludeFilters = this.IncludeNames.Equaling.Any() ||
+                                    this.IncludeNames.Containing.Any() ||
+                                    this.IncludeNames.StartingWith.Any();
 
-            // Category filter: if no category filters specified, all pass; otherwise only matching categories pass
-            var categoryPasses = !this.IncludeCategoriesEqualing.Any() ||
-                                 (categoryName != null && this.IncludeCategoriesEqualing.Any(categoryName.Equals));
+            if (hasIncludeFilters) {
+                if (!this.IsNameIncluded(familyName)) {
+                    return false;
+                }
+            }
 
-            return namePasses && categoryPasses;
+            // Step 3: Filter by excludes if specified (otherwise all pass)
+            var hasExcludeFilters = this.ExcludeNames.Equaling.Any() ||
+                                    this.ExcludeNames.Containing.Any() ||
+                                    this.ExcludeNames.StartingWith.Any();
+
+            if (hasExcludeFilters) {
+                if (this.IsNameExcluded(familyName)) {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private bool IsNameIncluded(string familyName) =>

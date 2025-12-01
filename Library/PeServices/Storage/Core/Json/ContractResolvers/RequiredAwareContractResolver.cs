@@ -2,79 +2,85 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Collections;
 using System.ComponentModel.DataAnnotations;
+using System.Runtime.CompilerServices;
 
 namespace PeServices.Storage.Core.Json.ContractResolvers;
 
 /// <summary>
 ///     Contract resolver that:
-///     1. Orders properties by declaration order (respecting inheritance)
-///     2. Always serializes properties marked with [Required] attribute
-///     3. Skips serializing non-required properties when they equal their type's default values
+///     1. Orders properties by declaration order (respecting inheritance) - inherited from OrderedContractResolver
+///     2. Always serializes properties marked with [Required] attribute or 'required' keyword
+///     3. Skips serializing non-required properties when they equal their class-defined default values
 /// </summary>
-internal class RequiredAwareContractResolver : DefaultContractResolver {
-    protected override IList<JsonProperty> CreateProperties(Type type, MemberSerialization memberSerialization) {
-        var properties = base.CreateProperties(type, memberSerialization);
+internal class RequiredAwareContractResolver : OrderedContractResolver {
+    private readonly Dictionary<Type, object> _defaultInstanceCache = new();
 
-        // Create a default instance to compare against
-        var defaultInstance = TryCreateDefaultInstance(type);
+    protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization) {
+        var property = base.CreateProperty(member, memberSerialization);
 
-        // Build inheritance chain from base to derived
-        var typeHierarchy = new List<Type>();
-        var currentType = type;
-        while (currentType != null && currentType != typeof(object)) {
-            typeHierarchy.Insert(0, currentType);
-            currentType = currentType.BaseType;
+        if (property.PropertyType == null || member is not PropertyInfo propInfo) return property;
+
+        // Check if property is required
+        if (this.IsRequiredProperty(propInfo)) {
+            // Always serialize required properties, even if they have default values
+            property.DefaultValueHandling = DefaultValueHandling.Include;
+            return property;
         }
 
-        // Create ordered list: base class properties first, then derived class properties
-        var orderedProperties = new List<JsonProperty>();
-        var seenProperties = new HashSet<JsonProperty>();
+        // For non-required properties, skip when they equal their default value
+        var declaringType = propInfo.DeclaringType;
+        if (declaringType == null) return property;
 
-        foreach (var t in typeHierarchy) {
-            var declaredProps = t.GetProperties(BindingFlags.Public |
-                                                BindingFlags.Instance |
-                                                BindingFlags.DeclaredOnly)
-                .OrderBy(p => p.MetadataToken) // Order by metadata token to ensure declaration order
-                .ToList();
-
-            foreach (var declaredProp in declaredProps) {
-                var jsonProp = properties.FirstOrDefault(p => p.UnderlyingName == declaredProp.Name);
-                if (jsonProp != null && !seenProperties.Contains(jsonProp)) {
-                    _ = seenProperties.Add(jsonProp);
-
-                    // Check if property has [Required] attribute
-                    var hasRequiredAttribute = declaredProp.GetCustomAttributes(typeof(RequiredAttribute), true).Any();
-
-                    if (hasRequiredAttribute) {
-                        // Always serialize required properties, even if they have default values
-                        jsonProp.DefaultValueHandling = DefaultValueHandling.Include;
-                    } else {
-                        // For non-required properties, skip when they match the default value
-                        if (defaultInstance != null) {
-                            var defaultValue = GetDefaultValue(declaredProp, defaultInstance);
-                            jsonProp.ShouldSerialize = instance => {
-                                var actualValue = declaredProp.GetValue(instance);
-                                return !AreValuesEqual(actualValue, defaultValue, declaredProp.PropertyType);
-                            };
-                        } else {
-                            // Fallback to CLR default handling
-                            jsonProp.DefaultValueHandling = DefaultValueHandling.Ignore;
-                        }
-                    }
-
-                    orderedProperties.Add(jsonProp);
-                }
-            }
+        var defaultInstance = this.GetOrCreateDefaultInstance(declaringType);
+        if (defaultInstance == null) {
+            // If we can't create a default instance, fall back to CLR default handling
+            property.DefaultValueHandling = DefaultValueHandling.Ignore;
+            return property;
         }
 
-        return orderedProperties;
+        // Get the default value for this property from the default instance
+        var defaultValue = this.GetDefaultValue(propInfo, defaultInstance);
+
+        // Set ShouldSerialize to skip when value equals default
+        property.ShouldSerialize = instance => {
+            var actualValue = propInfo.GetValue(instance);
+            var shouldSerialize = !this.AreValuesEqual(actualValue, defaultValue, propInfo.PropertyType);
+            // Debug.WriteLine($"{property.DeclaringType}.{property.PropertyName} {shouldSerialize}");
+            return shouldSerialize;
+        };
+
+        return property;
+    }
+
+    /// <summary>
+    ///     Checks if a property is required (either via [Required] attribute or C# 'required' keyword).
+    /// </summary>
+    private bool IsRequiredProperty(PropertyInfo propertyInfo) {
+        // Check for [Required] attribute from System.ComponentModel.DataAnnotations
+        if (propertyInfo.GetCustomAttribute<RequiredAttribute>() != null) return true;
+
+        // Check for RequiredMemberAttribute (C# 'required' keyword)
+        if (propertyInfo.GetCustomAttribute<RequiredMemberAttribute>() != null) return true;
+
+        return false;
+    }
+
+    /// <summary>
+    ///     Gets or creates a cached default instance for the given type.
+    /// </summary>
+    private object GetOrCreateDefaultInstance(Type type) {
+        if (this._defaultInstanceCache.TryGetValue(type, out var cached)) return cached;
+
+        var instance = this.TryCreateDefaultInstance(type);
+        this._defaultInstanceCache[type] = instance;
+        return instance;
     }
 
     /// <summary>
     ///     Attempts to create a default instance of the type for comparison.
     ///     Handles types with parameterless constructors and types with required properties.
     /// </summary>
-    private static object TryCreateDefaultInstance(Type type) {
+    private object TryCreateDefaultInstance(Type type) {
         try {
             // Try regular parameterless construction first
             return Activator.CreateInstance(type);
@@ -106,15 +112,25 @@ internal class RequiredAwareContractResolver : DefaultContractResolver {
         }
     }
 
-    private static object GetDefaultValue(PropertyInfo propertyInfo, object defaultInstance) {
+    /// <summary>
+    ///     Gets the default value for a property from the default instance.
+    /// </summary>
+    private object GetDefaultValue(PropertyInfo propertyInfo, object defaultInstance) {
         try {
+            // if (defaultInstance == null) Debug.WriteLine($"property {propertyInfo.Name} is null");
+            if (defaultInstance == null) return null;
             return propertyInfo.GetValue(defaultInstance);
         } catch {
+            // If we can't get the value, return null (property will be serialized)
             return null;
         }
     }
 
-    private static bool AreValuesEqual(object value1, object value2, Type propertyType) {
+    /// <summary>
+    ///     Compares two values for equality, handling null and collection types properly.
+    /// </summary>
+    private bool AreValuesEqual(object value1, object value2, Type propertyType) {
+        // Handle null cases
         if (value1 == null && value2 == null) return true;
 
         if (value1 == null || value2 == null) return false;
@@ -136,6 +152,7 @@ internal class RequiredAwareContractResolver : DefaultContractResolver {
             return list1.SequenceEqual(list2);
         }
 
+        // Use EqualityComparer for proper comparison
         var comparerType = typeof(EqualityComparer<>).MakeGenericType(propertyType);
         var defaultComparer = comparerType.GetProperty("Default", BindingFlags.Public | BindingFlags.Static)
             ?.GetValue(null);

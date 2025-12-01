@@ -29,7 +29,17 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
             try {
                 var currentParam = fm.FindParameter(mapping.CurrName);
                 if (currentParam == null) continue; // skip silently, errors will show in MapParams operation
-                if (ParameterUtils.IsBuiltInParameter(currentParam.Id)) continue;
+                if (ParameterUtils.IsBuiltInParameter(currentParam.Id)) {
+                    continue;
+
+                    // TODO: Make another operation that will replace uses of builtin parameters with shared parameters, then delete the builtin.
+                    // if (currentParam.StorageType == StorageType.String) continue;
+
+                    // if (currentParam.AssociatedParameters.Cast<Parameter>().Any()) continue;
+                    // if (currentParam.AssociatedArrays(doc).Any()) continue;
+                    // if (currentParam.AssociatedDimensions(doc).Any()) continue;
+                    // if (currentParam.AssociatedFamilyParameters(doc, true).Any()) continue;
+                }
 
                 if (currentParam.Definition.GetDataType() != sharedParam.externalDefinition.GetDataType()) continue;
 
