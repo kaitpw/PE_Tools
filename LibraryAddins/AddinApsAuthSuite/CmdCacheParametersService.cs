@@ -16,7 +16,7 @@ public class CmdCacheParametersService : IExternalCommand {
         var svcAps = new Aps(new CacheParametersService());
         var _ = Task.Run(async () =>
             await svcAps.Parameters(new CacheParametersService()).GetParameters(
-                apsParamsCache)
+                apsParamsCache, false)
         ).Result;
 
         return Result.Succeeded;

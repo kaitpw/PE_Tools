@@ -70,12 +70,10 @@ public class LogRefPlaneAndDims(string outputDir) : DocOperation {
             }
         }
 
-        var defaultInstance = new RefPlaneSpec { Name = "", AnchorName = "" };
-
         // Output JSON format
         var jsonOptions = new JsonSerializerSettings {
             Formatting = Formatting.Indented,
-            ContractResolver = new DefaultValueSkippingContractResolver(defaultInstance),
+            ContractResolver = new RequiredAwareContractResolver(),
             Converters = [new StringEnumConverter()]
         };
 

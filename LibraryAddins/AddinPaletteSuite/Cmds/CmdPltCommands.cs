@@ -111,8 +111,10 @@ public static class CommandPaletteService {
         // Create view model
         var viewModel = new PaletteViewModel<PostableCommandItem>(selectableItems, searchService);
 
-        // Create palette UserControl
-        var palette = new Palette<PostableCommandItem>(viewModel, actions);
+        // Create palette using composition pattern (NOT inheritance)
+        // Generic classes cannot inherit from XAML partial classes in Revit-hosted WPF
+        var palette = new Palette();
+        palette.Initialize(viewModel, actions);
 
         // Wrap in EphemeralWindow and return
         return new EphemeralWindow(palette, "Command Palette");

@@ -6,7 +6,6 @@ using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI.Events;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
-using Wpf.Ui.Appearance;
 
 namespace PE_Tools;
 
@@ -14,9 +13,6 @@ internal class App : IExternalApplication {
     public Result OnStartup(UIControlledApplication app) {
         // Set up assembly resolver for Wpf.Ui and other dependencies
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
-
-        // Initialize WPF.UI theme system - defaults to Dark theme
-        ApplicationThemeManager.Apply(ApplicationTheme.Dark);
 
         // Subscribe to ViewActivated event for MRU tracking
         app.ViewActivated += OnViewActivated;
@@ -59,6 +55,7 @@ internal class App : IExternalApplication {
             panelMigration.AddPushButton<CmdFFMakeATVariants>("Make AT Variants"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
+            manageStackButton.AddPushButton<CmdTestSettingsEditor>("Test Settings Editor"),
 
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
             panelTools.AddPushButton<CmdPltCommands>("Command Palette"),
@@ -91,34 +88,41 @@ internal class App : IExternalApplication {
     }
 
     private static void OnDocumentClosing(object sender, DocumentClosingEventArgs e) {
-        if (e?.Document == null) return;
+        if (e?.Document == null) {
+            Debug.WriteLine("[App] OnDocumentClosing: Document is null, ignoring");
+            return;
+        }
 
-        // Clean up MRU buffer
+        Debug.WriteLine($"[App] OnDocumentClosing: Title='{e.Document.Title}', PathName='{e.Document.PathName}'");
+        Debug.WriteLine("[App] OnDocumentClosing: Removing from MRU buffer...");
         MruViewService.Instance.RemoveDocumentViews(e.Document);
 
-        // Clean up document color cache
+        Debug.WriteLine("[App] OnDocumentClosing: Removing from color cache...");
         DocumentColorService.Instance.RemoveDocument(e.Document);
+        Debug.WriteLine("[App] OnDocumentClosing: Done");
     }
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
-        Debug.WriteLine($"Assembly Resolution Failes: \n\t Failed Assembly: {args.Name}");
+        Debug.WriteLine($"Assembly Resolution Requested: {args.Name}");
 
         // Get the assembly name being requested
         var assemblyName = new AssemblyName(args.Name);
 
-        // Only handle assemblies we know about
-        if (assemblyName.Name is not "Wpf.Ui" and not "Wpf.Ui.Abstractions") return null;
-
         // Get the directory where this add-in's DLL is located
         var addinPath = typeof(App).Assembly.Location;
         var addinDirectory = Path.GetDirectoryName(addinPath);
+        if (addinDirectory is null) return null;
 
         // Construct the path to the requested assembly
         var assemblyPath = Path.Combine(addinDirectory, $"{assemblyName.Name}.dll");
 
-        // Load and return the assembly if it exists
-        if (File.Exists(assemblyPath)) return Assembly.LoadFrom(assemblyPath);
+        // Load and return the assembly if it exists in our add-in directory
+        if (File.Exists(assemblyPath)) {
+            Debug.WriteLine($"Loading assembly from: {assemblyPath}");
+            return Assembly.LoadFrom(assemblyPath);
+        }
 
+        Debug.WriteLine($"Assembly not found in add-in directory: {assemblyPath}");
         return null;
     }
 }
@@ -258,6 +262,13 @@ public static class ButtonDataHydrator {
                 LargeImage = "Red_32.png",
                 ToolTip =
                     "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
+            }
+        }, {
+            nameof(CmdTestSettingsEditor),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Test the generic settings editor POC with Family Foundry settings."
             }
         }
     };

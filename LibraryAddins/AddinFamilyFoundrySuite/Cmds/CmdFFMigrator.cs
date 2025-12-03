@@ -60,7 +60,6 @@ public class CmdFFMigrator : IExternalCommand {
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, apsParamNames))
-                .Add(new DebugLogAnnoInfo())
                 .Add(new SetParamValueAsFormula(addFamilyParamsSettings));
 
             var metadataString = queue.GetExecutableMetadataString();

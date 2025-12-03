@@ -30,13 +30,15 @@ internal static class ThemeSettings {
 ///     Wraps ApplicationAccentColorManager and provides type-safe access to colors, typography, and spacing.
 /// </summary>
 public static class ThemeManager {
+    private static ResourceDictionary? _wpfUiResources;
+
     public static double IconOpacity => ThemeSettings.IconOpacity;
     public static CornerRadius Radius => ThemeSettings.Radius;
 
     public static double DisabledOpacity => ThemeSettings.DisabledOpacity;
 
     public static ResourceDictionary WpfUiResources =>
-        new() {
+        _wpfUiResources ??= new ResourceDictionary {
             Source = new Uri("pack://application:,,,/PE_Tools;component/peui/core/wpfuiresources.xaml",
                 UriKind.Absolute)
         };
@@ -73,7 +75,6 @@ public static class ThemeManager {
     ///     The targetType parameter is kept for API compatibility but styles are TextBlock-based.
     /// </summary>
     /// <param name="typography">The FontTypography level to get</param>
-    /// <param name="_">Unused type parameter for API compatibility</param>
     /// <param name="searchContext">Optional element to search for resources in its resource chain before Application</param>
     public static Style GetTypographyStyle(
         FontTypography typography,

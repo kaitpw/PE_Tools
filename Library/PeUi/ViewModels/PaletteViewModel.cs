@@ -8,9 +8,17 @@ using System.Windows.Threading;
 namespace PeUi.ViewModels;
 
 /// <summary>
+///     Non-generic interface for type-erased access in Palette component
+/// </summary>
+public interface IPaletteViewModel {
+    IRelayCommand MoveSelectionUpCommand { get; }
+    IRelayCommand MoveSelectionDownCommand { get; }
+}
+
+/// <summary>
 ///     Generic ViewModel for the SelectablePalette window with optional filtering support
 /// </summary>
-public partial class PaletteViewModel<TItem> : ObservableObject
+public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewModel
     where TItem : class, IPaletteListItem {
     private readonly List<TItem> _allItems;
     private readonly DispatcherTimer _debounceTimer;

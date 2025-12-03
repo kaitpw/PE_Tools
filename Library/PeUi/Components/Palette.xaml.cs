@@ -11,59 +11,59 @@ using Grid = System.Windows.Controls.Grid;
 namespace PeUi.Components;
 
 /// <summary>
-///     Non-generic base class for SelectablePalette.xaml
-///     This matches the XAML x:Class declaration and provides access to XAML-defined controls
+///     Attached property holder and common close behavior for Palette.
+///     Separated from XAML class to support generic usage.
 /// </summary>
-public partial class Palette : RevitHostedUserControl, ICloseRequestable {
+public static class PaletteAttachedProperties {
     /// <summary>
     ///     Attached property to store ActionBinding for child controls to access
     /// </summary>
     public static readonly DependencyProperty ActionBindingProperty = DependencyProperty.RegisterAttached(
         "ActionBinding",
         typeof(object),
-        typeof(Palette),
+        typeof(PaletteAttachedProperties),
         new PropertyMetadata(null));
-
-    protected Palette(object dataContext = null) {
-        // Set DataContext before InitializeComponent so bindings work
-        if (dataContext != null)
-            this.DataContext = dataContext;
-        this.InitializeComponent();
-    }
-
-    public event EventHandler<CloseRequestedEventArgs> CloseRequested;
 
     public static void SetActionBinding(DependencyObject element, object value) =>
         element.SetValue(ActionBindingProperty, value);
 
     public static object GetActionBinding(DependencyObject element) =>
         element.GetValue(ActionBindingProperty);
-
-    protected void RequestClose(bool restoreFocus = true) =>
-        this.CloseRequested?.Invoke(this, new CloseRequestedEventArgs { RestoreFocus = restoreFocus });
-
-    // Note: SearchBoxBorder, MainBorder, StatusBarBorder, ItemListView, StatusBarBorder
-    // are defined in the XAML and accessible via the partial class generated code
 }
 
 /// <summary>
-///     Generic SelectablePalette implementation with typed item support
+///     XAML-backed Palette component. This is the ONLY class that should be used
+///     with the Palette.xaml file. Generic behavior is handled via composition,
+///     NOT inheritance (generic classes cannot inherit from XAML partial classes).
 /// </summary>
-public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
-    private readonly ActionBinding<TItem> _actionBinding;
-    private readonly ActionMenu<TItem> _actionMenu;
-    private readonly CustomKeyBindings? _customKeyBindings;
-    private readonly FilterBox<PaletteViewModel<TItem>>? _filterBox;
-    private readonly SelectableTextBox _tooltipPanel;
+public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable {
+    private ActionBinding _actionBinding;
+    private ActionMenu _actionMenu;
+    private CustomKeyBindings _customKeyBindings;
+    private FilterBox _filterBox;
+    private SelectableTextBox _tooltipPanel;
+    private Func<Task<bool>> _executeItemFunc;
+    private Func<object> _getSelectedItemFunc;
+    private Action _recordUsageFunc;
     private bool _isSearchBoxHidden;
 
-    public Palette(
+    public Palette() {
+        this.InitializeComponent();
+    }
+
+    public event EventHandler<CloseRequestedEventArgs> CloseRequested;
+
+    /// <summary>
+    ///     Initializes the palette with type-specific behavior via composition.
+    ///     This must be called after construction to wire up generic-specific logic.
+    /// </summary>
+    internal void Initialize<TItem>(
         PaletteViewModel<TItem> viewModel,
         IEnumerable<PaletteAction<TItem>> actions,
-        CustomKeyBindings? customKeyBindings = null
-    ) : base(viewModel) {
+        CustomKeyBindings customKeyBindings = null
+    ) where TItem : class, IPaletteListItem {
+        this.DataContext = viewModel;
         this._customKeyBindings = customKeyBindings;
-        // Base class constructor sets DataContext and calls InitializeComponent()
 
         // Load resources for SearchTextBox
         ThemeManager.LoadWpfUiResources(this.SearchTextBox);
@@ -71,12 +71,16 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
         // Create FilterBox if filtering is enabled
         var hasFiltering = viewModel.AvailableFilterValues != null;
         if (hasFiltering) {
-            this._filterBox = new FilterBox<PaletteViewModel<TItem>>(viewModel, new[] { Key.Tab, Key.Escape });
-            this._filterBox.BindToViewModel("AvailableFilterValues", "SelectedFilterValue");
-            this._filterBox.ExitRequested += (_, _) => _ = this.SearchTextBox.Focus();
+            var filterBox = new FilterBox<PaletteViewModel<TItem>>(
+                viewModel,
+                [Key.Tab, Key.Escape],
+                viewModel.AvailableFilterValues
+            );
+            filterBox.ExitRequested += (_, _) => _ = this.SearchTextBox.Focus();
+            this._filterBox = filterBox;
 
-            Grid.SetColumn(this._filterBox, 1);
-            _ = this.SearchBoxGrid.Children.Add(this._filterBox);
+            Grid.SetColumn(filterBox, 1);
+            _ = this.SearchBoxGrid.Children.Add(filterBox);
         }
 
         new BorderSpec()
@@ -95,37 +99,90 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
             .ApplyToBorder(this.StatusBarBorder);
         this.StatusBarBorder.ClipToBounds = true;
 
-        this._actionBinding = new ActionBinding<TItem>();
-        this._actionBinding.RegisterRange(actions);
-        this._actionMenu = new ActionMenu<TItem>([Key.Escape, Key.Left]);
+        var actionBinding = new ActionBinding<TItem>();
+        actionBinding.RegisterRange(actions);
+        var actionMenu = new ActionMenu<TItem>([Key.Escape, Key.Left]);
+
+        // Store type-erased references for non-generic code paths
+        this._actionBinding = actionBinding;
+        this._actionMenu = actionMenu;
 
         // Store ActionBinding as attached property so child controls can access it
-        SetActionBinding(this, this._actionBinding);
+        PaletteAttachedProperties.SetActionBinding(this, actionBinding);
 
         // Create tooltip panel programmatically
         this._tooltipPanel = new SelectableTextBox([Key.Escape, Key.Up, Key.Down, Key.Right]);
+
+        // Capture typed delegates for use in non-generic handlers
+        this._getSelectedItemFunc = () => viewModel.SelectedItem;
+        this._recordUsageFunc = viewModel.RecordUsage;
+        this._executeItemFunc = async () => {
+            var selectedItem = viewModel.SelectedItem;
+            if (selectedItem == null) return false;
+            return await this.ExecuteItemTyped(selectedItem, actionBinding, viewModel, Keyboard.Modifiers);
+        };
+
+        // Wire up typed event handlers
+        this.SetupTypedEventHandlers(viewModel, actionBinding, actionMenu);
 
         // Wire up event handlers
         this.Loaded += this.UserControl_Loaded;
         this.PreviewKeyDown += this.UserControl_PreviewKeyDown;
     }
 
+    private void SetupTypedEventHandlers<TItem>(
+        PaletteViewModel<TItem> viewModel,
+        ActionBinding<TItem> actionBinding,
+        ActionMenu<TItem> actionMenu
+    ) where TItem : class, IPaletteListItem {
+        this.ItemListView.ItemMouseLeftButtonUp += async (_, e) => {
+            if (e.OriginalSource is not FrameworkElement source) return;
+            var item = source.DataContext as TItem;
+            if (item == null) return;
+            viewModel.SelectedItem = item;
+            _ = await this.ExecuteItemTyped(item, actionBinding, viewModel, Keyboard.Modifiers);
+        };
 
-    private PaletteViewModel<TItem> ViewModel => this.DataContext as PaletteViewModel<TItem>;
+        this.ItemListView.ItemMouseRightButtonUp += (_, e) => {
+            if (e.OriginalSource is not FrameworkElement source) return;
+            var item = source.DataContext as TItem;
+            if (item == null) return;
+            viewModel.SelectedItem = item;
 
-    /// <summary>
-    ///     Executes the selected item with the given modifiers
-    /// </summary>
-    private async Task<bool> ExecuteItem(
+            e.Handled = this.ShowPopover(placementTarget => {
+                actionMenu.Actions = actionBinding.GetAllActions().ToList();
+                actionMenu.Show(placementTarget, item);
+            });
+        };
+
+        this.ItemListView.SelectionChanged += (_, _) => {
+            if (viewModel.SelectedItem != null) this.ItemListView.ScrollIntoView(viewModel.SelectedItem);
+        };
+
+        // Set up action menu handlers
+        actionMenu.ExitRequested += (_, _) => this.Focus();
+        actionMenu.ActionClicked += async (_, action) => {
+            if (viewModel.SelectedItem == null) return;
+            var isNextPalette = await actionBinding.ExecuteActionAsync(action, viewModel.SelectedItem);
+            viewModel.RecordUsage();
+            this.RequestClose(!isNextPalette);
+        };
+
+        // Set up tooltip popover exit handler
+        this._tooltipPanel.ExitRequested += (_, _) => this.Focus();
+    }
+
+    private async Task<bool> ExecuteItemTyped<TItem>(
         TItem selectedItem,
+        ActionBinding<TItem> actionBinding,
+        PaletteViewModel<TItem> viewModel,
         ModifierKeys modifiers = ModifierKeys.None,
         Key key = Key.Enter
-    ) {
-        var result = await this._actionBinding.TryExecuteAsync(
-            selectedItem, key, modifiers);
+    ) where TItem : class, IPaletteListItem {
+        var result = await actionBinding.TryExecuteAsync(selectedItem, key, modifiers);
 
         if (result.Success) {
-            this.ViewModel.RecordUsage();
+            viewModel.RecordUsage();
             this.RequestClose(!result.IsNextPalette);
             return true;
         }
@@ -144,8 +201,11 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
         this.Focusable = true;
     }
 
+    private void RequestClose(bool restoreFocus = true) =>
+        this.CloseRequested?.Invoke(this, new CloseRequestedEventArgs { RestoreFocus = restoreFocus });
+
     private void UserControl_Loaded(object sender, RoutedEventArgs e) {
-        if (this.ViewModel == null) throw new InvalidOperationException("SelectablePalette view-model is null");
+        if (this.DataContext == null) throw new InvalidOperationException("Palette DataContext is null");
 
         // If search box is hidden - focus on the UserControl itself to receive keyboard input
         if (this._isSearchBoxHidden)
@@ -154,66 +214,6 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
             _ = this.SearchTextBox.Focus();
             this.SearchTextBox.SelectAll();
         }
-
-        this.ItemListView.ItemMouseLeftButtonUp += async (_, e) => {
-            if (e.OriginalSource is not FrameworkElement source) return;
-            var item = source.DataContext as TItem;
-            if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
-            _ = await this.ExecuteItem(item, Keyboard.Modifiers);
-        };
-
-        this.ItemListView.ItemMouseRightButtonUp += (_, e) => {
-            if (e.OriginalSource is not FrameworkElement source) return;
-            var item = source.DataContext as TItem;
-            if (item == null) return;
-            if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
-
-            e.Handled = this.ShowPopover(placementTarget => {
-                this._actionMenu.Actions = this._actionBinding.GetAllActions().ToList();
-                this._actionMenu.Show(placementTarget, item);
-            });
-        };
-
-        // Track last shown tooltip item to prevent flickering
-        TItem lastTooltipItem = null;
-
-        this.ItemListView.ItemMouseMove += (_, e) => {
-            if (e.OriginalSource is not FrameworkElement source) return;
-            var item = source.DataContext as TItem;
-
-            // Hide tooltip if mouse moved away from items
-            if (item == null) {
-                lastTooltipItem = null;
-                this._tooltipPanel.Hide();
-                return;
-            }
-
-            // Skip if no tooltip text or already showing for this item
-            if (string.IsNullOrEmpty(item.TextInfo) || item == lastTooltipItem) return;
-
-            // Update ViewModel selection and show tooltip
-            if (this.ViewModel != null) this.ViewModel.SelectedItem = item;
-            _ = this.ShowPopover(placementTarget => {
-                lastTooltipItem = item;
-                this._tooltipPanel.Show(placementTarget, item.TextInfo);
-            });
-        };
-
-        this.ItemListView.ItemMouseLeave += (_, e) => {
-            lastTooltipItem = null;
-            this._tooltipPanel.Hide();
-        };
-
-        this.ItemListView.SelectionChanged += (_, e) => {
-            if (this.ViewModel.SelectedItem != null) this.ItemListView.ScrollIntoView(this.ViewModel.SelectedItem);
-        };
-
-        // Set up action menu handlers
-        this._actionMenu.ExitRequested += (_, _) => this.Focus();
-        this._actionMenu.ActionClicked += this.ActionMenu_ActionClicked;
-
-        // Set up tooltip popover exit handler
-        this._tooltipPanel.ExitRequested += (_, _) => this.Focus();
     }
 
     private async void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
@@ -230,7 +230,7 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
             }
 
             var modifiers = e.KeyboardDevice.Modifiers;
-            var selectedItem = this.ViewModel.SelectedItem;
+            var selectedItem = this._getSelectedItemFunc?.Invoke();
 
             // Check custom key bindings first (and handle no search box palettes)
             if (this._customKeyBindings != null &&
@@ -240,23 +240,22 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
                 this.RequestClose();
                 e.Handled = true;
             } else if (e.Key == Key.Enter && selectedItem != null)
-                e.Handled = await this.ExecuteItem(selectedItem, modifiers);
+                e.Handled = await this._executeItemFunc();
             else if (e.Key == Key.Tab && modifiers == ModifierKeys.None && this._filterBox != null)
                 e.Handled = this.ShowPopover(_ => this._filterBox?.Show());
-            else if (e.Key == Key.Left && selectedItem != null) {
+            else if (e.Key == Key.Left && selectedItem is IPaletteListItem item) {
                 e.Handled = this.ShowPopover(placementTarget =>
-                    this._tooltipPanel.Show(placementTarget, selectedItem.TextInfo));
+                    this._tooltipPanel.Show(placementTarget, item.TextInfo));
             } else if (e.Key == Key.Right && selectedItem != null) {
                 e.Handled = this.ShowPopover(placementTarget => {
-                    this._actionMenu.Actions = this._actionBinding.GetAllActions().ToList();
-                    this._actionMenu.Show(placementTarget, selectedItem);
+                    this._actionMenu?.SetActionsUntyped(this._actionBinding?.GetAllActionsUntyped());
+                    this._actionMenu?.ShowUntyped(placementTarget, selectedItem);
                 });
             }
         } catch { }
     }
-
     private bool ShowPopover(Action<UIElement> action) {
-        var selectedItem = this.ViewModel?.SelectedItem;
+        var selectedItem = this._getSelectedItemFunc?.Invoke();
         if (selectedItem == null) return false;
         this.ItemListView.UpdateLayout();
         var container = this.ItemListView.ContainerFromItem(selectedItem);
@@ -269,19 +268,19 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
     ///     Handles custom navigation actions triggered by key bindings
     /// </summary>
     private async Task<bool> HandleNavigationAction(NavigationAction action) {
-        if (this.ViewModel == null) return false;
+        if (this.DataContext is not IPaletteViewModel viewModel) return false;
 
         switch (action) {
         case NavigationAction.MoveUp:
-            this.ViewModel.MoveSelectionUpCommand.Execute(null);
+            viewModel.MoveSelectionUpCommand.Execute(null);
             return true;
 
         case NavigationAction.MoveDown:
-            this.ViewModel.MoveSelectionDownCommand.Execute(null);
+            viewModel.MoveSelectionDownCommand.Execute(null);
             return true;
 
         case NavigationAction.Execute:
-            return await this.ExecuteItem(this.ViewModel.SelectedItem);
+            return await this._executeItemFunc();
 
         case NavigationAction.Cancel:
             this.RequestClose();
@@ -290,12 +289,5 @@ public class Palette<TItem> : Palette where TItem : class, IPaletteListItem {
         default:
             return false;
         }
-    }
-
-    private async void ActionMenu_ActionClicked(object _, PaletteAction<TItem> action) {
-        if (this.ViewModel?.SelectedItem == null) return;
-        var isNextPalette = await this._actionBinding.ExecuteActionAsync(action, this.ViewModel.SelectedItem);
-        this.ViewModel.RecordUsage();
-        this.RequestClose(!isNextPalette);
     }
 }

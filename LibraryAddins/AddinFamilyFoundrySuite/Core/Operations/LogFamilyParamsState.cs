@@ -34,12 +34,10 @@ public class LogFamilyParamsState(string outputDir) : DocOperation {
         var filename = $"family-params_{timestamp}.json";
         var filePath = Path.Combine(this.OutputPath, filename);
 
-        var defaultInstance = new FamilyParamModel { Name = "", DataType = new ForgeTypeId("") };
-
         var serializerSettings = new JsonSerializerSettings {
             Formatting = Formatting.Indented,
             Converters = new List<JsonConverter> { new ForgeTypeIdConverter() },
-            ContractResolver = new DefaultValueSkippingContractResolver(defaultInstance)
+            ContractResolver = new RequiredAwareContractResolver()
         };
 
         var json = JsonConvert.SerializeObject(familyParamDataList, serializerSettings);

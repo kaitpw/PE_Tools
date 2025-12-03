@@ -17,16 +17,28 @@ public static class RevitTabColorReader {
     ///     Returns null if no color is found or if pyRevit colorization is not active.
     /// </summary>
     public static WpfColor? GetDocumentColorFromUI(Document doc) {
-        if (doc == null) return null;
+        if (doc == null) {
+            Debug.WriteLine("[TabColorReader] GetDocumentColorFromUI: doc is null");
+            return null;
+        }
+
+        Debug.WriteLine($"[TabColorReader] GetDocumentColorFromUI: Title='{doc.Title}', PathName='{doc.PathName}'");
 
         try {
             var mainWindow = GetMainRevitWindow();
-            if (mainWindow == null) return null;
+            if (mainWindow == null) {
+                Debug.WriteLine("[TabColorReader] ERROR: Could not find main Revit window");
+                return null;
+            }
 
             var dockingManager = mainWindow.FindDescendantsByTypeName("DockingManager").FirstOrDefault();
-            if (dockingManager == null) return null;
+            if (dockingManager == null) {
+                Debug.WriteLine("[TabColorReader] ERROR: Could not find DockingManager");
+                return null;
+            }
 
             var docPanes = dockingManager.FindDescendantsByTypeName("LayoutDocumentPaneControl").ToList();
+            Debug.WriteLine($"[TabColorReader] Found {docPanes.Count} document panes");
 
             // Build possible document name patterns
             // Revit adds file extensions to tab tooltips (.rfa for families, .rvt for projects)
@@ -35,49 +47,77 @@ public static class RevitTabColorReader {
                 docTitleWithExt = doc.Title + ".rfa";
             else if (!doc.IsFamilyDocument && !doc.Title.EndsWith(".rvt")) docTitleWithExt = doc.Title + ".rvt";
 
+            Debug.WriteLine($"[TabColorReader] Looking for tabs matching: '{doc.Title} - ' OR '{docTitleWithExt} - '");
+
+            var tabsChecked = 0;
             foreach (var pane in docPanes) {
                 var tabs = pane.FindDescendants<TabItem>().ToList();
 
                 foreach (var tab in tabs) {
+                    tabsChecked++;
                     var tooltip = tab.ToolTip?.ToString();
-                    if (string.IsNullOrEmpty(tooltip)) continue;
+                    if (string.IsNullOrEmpty(tooltip)) {
+                        Debug.WriteLine($"[TabColorReader]   Tab #{tabsChecked}: (no tooltip)");
+                        continue;
+                    }
 
                     // Tab tooltip format: "{DocumentName} - {ViewTitle}"
                     // Check if this tab belongs to our document (try both with and without extension)
                     var isMatch = tooltip.StartsWith($"{doc.Title} - ") ||
                                   tooltip.StartsWith($"{docTitleWithExt} - ");
 
-                    if (isMatch) {
-                        WpfColor? backgroundColorValue = null;
-                        WpfColor? borderColorValue = null;
-
-                        if (tab.Background is SolidColorBrush backgroundBrush)
-                            backgroundColorValue = backgroundBrush.Color;
-
-                        if (tab.BorderBrush is SolidColorBrush borderBrush) borderColorValue = borderBrush.Color;
-
-                        // In border mode, pyRevit uses BorderBrush for color and background is theme-based
-                        // Detect border mode: BorderThickness > 0 AND BorderBrush is significantly different from Background
-                        if (borderColorValue.HasValue && backgroundColorValue.HasValue && tab.BorderThickness.Top > 0) {
-                            var bg = backgroundColorValue.Value;
-                            var border = borderColorValue.Value;
-
-                            // Calculate color difference between background and border
-                            var colorDiff = Math.Abs(bg.R - border.R) + Math.Abs(bg.G - border.G) +
-                                            Math.Abs(bg.B - border.B);
-
-                            // If border is significantly different from background (diff > 100), use border color
-                            if (colorDiff > 100) return borderColorValue.Value;
-                        }
-
-                        // Otherwise use background color (fill mode)
-                        if (backgroundColorValue.HasValue) return backgroundColorValue.Value;
+                    if (!isMatch) {
+                        Debug.WriteLine($"[TabColorReader]   Tab #{tabsChecked}: '{tooltip}' - NO MATCH");
+                        continue;
                     }
+
+                    Debug.WriteLine($"[TabColorReader]   Tab #{tabsChecked}: '{tooltip}' - MATCH FOUND!");
+
+                    WpfColor? backgroundColorValue = null;
+                    WpfColor? borderColorValue = null;
+
+                    if (tab.Background is SolidColorBrush backgroundBrush)
+                        backgroundColorValue = backgroundBrush.Color;
+
+                    if (tab.BorderBrush is SolidColorBrush borderBrush) borderColorValue = borderBrush.Color;
+
+                    Debug.WriteLine($"[TabColorReader]     Background: {(backgroundColorValue.HasValue ? $"#{backgroundColorValue.Value.R:X2}{backgroundColorValue.Value.G:X2}{backgroundColorValue.Value.B:X2}" : "null")}");
+                    Debug.WriteLine($"[TabColorReader]     Border: {(borderColorValue.HasValue ? $"#{borderColorValue.Value.R:X2}{borderColorValue.Value.G:X2}{borderColorValue.Value.B:X2}" : "null")}");
+                    Debug.WriteLine($"[TabColorReader]     BorderThickness.Top: {tab.BorderThickness.Top}");
+
+                    // In border mode, pyRevit uses BorderBrush for color and background is theme-based
+                    // Detect border mode: BorderThickness > 0 AND BorderBrush is significantly different from Background
+                    if (borderColorValue.HasValue && backgroundColorValue.HasValue && tab.BorderThickness.Top > 0) {
+                        var bg = backgroundColorValue.Value;
+                        var border = borderColorValue.Value;
+
+                        // Calculate color difference between background and border
+                        var colorDiff = Math.Abs(bg.R - border.R) + Math.Abs(bg.G - border.G) +
+                                        Math.Abs(bg.B - border.B);
+
+                        Debug.WriteLine($"[TabColorReader]     ColorDiff (bg vs border): {colorDiff}");
+
+                        // If border is significantly different from background (diff > 100), use border color
+                        if (colorDiff > 100) {
+                            Debug.WriteLine($"[TabColorReader]     RETURNING BORDER COLOR: #{border.R:X2}{border.G:X2}{border.B:X2}");
+                            return borderColorValue.Value;
+                        }
+                    }
+
+                    // Otherwise use background color (fill mode)
+                    if (backgroundColorValue.HasValue) {
+                        Debug.WriteLine($"[TabColorReader]     RETURNING BACKGROUND COLOR: #{backgroundColorValue.Value.R:X2}{backgroundColorValue.Value.G:X2}{backgroundColorValue.Value.B:X2}");
+                        return backgroundColorValue.Value;
+                    }
+
+                    Debug.WriteLine("[TabColorReader]     No usable color found on matching tab");
                 }
             }
 
+            Debug.WriteLine($"[TabColorReader] No matching tab found after checking {tabsChecked} tabs");
             return null;
-        } catch {
+        } catch (Exception ex) {
+            Debug.WriteLine($"[TabColorReader] EXCEPTION: {ex.Message}");
             return null;
         }
     }

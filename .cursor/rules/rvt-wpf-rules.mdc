@@ -1,5 +1,5 @@
 ---
-globs: *.xaml,*.xaml.cs
+globs: *.xaml
 alwaysApply: false
 ---
 
@@ -9,79 +9,42 @@ WPF windows created for PE_Tools are meant to be minimal UI's that allow users
 to configure/choose their settings for a specific revit addin. Thus their visual
 design should be minimal and easy to parse (like a Shadcn aesthetic) and
 keyboard navigation support for essential/high-traffic UI features is
-non-negotiable. The stack is WPF, WPF.Ui, and CommunityToolkit.Mvvm. As you
-develop please respect the patterns of the codebase.
+non-negotiable. The stack is WPF, WPF.Ui, and CommunityToolkit.Mvvm.
 
-## The Revit environment
+WPF dev is not easy, so here are some notes. For a good example of best
+practices in this codebase, observe the Palette.xaml and code-behind. Notice the
+emphasis on centralized input handling, type safety throughout the component
+tree, and the split responsibility of layout in xaml then styling and behavior
+in code.
 
-Revit API code can only run on the Revit main thread. Thus why we don't attempt
-to make a conventional WPF application. Having completed project-setup already,
-this is only a minor concern, however occasionally it effects architecture. We
-will deal with the edge cases as they come, do not code defensively for this
-limitation of Revit.
+## Crucial Tips
 
-Because we have chosen to have revit host the wpf window on its own thread, thus
-`Application.Current` has no use to us. Specifically
-`Application.Current.TryFindResource(<key>)` will always return null, and by
-extension the the application's `.Resources` property is always an empty
-enumeration.
-
-Other important notes related to compilation troubleshooting are:
-
-1. `Shared.props` setup. It must explicitly export xaml
-2. OnAssemblyResolve in `App.cs` is crucial because wpf-ui is cannot be resolved
-   on its own. (This is a problem I'd like to fix at some point)
-
-## Tips
-
-- use the "wpfui Docs" and "rvt-docs-mcp" MCP servers at your disposal to verify
-  that what you are doing is valid.
-- When drafting up a component, implement a method with simple logging for every
-  handler of the wpf.ui component. Then prompt the user to show you the logs and
-  explain what actions in the UI caused each type of log. Its often best to
-  record this information in a doc comment for that method because handlers
-  often do not behave the way you'd expect.
+- **Use MCPs**: "wpfui Docs" and "rvt-docs-mcp" provide documentation access.
+  When in doubt, check that your approach is valid using these.
+- When drafting a component, implement a simple `Debug` log for every handler
+  and prompt the user to give the logs to you with context on what they did. The
+  user actions that trigger a handler should be recorded in a `<summary>`.
 
 ## Guidelines
 
-### General Guidelines
-
-- Components are usually best as inheiritors of `UserControl` (or sometimes
-  Border) with optional generic typing whenever the component needs high
-  reusability.
-- Keybindings, listeners, and other input handlers should be handled IN CODE
-  (rather than XAML) as much as possible. This makes debugging and generally
-  reasoning about behavior related code much easier since it is inherently buggy
-  code.
-- When XAML is necessary, most XAML elements should recieve an `x:Name` so they
-  can be used in the code-behind
-- Components should generally be all code based. Exceptions should be made
-  tastefully, for example for layout-heavy components such as a list item with a
-  primary text, secondary text, pill, etc.
 - Use dependency injection and the strategy pattern wherever you can
+- **Not MVVM purists**: Ideally we'd be code-only, but xaml reduces verbosity
+  immensely.
+- When XAML is necessary, most elements should recieve an `x:Name`.
+- Handlers and DependencyProperties should be bound IN CODE (not markup)
+- RelayCommands, Bindings, and Resources should be bound in markup.
+- Generally prefer event handlers over RelayCommands. RelayCommands only make
+  sense when logic is inherent to the data.
+- Interaction heavy components are usually best as inheiritors of
+  `RevitHostedUserControl` with optional generics where it makes sense.
+  Orchestration patterns are best for handling hotkeys and "navigation",
+  decentralized state management is a pain.
+- Behavior orchestration should be involve as few handlers as humanly possible.
+  Usually a previewKeyDown is enough for most interaction.
+- **Styling in code** allows for hot reloads and debuggability. Use and create
+  patterns like the `BorderSpec` to enable this on an as needed basis.
 
-### Styling Guidelines
-
-#### Resource Loading
-
-Explicitly loading resources is essential given our special enviroment of
-running inside Revit. Resources must be loaded for every Control. The
-ThemeMananager's utility for this should generally be prioritized, however you
-can also merge the dictionary in the XAML.
-
-```csharp
-ThemeManager.LoadWpfUiResources();
-```
-
-```xaml
-<UserControl.Resources>
-    <ResourceDictionary>
-        <ResourceDictionary.MergedDictionaries>
-            <ResourceDictionary Source="pack://application:,,,/PE_Tools;component/peui/core/wpfuiresources.xaml" />
-...
-```
-
-#### Leveraging WPF-UI
+### Leveraging WPF-UI
 
 Lean on Wpf.Ui's design system and components wherever possible. For example
 prefer `ui:TextBox` over normal System's `TextBox`. Furthermore Prefer
@@ -106,32 +69,53 @@ overriding Wpf.Ui's templates over creating new components from scratch.
 </Border>
 ```
 
-## Code-First Architecture
+### Overriding WPF-UI Styles
 
-### Styling
+Because of our environment, WPF's normal resource lookup chain is broken. We
+work around this by explicitly merging `WpfUiResources.xaml` into each
+window/control via `ThemeManager.LoadWpfUiResources()`. However, this creates a
+resource hierarchy where merged dictionaries can't find sibling dictionaries
+during `StaticResource` resolution at parse time. Standalone WPF apps don't face
+this because Application-level resources are always searchable. Our solution -
+merging `ControlsDictionary` into each override file - compensates for this
+broken lookup chain.
 
-Styling in code allows for hot reloading and better debuggability. Use and
-create patterns like the `BorderSpec` to enable easy defaults, predictability,
-and consistency.
+#### Global overrides (all controls), put in WpfUiResources.xaml:
 
-### Custom Interactions & Component Communication
+```xaml
+<!-- Library/PeUi/Core/WpfUiResources.xaml -->
+<ResourceDictionary>
+    <ResourceDictionary.MergedDictionaries>
+        <ui:ThemesDictionary Theme="Dark" />
+        <ui:ControlsDictionary />
+        <ResourceDictionary Source=".../TextBox.xaml" />
+    </ResourceDictionary.MergedDictionaries>
 
-- Use `event EventHandler<CustomEventArgs>` for most parent-child communication
-- Unless the situation specifically calls for it, components should handle all
-  their keybindings themselves and pass no unhandled events upwards.
-- Strategy pattern is your friend, particularly in hotkey heavy circumstances
-  like ours.
-- Orchestration patterns for handling hotkeys and "navigation" (more like manual
-  focusing behavior) often work best. Decentralizes state management is a pain.
+    <!-- Global overrides that affect ALL controls -->
+    <SolidColorBrush x:Key="TextControlFocusedBorderBrush" Color="Transparent" />
+</ResourceDictionary>
+```
 
-### Bindings
+#### Per component/control overrides, make a specific override file
 
-- Use `DependencyProperty` for bindable properties
-- Load theme resources in constructor: `ThemeManager.LoadWpfUiResources(this)`
-- Set up important bindings programmatically with `SetBinding()` or
-  `SetResourceReference()`
+1. Create `Library/PeUi/Core/WpfOverrides/{ControlName}.xaml`
+2. Merge `ControlsDictionary` at the top
+   - This makes all Wpf.Ui Resources available to the override file, this
+     enables using them as StaticResources (for perf reasons) and also makes all
+     the internal Styles of the library available to override with `BasedOn`.
+     Not doing this may also result in a XamlParseException.
+3. Override resources if needed (for template/trigger behavior)
+   - use StaticResource as much as possible. (if using a color, then this must
+     be dynamic)
+   - write the minimal code. For simple style overrides, only write setters for
+     properties that we are changing from the default. For complex overrides
+     involving templates this is less applicable, but remember it still.
+4. Override style using `BasedOn="{StaticResource <StyleName>}"`
+   - Style name must be found in the Wpf.Ui source code. Rely on the user or the
+     wpfui docs mcp to find this name.
+5. Add merge reference in `WpfUiResources.xaml`
 
-## Key Anti-Patterns
+### Key Anti-Patterns
 
 ❌ **Don't** create standard `TextBlock` - use `ui:TextBlock` for theme
 consistency\
@@ -139,4 +123,54 @@ consistency\
 `ThemeManager`\
 ❌ **Don't** create timers for UI updates - use events or
 `Dispatcher.BeginInvoke()`\
-❌ **Don't** use multi-thread locks (Revit is single-threaded)
+❌ **Don't** use multi-thread locks (Revit is single-threaded)\
+❌ **Don't** inherit generic classes from XAML-backed partial classes (see
+below)
+
+## Notes
+
+### This Environment
+
+Revit API code can only run on the Revit main thread. Thus why we don't attempt
+to make a conventional WPF application. Having completed project-setup, this is
+only a minor concern, however it may occasionally effect architecture. Do not
+code defensively for this limitation, we'll cross that bridge when we're there.
+
+Because Revit hosts the wpf window, `Application.Current` only contains Revits
+resources. Specifically `Application.Current.TryFindResource(<key>)` will always
+return null, where `<key>` is a Wpf.Ui `ThemeResource`. Our
+`RevitHostedUserControl`, `ThemeManager.LoadWpfUiResources()`, and
+`WpfUiResources.xaml` are the solution to this problem.
+
+Other important notes related to compilation troubleshooting are:
+
+1. `Shared.props` setup. xaml and xaml.cs must be explicitly handled.
+2. OnAssemblyResolve in `App.cs` is crucial because wpf-ui cannot be resolved on
+   its own.
+
+### Generic Classes and XAML Inheritance
+
+**Generic classes CANNOT inherit from XAML-backed partial classes.** When
+`InitializeComponent()` runs, WPF uses `this.GetType()` to locate BAML
+resources. If `this` is a generic type like `MyControl<T>`, WPF looks for XAML
+compiled for that generic type—which doesn't exist.
+
+This bug is insidious: it may work initially due to WPF's internal caching, then
+fail intermittently after Revit has been open for a while.
+
+**Wrong:**
+
+```csharp
+public partial class Palette : UserControl { }  // XAML partial
+public class Palette<T> : Palette { }           // Generic inherits - BROKEN
+```
+
+**Correct:** Use composition via a generic `Initialize<T>()` method:
+
+```csharp
+public sealed partial class Palette : UserControl {
+    public void Initialize<T>(ViewModel<T> vm) { /* capture typed delegates */ }
+}
+```
+
+See `Palette.xaml.cs` for the canonical implementation of this pattern.

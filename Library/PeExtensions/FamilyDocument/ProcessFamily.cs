@@ -105,11 +105,12 @@ public static class FamilyDocumentProcessFamily {
     }
 
     public static void OpenForUserEditting(this FamilyDocument famDoc, UIApplication uiApp) {
-        if (string.IsNullOrEmpty(famDoc.PathName)) {
-            var tempPath = Path.Combine(Path.GetTempPath(), $"{famDoc.Document.Title}_{Guid.NewGuid()}.rfa");
-            famDoc.Document.SaveAs(tempPath);
-            _ = uiApp.OpenAndActivateDocument(tempPath);
-        } else
+        if (!string.IsNullOrEmpty(famDoc.PathName)) {
             _ = uiApp.OpenAndActivateDocument(famDoc.PathName);
+        } else {
+            var tempPath = Path.Combine(Path.GetTempPath(), $"{famDoc.Document.Title}.rfa");
+            famDoc.Document.SaveAs(tempPath, new SaveAsOptions { OverwriteExistingFile = true, Compact = true });
+            _ = uiApp.OpenAndActivateDocument(tempPath);
+        }
     }
 }

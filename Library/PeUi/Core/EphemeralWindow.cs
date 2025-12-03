@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
@@ -45,7 +47,8 @@ public class EphemeralWindow : Window {
 
         // Create main container grid with centered alignment
         var containerGrid = new Grid {
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
         };
 
         // Add to grid (both at same location so pill floats over content)
@@ -115,7 +118,6 @@ public class EphemeralWindow : Window {
     }
 
     public void CloseWindow(bool restoreFocus = true) {
-        // Debug.WriteLine($"[EphemeralWindow] CloseWindow called: restoreFocus={restoreFocus}, _isClosing={this._isClosing}");
         try {
             if (this._isClosing) return;
             this._isClosing = true;
@@ -129,8 +131,22 @@ public class EphemeralWindow : Window {
     }
 
     /// <summary>
-    ///     Restores focus to the main Revit window. Can be called from external code.
+    ///     Attempts to restore keyboard shortcut functionality to Revit after palette closes.
     /// </summary>
+    /// <remarks>
+    ///     <b>KNOWN LIMITATION:</b> This method is unreliable. Users may need to click the view canvas.
+    ///     
+    ///     <b>Key findings from extensive testing:</b>
+    ///     <list type="bullet">
+    ///         <item>Windows focus (SetForegroundWindow/SetFocus) ≠ Revit's internal keyboard routing</item>
+    ///         <item>Keyboard shortcuts only work when the MFC view canvas (AfxFrameOrView140u) has Revit's internal focus</item>
+    ///         <item>UI Automation can report HasKeyboardFocus=True while shortcuts still don't work</item>
+    ///         <item>After SetForegroundWindow, focus often lands on Chrome_WidgetWin_0 (Revit's embedded browser)</item>
+    ///         <item>The issue is worse for views that were already open vs. freshly opened views</item>
+    ///     </list>
+    ///     
+    ///     Current approach: SetForegroundWindow + simulate mouse click in view area.
+    /// </remarks>
     public static void RestoreRevitFocus() {
         try {
             var revitProcess = Process.GetCurrentProcess();

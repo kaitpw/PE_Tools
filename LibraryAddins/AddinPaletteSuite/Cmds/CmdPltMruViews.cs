@@ -27,27 +27,7 @@ public class CmdPltMruViews : IExternalCommand {
             var actions = new List<PaletteAction<MruViewPaletteItem>> {
                 new() {
                     Name = "Open View",
-                    Execute = item => {
-                        var targetDoc = item.View.Document;
-                        var currentDoc = uiapp.ActiveUIDocument?.Document;
-
-                        if (currentDoc != null && targetDoc.Equals(currentDoc)) {
-                            // Already on the correct document, just set the view
-                            uiapp.ActiveUIDocument.ActiveView = item.View;
-                        } else {
-                            // Switch to the target document first by using OpenAndActivateDocument
-                            // This works for already open documents and brings them to the front
-                            var docPath = !string.IsNullOrEmpty(targetDoc.PathName)
-                                ? targetDoc.PathName
-                                : targetDoc.Title;
-
-                            // OpenAndActivateDocument activates the document if already open
-                            var activatedUIDoc = uiapp.OpenAndActivateDocument(docPath);
-
-                            // Now set the view
-                            activatedUIDoc.ActiveView = item.View;
-                        }
-                    },
+                    Execute = item => ActivateView(uiapp, item.View),
                     CanExecute = item => item?.View != null && item.View.CanBePrinted
                 }
             };
@@ -71,33 +51,19 @@ public class CmdPltMruViews : IExternalCommand {
             customKeys.Add(Key.OemTilde, NavigationAction.MoveUp,
                 ModifierKeys.Control | ModifierKeys.Shift); // Ctrl+Shift+` cycles backward
 
-            // Create palette UserControl with custom key bindings
-            var palette = new Palette<MruViewPaletteItem>(viewModel, actions, customKeys);
+            // Create palette using composition pattern (NOT inheritance)
+            // Generic classes cannot inherit from XAML partial classes in Revit-hosted WPF
+            var palette = new Palette();
+            palette.Initialize(viewModel, actions, customKeys);
 
             // Hide search box for MRU views (we only navigate with keyboard)
             palette.HideSearchBox();
 
             // Callback to execute selected view when Ctrl is released
             void OnCtrlReleased() {
-                try {
-                    var selectedItem = viewModel.SelectedItem;
-                    if (selectedItem?.View == null) return;
-                    var targetDoc = selectedItem.View.Document;
-                    var currentDoc = uiapp.ActiveUIDocument?.Document;
-
-                    if (currentDoc != null && targetDoc.Equals(currentDoc))
-                        uiapp.ActiveUIDocument.ActiveView = selectedItem.View;
-                    else {
-                        var docPath = !string.IsNullOrEmpty(targetDoc.PathName)
-                            ? targetDoc.PathName
-                            : targetDoc.Title;
-                        var activatedUiDoc = uiapp.OpenAndActivateDocument(docPath);
-                        activatedUiDoc.ActiveView = selectedItem.View;
-                    }
-
-                    EphemeralWindow.RestoreRevitFocus();
-                } catch {
-                }
+                var selectedItem = viewModel.SelectedItem;
+                if (selectedItem?.View != null)
+                    ActivateView(uiapp, selectedItem.View);
             }
 
             // Wrap in EphemeralWindow with Ctrl key monitoring and show
@@ -110,6 +76,82 @@ public class CmdPltMruViews : IExternalCommand {
             return Result.Failed;
         }
     }
+
+    /// <summary>
+    ///     Activates a view, switching documents if necessary.
+    ///     Supports local, cloud-hosted (Autodesk Docs), and family documents.
+    /// </summary>
+    private static void ActivateView(UIApplication uiapp, View targetView) {
+        var targetDoc = targetView.Document;
+        var currentDoc = uiapp.ActiveUIDocument?.Document;
+
+        Debug.WriteLine($"[MruViews] ActivateView: targetView='{targetView.Name}', targetDoc='{targetDoc.Title}'");
+        Debug.WriteLine($"[MruViews] ActivateView: currentDoc='{currentDoc?.Title ?? "null"}'");
+        Debug.WriteLine($"[MruViews] ActivateView: targetDoc.PathName='{targetDoc.PathName}', IsModelInCloud={targetDoc.IsModelInCloud}");
+
+        // Same document - just switch views
+        if (currentDoc != null && targetDoc.Equals(currentDoc)) {
+            Debug.WriteLine("[MruViews] Same document, switching view directly");
+            uiapp.ActiveUIDocument.ActiveView = targetView;
+            return;
+        }
+
+        // Different document - try multiple approaches
+        // Approach 1: For documents with a valid path, use OpenAndActivateDocument
+        ModelPath modelPath = null;
+        if (targetDoc.IsModelInCloud) {
+            modelPath = targetDoc.GetCloudModelPath();
+            Debug.WriteLine("[MruViews] Cloud document, using GetCloudModelPath()");
+        } else if (!string.IsNullOrEmpty(targetDoc.PathName)) {
+            modelPath = ModelPathUtils.ConvertUserVisiblePathToModelPath(targetDoc.PathName);
+            Debug.WriteLine("[MruViews] Local document, converted PathName to ModelPath");
+        }
+
+        if (modelPath != null) {
+            Debug.WriteLine("[MruViews] Opening and activating document via ModelPath");
+            var openOptions = new OpenOptions { DetachFromCentralOption = DetachFromCentralOption.DoNotDetach };
+            var activatedUiDoc = uiapp.OpenAndActivateDocument(modelPath, openOptions, false);
+            activatedUiDoc.ActiveView = targetView;
+            Debug.WriteLine("[MruViews] Document activated successfully via ModelPath");
+            return;
+        }
+
+        // Approach 2: For unsaved/pathless documents, use ShowElements workaround.
+        // Per Building Coder: "When you call UIDocument.ShowElements, the active Document 
+        // will change to the document you are showing elements in"
+        // https://thebuildingcoder.typepad.com/blog/2018/04/switch-view-or-document-by-showing-elements.html
+        Debug.WriteLine("[MruViews] No ModelPath available, trying ShowElements workaround...");
+        Debug.WriteLine($"[MruViews] targetDoc.Title='{targetDoc.Title}', IsFamilyDocument={targetDoc.IsFamilyDocument}");
+
+        try {
+            var targetUiDoc = new UIDocument(targetDoc);
+
+            // Find any element in the target view to use with ShowElements
+            // This will activate the document as a side effect
+            var elementInView = new FilteredElementCollector(targetDoc, targetView.Id)
+                .WhereElementIsNotElementType()
+                .FirstElementId();
+
+            if (elementInView != null && elementInView != ElementId.InvalidElementId) {
+                Debug.WriteLine($"[MruViews] Found element {elementInView} in view, calling ShowElements...");
+                targetUiDoc.ShowElements(elementInView);
+            } else {
+                // Fallback: try showing the view element itself
+                Debug.WriteLine("[MruViews] No elements in view, trying to show view element itself...");
+                targetUiDoc.ShowElements(targetView.Id);
+            }
+
+            // After ShowElements activates the document, set the view we actually want
+            // (ShowElements may have opened a different view to show the element)
+            Debug.WriteLine("[MruViews] Setting ActiveView after ShowElements...");
+            targetUiDoc.ActiveView = targetView;
+            Debug.WriteLine("[MruViews] Document activated successfully via ShowElements workaround");
+        } catch (Exception ex) {
+            Debug.WriteLine($"[MruViews] ShowElements workaround failed: {ex.Message}");
+            throw new InvalidOperationException(
+                $"Cannot switch to document '{targetDoc.Title}'. Error: {ex.Message}", ex);
+        }
+    }
 }
 
 /// <summary>
@@ -118,8 +160,10 @@ public class CmdPltMruViews : IExternalCommand {
 public class MruViewPaletteItem : IPaletteListItem {
     public MruViewPaletteItem(View view) {
         this.View = view;
+        Debug.WriteLine($"[MruViewPaletteItem] Creating item for view '{view.Name}' in doc '{view.Document.Title}'");
         var color = DocumentColorService.Instance.GetOrCreateDocumentColor(view.Document);
         this.ItemColor = color;
+        Debug.WriteLine($"[MruViewPaletteItem] Item created with color #{color.R:X2}{color.G:X2}{color.B:X2}");
     }
 
     public View View { get; }

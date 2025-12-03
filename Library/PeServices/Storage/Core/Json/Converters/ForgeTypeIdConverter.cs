@@ -83,13 +83,13 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
 
         // Process SpecTypeId and its nested classes
         var specTypeIdType = typeof(SpecTypeId);
-        AddPropertiesToLabelMap(specTypeIdType, map);
+        AddPropertiesToLabelMap(specTypeIdType, map, isGroupType: false);
         var nestedTypes = specTypeIdType.GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
-        foreach (var nestedType in nestedTypes) AddPropertiesToLabelMap(nestedType, map);
+        foreach (var nestedType in nestedTypes) AddPropertiesToLabelMap(nestedType, map, isGroupType: false);
 
         // Process GroupTypeId
         var groupTypeIdType = typeof(GroupTypeId);
-        AddPropertiesToLabelMap(groupTypeIdType, map);
+        AddPropertiesToLabelMap(groupTypeIdType, map, isGroupType: true);
 
         return map;
     }
@@ -98,7 +98,7 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
     ///     Adds all static ForgeTypeId properties from a type to the label map.
     ///     For each ForgeTypeId, gets its label using LabelUtils and adds it to the map.
     /// </summary>
-    private static void AddPropertiesToLabelMap(Type type, Dictionary<string, ForgeTypeId> map) {
+    private static void AddPropertiesToLabelMap(Type type, Dictionary<string, ForgeTypeId> map, bool isGroupType) {
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Static);
 
         foreach (var property in properties) {
@@ -107,18 +107,16 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
             var value = property.GetValue(null) as ForgeTypeId;
             if (value == null) continue;
 
-            // Try to get label for spec type
+            // Get label using the appropriate LabelUtils method based on the source type
             string label;
             try {
-                label = LabelUtils.GetLabelForSpec(value);
+                label = isGroupType
+                    ? LabelUtils.GetLabelForGroup(value)
+                    : LabelUtils.GetLabelForSpec(value);
             } catch {
-                // Not a spec type, try group type
-                try {
-                    label = LabelUtils.GetLabelForGroup(value);
-                } catch {
-                    // If both fail, use TypeId as fallback
-                    label = value.TypeId;
-                }
+                // Skip ForgeTypeIds that can't be labeled (e.g., SpecTypeId.Custom)
+                // We only map ForgeTypeIds that have valid labels
+                continue;
             }
 
             // Add to map (case-insensitive), but don't overwrite if already exists (first wins)

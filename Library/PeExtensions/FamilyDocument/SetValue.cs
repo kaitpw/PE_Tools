@@ -13,12 +13,17 @@ public static class FamilyDocumentSetValue {
     ///     are VERY expensive operations, thus it is not done inside this method. Do it at the highest-level possible
     ///     in your loop/s.
     /// </remarks>
+    /// <returns>
+    ///     The mapped (target) parameter, or null if the source value is null.
+    /// </returns>
     public static FamilyParameter SetValue(this FamilyDocument famDoc,
         FamilyParameter targetParam,
         FamilyParameter sourceParam,
         ParamCoercionStrategy strategy = ParamCoercionStrategy.Strict
     ) {
         var context = CoercionContext.FromParam(famDoc, sourceParam, targetParam);
+        if (context.SourceValue == null) return null;
+
         ICoercionStrategy strategyInstance = strategy switch {
             ParamCoercionStrategy.Strict => new Strict(),
             ParamCoercionStrategy.CoerceByStorageType => new CoerceByStorageType(),
@@ -47,12 +52,17 @@ public static class FamilyDocumentSetValue {
     ///     are VERY expensive operations, thus it is not done inside this method. Do it at the highest-level possible
     ///     in your loop/s.
     /// </remarks>
+    /// <returns>
+    ///     The mapped (target) parameter, or null if the source value is null.
+    /// </returns>
     public static FamilyParameter SetValue(this FamilyDocument famDoc,
         FamilyParameter targetParam,
         object sourceValue,
         ValueCoercionStrategy strategy = ValueCoercionStrategy.Strict
     ) {
         var context = CoercionContext.FromValue(famDoc, sourceValue, targetParam);
+        if (context.SourceValue == null) return null;
+
         ICoercionStrategy strategyInstance = strategy switch {
             ValueCoercionStrategy.Strict => new Strict(),
             ValueCoercionStrategy.CoerceSimple => new CoerceSimple(),
@@ -64,7 +74,7 @@ public static class FamilyDocumentSetValue {
         if (!strategyInstance.CanMap(context)) {
             var targetDataType = targetParam?.Definition.GetDataType();
             throw new Exception(
-                $"Cannot map value '{sourceValue}' to '{targetParam.Definition.Name}' ({targetDataType}) using strategy '{strategy}'");
+                $"Cannot map value '{sourceValue}' to '{targetParam.Definition.Name}' ({targetDataType.TypeId}) using strategy '{strategy}'");
         }
 
         var (param, err) = strategyInstance.Map(context);

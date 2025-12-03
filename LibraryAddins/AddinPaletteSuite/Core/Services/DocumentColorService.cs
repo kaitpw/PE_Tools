@@ -12,7 +12,12 @@ namespace AddinPaletteSuite.Core.Services;
 public class DocumentColorService {
     private static DocumentColorService _instance;
     private readonly Dictionary<string, WpfColor> _colorCache = new();
-    private readonly Random _random = new();
+
+    /// <summary>
+    ///     Fallback color used when UI read fails. Using a consistent color
+    ///     makes it obvious when color detection isn't working.
+    /// </summary>
+    private static readonly WpfColor FallbackColor = Colors.DimGray;
 
     private DocumentColorService() { }
 
@@ -25,27 +30,37 @@ public class DocumentColorService {
 
     /// <summary>
     ///     Gets the color for the specified document from cache or by reading from Revit UI.
-    ///     Falls back to generating a new color if UI read fails.
+    ///     Falls back to DimGray if UI read fails (makes detection failures obvious).
     /// </summary>
     public WpfColor GetOrCreateDocumentColor(Document doc) {
-        if (doc == null) return Colors.Gray;
+        if (doc == null) {
+            Debug.WriteLine("[DocColorSvc] GetOrCreateDocumentColor: doc is null, returning Gray");
+            return Colors.Gray;
+        }
 
         var docKey = GetDocumentKey(doc);
+        Debug.WriteLine($"[DocColorSvc] GetOrCreateDocumentColor: docKey='{docKey}', Title='{doc.Title}', PathName='{doc.PathName}'");
 
         // Check cache first
-        if (this._colorCache.TryGetValue(docKey, out var cachedColor)) return cachedColor;
+        if (this._colorCache.TryGetValue(docKey, out var cachedColor)) {
+            Debug.WriteLine($"[DocColorSvc] CACHE HIT: docKey='{docKey}' -> #{cachedColor.R:X2}{cachedColor.G:X2}{cachedColor.B:X2}");
+            return cachedColor;
+        }
+
+        Debug.WriteLine($"[DocColorSvc] CACHE MISS: docKey='{docKey}', attempting UI read...");
 
         // Try reading from Revit UI
         var uiColor = RevitTabColorReader.GetDocumentColorFromUI(doc);
         if (uiColor.HasValue) {
             this._colorCache[docKey] = uiColor.Value;
+            Debug.WriteLine($"[DocColorSvc] UI READ SUCCESS: docKey='{docKey}' -> #{uiColor.Value.R:X2}{uiColor.Value.G:X2}{uiColor.Value.B:X2}");
             return uiColor.Value;
         }
 
-        // Fallback to generated color
-        var newColor = this.GenerateVibrantColor();
-        this._colorCache[docKey] = newColor;
-        return newColor;
+        // Fallback to consistent gray - makes it obvious when color detection fails
+        Debug.WriteLine($"[DocColorSvc] UI READ FAILED: docKey='{docKey}', using fallback color DimGray");
+        this._colorCache[docKey] = FallbackColor;
+        return FallbackColor;
     }
 
     /// <summary>
@@ -53,59 +68,24 @@ public class DocumentColorService {
     ///     This allows colors to be reassigned if the document is reopened.
     /// </summary>
     public void RemoveDocument(Document doc) {
-        if (doc == null) return;
-        var docKey = GetDocumentKey(doc);
-        this._colorCache.Remove(docKey);
-    }
-
-    /// <summary>
-    ///     Generates a vibrant, distinguishable color using HSL color space
-    /// </summary>
-    private WpfColor GenerateVibrantColor() {
-        // Generate random hue (0-360 degrees)
-        var hue = this._random.Next(0, 360);
-
-        // High saturation (70-90%) for vibrant colors
-        var saturation = 0.7 + (this._random.NextDouble() * 0.2);
-
-        // Medium lightness (45-65%) for good contrast
-        var lightness = 0.45 + (this._random.NextDouble() * 0.2);
-
-        return HslToRgb(hue, saturation, lightness);
-    }
-
-    /// <summary>
-    ///     Converts HSL color values to RGB
-    /// </summary>
-    private static WpfColor HslToRgb(double h, double s, double l) {
-        h /= 360.0;
-
-        double r, g, b;
-
-        if (s == 0)
-            r = g = b = l; // achromatic
-        else {
-            var q = l < 0.5 ? l * (1 + s) : l + s - (l * s);
-            var p = (2 * l) - q;
-            r = HueToRgb(p, q, h + (1.0 / 3.0));
-            g = HueToRgb(p, q, h);
-            b = HueToRgb(p, q, h - (1.0 / 3.0));
+        if (doc == null) {
+            Debug.WriteLine("[DocColorSvc] RemoveDocument: doc is null, ignoring");
+            return;
         }
 
-        return WpfColor.FromRgb(
-            (byte)Math.Round(r * 255),
-            (byte)Math.Round(g * 255),
-            (byte)Math.Round(b * 255)
-        );
+        var docKey = GetDocumentKey(doc);
+        var existed = this._colorCache.Remove(docKey);
+        Debug.WriteLine($"[DocColorSvc] RemoveDocument: docKey='{docKey}', wasInCache={existed}, cacheCount={this._colorCache.Count}");
     }
 
-    private static double HueToRgb(double p, double q, double t) {
-        if (t < 0) t += 1;
-        if (t > 1) t -= 1;
-        if (t < 1.0 / 6.0) return p + ((q - p) * 6 * t);
-        if (t < 1.0 / 2.0) return q;
-        if (t < 2.0 / 3.0) return p + ((q - p) * ((2.0 / 3.0) - t) * 6);
-        return p;
+    /// <summary>
+    ///     Debug helper to dump current cache state
+    /// </summary>
+    public void DumpCacheState() {
+        Debug.WriteLine($"[DocColorSvc] === CACHE STATE ({this._colorCache.Count} entries) ===");
+        foreach (var kvp in this._colorCache)
+            Debug.WriteLine($"[DocColorSvc]   '{kvp.Key}' -> #{kvp.Value.R:X2}{kvp.Value.G:X2}{kvp.Value.B:X2}");
+        Debug.WriteLine("[DocColorSvc] === END CACHE STATE ===");
     }
 
     private static string GetDocumentKey(Document doc) =>
