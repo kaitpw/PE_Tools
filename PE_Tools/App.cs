@@ -88,25 +88,25 @@ internal class App : IExternalApplication {
     }
 
     private static void OnDocumentClosing(object sender, DocumentClosingEventArgs e) {
-        if (e?.Document == null) return;
+        if (e?.Document == null) {
+            Debug.WriteLine("[App] OnDocumentClosing: Document is null, ignoring");
+            return;
+        }
 
-        // Clean up MRU buffer
+        Debug.WriteLine($"[App] OnDocumentClosing: Title='{e.Document.Title}', PathName='{e.Document.PathName}'");
+        Debug.WriteLine("[App] OnDocumentClosing: Removing from MRU buffer...");
         MruViewService.Instance.RemoveDocumentViews(e.Document);
 
-        // Clean up document color cache
+        Debug.WriteLine("[App] OnDocumentClosing: Removing from color cache...");
         DocumentColorService.Instance.RemoveDocument(e.Document);
+        Debug.WriteLine("[App] OnDocumentClosing: Done");
     }
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
-        Debug.WriteLine($"Assembly Resolution Failed: \n\t Failed Assembly: {args.Name}");
+        Debug.WriteLine($"Assembly Resolution Requested: {args.Name}");
 
         // Get the assembly name being requested
         var assemblyName = new AssemblyName(args.Name);
-
-        // Only handle assemblies we know about
-        var knownProblemAssemblyNames =
-            new List<string> { "Wpf.Ui", "Wpf.Ui.Abstractions", "Microsoft.Extensions.Options" };
-        if (knownProblemAssemblyNames.Contains(assemblyName.Name)) return null;
 
         // Get the directory where this add-in's DLL is located
         var addinPath = typeof(App).Assembly.Location;
@@ -116,9 +116,13 @@ internal class App : IExternalApplication {
         // Construct the path to the requested assembly
         var assemblyPath = Path.Combine(addinDirectory, $"{assemblyName.Name}.dll");
 
-        // Load and return the assembly if it exists
-        if (File.Exists(assemblyPath)) return Assembly.LoadFrom(assemblyPath);
+        // Load and return the assembly if it exists in our add-in directory
+        if (File.Exists(assemblyPath)) {
+            Debug.WriteLine($"Loading assembly from: {assemblyPath}");
+            return Assembly.LoadFrom(assemblyPath);
+        }
 
+        Debug.WriteLine($"Assembly not found in add-in directory: {assemblyPath}");
         return null;
     }
 }

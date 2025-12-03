@@ -33,7 +33,6 @@ public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where T
 
     public void Open(UIApplication uiapp) {
         Debug.WriteLine("Opening " + this.Title);
-        var color = Theme.ApplicationBackground();
         var doc = uiapp.ActiveUIDocument.Document;
         var persistence = new Storage(this.GetType().Name);
         var elements = new FilteredElementCollector(doc)
@@ -47,7 +46,12 @@ public abstract class BaseCmdPalette<TElement, TItem> : IExternalCommand where T
         var filterKeySelector = this.GetFilterKeySelector();
         var customKeyBindings = this.GetCustomKeyBindings();
         var viewModel = new PaletteViewModel<TItem>(selectableItems, searchService, filterKeySelector);
-        var palette = new Palette<TItem>(viewModel, actions, customKeyBindings);
+
+        // Create palette using composition pattern (NOT inheritance)
+        // Generic classes cannot inherit from XAML partial classes in Revit-hosted WPF
+        var palette = new Palette();
+        palette.Initialize(viewModel, actions, customKeyBindings);
+
         var window = new EphemeralWindow(palette, this.Title);
         window.Show();
     }

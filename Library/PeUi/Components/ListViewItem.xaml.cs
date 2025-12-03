@@ -164,7 +164,7 @@ public partial class ListViewItem : Border {
     private object FindActionBinding() {
         var current = this.Parent;
         while (current != null) {
-            var actionBinding = Palette.GetActionBinding(current);
+            var actionBinding = PaletteAttachedProperties.GetActionBinding(current);
             if (actionBinding != null) return actionBinding;
 
             current = current is FrameworkElement fe ? fe.Parent : null;

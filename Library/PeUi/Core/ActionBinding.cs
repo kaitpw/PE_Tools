@@ -3,9 +3,19 @@ using System.Windows.Input;
 namespace PeUi.Core;
 
 /// <summary>
+///     Non-generic base class for ActionBinding to enable type-erased storage
+/// </summary>
+public abstract class ActionBinding {
+    /// <summary>
+    ///     Gets all registered actions as untyped objects
+    /// </summary>
+    public abstract IEnumerable<object> GetAllActionsUntyped();
+}
+
+/// <summary>
 ///     Manages action registration and execution for palette items
 /// </summary>
-public class ActionBinding<TItem> where TItem : class, IPaletteListItem {
+public class ActionBinding<TItem> : ActionBinding where TItem : class, IPaletteListItem {
     private readonly List<PaletteAction<TItem>> _actions = new();
 
     /// <summary>
@@ -71,6 +81,9 @@ public class ActionBinding<TItem> where TItem : class, IPaletteListItem {
     ///     Gets all registered actions (not filtered by CanExecute)
     /// </summary>
     public IEnumerable<PaletteAction<TItem>> GetAllActions() => this._actions;
+
+    /// <inheritdoc />
+    public override IEnumerable<object> GetAllActionsUntyped() => this._actions.Cast<object>();
 
     /// <summary>
     ///     Executes a specific action for a given item

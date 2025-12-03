@@ -16,7 +16,7 @@ namespace PeUi.Components;
 ///     Non-generic base class for ActionMenu
 ///     Provides popover functionality and resource loading
 /// </summary>
-public class ActionMenu : RevitHostedUserControl, IPopoverExit {
+public abstract class ActionMenu : RevitHostedUserControl, IPopoverExit {
     protected IEnumerable? _actions;
     protected ContextMenu? Menu { get; set; }
     public event EventHandler? ExitRequested;
@@ -30,6 +30,16 @@ public class ActionMenu : RevitHostedUserControl, IPopoverExit {
     public bool ShouldCloseOnKey(Key key) => this.CloseKeys.Contains(key);
 
     protected void OnExitRequested() => this.ExitRequested?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    ///     Type-erased Show method for use when the generic type is not available
+    /// </summary>
+    public abstract void ShowUntyped(UIElement placementTarget, object item);
+
+    /// <summary>
+    ///     Sets the actions list (type-erased for non-generic access)
+    /// </summary>
+    public abstract void SetActionsUntyped(IEnumerable actions);
 }
 
 /// <summary>
@@ -49,8 +59,8 @@ public class ActionMenu<TItem> : ActionMenu where TItem : class, IPaletteListIte
         this.Menu.PreviewKeyDown += this.ContextMenu_PreviewKeyDown;
     }
 
-    public IEnumerable? Actions {
-        get => this._actions;
+    public IEnumerable<PaletteAction<TItem>>? Actions {
+        get => this._actions as IEnumerable<PaletteAction<TItem>>;
         set {
             this._actions = value;
             this.RebuildMenu();
@@ -58,6 +68,18 @@ public class ActionMenu<TItem> : ActionMenu where TItem : class, IPaletteListIte
     }
 
     public event EventHandler<PaletteAction<TItem>>? ActionClicked;
+
+    /// <inheritdoc />
+    public override void ShowUntyped(UIElement placementTarget, object item) {
+        if (item is TItem typedItem)
+            this.Show(placementTarget, typedItem);
+    }
+
+    /// <inheritdoc />
+    public override void SetActionsUntyped(IEnumerable actions) {
+        if (actions is IEnumerable<PaletteAction<TItem>> typedActions)
+            this.Actions = typedActions;
+    }
 
     /// <summary>
     ///     Shows the action menu positioned to the right of the target element
@@ -101,7 +123,9 @@ public class ActionMenu<TItem> : ActionMenu where TItem : class, IPaletteListIte
             var shortcutText = this.FormatShortcut(paletteAction);
 
             var menuItem = new MenuItem {
-                Header = paletteAction.Name, InputGestureText = shortcutText, IsEnabled = canExecute
+                Header = paletteAction.Name,
+                InputGestureText = shortcutText,
+                IsEnabled = canExecute
             };
 
             menuItem.Click += (_, _) => {
