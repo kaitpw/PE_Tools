@@ -9,7 +9,6 @@ namespace PeUi.Core.Services;
 /// </summary>
 public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
     private readonly Cosine _cosine = new(2); // 2-gram for cosine similarity
-    private readonly bool _enableUsageTracking;
 
     // String similarity algorithms
     private readonly JaroWinkler _jaroWinkler = new();
@@ -19,27 +18,40 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
     private readonly CsvReadWriter<ItemUsageData> _state;
     private Dictionary<string, ItemUsageData> _usageCache = new();
 
+    /// <summary>
+    ///     Initializes a new instance of the <see cref="SearchFilterService{TItem}" /> class.
+    /// </summary>
+    /// <param name="storage"></param>
+    /// <param name="keyGenerator"></param>
+    /// <param name="searchConfig"></param>
     public SearchFilterService(
         Storage storage,
         Func<TItem, string> keyGenerator,
-        SearchConfig searchConfig = null,
-        bool enableUsageTracking = true
+        SearchConfig searchConfig = null
     ) {
-        this._keyGenerator = keyGenerator;
         this._searchConfig = searchConfig ?? SearchConfig.Default();
-        this._enableUsageTracking = enableUsageTracking;
+        this._keyGenerator = keyGenerator;
         this._state = storage.StateDir().Csv<ItemUsageData>();
     }
 
+    public SearchFilterService(
+        SearchConfig searchConfig = null
+    ) => this._searchConfig = searchConfig ?? SearchConfig.Default();
+
+    private bool IsStorageDisabled => this._state is null && this._keyGenerator is null;
+
     public List<TItem> Filter(string searchText, IEnumerable<TItem> items) {
         var itemsList = items as List<TItem> ?? items.ToList();
+        if (!itemsList.Any()) return [];
 
         if (string.IsNullOrWhiteSpace(searchText)) {
-            // No search text - sort by usage only
-            return itemsList
-                .OrderByDescending(this.GetUsageCount)
-                .ThenByDescending(this.GetLastUsed)
+            // No search text - keep most recent at top, sort rest by used date then usage count
+            var ordered = itemsList
+                .OrderByDescending(this.GetLastUsedDate)
+                .ThenByDescending(this.GetUsageCount)
                 .ToList();
+
+            return [ordered.First(), .. ordered.Skip(1).ToList()];
         }
 
         var searchLower = searchText.ToLowerInvariant();
@@ -50,15 +62,15 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
             .Where(x => x.score > 0)
             .OrderByDescending(x => x.score)
             .ThenByDescending(x => this.GetUsageCount(x.item))
-            .ThenByDescending(x => this.GetLastUsed(x.item))
+            .ThenByDescending(x => this.GetLastUsedDate(x.item))
             .Select(x => x.item)
             .ToList();
     }
 
     public void RecordUsage(TItem item) {
-        if (!this._enableUsageTracking) return;
-
+        if (this.IsStorageDisabled) return;
         var key = this._keyGenerator(item);
+        if (string.IsNullOrWhiteSpace(key)) return;
         var existing = this._usageCache.GetValueOrDefault(key);
         var usageCount = (existing?.UsageCount ?? 0) + 1;
 
@@ -69,7 +81,7 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
     }
 
     public void LoadUsageData() {
-        if (!this._enableUsageTracking) return;
+        if (this.IsStorageDisabled) return;
 
         this._usageCache = this._state.Read();
     }
@@ -83,7 +95,6 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
 
         foreach (var item in items) {
             var metadata = new SearchableItemMetadata {
-                KeyLower = (this._keyGenerator(item) ?? string.Empty).ToLowerInvariant(),
                 PrimaryLower = (item.TextPrimary ?? string.Empty).ToLowerInvariant(),
                 SecondaryLower = (item.TextSecondary ?? string.Empty).ToLowerInvariant(),
                 PillLower = (item.TextPill ?? string.Empty).ToLowerInvariant(),
@@ -93,15 +104,14 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
                 AllWords = SplitIntoWords(
                     $"{item.TextPrimary} {item.TextSecondary} {item.TextPill} {item.TextInfo}")
             };
-
             this._searchCache[item] = metadata;
         }
     }
 
     private static string[] SplitIntoWords(string text) {
-        if (string.IsNullOrEmpty(text)) return Array.Empty<string>();
+        if (string.IsNullOrEmpty(text)) return [];
 
-        return text.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries)
+        return text.Split([' ', '-', '_'], StringSplitOptions.RemoveEmptyEntries)
             .Select(w => w.ToLowerInvariant())
             .ToArray();
     }
@@ -109,18 +119,25 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
     private static string BuildAcronym(string text) {
         if (string.IsNullOrEmpty(text)) return string.Empty;
 
-        var words = text.Split(new[] { ' ', '-', '_' }, StringSplitOptions.RemoveEmptyEntries);
+        var words = text.Split([' ', '-', '_'], StringSplitOptions.RemoveEmptyEntries);
         return string.Concat(words.Select(w => w.Length > 0 ? char.ToLower(w[0]) : ' '));
     }
 
     private int GetUsageCount(TItem item) {
+        if (this.IsStorageDisabled) return 0;
         var key = this._keyGenerator(item);
+        if (string.IsNullOrWhiteSpace(key)) return 0;
         return this._usageCache.GetValueOrDefault(key)?.UsageCount ?? 0;
     }
 
-    private DateTime GetLastUsed(TItem item) {
+    private DateTime GetLastUsedDate(TItem item) {
+        if (this.IsStorageDisabled) return DateTime.MinValue;
         var key = this._keyGenerator(item);
-        return this._usageCache.GetValueOrDefault(key)?.LastUsed ?? DateTime.MinValue;
+        if (string.IsNullOrWhiteSpace(key)) return DateTime.MinValue;
+        var lastUsedDateTime = this._usageCache.TryGetValue(key, out var usageData)
+            ? usageData.LastUsed
+            : DateTime.MinValue;
+        return lastUsedDateTime.Date;
     }
 
     /// <summary>
@@ -189,12 +206,12 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
             foreach (var (text, weight) in fieldTexts) {
                 var tokenScore = 0.0;
 
-                if (text.StartsWith(token))
+                if (this.IsWordBoundaryMatch(text, token))
+                    tokenScore = 80;
+                else if (text.StartsWith(token))
                     tokenScore = 70;
                 else if (text.Contains(token))
                     tokenScore = 50;
-                else if (this.IsWordBoundaryMatch(text, token))
-                    tokenScore = 30;
 
                 if (tokenScore > 0) bestTokenScore = Math.Max(bestTokenScore, tokenScore * weight);
             }
@@ -294,7 +311,7 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
     ///     Example: "v pal" matches "views palette"
     /// </summary>
     private double CalculateMultiTokenScore(string text, string search) {
-        var searchTokens = search.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+        var searchTokens = search.Split([' '], StringSplitOptions.RemoveEmptyEntries);
         if (searchTokens.Length < 2) return 0;
 
         var totalScore = 0.0;

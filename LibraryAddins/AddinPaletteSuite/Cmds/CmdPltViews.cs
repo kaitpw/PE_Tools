@@ -1,5 +1,6 @@
-using AddinPaletteSuite.Core;
 using Nice3point.Revit.Extensions;
+using PeRevit.Ui;
+using PeServices.Storage;
 using PeUi.Core;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
@@ -7,28 +8,45 @@ using Color = System.Windows.Media.Color;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltViews : BaseCmdPalette<View, ViewPaletteItem> {
-    public override string TypeName => "view";
+public class CmdPltViews : IExternalCommand {
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elementSet) {
+        try {
+            var uiapp = commandData.Application;
+            var doc = uiapp.ActiveUIDocument.Document;
 
-    public override IEnumerable<ViewPaletteItem> GetItems(IEnumerable<View> views, Document doc) =>
-        views.Where(v => !v.IsTemplate
-                         && v.ViewType != ViewType.Legend
-                         && v.ViewType != ViewType.DrawingSheet
-                         && v.ViewType != ViewType.DraftingView
-                         && v.ViewType != ViewType.SystemBrowser
-                         && v is not ViewSchedule)
-            .Select(view => new ViewPaletteItem(view));
+            var items = new FilteredElementCollector(doc)
+                .OfClass(typeof(View))
+                .Cast<View>()
+                .Where(v => !v.IsTemplate
+                            && v.ViewType != ViewType.Legend
+                            && v.ViewType != ViewType.DrawingSheet
+                            && v.ViewType != ViewType.DraftingView
+                            && v.ViewType != ViewType.SystemBrowser
+                            && v is not ViewSchedule)
+                .OrderBy(v => v.Name)
+                .Select(v => new ViewPaletteItem(v));
 
-    public override string GetPersistenceKey(ViewPaletteItem item) => item.View.Id.ToString();
+            var actions = new List<PaletteAction<ViewPaletteItem>> {
+                new() {
+                    Name = "Open View",
+                    Execute = item => uiapp.ActiveUIDocument.ActiveView = item.View,
+                    CanExecute = item => item != null && item.View.CanBePrinted
+                }
+            };
 
-    public override IEnumerable<PaletteAction<ViewPaletteItem>> GetActions(UIApplication uiApp) =>
-        new List<PaletteAction<ViewPaletteItem>> {
-            new() {
-                Name = "Open View",
-                Execute = item => uiApp.ActiveUIDocument.ActiveView = item.View,
-                CanExecute = item => item != null && item.View.CanBePrinted
-            }
-        };
+            var window = PaletteFactory.Create("View Palette", items, actions,
+                new PaletteOptions<ViewPaletteItem> {
+                    Storage = new Storage(nameof(CmdPltViews)),
+                    PersistenceKey = item => item.View.Id.ToString()
+                });
+            window.Show();
+
+            return Result.Succeeded;
+        } catch (Exception ex) {
+            new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
+            return Result.Failed;
+        }
+    }
 }
 
 /// <summary>
@@ -38,8 +56,6 @@ public class ViewPaletteItem(View view) : IPaletteListItem {
     private readonly string _discipline = view.HasViewDiscipline()
         ? view.Discipline.ToString()
         : string.Empty;
-
-    // Use HasViewDiscipline to check before accessing to avoid exceptions
 
     public View View { get; } = view;
     public string TextPrimary => this.View.Name;

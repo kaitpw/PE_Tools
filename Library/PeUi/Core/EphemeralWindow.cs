@@ -22,18 +22,15 @@ namespace PeUi.Core;
 public class EphemeralWindow : Window {
     private readonly UserControl _contentControl;
     private readonly DispatcherTimer _ctrlKeyMonitor;
-    private readonly bool _monitorCtrlKey;
     private readonly Action _onCtrlReleased;
     private bool _isClosing;
 
     public EphemeralWindow(
         UserControl content,
         string title = "Palette",
-        bool monitorCtrlKey = false,
         Action onCtrlReleased = null
     ) {
         this._contentControl = content;
-        this._monitorCtrlKey = monitorCtrlKey;
         this._onCtrlReleased = onCtrlReleased;
         this.Title = title;
         this.SizeToContent = SizeToContent.Manual;
@@ -66,13 +63,11 @@ public class EphemeralWindow : Window {
 
         this.Content = containerGrid;
 
-        // 6. Apply custom implicit styles (focus visual, etc.)
-
         // Subscribe to CloseRequested event if content implements it
         if (content is ICloseRequestable closeable) closeable.CloseRequested += this.OnContentCloseRequested;
 
         // Set up Ctrl key monitoring if requested
-        if (this._monitorCtrlKey) {
+        if (this._onCtrlReleased != null) {
             this._ctrlKeyMonitor = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
             this._ctrlKeyMonitor.Tick += this.OnCtrlKeyMonitorTick;
             this.Loaded += (_, _) => this._ctrlKeyMonitor.Start();

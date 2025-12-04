@@ -131,8 +131,8 @@ public static class RevitTabColorReader {
             var windowsWithDockingManager = new List<IntPtr>();
 
             // Enumerate all top-level windows
-            EnumWindows((hwnd, lParam) => {
-                GetWindowThreadProcessId(hwnd, out var processId);
+            _ = EnumWindows((hwnd, lParam) => {
+                _ = GetWindowThreadProcessId(hwnd, out var processId);
 
                 // Only check windows belonging to our process
                 if (processId != currentProcessId) return true;

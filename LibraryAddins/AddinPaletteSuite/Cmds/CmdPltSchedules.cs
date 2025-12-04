@@ -1,5 +1,6 @@
-using AddinPaletteSuite.Core;
 using Nice3point.Revit.Extensions;
+using PeRevit.Ui;
+using PeServices.Storage;
 using PeUi.Core;
 using PeUi.Core.Services;
 using System.Windows.Media.Imaging;
@@ -8,33 +9,41 @@ using Color = System.Windows.Media.Color;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltSchedules : BaseCmdPalette<ViewSchedule, SchedulePaletteItem> {
-    public override string TypeName => "Schedule";
+public class CmdPltSchedules : IExternalCommand {
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elementSet) {
+        try {
+            var uiapp = commandData.Application;
+            var doc = uiapp.ActiveUIDocument.Document;
 
-    public override IEnumerable<SchedulePaletteItem> GetItems(IEnumerable<ViewSchedule> schedules, Document doc) =>
-        schedules.Where(s => !s.Name.Contains("<Revision Schedule>"))
-            .Select(schedule => new SchedulePaletteItem(schedule));
+            var items = new FilteredElementCollector(doc)
+                .OfClass(typeof(ViewSchedule))
+                .Cast<ViewSchedule>()
+                .Where(s => !s.Name.Contains("<Revision Schedule>"))
+                .OrderBy(s => s.Name)
+                .Select(s => new SchedulePaletteItem(s));
 
-    public override string GetPersistenceKey(SchedulePaletteItem item) => item.Schedule.Id.ToString();
+            var actions = new List<PaletteAction<SchedulePaletteItem>> {
+                new() {
+                    Name = "Open",
+                    Execute = item => uiapp.ActiveUIDocument.ActiveView = item.Schedule,
+                }
+            };
 
-    /// <summary>
-    ///     Enable filtering by discipline (TextPill property)
-    /// </summary>
-    protected override Func<SchedulePaletteItem, string> GetFilterKeySelector() => item => item.TextPill;
+            var window = PaletteFactory.Create("Schedule Palette", items, actions,
+                new PaletteOptions<SchedulePaletteItem> {
+                    Storage = new Storage(nameof(CmdPltSchedules)),
+                    PersistenceKey = item => item.Schedule.Id.ToString(),
+                    SearchConfig = SearchConfig.PrimaryAndSecondary(),
+                    FilterKeySelector = item => item.TextPill
+                });
+            window.Show();
 
-    /// <summary>
-    ///     Search both primary (schedule name) and secondary (sheet info)
-    /// </summary>
-    protected override SearchConfig GetSearchConfig() => SearchConfig.PrimaryAndSecondary();
-
-    public override IEnumerable<PaletteAction<SchedulePaletteItem>> GetActions(UIApplication uiApp) =>
-        new List<PaletteAction<SchedulePaletteItem>> {
-            new() {
-                Name = "Open",
-                Execute = item => uiApp.ActiveUIDocument.ActiveView = item.Schedule,
-                CanExecute = item => item != null && item.Schedule.CanBePrinted
-            }
-        };
+            return Result.Succeeded;
+        } catch (Exception ex) {
+            new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
+            return Result.Failed;
+        }
+    }
 }
 
 /// <summary>

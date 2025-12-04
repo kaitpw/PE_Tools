@@ -1,6 +1,7 @@
 #nullable enable
-using AddinPaletteSuite.Core;
 using PeExtensions.FamDocument;
+using PeRevit.Ui;
+using PeServices.Storage;
 using PeUi.Core;
 using PeUi.Core.Services;
 using System.Windows.Input;
@@ -10,64 +11,67 @@ using Color = System.Windows.Media.Color;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltFamilies : BaseCmdPalette<Family, FamilyPaletteItem> {
-    public override string TypeName => "family";
+public class CmdPltFamilies : IExternalCommand {
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elementSet) {
+        try {
+            var uiapp = commandData.Application;
+            var doc = uiapp.ActiveUIDocument.Document;
+            var activeView = uiapp.ActiveUIDocument.ActiveView;
 
-    public override IEnumerable<FamilyPaletteItem> GetItems(IEnumerable<Family> families, Document doc) =>
-        families.Select(family => new FamilyPaletteItem(family, doc));
+            var items = new FilteredElementCollector(doc)
+                .OfClass(typeof(Family))
+                .Cast<Family>()
+                .OrderBy(f => f.Name)
+                .Select(f => new FamilyPaletteItem(f, doc));
 
-    public override string GetPersistenceKey(FamilyPaletteItem item) => item.Family.Id.ToString();
-
-    /// <summary>
-    ///     Enable filtering by category (TextPill property)
-    /// </summary>
-    protected override Func<FamilyPaletteItem, string>? GetFilterKeySelector() => item => item.TextPill;
-
-    /// <summary>
-    ///     Search both primary (family name) and secondary (family type names)
-    /// </summary>
-    protected override SearchConfig GetSearchConfig() => SearchConfig.PrimaryAndSecondary();
-
-    public override IEnumerable<PaletteAction<FamilyPaletteItem>> GetActions(UIApplication uiApp) {
-        var doc = uiApp.ActiveUIDocument.Document;
-        var activeView = uiApp.ActiveUIDocument.ActiveView;
-
-        return new List<PaletteAction<FamilyPaletteItem>> {
-            // Default action: Open family types palette (Enter or Click)
-            new() {
-                Name = "Types",
-                ExecuteNextPalette = item => {
-                    var familyTypes = new PltFamilyTypes(item.Family);
-                    familyTypes.Open(uiApp);
+            var actions = new List<PaletteAction<FamilyPaletteItem>> {
+                // Default action: Open family types palette (Enter or Click)
+                new() {
+                    Name = "Types",
+                    ExecuteNextPalette = item => PltFamilyTypes.Open(uiapp, item.Family),
+                    CanExecute = item => item != null
                 },
-                CanExecute = item => item != null
-            },
-            new() {
-                Name = "Select in View",
-                Modifiers = ModifierKeys.Shift,
-                Execute = item => {
-                    var instances = new FilteredElementCollector(doc)
-                        .OfClass(typeof(FamilyInstance))
-                        .Cast<FamilyInstance>()
-                        .Where(fi => fi.Symbol.Family.Id == item.Family.Id)
-                        .Select(fi => fi.Id)
-                        .ToList();
-                    uiApp.ActiveUIDocument.Selection.SetElementIds(instances);
+                new() {
+                    Name = "Select in View",
+                    Modifiers = ModifierKeys.Shift,
+                    Execute = item => {
+                        var instances = new FilteredElementCollector(doc)
+                            .OfClass(typeof(FamilyInstance))
+                            .Cast<FamilyInstance>()
+                            .Where(fi => fi.Symbol.Family.Id == item.Family.Id)
+                            .Select(fi => fi.Id)
+                            .ToList();
+                        uiapp.ActiveUIDocument.Selection.SetElementIds(instances);
+                    },
+                    CanExecute = item => item != null && !activeView.IsTemplate
+                                                      && activeView.ViewType != ViewType.Legend
+                                                      && activeView.ViewType != ViewType.DrawingSheet
+                                                      && activeView.ViewType != ViewType.DraftingView
+                                                      && activeView.ViewType != ViewType.SystemBrowser
+                                                      && activeView is not ViewSchedule && item.Family.IsEditable
                 },
-                CanExecute = item => item != null && !activeView.IsTemplate
-                                                  && activeView.ViewType != ViewType.Legend
-                                                  && activeView.ViewType != ViewType.DrawingSheet
-                                                  && activeView.ViewType != ViewType.DraftingView
-                                                  && activeView.ViewType != ViewType.SystemBrowser
-                                                  && activeView is not ViewSchedule && item.Family.IsEditable
-            },
-            new() {
-                Name = "Open/Edit",
-                Modifiers = ModifierKeys.Control,
-                Execute = item => doc.EditFamily(item.Family).GetFamilyDocument().OpenForUserEditting(uiApp),
-                CanExecute = item => item != null && item.Family.IsEditable
-            }
-        };
+                new() {
+                    Name = "Open/Edit",
+                    Modifiers = ModifierKeys.Control,
+                    Execute = item => doc.EditFamily(item.Family).GetFamilyDocument().OpenForUserEditting(uiapp),
+                    CanExecute = item => item != null && item.Family.IsEditable
+                }
+            };
+
+            var window = PaletteFactory.Create("Family Palette", items, actions,
+                new PaletteOptions<FamilyPaletteItem> {
+                    Storage = new Storage(nameof(CmdPltFamilies)),
+                    PersistenceKey = item => item.Family.Id.ToString(),
+                    SearchConfig = SearchConfig.PrimaryAndSecondary(),
+                    FilterKeySelector = item => item.TextPill
+                });
+            window.Show();
+
+            return Result.Succeeded;
+        } catch (Exception ex) {
+            new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
+            return Result.Failed;
+        }
     }
 }
 

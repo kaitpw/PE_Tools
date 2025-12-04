@@ -7,6 +7,7 @@ public class Csv<T> : CsvReadWriter<T> where T : class, new() {
     public Csv(string filePath) {
         FileUtils.ValidateFileNameAndExtension(filePath, "csv");
         this.FilePath = filePath;
+        _ = this.EnsureDirectoryExists();
     }
 
     public string FilePath { get; init; }
@@ -59,12 +60,10 @@ public class Csv<T> : CsvReadWriter<T> where T : class, new() {
     /// <summary>
     ///     Writes CSV data to the default state file with type safety
     /// </summary>
-    public void Write(Dictionary<string, T> data) {
+    public string Write(Dictionary<string, T> data) {
         try {
-            if (data.Count == 0) {
-                File.WriteAllText(this.FilePath, string.Empty);
-                return;
-            }
+            if (data.Count == 0) return string.Empty;
+            _ = this.EnsureDirectoryExists();
 
             // Get all properties from the type
             var properties = typeof(T).GetProperties()
@@ -90,30 +89,38 @@ public class Csv<T> : CsvReadWriter<T> where T : class, new() {
             }
 
             File.WriteAllLines(this.FilePath, lines);
+            return this.FilePath;
         } catch {
-            // TODO: Maybe return Result type instead
             new Ballogger().Add(Log.ERR, null, $"Failed to write to CSV file: {this.FilePath}").Show();
+            return string.Empty;
         }
     }
 
     /// <summary>
     ///     Gets a specific row from the CSV state file with type safety
     /// </summary>
-    public T? ReadRow(string key) => this.Read().GetValueOrDefault(key);
+    public T ReadRow(string key) => this.Read().GetValueOrDefault(key);
 
     /// <summary>
     ///     Updates a specific row in the CSV state file with type safety
     /// </summary>
-    public void WriteRow(string key, T rowData) {
+    public string WriteRow(string key, T rowData) {
         var state = this.Read();
+        if (state.Count == 0) return string.Empty;
         state[key] = rowData;
-        this.Write(state);
+        return this.Write(state);
+    }
+
+    private string EnsureDirectoryExists() {
+        var directory = Path.GetDirectoryName(this.FilePath);
+        if (directory != null && !Directory.Exists(directory)) _ = Directory.CreateDirectory(directory);
+        return directory;
     }
 
     /// <summary>
     ///     Converts a string value to the target type for CSV parsing
     /// </summary>
-    private static object? ConvertValue(string value, Type targetType) {
+    private static object ConvertValue(string value, Type targetType) {
         if (string.IsNullOrEmpty(value)) return null;
 
         try {

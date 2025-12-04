@@ -1,4 +1,5 @@
-using AddinPaletteSuite.Core;
+using PeRevit.Ui;
+using PeServices.Storage;
 using PeUi.Core;
 using PeUi.Core.Services;
 using System.Windows.Media.Imaging;
@@ -7,31 +8,40 @@ using Color = System.Windows.Media.Color;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltAllViews : BaseCmdPalette<View, AllViewPaletteItem> {
-    public override string TypeName => "all views";
+public class CmdPltAllViews : IExternalCommand {
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elementSet) {
+        try {
+            var uiapp = commandData.Application;
+            var doc = uiapp.ActiveUIDocument.Document;
 
-    public override IEnumerable<AllViewPaletteItem> GetItems(IEnumerable<View> views, Document doc) =>
-        views.Select(view => new AllViewPaletteItem(view));
+            var items = new FilteredElementCollector(doc)
+                .OfClass(typeof(View))
+                .Cast<View>()
+                .OrderBy(v => v.Name)
+                .Select(v => new AllViewPaletteItem(v));
 
-    public override string GetPersistenceKey(AllViewPaletteItem item) => item.View.Id.ToString();
+            var actions = new List<PaletteAction<AllViewPaletteItem>> {
+                new() {
+                    Name = "Open View",
+                    Execute = item => uiapp.ActiveUIDocument.ActiveView = item.View,
+                }
+            };
 
-    protected override Func<AllViewPaletteItem, string>? GetFilterKeySelector() =>
-        item => item.View.ViewType.ToString();
+            var window = PaletteFactory.Create("All Views Palette", items, actions,
+                new PaletteOptions<AllViewPaletteItem> {
+                    Storage = new Storage(nameof(CmdPltAllViews)),
+                    PersistenceKey = item => item.View.Id.ToString(),
+                    SearchConfig = SearchConfig.Default(),
+                    FilterKeySelector = item => item.View.ViewType.ToString()
+                });
+            window.Show();
 
-    /// <summary>
-    ///     TODO: Eventually search all fields (Primary, Secondary, Pill, Info) for comprehensive search
-    ///     For now, use default (TextPrimary only)
-    /// </summary>
-    protected override SearchConfig GetSearchConfig() => SearchConfig.Default();
-
-    public override IEnumerable<PaletteAction<AllViewPaletteItem>> GetActions(UIApplication uiApp) =>
-        new List<PaletteAction<AllViewPaletteItem>> {
-            new() {
-                Name = "Open View",
-                Execute = item => uiApp.ActiveUIDocument.ActiveView = item.View,
-                CanExecute = item => item != null && item.View.CanBePrinted
-            }
-        };
+            return Result.Succeeded;
+        } catch (Exception ex) {
+            new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
+            return Result.Failed;
+        }
+    }
 }
 
 /// <summary>

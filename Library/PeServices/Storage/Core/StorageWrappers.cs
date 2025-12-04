@@ -2,10 +2,6 @@ namespace PeServices.Storage.Core;
 
 // Restrictive interfaces for different operation types
 
-public interface ICsvIO {
-    string FilePath { get; }
-}
-
 public interface JsonReader<T> {
     string FilePath { get; }
     T Read();
@@ -13,7 +9,7 @@ public interface JsonReader<T> {
 
 public interface JsonWriter<T> {
     string FilePath { get; }
-    void Write(T data);
+    string Write(T data);
 }
 
 public interface JsonReadWriter<T> : JsonReader<T>, JsonWriter<T> where T : class, new() {
@@ -28,8 +24,8 @@ public interface CsvReader<T> {
 
 public interface CsvWriter<T> {
     string FilePath { get; }
-    void Write(Dictionary<string, T> data);
-    void WriteRow(string key, T rowData);
+    string Write(Dictionary<string, T> data);
+    string WriteRow(string key, T rowData);
 }
 
 public interface CsvReadWriter<T> : CsvReader<T>, CsvWriter<T> where T : class, new() {

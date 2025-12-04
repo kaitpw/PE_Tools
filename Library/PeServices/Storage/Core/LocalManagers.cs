@@ -19,10 +19,22 @@ public abstract class BaseLocalManager {
         Path.Combine(this.DirectoryPath, filename ?? $"{this.Name}.json");
 
     /// <summary>
+    ///     Get the path to the JSON file with a timestamp in the filename. Uses the <see cref="Name" /> of the manager by default.
+    /// </summary>
+    public string GetDatedJsonPath(string filename = null) =>
+        Path.Combine(this.DirectoryPath, $"{filename ?? this.Name}_{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}.json");
+
+    /// <summary>
     ///     Get the path to the CSV file. Uses the <see cref="Name" /> of the manager by default.
     /// </summary>
     public string GetCsvPath(string filename = null) =>
         Path.Combine(this.DirectoryPath, filename ?? $"{this.Name}.csv");
+
+    /// <summary>
+    ///     Get the path to the CSV file with a timestamp in the filename. Uses the <see cref="Name" /> of the manager by default.
+    /// </summary>
+    public string GetDatedCsvPath(string filename = null) =>
+        Path.Combine(this.DirectoryPath, $"{filename ?? this.Name}_{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}.csv");
 }
 
 public class SettingsManager : BaseLocalManager {
@@ -81,10 +93,10 @@ public class OutputManager : BaseLocalManager {
     public override bool SaveSchema { get; } = false;
 
     public JsonWriter<T> Json<T>(string filename) where T : class, new() =>
-        new Json<T>(this.GetJsonPath(filename), this.ThrowIfDefaultCreated, this.SaveSchema);
+        new Json<T>(this.GetDatedJsonPath(filename), this.ThrowIfDefaultCreated, this.SaveSchema);
 
     public CsvWriter<T> Csv<T>(string filename) where T : class, new() =>
-        new Csv<T>(this.GetCsvPath(filename));
+        new Csv<T>(this.GetDatedCsvPath(filename));
 
     /// <summary>
     ///     Navigate to a subdirectory for accessing files within nested folders.

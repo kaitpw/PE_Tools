@@ -5,9 +5,6 @@ namespace PeUi.Core.Services;
 ///     This is cached once per item and reused across all searches.
 /// </summary>
 internal class SearchableItemMetadata {
-    /// <summary> Item key in lowercase (for usage tracking lookups) </summary>
-    public string KeyLower { get; init; } = string.Empty;
-
     /// <summary> Primary text in lowercase (e.g., command name) </summary>
     public string PrimaryLower { get; init; } = string.Empty;
 

@@ -49,13 +49,15 @@ internal class App : IExternalApplication {
 #endif
 
         ButtonDataHydrator.AddButtonData([
+            panelMigration.AddPushButton<CmdCreateSchedule>("Create Schedule"),
+            panelMigration.AddPushButton<CmdSerializeSchedule>("Serialize Schedule"),
             panelMigration.AddPushButton<CmdFFManager>("FF Manager"),
             panelMigration.AddPushButton<CmdFFManagerSnapshot>("FF Manager Snapshot"),
             panelMigration.AddPushButton<CmdFFMigrator>("FF Migrator"),
             panelMigration.AddPushButton<CmdFFMakeATVariants>("Make AT Variants"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
-            manageStackButton.AddPushButton<CmdTestSettingsEditor>("Test Settings Editor"),
+            // manageStackButton.AddPushButton<CmdTestSettingsEditor>("Test Settings Editor"),
 
             panelTools.AddPushButton<CmdMep2040>("MEP 2040"),
             panelTools.AddPushButton<CmdPltCommands>("Command Palette"),
@@ -229,6 +231,20 @@ public static class ButtonDataHydrator {
                     """
             }
         }, {
+            nameof(CmdCreateSchedule),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Create a new schedule from a profile."
+            }
+        }, {
+            nameof(CmdSerializeSchedule),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Serialize a schedule to a JSON file."
+            }
+        }, {
             nameof(CmdFFMigrator),
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
@@ -263,14 +279,15 @@ public static class ButtonDataHydrator {
                 ToolTip =
                     "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
             }
-        }, {
-            nameof(CmdTestSettingsEditor),
-            new ButtonDataRecord {
-                SmallImage = "Red_16.png",
-                LargeImage = "Red_32.png",
-                ToolTip = "Test the generic settings editor POC with Family Foundry settings."
-            }
         }
+        // {
+        //     nameof(CmdTestSettingsEditor),
+        //     new ButtonDataRecord {
+        //         SmallImage = "Red_16.png",
+        //         LargeImage = "Red_32.png",
+        //         ToolTip = "Test the generic settings editor POC with Family Foundry settings."
+        //     }
+        // }
     };
 
     public static void AddButtonData(List<PushButton> buttons) {

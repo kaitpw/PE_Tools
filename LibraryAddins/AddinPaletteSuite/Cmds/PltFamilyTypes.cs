@@ -1,4 +1,3 @@
-using AddinPaletteSuite.Core;
 using PeRevit.Ui;
 using PeUi.Core;
 using System.Windows.Media.Imaging;
@@ -6,22 +5,23 @@ using Color = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Cmds;
 
-[Transaction(TransactionMode.Manual)]
-public class PltFamilyTypes(Family family) : BaseCmdPalette<FamilySymbol, FamilyTypePaletteItem> {
-    public Family Family { get; } = family;
-    public override string TypeName => "family type";
+/// <summary>
+///     Secondary palette for displaying and placing family types.
+///     Opened from the family palette (CmdPltFamilies) when user selects a family.
+/// </summary>
+public static class PltFamilyTypes {
+    public static void Open(UIApplication uiapp, Family family) {
+        var doc = uiapp.ActiveUIDocument.Document;
+        var activeView = uiapp.ActiveUIDocument.ActiveView;
 
-    public override IEnumerable<FamilyTypePaletteItem>
-        GetItems(IEnumerable<FamilySymbol> familySymbols, Document doc) =>
-        familySymbols.Where(f => f.Family.Id == this.Family.Id)
-            .Select(famSymbol => new FamilyTypePaletteItem(famSymbol));
+        var items = new FilteredElementCollector(doc)
+            .OfClass(typeof(FamilySymbol))
+            .Cast<FamilySymbol>()
+            .Where(f => f.Family.Id == family.Id)
+            .OrderBy(f => f.Name)
+            .Select(f => new FamilyTypePaletteItem(f));
 
-    public override string GetPersistenceKey(FamilyTypePaletteItem item) => item.FamilySymbol.Id.ToString();
-
-    public override IEnumerable<PaletteAction<FamilyTypePaletteItem>> GetActions(UIApplication uiApp) {
-        var activeView = uiApp.ActiveUIDocument.ActiveView;
-
-        return new List<PaletteAction<FamilyTypePaletteItem>> {
+        var actions = new List<PaletteAction<FamilyTypePaletteItem>> {
             new() {
                 Name = "Place",
                 Execute = item => {
@@ -29,7 +29,7 @@ public class PltFamilyTypes(Family family) : BaseCmdPalette<FamilySymbol, Family
                     if (!symbol.IsActive) symbol.Activate();
 
                     try {
-                        uiApp.ActiveUIDocument.PromptForFamilyInstancePlacement(symbol);
+                        uiapp.ActiveUIDocument.PromptForFamilyInstancePlacement(symbol);
                     } catch (OperationCanceledException) {
                         // User canceled placement - this is expected behavior, not an error
                     } catch (Exception ex) {
@@ -40,7 +40,6 @@ public class PltFamilyTypes(Family family) : BaseCmdPalette<FamilySymbol, Family
                     if (item == null) return false;
 
                     // Check if active view is valid for placing families
-                    // Same logic as CmdPltViews - exclude templates, legends, sheets, schedules, etc.
                     return !activeView.IsTemplate
                            && activeView.ViewType != ViewType.Legend
                            && activeView.ViewType != ViewType.DrawingSheet
@@ -50,6 +49,10 @@ public class PltFamilyTypes(Family family) : BaseCmdPalette<FamilySymbol, Family
                 }
             }
         };
+
+        var window = PaletteFactory.Create($"{family.Name} Types", items, actions,
+            new PaletteOptions<FamilyTypePaletteItem> { SearchConfig = null });
+        window.Show();
     }
 }
 

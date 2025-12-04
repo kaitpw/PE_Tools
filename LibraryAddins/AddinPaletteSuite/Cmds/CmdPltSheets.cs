@@ -1,4 +1,6 @@
-using AddinPaletteSuite.Core;
+using Nice3point.Revit.Extensions;
+using PeRevit.Ui;
+using PeServices.Storage;
 using PeUi.Core;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
@@ -6,23 +8,40 @@ using Color = System.Windows.Media.Color;
 namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
-public class CmdPltSheets : BaseCmdPalette<ViewSheet, SheetPaletteItem> {
-    public override string TypeName => "sheet";
+public class CmdPltSheets : IExternalCommand {
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elementSet) {
+        try {
+            var uiapp = commandData.Application;
+            var doc = uiapp.ActiveUIDocument.Document;
 
-    public override IEnumerable<SheetPaletteItem> GetItems(IEnumerable<ViewSheet> sheets, Document doc) =>
-        sheets.OrderBy(s => s.SheetNumber)
-            .Select(sheet => new SheetPaletteItem(sheet));
+            var items = new FilteredElementCollector(doc)
+                .OfClass(typeof(ViewSheet))
+                .Cast<ViewSheet>()
+                .OrderBy(s => s.SheetNumber)
+                .Select(s => new SheetPaletteItem(s));
 
-    public override string GetPersistenceKey(SheetPaletteItem item) => item.Sheet.Id.ToString();
+            var actions = new List<PaletteAction<SheetPaletteItem>> {
+                new() {
+                    Name = "Open Sheet",
+                    Execute = item => uiapp.ActiveUIDocument.ActiveView = item.Sheet,
+                    CanExecute = item => item != null && item.Sheet.CanBePrinted
+                }
+            };
 
-    public override IEnumerable<PaletteAction<SheetPaletteItem>> GetActions(UIApplication uiApp) =>
-        new List<PaletteAction<SheetPaletteItem>> {
-            new() {
-                Name = "Open Sheet",
-                Execute = item => uiApp.ActiveUIDocument.ActiveView = item.Sheet,
-                CanExecute = item => item != null && item.Sheet.CanBePrinted
-            }
-        };
+            var window = PaletteFactory.Create("Sheet Palette", items, actions,
+                new PaletteOptions<SheetPaletteItem> {
+                    Storage = new Storage(nameof(CmdPltSheets)),
+                    PersistenceKey = item => item.Sheet.Id.ToString(),
+                    FilterKeySelector = item => item.TextPill
+                });
+            window.Show();
+
+            return Result.Succeeded;
+        } catch (Exception ex) {
+            new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
+            return Result.Failed;
+        }
+    }
 }
 
 /// <summary>
@@ -32,12 +51,25 @@ public class SheetPaletteItem(ViewSheet sheet) : IPaletteListItem {
     public ViewSheet Sheet { get; } = sheet;
     public string TextPrimary => $"{this.Sheet.SheetNumber} - {this.Sheet.Name}";
 
-    public string TextSecondary => string.Empty;
-
-    public string TextPill {
+    public string TextSecondary {
         get {
             var views = this.GetViewInfo();
             return views.Count == 0 ? string.Empty : $"{views.Count} views";
+        }
+    }
+
+    public string TextPill {
+        get {
+            try {
+                var sheetNum = this.Sheet.FindParameter(BuiltInParameter.SHEET_NUMBER)?.AsString();
+                if (string.IsNullOrEmpty(sheetNum) || sheetNum == "-") return string.Empty;
+
+                var firstDigitIndex = sheetNum.TakeWhile(c => !char.IsDigit(c)).Count();
+                if (firstDigitIndex == 0) return string.Empty;
+                return sheetNum[..firstDigitIndex];
+            } catch {
+                return string.Empty;
+            }
         }
     }
 

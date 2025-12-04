@@ -20,7 +20,6 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         NullValueHandling = NullValueHandling.Ignore,
     };
 
-    private readonly DateTime _instanceCreationTime;
     private readonly JsonSchema _schema;
 
     private readonly JsonSerializerSettings _serialSettings = new() {
@@ -33,15 +32,20 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
     public Json(string filePath, bool throwIfDefaultCreated, bool saveSchema) {
         FileUtils.ValidateFileNameAndExtension(filePath, "json");
         this.FilePath = filePath;
-        this._instanceCreationTime = DateTime.Now;
+        _ = this.EnsureDirectoryExists();
+
         var settings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true };
         settings.SchemaProcessors.Add(new EnumConstraintSchemaProcessor());
         settings.SchemaProcessors.Add(new ForgeTypeIdSchemaProcessor());
         this._schema = new JsonSchemaGenerator(settings).Generate(typeof(T));
 
-        _ = this.EnsureDirectoryExists();
-
-        if (File.Exists(this.FilePath) && this.CurrJObject().HasValues) {
+        if (!this.IsFileValid) {
+            this.WritePossiblyInvalid(new T());
+            if (throwIfDefaultCreated) {
+                throw new CrashProgramException(
+                    $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
+            }
+        } else {
             // Always deserialize and re-serialize to sanitize the JSON file.
             var originalJson = this.CurrJObject();
             var sanitizedJsonText = this.Deserialize();
@@ -64,14 +68,9 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
             return;
         }
 
-        this.WritePossiblyInvalid(new T());
-        if (throwIfDefaultCreated) {
-            throw new CrashProgramException(
-                $"File {this.FilePath} did not exist. A default file was created, please review it and try again.");
-        }
-
         if (saveSchema) this.WriteSchema();
     }
+    public bool IsFileValid => File.Exists(this.FilePath) && this.CurrJObject().HasValues;
 
     public string FilePath { get; init; }
 
@@ -83,13 +82,14 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         return content;
     }
 
-    public void Write(T content) {
+    public string Write(T content) {
         _ = this.EnsureDirectoryExists();
         var jsonContent = this.Serialize(content);
         var validationErrs = this._schema.Validate(jsonContent).ToList();
         if (validationErrs.Any())
             throw new JsonValidationException(this.FilePath, validationErrs);
         File.WriteAllText(this.FilePath, jsonContent);
+        return this.FilePath;
     }
 
     /// <summary>

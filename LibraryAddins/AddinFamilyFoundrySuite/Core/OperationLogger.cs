@@ -141,8 +141,8 @@ public class OperationLogger {
         var filename = $"dry-run_{timestamp}.json";
         var detailedFilename = $"dry-run_{timestamp}_detailed.json";
 
-        storage.OutputDir().Json<object>(filename).Write(summary);
-        storage.OutputDir().Json<object>(detailedFilename).Write(detailed);
+        _ = storage.OutputDir().Json<object>(filename).Write(summary);
+        _ = storage.OutputDir().Json<object>(detailedFilename).Write(detailed);
 
         if (openOutputFilesOnCommandFinish)
             FileUtils.OpenInDefaultApp(Path.Combine(storage.OutputDir().DirectoryPath, filename));
@@ -160,8 +160,8 @@ public class OperationLogger {
         var filename = $"{timestamp}.json";
         var detailedFilename = $"{timestamp}_detailed.json";
 
-        storage.OutputDir().Json<object>(filename).Write(summary);
-        storage.OutputDir().Json<object>(detailedFilename).Write(detailed);
+        _ = storage.OutputDir().Json<object>(filename).Write(summary);
+        _ = storage.OutputDir().Json<object>(detailedFilename).Write(detailed);
 
         var logPath = Path.Combine(storage.OutputDir().DirectoryPath, filename);
         if (openOutputFilesOnCommandFinish)

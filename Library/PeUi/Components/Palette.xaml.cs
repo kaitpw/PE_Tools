@@ -44,11 +44,17 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     private SelectableTextBox _tooltipPanel;
     private Func<Task<bool>> _executeItemFunc;
     private Func<object> _getSelectedItemFunc;
-    private Action _recordUsageFunc;
-    private bool _isSearchBoxHidden;
+    private Action _recordUsageFunc; // TODO: this probably exists from my refactors, did i mess something up?
+    private readonly bool _isSearchBoxHidden;
 
-    public Palette() {
+    public Palette(bool isSearchBoxHidden = false) {
         this.InitializeComponent();
+        if (isSearchBoxHidden) {
+            this._isSearchBoxHidden = true;
+            this.SearchBoxBorder.Visibility = Visibility.Collapsed;
+            // Make the UserControl itself focusable so it can receive keyboard input
+            this.Focusable = true;
+        }
     }
 
     public event EventHandler<CloseRequestedEventArgs> CloseRequested;
@@ -100,7 +106,7 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         this.StatusBarBorder.ClipToBounds = true;
 
         var actionBinding = new ActionBinding<TItem>();
-        actionBinding.RegisterRange(actions);
+        if (actions != null && actions.Any()) actionBinding.RegisterRange(actions);
         var actionMenu = new ActionMenu<TItem>([Key.Escape, Key.Left]);
 
         // Store type-erased references for non-generic code paths
@@ -190,17 +196,6 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         return false;
     }
 
-    /// <summary>
-    ///     Hides the search box and sets up alternative focus handling for keyboard-only navigation
-    /// </summary>
-    public void HideSearchBox() {
-        this._isSearchBoxHidden = true;
-        this.SearchBoxBorder.Visibility = Visibility.Collapsed;
-
-        // Make the UserControl itself focusable so it can receive keyboard input
-        this.Focusable = true;
-    }
-
     private void RequestClose(bool restoreFocus = true) =>
         this.CloseRequested?.Invoke(this, new CloseRequestedEventArgs { RestoreFocus = restoreFocus });
 
@@ -241,6 +236,12 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
                 e.Handled = true;
             } else if (e.Key == Key.Enter && selectedItem != null)
                 e.Handled = await this._executeItemFunc();
+            // No idea why this is needed, but it is and its very counterintuitive. 
+            // Without it, when the search box is hidden, ONLY the up/down keys work, and none of the others
+            else if (e.Key == Key.Up && modifiers == ModifierKeys.None && this._isSearchBoxHidden)
+                e.Handled = await this.HandleNavigationAction(NavigationAction.MoveUp);
+            else if (e.Key == Key.Down && modifiers == ModifierKeys.None && this._isSearchBoxHidden)
+                e.Handled = await this.HandleNavigationAction(NavigationAction.MoveDown);
             else if (e.Key == Key.Tab && modifiers == ModifierKeys.None && this._filterBox != null)
                 e.Handled = this.ShowPopover(_ => this._filterBox?.Show());
             else if (e.Key == Key.Left && selectedItem is IPaletteListItem item) {

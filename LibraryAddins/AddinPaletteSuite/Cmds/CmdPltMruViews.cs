@@ -1,9 +1,6 @@
 using AddinPaletteSuite.Core.Services;
-using PeServices.Storage;
-using PeUi.Components;
+using PeRevit.Ui;
 using PeUi.Core;
-using PeUi.Core.Services;
-using PeUi.ViewModels;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
 using WpfColor = System.Windows.Media.Color;
@@ -12,69 +9,42 @@ namespace AddinPaletteSuite.Cmds;
 
 [Transaction(TransactionMode.Manual)]
 public class CmdPltMruViews : IExternalCommand {
-    public Result Execute(
-        ExternalCommandData commandData,
-        ref string message,
-        ElementSet elementSet
-    ) {
+    public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elementSet) {
         try {
             var uiapp = commandData.Application;
-            // Get MRU ordered views from all open documents
-            var mruViews = MruViewService.Instance.GetMruOrderedViews(uiapp);
-            var selectableItems = mruViews.Select(v => new MruViewPaletteItem(v)).ToList();
-
-            // Create actions - single action to open view
-            var actions = new List<PaletteAction<MruViewPaletteItem>> {
-                new() {
-                    Name = "Open View",
-                    Execute = item => ActivateView(uiapp, item.View),
-                    CanExecute = item => item?.View != null && item.View.CanBePrinted
-                }
-            };
-
-            // Create minimal search service without persistence (MRU ordering is handled by service)
-            var persistence = new Storage(nameof(CmdPltMruViews));
-            var searchService = new SearchFilterService<MruViewPaletteItem>(
-                persistence,
-                item => item.View.Id.ToString(),
-                enableUsageTracking: false);
-
-            // Create view model
-            var viewModel = new PaletteViewModel<MruViewPaletteItem>(selectableItems, searchService);
-
-            // Select second item (index 1) instead of first for MRU behavior
-            if (viewModel.FilteredItems.Count > 1) viewModel.SelectedIndex = 1;
-
-            // Create custom key bindings for MRU navigation
-            var customKeys = new CustomKeyBindings();
-            customKeys.Add(Key.OemTilde, NavigationAction.MoveDown, ModifierKeys.Control); // Ctrl+` cycles forward
-            customKeys.Add(Key.OemTilde, NavigationAction.MoveUp,
-                ModifierKeys.Control | ModifierKeys.Shift); // Ctrl+Shift+` cycles backward
-
-            // Create palette using composition pattern (NOT inheritance)
-            // Generic classes cannot inherit from XAML partial classes in Revit-hosted WPF
-            var palette = new Palette();
-            palette.Initialize(viewModel, actions, customKeys);
-
-            // Hide search box for MRU views (we only navigate with keyboard)
-            palette.HideSearchBox();
-
-            // Callback to execute selected view when Ctrl is released
-            void OnCtrlReleased() {
-                var selectedItem = viewModel.SelectedItem;
-                if (selectedItem?.View != null)
-                    ActivateView(uiapp, selectedItem.View);
-            }
-
-            // Wrap in EphemeralWindow with Ctrl key monitoring and show
-            var window = new EphemeralWindow(palette, "MRU Views", true, OnCtrlReleased);
-            window.Show();
-
+            Open(uiapp);
             return Result.Succeeded;
         } catch (Exception ex) {
-            message = $"Error opening MRU views palette: {ex.Message}";
+            new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
             return Result.Failed;
         }
+    }
+
+    public static void Open(UIApplication uiapp) {
+        var items = MruViewService.Instance
+            .GetMruOrderedViews(uiapp)
+            .Select(v => new MruViewPaletteItem(v));
+
+        var customKeys = new CustomKeyBindings();
+        customKeys.Add(Key.OemTilde, NavigationAction.MoveDown, ModifierKeys.Control); // Ctrl+` cycles forward
+        customKeys.Add(Key.OemTilde, NavigationAction.MoveUp, ModifierKeys.Control | ModifierKeys.Shift); // Ctrl+Shift+` cycles backward
+
+        var window = PaletteFactory.Create("Mru Views Palette", items, new List<PaletteAction<MruViewPaletteItem>>(),
+            new PaletteOptions<MruViewPaletteItem> {
+                SearchConfig = null, // Disable search for MRU palette
+                CustomKeyBindings = customKeys,
+                ViewModelMutator = vm => {
+                    // Select second item (first is current view, second is previous)
+                    if (vm.FilteredItems.Count > 1) vm.SelectedIndex = 1;
+                },
+                OnCtrlReleased = vm => {
+                    var selectedItem = vm.SelectedItem;
+                    if (selectedItem?.View != null)
+                        return () => ActivateView(uiapp, selectedItem.View);
+                    return null;
+                }
+            });
+        window.Show();
     }
 
     /// <summary>
