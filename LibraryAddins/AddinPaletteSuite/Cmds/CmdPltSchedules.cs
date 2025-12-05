@@ -1,4 +1,5 @@
 using Nice3point.Revit.Extensions;
+using PeExtensions.UiApplication;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeUi.Core;
@@ -25,7 +26,7 @@ public class CmdPltSchedules : IExternalCommand {
             var actions = new List<PaletteAction<SchedulePaletteItem>> {
                 new() {
                     Name = "Open",
-                    Execute = item => uiapp.ActiveUIDocument.ActiveView = item.Schedule,
+                    Execute = item => uiapp.OpenAndActivateView(item.Schedule),
                 }
             };
 
@@ -64,17 +65,15 @@ public class SchedulePaletteItem(ViewSchedule schedule) : IPaletteListItem {
 
     public string TextPill { get; } = schedule.FindParameter("Discipline")?.AsValueString();
 
-    public string TextInfo {
-        get {
-            var sheets = this.GetSheetInfo();
-            var sheetText = sheets.Count == 0
-                ? "None"
-                : string.Join("\n  ", sheets.Select(s => $"{s.num} - {s.name}"));
-            return $"Id: {this.Schedule.Id}" +
-                   $"\nDiscipline: {this.TextPill}" +
-                   $"\nSheeted on:\n\t{sheetText}";
-        }
-    }
+    public Func<string> GetTextInfo => () => {
+        var sheets = this.GetSheetInfo();
+        var sheetText = sheets.Count == 0
+            ? "None"
+            : string.Join("\n  ", sheets.Select(s => $"{s.num} - {s.name}"));
+        return $"Id: {this.Schedule.Id}" +
+               $"\nDiscipline: {this.TextPill}" +
+               $"\nSheeted on:\n  {sheetText}";
+    };
 
     public BitmapImage Icon => null;
     public Color? ItemColor => null;

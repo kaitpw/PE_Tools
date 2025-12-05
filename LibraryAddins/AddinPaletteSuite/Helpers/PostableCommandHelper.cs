@@ -18,7 +18,9 @@ public class PostableCommandHelper(Storage storage) {
     ///     Gets all PostableCommand items with metadata, sorted by usage
     /// </summary>
     public List<PostableCommandItem> GetAllCommands() {
-        if (this._allCommands == null) this._allCommands = this.LoadPostableCommands();
+        // if ( this._allCommands == null) 
+
+        this._allCommands = this.LoadPostableCommands();
 
         return this._allCommands;
     }
@@ -34,7 +36,7 @@ public class PostableCommandHelper(Storage storage) {
             var usageCount = (existing?.UsageCount ?? 0) + 1;
 
             var usageData = new ItemUsageData { ItemKey = key, UsageCount = usageCount, LastUsed = DateTime.Now };
-            this._state.WriteRow(key, usageData);
+            _ = this._state.WriteRow(key, usageData);
         }
     }
 
@@ -65,7 +67,8 @@ public class PostableCommandHelper(Storage storage) {
             var commandItem = new PostableCommandItem {
                 Command = command.Id,
                 UsageCount = usageData?.UsageCount ?? 0,
-                LastUsed = usageData?.LastUsed ?? DateTime.MinValue
+                LastUsed = usageData?.LastUsed ?? DateTime.MinValue,
+                ImageSource = command.Image
             };
             // Try to get shortcut info from XML
             var (shortcutInfo, infoErr) = shortcutsService.GetShortcutInfo(command.Id);

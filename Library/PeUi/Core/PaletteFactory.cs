@@ -59,11 +59,17 @@ public static class PaletteFactory {
         // Create palette - hide search box if search is disabled
         var isSearchDisabled = options.SearchConfig == null;
         var palette = new Palette(isSearchBoxHidden: isSearchDisabled);
-        palette.Initialize(viewModel, actions, options.CustomKeyBindings);
 
-        // Create window with optional Ctrl-release callback
-        var onCtrlReleased = options.OnCtrlReleased?.Invoke(viewModel);
-        return new EphemeralWindow(palette, title, onCtrlReleased);
+        // Create Ctrl-release callback if provided
+        // Pass viewModel reference so callback can read current SelectedItem when Ctrl is released
+        Action onCtrlReleased = null;
+        if (options.OnCtrlReleased != null) {
+            var vmRef = viewModel; // Capture viewModel reference
+            onCtrlReleased = options.OnCtrlReleased(vmRef);
+        }
+
+        palette.Initialize(viewModel, actions, options.CustomKeyBindings, onCtrlReleased);
+        return new EphemeralWindow(palette, title);
     }
 }
 
@@ -152,15 +158,16 @@ public class PaletteOptions<TItem> where TItem : class, IPaletteListItem {
     /// <summary>
     ///     Factory function that receives the view model and returns an action to execute when Ctrl is released.
     ///     Used for "hold Ctrl to browse, release to select" behavior (like Alt+Tab).
+    ///     The returned action should read the current SelectedItem when executed (not when created).
     ///     Default: null (no Ctrl-release behavior)
     /// </summary>
     /// <example>
     ///     <code>
-    ///     OnCtrlReleased = vm => {
+    ///     OnCtrlReleased = vm => () => {
+    ///         // Read current SelectedItem when Ctrl is released (not at window creation)
     ///         var selected = vm.SelectedItem;
     ///         if (selected?.View != null)
-    ///             return () => uiapp.ActiveUIDocument.ActiveView = selected.View;
-    ///         return null;
+    ///             uiapp.ActiveUIDocument.ActiveView = selected.View;
     ///     }
     ///     </code>
     /// </example>

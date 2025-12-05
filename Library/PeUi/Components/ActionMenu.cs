@@ -18,6 +18,7 @@ namespace PeUi.Components;
 /// </summary>
 public abstract class ActionMenu : RevitHostedUserControl, IPopoverExit {
     protected IEnumerable? _actions;
+
     protected ContextMenu? Menu { get; set; }
     public event EventHandler? ExitRequested;
     public IEnumerable<Key> CloseKeys { get; set; } = Array.Empty<Key>();
@@ -85,7 +86,7 @@ public class ActionMenu<TItem> : ActionMenu where TItem : class, IPaletteListIte
     ///     Shows the action menu positioned to the right of the target element
     /// </summary>
     public void Show(UIElement placementTarget, TItem? currentItem) {
-        if (this._actions == null || this.Menu == null) return;
+        if (this._actions == null || !this._actions.Cast<object>().Any() || this.Menu == null) return;
 
         this._currentItem = currentItem;
         this.RebuildMenu();

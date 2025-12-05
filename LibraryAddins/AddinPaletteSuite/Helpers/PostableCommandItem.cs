@@ -41,6 +41,11 @@ public class PostableCommandItem : IPaletteListItem {
     public List<string> Paths { get; set; } = new();
 
     /// <summary>
+    ///     Command icon from the ribbon
+    /// </summary>
+    public System.Windows.Media.ImageSource ImageSource { get; set; }
+
+    /// <summary>
     ///     For addin commands, stores the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
     /// </summary>
     public bool isExternalCommand => this.Command.Value is not PostableCommand;
@@ -80,8 +85,39 @@ public class PostableCommandItem : IPaletteListItem {
     public string TextPrimary => this.Name;
     public string TextSecondary => this.TruncatedPaths;
     public string TextPill => this.PrimaryShortcut;
-    public string TextInfo => this.AllPaths;
-    public BitmapImage Icon => null;
+    public Func<string> GetTextInfo => () => this.AllPaths;
+    public BitmapImage Icon {
+        get {
+            if (this.ImageSource is BitmapImage bitmapImage)
+                return bitmapImage;
+
+            // Try to convert ImageSource to BitmapImage
+            if (this.ImageSource is System.Windows.Media.Imaging.BitmapSource bitmapSource) {
+                try {
+                    // Convert BitmapSource (including BitmapFrame) to BitmapImage
+                    var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmapSource));
+
+                    using var stream = new System.IO.MemoryStream();
+                    encoder.Save(stream);
+                    stream.Position = 0;
+
+                    var result = new BitmapImage();
+                    result.BeginInit();
+                    result.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    result.StreamSource = stream;
+                    result.EndInit();
+                    result.Freeze();
+
+                    return result;
+                } catch {
+                    return null;
+                }
+            }
+
+            return null;
+        }
+    }
     public Color? ItemColor => null;
 
     public override string ToString() => this.Name;

@@ -62,7 +62,7 @@ public class FamilyTypePaletteItem(FamilySymbol familySymbol) : IPaletteListItem
     public string TextSecondary => string.Empty;
     public string TextPill => string.Empty;
 
-    public string TextInfo =>
+    public Func<string> GetTextInfo => () =>
         $"{this.FamilySymbol.Name} - {this.FamilySymbol.Family.Name} - {this.FamilySymbol.Family.FamilyCategory?.Name ?? string.Empty}";
 
     public BitmapImage Icon => null;

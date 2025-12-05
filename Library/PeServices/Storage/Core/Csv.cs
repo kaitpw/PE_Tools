@@ -39,11 +39,10 @@ public class Csv<T> : CsvReadWriter<T> where T : class, new() {
                     var value = values[j];
 
                     var property = typeof(T).GetProperty(header);
-                    if (property != null && property.CanWrite) {
-                        // Try to convert the string value to the property type
-                        var convertedValue = ConvertValue(value, property.PropertyType);
-                        if (convertedValue != null) property.SetValue(row, convertedValue);
-                    }
+                    if (property == null || !property.CanWrite) continue;
+                    // Try to convert the string value to the property type
+                    var convertedValue = ConvertValue(value, property.PropertyType);
+                    if (convertedValue != null) property.SetValue(row, convertedValue);
                 }
 
                 state[key] = row;
@@ -51,7 +50,6 @@ public class Csv<T> : CsvReadWriter<T> where T : class, new() {
 
             return state;
         } catch {
-            // TODO: Maybe return Result type instead
             new Ballogger().Add(Log.ERR, null, $"Failed to read from CSV file: {this.FilePath}").Show();
             return new Dictionary<string, T>();
         }

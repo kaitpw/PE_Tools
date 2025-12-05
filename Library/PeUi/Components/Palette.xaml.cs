@@ -46,6 +46,8 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     private Func<object> _getSelectedItemFunc;
     private Action _recordUsageFunc; // TODO: this probably exists from my refactors, did i mess something up?
     private readonly bool _isSearchBoxHidden;
+    private Action _onCtrlReleased;
+    private bool _isCtrlPressed;
 
     public Palette(bool isSearchBoxHidden = false) {
         this.InitializeComponent();
@@ -66,7 +68,8 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     internal void Initialize<TItem>(
         PaletteViewModel<TItem> viewModel,
         IEnumerable<PaletteAction<TItem>> actions,
-        CustomKeyBindings customKeyBindings = null
+        CustomKeyBindings customKeyBindings = null,
+        Action onCtrlReleased = null
     ) where TItem : class, IPaletteListItem {
         this.DataContext = viewModel;
         this._customKeyBindings = customKeyBindings;
@@ -128,12 +131,16 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
             return await this.ExecuteItemTyped(selectedItem, actionBinding, viewModel, Keyboard.Modifiers);
         };
 
+        // Store Ctrl-release callback if provided
+        this._onCtrlReleased = onCtrlReleased;
+
         // Wire up typed event handlers
         this.SetupTypedEventHandlers(viewModel, actionBinding, actionMenu);
 
         // Wire up event handlers
         this.Loaded += this.UserControl_Loaded;
         this.PreviewKeyDown += this.UserControl_PreviewKeyDown;
+        this.PreviewKeyUp += this.UserControl_PreviewKeyUp;
     }
 
     private void SetupTypedEventHandlers<TItem>(
@@ -202,6 +209,10 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     private void UserControl_Loaded(object sender, RoutedEventArgs e) {
         if (this.DataContext == null) throw new InvalidOperationException("Palette DataContext is null");
 
+        // Check if Ctrl is already pressed (e.g., palette opened with Ctrl+`)
+        if (this._onCtrlReleased != null)
+            this._isCtrlPressed = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+
         // If search box is hidden - focus on the UserControl itself to receive keyboard input
         if (this._isSearchBoxHidden)
             _ = this.Focus();
@@ -227,6 +238,10 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
             var modifiers = e.KeyboardDevice.Modifiers;
             var selectedItem = this._getSelectedItemFunc?.Invoke();
 
+            // Track Ctrl key state for Ctrl-release behavior
+            if ((modifiers & ModifierKeys.Control) != 0)
+                this._isCtrlPressed = true;
+
             // Check custom key bindings first (and handle no search box palettes)
             if (this._customKeyBindings != null &&
                 this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction))
@@ -245,8 +260,11 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
             else if (e.Key == Key.Tab && modifiers == ModifierKeys.None && this._filterBox != null)
                 e.Handled = this.ShowPopover(_ => this._filterBox?.Show());
             else if (e.Key == Key.Left && selectedItem is IPaletteListItem item) {
-                e.Handled = this.ShowPopover(placementTarget =>
-                    this._tooltipPanel.Show(placementTarget, item.TextInfo));
+                e.Handled = this.ShowPopover(placementTarget => {
+                    // Lazy evaluate tooltip text only when showing
+                    var tooltipText = item.GetTextInfo?.Invoke();
+                    this._tooltipPanel.Show(placementTarget, tooltipText);
+                });
             } else if (e.Key == Key.Right && selectedItem != null) {
                 e.Handled = this.ShowPopover(placementTarget => {
                     this._actionMenu?.SetActionsUntyped(this._actionBinding?.GetAllActionsUntyped());
@@ -255,6 +273,20 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
             }
         } catch { }
     }
+
+    private void UserControl_PreviewKeyUp(object sender, KeyEventArgs e) {
+        // Handle Ctrl-release behavior
+        if (this._onCtrlReleased != null && this._isCtrlPressed) {
+            var modifiers = e.KeyboardDevice.Modifiers;
+            // Check if Ctrl was released (no longer in modifiers)
+            if ((modifiers & ModifierKeys.Control) == 0) {
+                this._isCtrlPressed = false;
+                this._onCtrlReleased?.Invoke();
+                this.RequestClose();
+            }
+        }
+    }
+
     private bool ShowPopover(Action<UIElement> action) {
         var selectedItem = this._getSelectedItemFunc?.Invoke();
         if (selectedItem == null) return false;

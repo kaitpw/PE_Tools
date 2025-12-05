@@ -21,17 +21,13 @@ namespace PeUi.Core;
 /// </summary>
 public class EphemeralWindow : Window {
     private readonly UserControl _contentControl;
-    private readonly DispatcherTimer _ctrlKeyMonitor;
-    private readonly Action _onCtrlReleased;
     private bool _isClosing;
 
     public EphemeralWindow(
         UserControl content,
-        string title = "Palette",
-        Action onCtrlReleased = null
+        string title = "Palette"
     ) {
         this._contentControl = content;
-        this._onCtrlReleased = onCtrlReleased;
         this.Title = title;
         this.SizeToContent = SizeToContent.Manual;
         this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -65,13 +61,6 @@ public class EphemeralWindow : Window {
 
         // Subscribe to CloseRequested event if content implements it
         if (content is ICloseRequestable closeable) closeable.CloseRequested += this.OnContentCloseRequested;
-
-        // Set up Ctrl key monitoring if requested
-        if (this._onCtrlReleased != null) {
-            this._ctrlKeyMonitor = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
-            this._ctrlKeyMonitor.Tick += this.OnCtrlKeyMonitorTick;
-            this.Loaded += (_, _) => this._ctrlKeyMonitor.Start();
-        }
     }
 
     private Border CreateTitlePill(string title) {
@@ -99,19 +88,6 @@ public class EphemeralWindow : Window {
     private void OnContentCloseRequested(object sender, CloseRequestedEventArgs e) =>
         this.CloseWindow(e.RestoreFocus);
 
-    private void OnCtrlKeyMonitorTick(object sender, EventArgs e) {
-        // Check if Ctrl key is still pressed (VK_CONTROL = 0x11)
-        const int VK_CONTROL = 0x11;
-        var isCtrlPressed = (GetAsyncKeyState(VK_CONTROL) & 0x8000) != 0;
-
-        if (!isCtrlPressed) {
-            // Ctrl key released - execute callback (if provided) then close the window
-            this._ctrlKeyMonitor?.Stop();
-            this._onCtrlReleased?.Invoke();
-            this.CloseWindow();
-        }
-    }
-
     public void CloseWindow(bool restoreFocus = true) {
         try {
             if (this._isClosing) return;
@@ -129,7 +105,7 @@ public class EphemeralWindow : Window {
     ///     Attempts to restore keyboard shortcut functionality to Revit after palette closes.
     /// </summary>
     /// <remarks>
-    ///     <b>KNOWN LIMITATION:</b> This method is unreliable. Users may need to click the view canvas.
+    ///     <b>KNOWN LIMITATION:</b> This method is unreliable. Users must click the view canvas.
     ///     
     ///     <b>Key findings from extensive testing:</b>
     ///     <list type="bullet">
@@ -140,7 +116,7 @@ public class EphemeralWindow : Window {
     ///         <item>The issue is worse for views that were already open vs. freshly opened views</item>
     ///     </list>
     ///     
-    ///     Current approach: SetForegroundWindow + simulate mouse click in view area.
+    ///     Current approach: SetForegroundWindow + simulate mouse click in view area. Again, does not work.
     /// </remarks>
     public static void RestoreRevitFocus() {
         try {
@@ -155,7 +131,6 @@ public class EphemeralWindow : Window {
 
     protected override void OnClosing(CancelEventArgs e) {
         this._isClosing = true;
-        this._ctrlKeyMonitor?.Stop();
         base.OnClosing(e);
     }
 
@@ -183,7 +158,6 @@ public class EphemeralWindow : Window {
 
         if (msg == WM_ACTIVATE) {
             var activateType = (int)wParam & 0xFFFF;
-            // Debug.WriteLine($"[EphemeralWindow] WM_ACTIVATE: type={activateType} (0=inactive, 1=active, 2=click)");
 
             if (activateType == WA_INACTIVE && !this._isClosing) {
                 // lParam contains the handle of the window being activated (may be zero)
@@ -235,8 +209,6 @@ public class EphemeralWindow : Window {
                                 ? "Clicking Revit (already foreground)"
                                 : "Switching to Revit"
                             : $"Switching to: {this.GetWindowTitle(targetWindow)}";
-
-                // Debug.WriteLine($"[EphemeralWindow] Action: {actionType} → Close (restoreFocus={shouldRestoreFocus})");
 
                 // Use Dispatcher to avoid issues with closing during message processing
                 _ = this.Dispatcher.BeginInvoke(new Action(() => {

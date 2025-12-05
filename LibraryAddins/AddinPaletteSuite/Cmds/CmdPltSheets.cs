@@ -1,4 +1,5 @@
 using Nice3point.Revit.Extensions;
+using PeExtensions.UiApplication;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeUi.Core;
@@ -23,7 +24,7 @@ public class CmdPltSheets : IExternalCommand {
             var actions = new List<PaletteAction<SheetPaletteItem>> {
                 new() {
                     Name = "Open Sheet",
-                    Execute = item => uiapp.ActiveUIDocument.ActiveView = item.Sheet,
+                    Execute = item => uiapp.OpenAndActivateView(item.Sheet),
                     CanExecute = item => item != null && item.Sheet.CanBePrinted
                 }
             };
@@ -73,16 +74,14 @@ public class SheetPaletteItem(ViewSheet sheet) : IPaletteListItem {
         }
     }
 
-    public string TextInfo {
-        get {
-            var views = this.GetViewInfo();
-            var viewText = views.Count == 0
-                ? "None"
-                : string.Join("\n  ", views.Select(v => $"{v.type} - {v.name}"));
-            return $"Id: {this.Sheet.Id}" +
-                   $"\nPlaced Views:\n\t{viewText}";
-        }
-    }
+    public Func<string> GetTextInfo => () => {
+        var views = this.GetViewInfo();
+        var viewText = views.Count == 0
+            ? "None"
+            : string.Join("\n  ", views.Select(v => $"{v.type} - {v.name}"));
+        return $"Id: {this.Sheet.Id}" +
+               $"\nPlaced Views:\n\t{viewText}";
+    };
 
     public BitmapImage Icon => null;
     public Color? ItemColor => null;

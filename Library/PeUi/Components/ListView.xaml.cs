@@ -13,7 +13,7 @@ public partial class ListView : RevitHostedUserControl {
         nameof(ItemsSource),
         typeof(IEnumerable),
         typeof(ListView),
-        new PropertyMetadata(null));
+        new PropertyMetadata(null, OnItemsSourceChanged));
 
     public static readonly DependencyProperty SelectedItemProperty = DependencyProperty.Register(
         nameof(SelectedItem),
@@ -26,6 +26,15 @@ public partial class ListView : RevitHostedUserControl {
         typeof(int),
         typeof(ListView),
         new FrameworkPropertyMetadata(-1, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+    /// <summary>
+    ///     Attached property to indicate if the list has any items with icons (for consistent spacing)
+    /// </summary>
+    public static readonly DependencyProperty HasIconsProperty = DependencyProperty.RegisterAttached(
+        "HasIcons",
+        typeof(bool),
+        typeof(ListView),
+        new PropertyMetadata(false));
 
     public ListView() {
         this.InitializeComponent();
@@ -47,6 +56,24 @@ public partial class ListView : RevitHostedUserControl {
     public int SelectedIndex {
         get => (int)this.GetValue(SelectedIndexProperty);
         set => this.SetValue(SelectedIndexProperty, value);
+    }
+
+    public static bool GetHasIcons(DependencyObject obj) => (bool)obj.GetValue(HasIconsProperty);
+    public static void SetHasIcons(DependencyObject obj, bool value) => obj.SetValue(HasIconsProperty, value);
+
+    private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) {
+        if (d is not ListView listView) return;
+
+        // Check if any item has an icon
+        if (e.NewValue is IEnumerable items) {
+            var hasIcons = items.Cast<object>()
+                .OfType<IPaletteListItem>()
+                .Any(item => item.Icon != null);
+
+            SetHasIcons(listView, hasIcons);
+            // Also set on the inner ItemListView so items can find it
+            SetHasIcons(listView.ItemListView, hasIcons);
+        }
     }
 
     public WpfUiListViewItem ContainerFromItem(object item) =>

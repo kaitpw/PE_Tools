@@ -1,5 +1,7 @@
 #nullable enable
+using AddinPaletteSuite.Core.Services;
 using PeExtensions.FamDocument;
+using PeExtensions.UiApplication;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeUi.Core;
@@ -21,6 +23,7 @@ public class CmdPltFamilies : IExternalCommand {
             var items = new FilteredElementCollector(doc)
                 .OfClass(typeof(Family))
                 .Cast<Family>()
+                .Where(f => !string.IsNullOrWhiteSpace(f.Name))
                 .OrderBy(f => f.Name)
                 .Select(f => new FamilyPaletteItem(f, doc));
 
@@ -53,7 +56,7 @@ public class CmdPltFamilies : IExternalCommand {
                 new() {
                     Name = "Open/Edit",
                     Modifiers = ModifierKeys.Control,
-                    Execute = item => doc.EditFamily(item.Family).GetFamilyDocument().OpenForUserEditting(uiapp),
+                    Execute = item => uiapp.OpenAndActivateFamily(item.Family),
                     CanExecute = item => item != null && item.Family.IsEditable
                 }
             };
@@ -108,7 +111,7 @@ public class FamilyPaletteItem : IPaletteListItem {
 
     public string TextPill => this.Family.FamilyCategory?.Name ?? string.Empty;
 
-    public string TextInfo =>
+    public Func<string> GetTextInfo => () =>
         $"{this.Family.Name}\nCategory: {this.Family.FamilyCategory?.Name}\nId: {this.Family.Id}";
 
     public BitmapImage? Icon => null;

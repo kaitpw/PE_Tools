@@ -1,3 +1,4 @@
+using PeExtensions.UiApplication;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeUi.Core;
@@ -23,7 +24,7 @@ public class CmdPltAllViews : IExternalCommand {
             var actions = new List<PaletteAction<AllViewPaletteItem>> {
                 new() {
                     Name = "Open View",
-                    Execute = item => uiapp.ActiveUIDocument.ActiveView = item.View,
+                    Execute = item => uiapp.OpenAndActivateView(item.View),
                 }
             };
 
@@ -52,7 +53,7 @@ public class AllViewPaletteItem(View view) : IPaletteListItem {
     public string TextPrimary => this.View.Name;
     public string TextSecondary => string.Empty;
     public string TextPill => this.View.ViewType.ToString();
-    public string TextInfo => $"View Type: {this.View.ViewType}\nId: {this.View.Id}";
+    public Func<string> GetTextInfo => () => $"View Type: {this.View.ViewType}\nId: {this.View.Id}";
     public BitmapImage Icon => null;
     public Color? ItemColor => null;
 }

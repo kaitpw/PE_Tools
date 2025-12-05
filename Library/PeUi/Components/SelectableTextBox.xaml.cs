@@ -17,6 +17,7 @@ namespace PeUi.Components;
 ///     Popover component that displays text content positioned relative to a target element
 /// </summary>
 public class SelectableTextBox : RevitHostedUserControl, IPopoverExit {
+    private readonly Border _border;
     private readonly Popup _popup;
     private readonly WpfUiRichTextBox _richTextBox;
 
@@ -37,12 +38,16 @@ public class SelectableTextBox : RevitHostedUserControl, IPopoverExit {
         this._richTextBox.PreviewKeyDown += this.RichTextBox_PreviewKeyDown;
         this._richTextBox.LostFocus += this.RichTextBox_LostFocus;
 
-        var border = new BorderSpec()
+        // Allow RichTextBox to measure its content naturally
+        this._richTextBox.MinWidth = 100;
+        this._richTextBox.MinHeight = 50;
+        this._richTextBox.MaxWidth = 250;
+        this._richTextBox.MaxHeight = 400;
+
+        this._border = new BorderSpec()
             .Background(ThemeResource.ApplicationBackgroundBrush)
             .HorizontalAlign(HorizontalAlignment.Left)
             .VerticalAlign(VerticalAlignment.Top)
-            .Width(150)
-            .Height(50, 75, 400)
             .Border(thickness: UiSz.ss)
             .Padding(UiSz.m)
             .CreateAround(this._richTextBox);
@@ -54,7 +59,7 @@ public class SelectableTextBox : RevitHostedUserControl, IPopoverExit {
             Placement = PlacementMode.Left,
             HorizontalOffset = 0,
             VerticalOffset = 0,
-            Child = border
+            Child = this._border
         };
 
         this._popup.Closed += (_, _) => this.OnExitRequested();
@@ -64,10 +69,10 @@ public class SelectableTextBox : RevitHostedUserControl, IPopoverExit {
         this.Content = this._popup;
     }
 
+    public bool IsOpen => this._popup.IsOpen;
+
     public event EventHandler? ExitRequested;
     public IEnumerable<Key> CloseKeys { get; set; } = Array.Empty<Key>();
-
-    public bool IsOpen => this._popup.IsOpen;
 
     public void RequestExit() {
         this.Hide();

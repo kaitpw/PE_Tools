@@ -33,7 +33,7 @@ public partial class ListViewItem : Border {
         this.IconImage.Width = (double)UiSz.ll;
         this.IconImage.Height = (double)UiSz.ll;
         this.IconImage.Margin = new Thickness(0, 0, (double)UiSz.l, 0);
-        this.IconImage.Opacity = ThemeManager.IconOpacity;
+        // Opacity is set per-item in UpdateFromDataContext based on whether icon exists
 
         // Text styling - apply typography styles to override WPF.UI defaults
         // this.PrimaryText.Style = ThemeManager.GetTypographyStyle(FontTypography.BodyStrong);
@@ -63,9 +63,16 @@ public partial class ListViewItem : Border {
         this.PillBorder.Visibility = hasPill ? Visibility.Visible : Visibility.Collapsed;
 
         // Update Icon and Visibility
+        // Check if list has ANY icons - if so, reserve space even if this item doesn't have one
+        var listHasIcons = this.GetListHasIcons();
         var hasIcon = item.Icon != null;
         this.IconImage.Source = hasIcon ? item.Icon : null;
-        this.IconImage.Visibility = hasIcon ? Visibility.Visible : Visibility.Collapsed;
+
+        // Show icon space if: this item has an icon OR any item in the list has an icon
+        this.IconImage.Visibility = hasIcon || listHasIcons ? Visibility.Visible : Visibility.Collapsed;
+
+        // Set opacity to 0 if no icon but space is reserved (invisible but takes up space)
+        this.IconImage.Opacity = hasIcon ? ThemeManager.IconOpacity : 0;
 
         // Update Color Indicator
         if (item.ItemColor.HasValue) {
@@ -92,7 +99,8 @@ public partial class ListViewItem : Border {
         _ = this.SecondaryText.SetBinding(TextBlock.TextProperty, secondaryBinding);
 
         var secondaryVisibilityBinding = new Binding("TextSecondary") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new VisibilityConverter()
         };
         _ = this.SecondaryText.SetBinding(VisibilityProperty, secondaryVisibilityBinding);
 
@@ -101,36 +109,44 @@ public partial class ListViewItem : Border {
         _ = this.PillBorder.SetBinding(Pill.TextProperty, pillTextBinding);
 
         var pillVisibilityBinding = new Binding("TextPill") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new VisibilityConverter()
         };
         _ = this.PillBorder.SetBinding(VisibilityProperty, pillVisibilityBinding);
-
-        // Bind Icon
+        // Bind Icon - but handle visibility manually based on list state
         var iconBinding = new Binding("Icon") { Mode = BindingMode.OneWay };
         _ = this.IconImage.SetBinding(Image.SourceProperty, iconBinding);
 
-        var iconVisibilityBinding = new Binding("Icon") {
-            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
-        };
-        _ = this.IconImage.SetBinding(VisibilityProperty, iconVisibilityBinding);
+        // Manual visibility and opacity handling after binding is set
+        var currentItem = this.DataContext as IPaletteListItem;
+        if (currentItem != null) {
+            var listHasIcons = this.GetListHasIcons();
+            var hasIcon = currentItem.Icon != null;
+            // Show icon space if: this item has an icon OR any item in the list has an icon
+            this.IconImage.Visibility = hasIcon || listHasIcons ? Visibility.Visible : Visibility.Collapsed;
+
+            // Set opacity to 0 if no icon but space is reserved
+            this.IconImage.Opacity = hasIcon ? ThemeManager.IconOpacity : 0;
+        }
 
         // Bind Color Indicator Background and Visibility
         var colorBackgroundBinding = new Binding("ItemColor") {
-            Mode = BindingMode.OneWay, Converter = new ColorToBrushConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new ColorToBrushConverter()
         };
         _ = this.ColorIndicator.SetBinding(BackgroundProperty, colorBackgroundBinding);
 
         var colorVisibilityBinding = new Binding("ItemColor") {
-            Mode = BindingMode.OneWay, Converter = new NullableColorToVisibilityConverter()
+            Mode = BindingMode.OneWay,
+            Converter = new NullableColorToVisibilityConverter()
         };
         _ = this.ColorIndicator.SetBinding(VisibilityProperty, colorVisibilityBinding);
 
         // Tooltip disabled - no hover tooltips
 
         // Compute opacity from actions (no binding needed since CanExecute doesn't change after palette opens)
-        var item = this.DataContext as IPaletteListItem;
-        if (item != null) {
-            var canExecute = this.ComputeCanExecute(item);
+        if (currentItem != null) {
+            var canExecute = this.ComputeCanExecute(currentItem);
             this.Opacity = canExecute ? 1 : ThemeManager.DisabledOpacity;
         }
     }
@@ -171,5 +187,29 @@ public partial class ListViewItem : Border {
         }
 
         return null;
+    }
+
+    /// <summary>
+    ///     Checks if the parent ListView has any items with icons
+    /// </summary>
+    private bool GetListHasIcons() {
+        // Try to find ListView in visual tree
+        DependencyObject current = this;
+        while (current != null) {
+            if (current is ListView customListView) {
+                var hasIcons = ListView.GetHasIcons(customListView);
+                return hasIcons;
+            }
+
+            // Also check for the inner Wpf.Ui.Controls.ListView
+            if (current is System.Windows.Controls.ListView sysListView) {
+                var hasIcons = ListView.GetHasIcons(sysListView);
+                return hasIcons;
+            }
+
+            current = VisualTreeHelper.GetParent(current);
+        }
+
+        return false;
     }
 }

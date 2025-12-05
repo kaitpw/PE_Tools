@@ -1,4 +1,7 @@
+using AddinFamilyFoundrySuite.Core.Helpers;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using UIFrameworkServices;
+using ViewType = Autodesk.Revit.DB.ViewType;
 
 namespace PeExtensions.FamDocument;
 
@@ -102,15 +105,5 @@ public static class FamilyDocumentProcessFamily {
         return closed
             ? family
             : throw new InvalidOperationException("Failed to close family document after load error.");
-    }
-
-    public static void OpenForUserEditting(this FamilyDocument famDoc, UIApplication uiApp) {
-        if (!string.IsNullOrEmpty(famDoc.PathName)) {
-            _ = uiApp.OpenAndActivateDocument(famDoc.PathName);
-        } else {
-            var tempPath = Path.Combine(Path.GetTempPath(), $"{famDoc.Document.Title}.rfa");
-            famDoc.Document.SaveAs(tempPath, new SaveAsOptions { OverwriteExistingFile = true, Compact = true });
-            _ = uiApp.OpenAndActivateDocument(tempPath);
-        }
     }
 }

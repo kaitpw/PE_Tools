@@ -51,8 +51,8 @@ public static class CommandPaletteService {
                         Name = Regex.Replace(item.Name, ":(?! )", ": "),
                         UsageCount = item.UsageCount,
                         LastUsed = item.LastUsed,
-                        Shortcuts = new List<string>(item.Shortcuts),
-                        Paths = new List<string>(item.Paths)
+                        Shortcuts = [.. item.Shortcuts],
+                        Paths = [.. item.Paths]
                     };
                 }
 
@@ -72,8 +72,8 @@ public static class CommandPaletteService {
                     Name = name,
                     UsageCount = item.UsageCount,
                     LastUsed = item.LastUsed,
-                    Shortcuts = new List<string>(item.Shortcuts),
-                    Paths = new List<string>(item.Paths)
+                    Shortcuts = [.. item.Shortcuts],
+                    Paths = [.. item.Paths]
                 });
             }
         }

@@ -172,7 +172,7 @@ public class KeyboardShortcutsHelper {
             return string.Empty;
 
         var allPaths = string.Join("; ", paths);
-        return allPaths.Length <= maxLength ? allPaths : allPaths.Substring(0, maxLength - 3) + "...";
+        return allPaths.Length <= maxLength ? allPaths : allPaths[..(maxLength - 3)] + "...";
     }
 }
 
@@ -184,19 +184,4 @@ public class ShortcutInfo {
     public string CommandName { get; set; }
     public List<string> Shortcuts { get; set; } = new();
     public List<string> Paths { get; set; } = new();
-
-    /// <summary>
-    ///     Gets the primary shortcut as a display string
-    /// </summary>
-    public string PrimaryShortcut => this.Shortcuts.Count > 0 ? this.Shortcuts[0] : string.Empty;
-
-    /// <summary>
-    ///     Gets all shortcuts as a display string
-    /// </summary>
-    public string AllShortcuts => string.Join(", ", this.Shortcuts);
-
-    /// <summary>
-    ///     Gets all paths as a display string
-    /// </summary>
-    public string AllPaths => string.Join("; ", this.Paths);
 }

@@ -76,7 +76,7 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
 
         var usageData = new ItemUsageData { ItemKey = key, UsageCount = usageCount, LastUsed = DateTime.Now };
 
-        this._state.WriteRow(key, usageData);
+        _ = this._state.WriteRow(key, usageData);
         this._usageCache[key] = usageData;
     }
 
@@ -94,15 +94,23 @@ public class SearchFilterService<TItem> where TItem : class, IPaletteListItem {
         this._searchCache.Clear();
 
         foreach (var item in items) {
+            // Only evaluate TextInfo if it's actually needed for search
+            var infoText = this._searchConfig?.SearchFields.HasFlag(SearchFields.TextInfo) == true
+                ? item.GetTextInfo?.Invoke() ?? string.Empty
+                : string.Empty;
+
+            var allText = this._searchConfig?.SearchFields.HasFlag(SearchFields.TextInfo) == true
+                ? $"{item.TextPrimary} {item.TextSecondary} {item.TextPill} {infoText}"
+                : $"{item.TextPrimary} {item.TextSecondary} {item.TextPill}";
+
             var metadata = new SearchableItemMetadata {
                 PrimaryLower = (item.TextPrimary ?? string.Empty).ToLowerInvariant(),
                 SecondaryLower = (item.TextSecondary ?? string.Empty).ToLowerInvariant(),
                 PillLower = (item.TextPill ?? string.Empty).ToLowerInvariant(),
-                InfoLower = (item.TextInfo ?? string.Empty).ToLowerInvariant(),
+                InfoLower = infoText.ToLowerInvariant(),
                 PrimaryWords = SplitIntoWords(item.TextPrimary ?? string.Empty),
                 PrimaryAcronym = BuildAcronym(item.TextPrimary ?? string.Empty),
-                AllWords = SplitIntoWords(
-                    $"{item.TextPrimary} {item.TextSecondary} {item.TextPill} {item.TextInfo}")
+                AllWords = SplitIntoWords(allText)
             };
             this._searchCache[item] = metadata;
         }

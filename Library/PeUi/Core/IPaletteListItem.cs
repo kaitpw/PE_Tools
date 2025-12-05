@@ -16,8 +16,12 @@ public interface IPaletteListItem {
     /// <summary> Badge/pill text (e.g., keyboard shortcuts) </summary>
     string TextPill { get; }
 
-    /// <summary> Full tooltip text for detailed information </summary>
-    string TextInfo { get; }
+    /// <summary> 
+    ///     Tooltip text generator for detailed information.
+    ///     Returns a function that generates the tooltip text when called.
+    ///     This allows expensive tooltip generation to be deferred until the tooltip is actually shown.
+    /// </summary>
+    Func<string> GetTextInfo { get; }
 
     /// <summary> Item icon (optional, can be null) </summary>
     BitmapImage Icon { get; }

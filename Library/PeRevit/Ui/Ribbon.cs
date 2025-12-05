@@ -1,36 +1,35 @@
 using Autodesk.Windows;
 using System.ComponentModel;
+using System.Windows.Media;
 
 namespace PeRevit.Ui;
 
 public class Ribbon {
     public static IEnumerable<DiscoveredTab> GetAllTabs() {
         var tabs = ComponentManager.Ribbon.Tabs;
-        var tabList = new List<DiscoveredTab>();
-        foreach (var tab in tabs) {
-            if (!tab.IsVisible || !tab.IsEnabled) continue;
-            tabList.Add(new DiscoveredTab {
-                Id = tab.Id,
-                Name = tab.Title,
-                Panels = tab.Panels,
-                DockedPanels = tab.DockedPanelsView,
-                RibbonControl = tab.RibbonControl
-            });
-        }
-
-        return tabList;
+        return (from tab in tabs
+                where tab.IsVisible && tab.IsEnabled
+                select new DiscoveredTab {
+                    Id = tab.Id,
+                    Name = tab.Title,
+                    Panels = tab.Panels,
+                    DockedPanels = tab.DockedPanelsView,
+                    RibbonControl = tab.RibbonControl
+                }).ToList();
     }
 
     public static IEnumerable<DiscoveredPanel> GetAllPanels() {
         var tabs = GetAllTabs();
         var panelList = new List<DiscoveredPanel>();
         foreach (var tab in tabs) {
-            foreach (var panel in tab.Panels) {
-                if (!panel.IsVisible || !panel.IsEnabled) continue;
-                panelList.Add(new DiscoveredPanel {
-                    Tab = panel.Tab, Cookie = panel.Cookie, Source = panel.Source, RibbonControl = panel.RibbonControl
-                });
-            }
+            panelList.AddRange(from panel in tab.Panels
+                               where panel.IsVisible && panel.IsEnabled
+                               select new DiscoveredPanel {
+                                   Tab = panel.Tab,
+                                   Cookie = panel.Cookie,
+                                   Source = panel.Source,
+                                   RibbonControl = panel.RibbonControl
+                               });
         }
 
         return panelList;
@@ -65,28 +64,43 @@ public class Ribbon {
     /// </summary>
     private static DiscoveredCommand ProcessRibbonItem(dynamic item,
         DiscoveredPanel panel,
-        List<DiscoveredCommand> commandList) {
-        var command = new DiscoveredCommand {
-            Id = item.Id?.ToString() ?? "",
-            Name = item.Name?.ToString() ?? "",
-            Text = item.Text?.ToString() ?? "",
-            ToolTip = item.ToolTip,
-            Description = item.Description?.ToString() ?? "",
-            ToolTipResolver = item.ToolTipResolver,
-            Tab = panel.Tab.Title,
-            Panel = panel.Cookie,
-            ItemType = item.GetType().Name
-        };
+        List<DiscoveredCommand> commandList
+    ) {
+        if (!item.IsEnabled) return null;
+        if (!item.IsVisible) return null;
 
-        // Recursively process child items for container types
-        if (HasItemsCollection(item) && item.Items?.Count > 0) {
-            foreach (var childItem in item.Items) {
-                var childCommand = ProcessRibbonItem(childItem, panel, commandList);
-                if (childCommand != null) commandList.Add(childCommand);
+        if (!HasItemsCollection(item) || item.Items?.Count <= 0) {
+            // Extract image from ribbon item
+            ImageSource imageSource = null;
+            try {
+                // TODO: the problem doesn't seem to be here, however the Command Palette is not showing images
+                // for commands that are nested in a stack button or sommething (ie. has a name like "<StackButtonName>: <CommandName>" in the palette)
+                imageSource = item.LargeImage;
+            } catch {
+                // Ignore errors accessing Image property
             }
+
+            return new DiscoveredCommand {
+                Id = item.Id?.ToString() ?? "",
+                Name = item.Name?.ToString() ?? "",
+                Text = item.Text?.ToString() ?? "",
+                ToolTip = item.ToolTip,
+                Description = item.Description?.ToString() ?? "",
+                ToolTipResolver = item.ToolTipResolver,
+                Tab = panel.Tab.Title,
+                Panel = panel.Cookie,
+                ItemType = item.GetType().Name,
+                Image = imageSource
+            };
         }
 
-        return command;
+        // Recursively process child items for container types
+        foreach (var childItem in item.Items) {
+            var childCommand = ProcessRibbonItem(childItem, panel, commandList);
+            if (childCommand != null) commandList.Add(childCommand);
+        }
+
+        return null;
     }
 
     /// <summary> Determines if a ribbon item type supports having child items. </summary>
@@ -158,6 +172,9 @@ public class DiscoveredCommand {
 
     /// <summary> Often empty, look into ToolTipResolver for more information. </summary>
     public object ToolTip { get; set; }
+
+    /// <summary> The image/icon of the command from the ribbon </summary>
+    public ImageSource Image { get; set; }
 
     /// <summary> A standin for tooltip? seems to be non-empty more often than Tooltip is.</summary>
     public string Description { get; set; }
