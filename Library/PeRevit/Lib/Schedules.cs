@@ -144,9 +144,8 @@ public static class ScheduleHelper {
     public static ViewSchedule CreateSchedule(Document doc, ScheduleSpec spec) {
         // Find category by name
         var categoryId = FindCategoryByName(doc, spec.CategoryName);
-        if (categoryId == ElementId.InvalidElementId) {
+        if (categoryId == ElementId.InvalidElementId)
             throw new ArgumentException($"Category '{spec.CategoryName}' not found in document");
-        }
 
         // Create schedule
         var schedule = ViewSchedule.CreateSchedule(doc, categoryId);
@@ -209,16 +208,13 @@ public static class ScheduleHelper {
     }
 
     private static void ApplyFieldProperties(ScheduleField field, ScheduleFieldSpec fieldSpec) {
-        if (!string.IsNullOrEmpty(fieldSpec.ColumnHeaderOverride)) {
-            field.ColumnHeading = fieldSpec.ColumnHeaderOverride;
-        }
+        if (!string.IsNullOrEmpty(fieldSpec.ColumnHeaderOverride)) field.ColumnHeading = fieldSpec.ColumnHeaderOverride;
 
         field.IsHidden = fieldSpec.IsHidden;
 
         // Apply column width if specified
-        if (fieldSpec.ColumnWidth.HasValue && fieldSpec.ColumnWidth.Value > 0) {
+        if (fieldSpec.ColumnWidth.HasValue && fieldSpec.ColumnWidth.Value > 0)
             field.SheetColumnWidth = fieldSpec.ColumnWidth.Value;
-        }
 
         // Apply display type if field supports it (cast to int for comparison since enum member names vary)
         var targetDisplayType = (ScheduleFieldDisplayType)(int)fieldSpec.DisplayType;
@@ -230,9 +226,9 @@ public static class ScheduleHelper {
                 _ => false
             };
 
-            if (canApply) {
+            if (canApply)
                 field.DisplayType = targetDisplayType;
-            } else {
+            else {
                 Debug.WriteLine(
                     $"Warning: DisplayType '{fieldSpec.DisplayType}' not supported for field '{fieldSpec.ParameterName}'");
             }
@@ -264,7 +260,7 @@ public static class ScheduleHelper {
                 ? Autodesk.Revit.DB.ScheduleSortOrder.Ascending
                 : Autodesk.Revit.DB.ScheduleSortOrder.Descending;
 
-            var sortGroupField = new Autodesk.Revit.DB.ScheduleSortGroupField(fieldId, sortOrder) {
+            var sortGroupField = new ScheduleSortGroupField(fieldId, sortOrder) {
                 ShowHeader = sortGroupSpec.ShowHeader,
                 ShowFooter = sortGroupSpec.ShowFooter,
                 ShowBlankLine = sortGroupSpec.ShowBlankLine
@@ -276,11 +272,9 @@ public static class ScheduleHelper {
 
     private static ElementId FindCategoryByName(Document doc, string categoryName) {
         var categories = doc.Settings.Categories;
-        foreach (Category cat in categories) {
-            if (cat.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase)) {
+        foreach (Category cat in categories)
+            if (cat.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
                 return cat.Id;
-            }
-        }
 
         return ElementId.InvalidElementId;
     }
@@ -289,12 +283,9 @@ public static class ScheduleHelper {
         var schedulableFields = def.GetSchedulableFields();
         foreach (var sf in schedulableFields) {
             var name = sf.GetName(doc);
-            if (name.Equals(parameterName, StringComparison.OrdinalIgnoreCase)) {
-                return sf;
-            }
+            if (name.Equals(parameterName, StringComparison.OrdinalIgnoreCase)) return sf;
         }
 
         return null;
     }
 }
-

@@ -83,7 +83,7 @@ public class ActionBinding<TItem> : ActionBinding where TItem : class, IPaletteL
     public IEnumerable<PaletteAction<TItem>> GetAllActions() => this._actions;
 
     /// <inheritdoc />
-    public override IEnumerable<object> GetAllActionsUntyped() => this._actions.Cast<object>();
+    public override IEnumerable<object> GetAllActionsUntyped() => this._actions;
 
     /// <summary>
     ///     Executes a specific action for a given item

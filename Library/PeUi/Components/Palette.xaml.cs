@@ -37,17 +37,17 @@ public static class PaletteAttachedProperties {
 ///     NOT inheritance (generic classes cannot inherit from XAML partial classes).
 /// </summary>
 public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable {
+    private readonly bool _isSearchBoxHidden;
     private ActionBinding _actionBinding;
     private ActionMenu _actionMenu;
     private CustomKeyBindings _customKeyBindings;
-    private FilterBox _filterBox;
-    private SelectableTextBox _tooltipPanel;
     private Func<Task<bool>> _executeItemFunc;
+    private FilterBox _filterBox;
     private Func<object> _getSelectedItemFunc;
-    private Action _recordUsageFunc; // TODO: this probably exists from my refactors, did i mess something up?
-    private readonly bool _isSearchBoxHidden;
-    private Action _onCtrlReleased;
     private bool _isCtrlPressed;
+    private Action _onCtrlReleased;
+    private Action _recordUsageFunc; // TODO: this probably exists from my refactors, did i mess something up?
+    private SelectableTextBox _tooltipPanel;
 
     public Palette(bool isSearchBoxHidden = false) {
         this.InitializeComponent();

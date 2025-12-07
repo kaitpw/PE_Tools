@@ -1,12 +1,9 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Threading;
 using Wpf.Ui.Controls;
 using Wpf.Ui.Markup;
 using Color = System.Windows.Media.Color;
@@ -40,8 +37,7 @@ public class EphemeralWindow : Window {
 
         // Create main container grid with centered alignment
         var containerGrid = new Grid {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
         };
 
         // Add to grid (both at same location so pill floats over content)
@@ -106,7 +102,6 @@ public class EphemeralWindow : Window {
     /// </summary>
     /// <remarks>
     ///     <b>KNOWN LIMITATION:</b> This method is unreliable. Users must click the view canvas.
-    ///     
     ///     <b>Key findings from extensive testing:</b>
     ///     <list type="bullet">
     ///         <item>Windows focus (SetForegroundWindow/SetFocus) ≠ Revit's internal keyboard routing</item>
@@ -115,7 +110,6 @@ public class EphemeralWindow : Window {
     ///         <item>After SetForegroundWindow, focus often lands on Chrome_WidgetWin_0 (Revit's embedded browser)</item>
     ///         <item>The issue is worse for views that were already open vs. freshly opened views</item>
     ///     </list>
-    ///     
     ///     Current approach: SetForegroundWindow + simulate mouse click in view area. Again, does not work.
     /// </remarks>
     public static void RestoreRevitFocus() {

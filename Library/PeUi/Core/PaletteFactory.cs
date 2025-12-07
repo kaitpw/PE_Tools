@@ -58,7 +58,7 @@ public static class PaletteFactory {
 
         // Create palette - hide search box if search is disabled
         var isSearchDisabled = options.SearchConfig == null;
-        var palette = new Palette(isSearchBoxHidden: isSearchDisabled);
+        var palette = new Palette(isSearchDisabled);
 
         // Create Ctrl-release callback if provided
         // Pass viewModel reference so callback can read current SelectedItem when Ctrl is released
@@ -74,7 +74,7 @@ public static class PaletteFactory {
 }
 
 /// <summary>
-///     Configuration options for <see cref="PaletteFactory.Create{TItem}"/>.
+///     Configuration options for <see cref="PaletteFactory.Create{TItem}" />.
 ///     All properties are optional - use only what you need.
 /// </summary>
 /// <typeparam name="TItem">The palette item type</typeparam>
@@ -100,7 +100,7 @@ public class PaletteOptions<TItem> where TItem : class, IPaletteListItem {
 
     /// <summary>
     ///     Search configuration controlling which fields to search and scoring weights.
-    ///     Default: <see cref="SearchConfig.Default()"/> (searches TextPrimary only).
+    ///     Default: <see cref="Services.SearchConfig.Default()" /> (searches TextPrimary only).
     ///     Set to null to disable search entirely (hides the search box).
     /// </summary>
     /// <example>
@@ -173,4 +173,3 @@ public class PaletteOptions<TItem> where TItem : class, IPaletteListItem {
     /// </example>
     public Func<PaletteViewModel<TItem>, Action> OnCtrlReleased { get; init; }
 }
-

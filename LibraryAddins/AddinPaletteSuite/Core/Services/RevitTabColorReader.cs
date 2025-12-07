@@ -17,20 +17,14 @@ public static class RevitTabColorReader {
     ///     Returns null if no color is found or if pyRevit colorization is not active.
     /// </summary>
     public static WpfColor? GetDocumentColorFromUI(Document doc) {
-        if (doc == null) {
-            return null;
-        }
+        if (doc == null) return null;
 
         try {
             var mainWindow = GetMainRevitWindow();
-            if (mainWindow == null) {
-                return null;
-            }
+            if (mainWindow == null) return null;
 
             var dockingManager = mainWindow.FindDescendantsByTypeName("DockingManager").FirstOrDefault();
-            if (dockingManager == null) {
-                return null;
-            }
+            if (dockingManager == null) return null;
 
             var docPanes = dockingManager.FindDescendantsByTypeName("LayoutDocumentPaneControl").ToList();
 
@@ -48,18 +42,14 @@ public static class RevitTabColorReader {
                 foreach (var tab in tabs) {
                     tabsChecked++;
                     var tooltip = tab.ToolTip?.ToString();
-                    if (string.IsNullOrEmpty(tooltip)) {
-                        continue;
-                    }
+                    if (string.IsNullOrEmpty(tooltip)) continue;
 
                     // Tab tooltip format: "{DocumentName} - {ViewTitle}"
                     // Check if this tab belongs to our document (try both with and without extension)
                     var isMatch = tooltip.StartsWith($"{doc.Title} - ") ||
                                   tooltip.StartsWith($"{docTitleWithExt} - ");
 
-                    if (!isMatch) {
-                        continue;
-                    }
+                    if (!isMatch) continue;
 
 
                     WpfColor? backgroundColorValue = null;
@@ -82,15 +72,11 @@ public static class RevitTabColorReader {
 
 
                         // If border is significantly different from background (diff > 100), use border color
-                        if (colorDiff > 100) {
-                            return borderColorValue.Value;
-                        }
+                        if (colorDiff > 100) return borderColorValue.Value;
                     }
 
                     // Otherwise use background color (fill mode)
-                    if (backgroundColorValue.HasValue) {
-                        return backgroundColorValue.Value;
-                    }
+                    if (backgroundColorValue.HasValue) return backgroundColorValue.Value;
                 }
             }
 

@@ -1,9 +1,6 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
-using PeServices.Storage.Core.Json.ContractResolvers;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -54,4 +51,3 @@ public class ScheduleSettings {
     [Required]
     public string CurrentProfile { get; set; } = "Default";
 }
-

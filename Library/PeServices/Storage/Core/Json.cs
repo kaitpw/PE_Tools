@@ -17,7 +17,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         Formatting = Formatting.Indented,
         Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter() },
         ContractResolver = new OrderedContractResolver(),
-        NullValueHandling = NullValueHandling.Ignore,
+        NullValueHandling = NullValueHandling.Ignore
     };
 
     private readonly JsonSchema _schema;
@@ -26,7 +26,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         Formatting = Formatting.Indented,
         Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter() },
         ContractResolver = new RequiredAwareContractResolver(),
-        NullValueHandling = NullValueHandling.Ignore,
+        NullValueHandling = NullValueHandling.Ignore
     };
 
     public Json(string filePath, bool throwIfDefaultCreated, bool saveSchema) {
@@ -70,6 +70,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
 
         if (saveSchema) this.WriteSchema();
     }
+
     public bool IsFileValid => File.Exists(this.FilePath) && this.CurrJObject().HasValues;
 
     public string FilePath { get; init; }

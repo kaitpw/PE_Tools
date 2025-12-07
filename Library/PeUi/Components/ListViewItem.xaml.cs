@@ -99,8 +99,7 @@ public partial class ListViewItem : Border {
         _ = this.SecondaryText.SetBinding(TextBlock.TextProperty, secondaryBinding);
 
         var secondaryVisibilityBinding = new Binding("TextSecondary") {
-            Mode = BindingMode.OneWay,
-            Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
         _ = this.SecondaryText.SetBinding(VisibilityProperty, secondaryVisibilityBinding);
 
@@ -109,8 +108,7 @@ public partial class ListViewItem : Border {
         _ = this.PillBorder.SetBinding(Pill.TextProperty, pillTextBinding);
 
         var pillVisibilityBinding = new Binding("TextPill") {
-            Mode = BindingMode.OneWay,
-            Converter = new VisibilityConverter()
+            Mode = BindingMode.OneWay, Converter = new VisibilityConverter()
         };
         _ = this.PillBorder.SetBinding(VisibilityProperty, pillVisibilityBinding);
         // Bind Icon - but handle visibility manually based on list state
@@ -131,14 +129,12 @@ public partial class ListViewItem : Border {
 
         // Bind Color Indicator Background and Visibility
         var colorBackgroundBinding = new Binding("ItemColor") {
-            Mode = BindingMode.OneWay,
-            Converter = new ColorToBrushConverter()
+            Mode = BindingMode.OneWay, Converter = new ColorToBrushConverter()
         };
         _ = this.ColorIndicator.SetBinding(BackgroundProperty, colorBackgroundBinding);
 
         var colorVisibilityBinding = new Binding("ItemColor") {
-            Mode = BindingMode.OneWay,
-            Converter = new NullableColorToVisibilityConverter()
+            Mode = BindingMode.OneWay, Converter = new NullableColorToVisibilityConverter()
         };
         _ = this.ColorIndicator.SetBinding(VisibilityProperty, colorVisibilityBinding);
 

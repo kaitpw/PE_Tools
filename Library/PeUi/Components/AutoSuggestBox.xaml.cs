@@ -3,7 +3,6 @@
 using PeUi.Core;
 using System.Collections;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -187,9 +186,7 @@ public partial class AutoSuggestBox : RevitHostedUserControl {
 
     private void OnTextBoxGotFocus(object sender, RoutedEventArgs e) {
         // Show suggestions when focused if AlwaysShowSuggestions is true
-        if (this.AlwaysShowSuggestions && this.FilteredItems.Count > 0) {
-            this.IsSuggestionListOpen = true;
-        }
+        if (this.AlwaysShowSuggestions && this.FilteredItems.Count > 0) this.IsSuggestionListOpen = true;
     }
 
     private void OnTextBoxLostFocus(object sender, RoutedEventArgs e) =>
@@ -215,9 +212,7 @@ public partial class AutoSuggestBox : RevitHostedUserControl {
 
             if (string.IsNullOrEmpty(searchText) || this.IsMatch(searchText, primaryText)) {
                 items.Add(new AutoSuggestBoxItem {
-                    PrimaryText = primaryText,
-                    SecondaryText = secondaryText,
-                    Value = item
+                    PrimaryText = primaryText, SecondaryText = secondaryText, Value = item
                 });
             }
         }
@@ -281,11 +276,9 @@ public partial class AutoSuggestBox : RevitHostedUserControl {
         } else if (e.Key == Key.Enter) {
             this.CommitSelection();
             e.Handled = false;
-        } else if (e.Key is Key.Escape or Key.Tab) {
-            if (this.IsSuggestionListOpen) {
+        } else if (e.Key is Key.Escape or Key.Tab)
+            if (this.IsSuggestionListOpen)
                 this.IsSuggestionListOpen = false;
-            }
-        }
 
         base.OnPreviewKeyDown(e);
     }

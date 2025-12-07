@@ -1,4 +1,3 @@
-using AddinPaletteSuite.Core.Services;
 using Nice3point.Revit.Extensions;
 using PeExtensions.UiApplication;
 using PeRevit.Ui;
@@ -39,8 +38,7 @@ public class CmdPltViews : IExternalCommand {
 
             var window = PaletteFactory.Create("View Palette", items, actions,
                 new PaletteOptions<ViewPaletteItem> {
-                    Storage = new Storage(nameof(CmdPltViews)),
-                    PersistenceKey = item => item.View.Id.ToString()
+                    Storage = new Storage(nameof(CmdPltViews)), PersistenceKey = item => item.View.Id.ToString()
                 });
             window.Show();
 

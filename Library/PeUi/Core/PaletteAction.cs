@@ -28,5 +28,5 @@ public record PaletteAction<TItem> where TItem : IPaletteListItem {
     public Func<TItem, Task> ExecuteNextPaletteAsync { get; init; }
 
     /// <summary> Optional predicate to check if action can execute </summary>
-    public Func<TItem, bool> CanExecute { get; init; } = (item) => item != null;
+    public Func<TItem, bool> CanExecute { get; init; } = item => item != null;
 }

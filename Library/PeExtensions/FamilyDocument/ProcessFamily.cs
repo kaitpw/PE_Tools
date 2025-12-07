@@ -1,7 +1,4 @@
-using AddinFamilyFoundrySuite.Core.Helpers;
-using AddinFamilyFoundrySuite.Core.OperationSettings;
 using UIFrameworkServices;
-using ViewType = Autodesk.Revit.DB.ViewType;
 
 namespace PeExtensions.FamDocument;
 

@@ -28,8 +28,8 @@ public class DocumentManager(UIApplication uiApp) {
 
 
     /// <summary>
-    /// Finds an open family document matching the given Family.
-    /// (partial match on Title because title is the file name (ie. "Building.rvt" or "Family.rfa").
+    ///     Finds an open family document matching the given Family.
+    ///     (partial match on Title because title is the file name (ie. "Building.rvt" or "Family.rfa").
     /// </summary>
     public Document FindOpenFamilyDocument(Family family) =>
         this.OpenDocs.FirstOrDefault(d => d.IsFamilyDocument && d.Title.Contains(family.Name));
@@ -49,7 +49,9 @@ public class DocumentManager(UIApplication uiApp) {
             _ = sb.AppendLine($"Target Document: {view.Document.Title} (Path: {view.Document.PathName})")
                 .AppendLine($"Target View: {view.Name} (ID: {view.Id.Value})");
         }
-        _ = sb.AppendLine($"Active Document: {this.ActiveDoc?.Title ?? "None"} (Path: {this.ActiveDoc?.PathName ?? "N/A"})")
+
+        _ = sb.AppendLine(
+                $"Active Document: {this.ActiveDoc?.Title ?? "None"} (Path: {this.ActiveDoc?.PathName ?? "N/A"})")
             .AppendLine($"Active View: {this.ActiveView?.Name ?? "None"} (ID: {this.ActiveViewId?.Value ?? -1})")
             .AppendLine(
                 $"Open Documents ({this.OpenDocs.Count()}): {string.Join("\n  - ", this.OpenDocs.Select(d => $"{d.Title} (Path: {d.PathName})"))}")
@@ -61,12 +63,11 @@ public class DocumentManager(UIApplication uiApp) {
 
 public static class OpenDocumentExtensions {
     /// <summary>
-    /// Opens and activates a view, handling cross-document navigation.
-    /// 
-    /// Key API behaviors:
-    /// - UIDocument.ActiveView setter ONLY works on the currently active document
-    /// - UIDocument.ShowElements() is the only way to switch to a non-active document
-    /// - ShowElements activates both the document AND shows the elements/view
+    ///     Opens and activates a view, handling cross-document navigation.
+    ///     Key API behaviors:
+    ///     - UIDocument.ActiveView setter ONLY works on the currently active document
+    ///     - UIDocument.ShowElements() is the only way to switch to a non-active document
+    ///     - ShowElements activates both the document AND shows the elements/view
     /// </summary>
     public static void OpenAndActivateView(this UIApplication uiApp, View targetView) {
         var docManager = new DocumentManager(uiApp);
@@ -80,7 +81,8 @@ public static class OpenDocumentExtensions {
             // Use RequestViewChange for reliable view switching from modeless windows
             // (ActiveView setter doesn't stick when called from palette callbacks)
             if (docManager.IsDocActive(targetDoc)) {
-                Debug.WriteLine($"[OpenAndActivateView] Document '{targetDoc.Title}' is active, using RequestViewChange");
+                Debug.WriteLine(
+                    $"[OpenAndActivateView] Document '{targetDoc.Title}' is active, using RequestViewChange");
                 targetUiDoc.RequestViewChange(targetView);
                 return;
             }
@@ -92,7 +94,7 @@ public static class OpenDocumentExtensions {
                 // For family documents, use the special family activation (saves to temp)
                 // This is required because EditFamily creates an independent copy that can't be "re-opened"
                 if (targetDoc.IsFamilyDocument) {
-                    Debug.WriteLine($"[OpenAndActivateView] Target is family document, using family activation...");
+                    Debug.WriteLine("[OpenAndActivateView] Target is family document, using family activation...");
                     ActivateOpenFamilyDocumentAndView(uiApp, targetDoc, targetView);
                     return;
                 }
@@ -100,8 +102,9 @@ public static class OpenDocumentExtensions {
                 // For project documents, try OpenAndActivateDocument with the path
                 var existingDocPath = docManager.GetDocumentModelPath(targetDoc);
                 if (existingDocPath != null) {
-                    Debug.WriteLine($"[OpenAndActivateView] Using OpenAndActivateDocument with path");
-                    var existingDocOptions = new OpenOptions { DetachFromCentralOption = DetachFromCentralOption.DoNotDetach };
+                    Debug.WriteLine("[OpenAndActivateView] Using OpenAndActivateDocument with path");
+                    var existingDocOptions =
+                        new OpenOptions { DetachFromCentralOption = DetachFromCentralOption.DoNotDetach };
                     var activatedUiDoc = uiApp.OpenAndActivateDocument(existingDocPath, existingDocOptions, false);
                     // Use RequestViewChange for reliable view switching from modeless windows
                     activatedUiDoc.RequestViewChange(targetView);
@@ -109,12 +112,14 @@ public static class OpenDocumentExtensions {
                 }
 
                 // Fallback: ShowElements (less reliable but last resort)
-                Debug.WriteLine($"[OpenAndActivateView] No path available, falling back to ShowElements");
+                Debug.WriteLine("[OpenAndActivateView] No path available, falling back to ShowElements");
                 var elementInView = FindElementInView(targetDoc, targetView);
                 if (elementInView != null) {
-                    Debug.WriteLine($"[OpenAndActivateView] Found element to show: {elementInView.GetType().Name} (Id: {elementInView.Id.Value})");
+                    Debug.WriteLine(
+                        $"[OpenAndActivateView] Found element to show: {elementInView.GetType().Name} (Id: {elementInView.Id.Value})");
                     targetUiDoc.ShowElements(elementInView);
                 }
+
                 return;
             }
 
@@ -137,15 +142,13 @@ public static class OpenDocumentExtensions {
     }
 
     /// <summary>
-    /// Opens and activates a family document for editing.
-    /// 
-    /// Logic flow:
-    /// 1. If family doc is already open AND active -> do nothing (already there)
-    /// 2. If family doc is already open but NOT active -> switch to it via temp file
-    /// 3. If family doc is NOT open -> use EditFamily to open it, then ShowElements to activate
-    /// 
-    /// Note: EditFamily opens the family AS IT EXISTS IN THE PROJECT (correct behavior).
-    /// ShowElements works for fresh documents but is unreliable for already-open ones.
+    ///     Opens and activates a family document for editing.
+    ///     Logic flow:
+    ///     1. If family doc is already open AND active -> do nothing (already there)
+    ///     2. If family doc is already open but NOT active -> switch to it via temp file
+    ///     3. If family doc is NOT open -> use EditFamily to open it, then ShowElements to activate
+    ///     Note: EditFamily opens the family AS IT EXISTS IN THE PROJECT (correct behavior).
+    ///     ShowElements works for fresh documents but is unreliable for already-open ones.
     /// </summary>
     public static void OpenAndActivateFamily(this UIApplication uiApp, Family family) {
         var docManager = new DocumentManager(uiApp);
@@ -160,12 +163,12 @@ public static class OpenDocumentExtensions {
 
                 // If it's already the active document, nothing to do
                 if (docManager.IsDocActive(existingFamDoc)) {
-                    Debug.WriteLine($"[OpenAndActivateFamily] Family doc is active, nothing to do");
+                    Debug.WriteLine("[OpenAndActivateFamily] Family doc is active, nothing to do");
                     return;
                 }
 
                 // Document is open but not active - need to switch to it
-                Debug.WriteLine($"[OpenAndActivateFamily] Family doc is open but not active, switching...");
+                Debug.WriteLine("[OpenAndActivateFamily] Family doc is open but not active, switching...");
                 ActivateOpenFamilyDocument(uiApp, existingFamDoc, family.Name);
                 return;
             }
@@ -186,7 +189,6 @@ public static class OpenDocumentExtensions {
             // ShowElements is unreliable for activation.
             // The reliable approach: save to temp file and use OpenAndActivateDocument
             ActivateOpenFamilyDocument(uiApp, famDoc, family.Name);
-
         } catch (Exception ex) {
             Debug.WriteLine(docManager.LogDocumentState(context: "OpenAndActivateFamily ERROR"));
             Debug.WriteLine(ex.ToStringDemystified());
@@ -194,24 +196,23 @@ public static class OpenDocumentExtensions {
     }
 
     /// <summary>
-    /// Activates an already-open family document.
-    /// 
-    /// IMPORTANT: Family documents opened via EditFamily have a PathName pointing to the original
-    /// source file, but Revit won't let you "re-open" that file since it's already loaded.
-    /// The reliable solution is to ALWAYS save to a unique temp file and open that.
+    ///     Activates an already-open family document.
+    ///     IMPORTANT: Family documents opened via EditFamily have a PathName pointing to the original
+    ///     source file, but Revit won't let you "re-open" that file since it's already loaded.
+    ///     The reliable solution is to ALWAYS save to a unique temp file and open that.
     /// </summary>
     private static void ActivateOpenFamilyDocument(UIApplication uiApp, Document famDoc, string familyName) {
         var tempPath = SaveFamilyToTempFile(famDoc, familyName);
-        Debug.WriteLine($"[ActivateOpenFamilyDocument] Opening from temp path...");
+        Debug.WriteLine("[ActivateOpenFamilyDocument] Opening from temp path...");
         _ = uiApp.OpenAndActivateDocument(tempPath);
     }
 
     /// <summary>
-    /// Activates an already-open family document and switches to a specific view.
+    ///     Activates an already-open family document and switches to a specific view.
     /// </summary>
     private static void ActivateOpenFamilyDocumentAndView(UIApplication uiApp, Document famDoc, View targetView) {
         var tempPath = SaveFamilyToTempFile(famDoc, famDoc.Title);
-        Debug.WriteLine($"[ActivateOpenFamilyDocumentAndView] Opening from temp path...");
+        Debug.WriteLine("[ActivateOpenFamilyDocumentAndView] Opening from temp path...");
         var activatedUiDoc = uiApp.OpenAndActivateDocument(tempPath);
 
         // Now set the view since we're in the active document
@@ -224,13 +225,12 @@ public static class OpenDocumentExtensions {
         if (viewByName != null) {
             Debug.WriteLine($"[ActivateOpenFamilyDocumentAndView] Using RequestViewChange to '{viewByName.Name}'");
             activatedUiDoc.RequestViewChange(viewByName);
-        } else {
+        } else
             Debug.WriteLine($"[ActivateOpenFamilyDocumentAndView] Could not find matching view '{targetView.Name}'");
-        }
     }
 
     /// <summary>
-    /// Saves a family document to a unique temp file and returns the path.
+    ///     Saves a family document to a unique temp file and returns the path.
     /// </summary>
     private static string SaveFamilyToTempFile(Document famDoc, string familyName) {
         // Create a unique temp directory for this session to avoid conflicts
@@ -245,11 +245,10 @@ public static class OpenDocumentExtensions {
     }
 
     /// <summary>
-    /// Switches to a document and view using ShowElements.
-    /// This is the only API-supported way to switch to a non-active document.
-    /// 
-    /// IMPORTANT: ShowElements requires an actual element visible in a view, NOT the View's ElementId.
-    /// We must find an element that exists in the target view and pass that.
+    ///     Switches to a document and view using ShowElements.
+    ///     This is the only API-supported way to switch to a non-active document.
+    ///     IMPORTANT: ShowElements requires an actual element visible in a view, NOT the View's ElementId.
+    ///     We must find an element that exists in the target view and pass that.
     /// </summary>
     private static void SwitchToDocumentView(UIDocument targetUiDoc, View targetView) {
         if (targetView == null) {
@@ -268,13 +267,14 @@ public static class OpenDocumentExtensions {
             return;
         }
 
-        Debug.WriteLine($"[SwitchToDocumentView] Calling ShowElements with {elementToShow.GetType().Name} '{elementToShow.Name}' (Id: {elementToShow.Id.Value}) in view '{targetView.Name}'");
+        Debug.WriteLine(
+            $"[SwitchToDocumentView] Calling ShowElements with {elementToShow.GetType().Name} '{elementToShow.Name}' (Id: {elementToShow.Id.Value}) in view '{targetView.Name}'");
         targetUiDoc.ShowElements(elementToShow);
     }
 
     /// <summary>
-    /// Finds an element that is visible in the given view, suitable for ShowElements.
-    /// Priority: Reference Planes > any element in view.
+    ///     Finds an element that is visible in the given view, suitable for ShowElements.
+    ///     Priority: Reference Planes > any element in view.
     /// </summary>
     private static Element FindElementInView(Document doc, View view) {
         // Priority 1: Find Reference Planes (always exist in family documents)
@@ -293,7 +293,8 @@ public static class OpenDocumentExtensions {
             .FirstOrDefault();
 
         if (anyElement != null) {
-            Debug.WriteLine($"[FindElementInView] Found element: {anyElement.GetType().Name} (Id: {anyElement.Id.Value})");
+            Debug.WriteLine(
+                $"[FindElementInView] Found element: {anyElement.GetType().Name} (Id: {anyElement.Id.Value})");
             return anyElement;
         }
 
@@ -302,8 +303,8 @@ public static class OpenDocumentExtensions {
     }
 
     /// <summary>
-    /// Gets the best view to show for a family document.
-    /// Priority: 1) MRU view from buffer, 2) "Ref. Level" floor plan, 3) Any valid view
+    ///     Gets the best view to show for a family document.
+    ///     Priority: 1) MRU view from buffer, 2) "Ref. Level" floor plan, 3) Any valid view
     /// </summary>
     private static View GetBestViewForFamilyDocument(UIDocument famUiDoc) {
         var famDoc = famUiDoc.Document;
@@ -323,7 +324,7 @@ public static class OpenDocumentExtensions {
             ViewType.PresureLossReport,
             ViewType.PanelSchedule,
             ViewType.ColumnSchedule,
-            ViewType.Schedule,
+            ViewType.Schedule
         };
 
         // Get all graphical, non-template views
@@ -335,15 +336,13 @@ public static class OpenDocumentExtensions {
 
         // Log all available views for debugging
         Debug.WriteLine($"[GetBestViewForFamilyDocument] Available graphical views ({allViews.Count}):");
-        foreach (var v in allViews) {
-            Debug.WriteLine($"  - '{v.Name}' (Type: {v.ViewType})");
-        }
+        foreach (var v in allViews) Debug.WriteLine($"  - '{v.Name}' (Type: {v.ViewType})");
 
         // Priority 1: "Ref. Level" floor plan (standard in most family templates)
         var refLevelFloorPlan = allViews.FirstOrDefault(v =>
             v.Name == "Ref. Level" && v.ViewType == ViewType.FloorPlan);
         if (refLevelFloorPlan != null) {
-            Debug.WriteLine($"[GetBestViewForFamilyDocument] Selected: 'Ref. Level' floor plan");
+            Debug.WriteLine("[GetBestViewForFamilyDocument] Selected: 'Ref. Level' floor plan");
             return refLevelFloorPlan;
         }
 
@@ -372,13 +371,15 @@ public static class OpenDocumentExtensions {
         // Tag families typically ONLY have Sheet views for displaying their content
         var sheetView = allViews.FirstOrDefault(v => v.ViewType == ViewType.DrawingSheet);
         if (sheetView != null) {
-            Debug.WriteLine($"[GetBestViewForFamilyDocument] Selected: sheet '{sheetView.Name}' (typical for annotation families)");
+            Debug.WriteLine(
+                $"[GetBestViewForFamilyDocument] Selected: sheet '{sheetView.Name}' (typical for annotation families)");
             return sheetView;
         }
 
         // Fallback: Any remaining graphical view
         var anyView = allViews.FirstOrDefault();
-        Debug.WriteLine($"[GetBestViewForFamilyDocument] Fallback to: '{anyView?.Name ?? "null"}' (Type: {anyView?.ViewType})");
+        Debug.WriteLine(
+            $"[GetBestViewForFamilyDocument] Fallback to: '{anyView?.Name ?? "null"}' (Type: {anyView?.ViewType})");
         return anyView;
     }
 }

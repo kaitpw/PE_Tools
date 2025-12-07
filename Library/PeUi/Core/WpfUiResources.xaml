@@ -15,7 +15,7 @@
             Source="pack://application:,,,/PE_Tools;component/peui/core/WpfOverrides/TextBox.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-        <!-- Override WPF.UI's focus visual style to be invisible -->
+    <!-- Override WPF.UI's focus visual style to be invisible -->
     <Style x:Key="DefaultControlFocusVisualStyle">
         <Setter Property="Control.Template">
             <Setter.Value>

@@ -1,5 +1,6 @@
 using PeRevit.Lib;
 using PeUi.Core;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
 
@@ -43,7 +44,7 @@ public class PostableCommandItem : IPaletteListItem {
     /// <summary>
     ///     Command icon from the ribbon
     /// </summary>
-    public System.Windows.Media.ImageSource ImageSource { get; set; }
+    public ImageSource ImageSource { get; set; }
 
     /// <summary>
     ///     For addin commands, stores the custom CommandId (e.g., CustomCtrl_%CustomCtrl_%...)
@@ -86,25 +87,26 @@ public class PostableCommandItem : IPaletteListItem {
     public string TextSecondary => this.TruncatedPaths;
     public string TextPill => this.PrimaryShortcut;
     public Func<string> GetTextInfo => () => this.AllPaths;
+
     public BitmapImage Icon {
         get {
             if (this.ImageSource is BitmapImage bitmapImage)
                 return bitmapImage;
 
             // Try to convert ImageSource to BitmapImage
-            if (this.ImageSource is System.Windows.Media.Imaging.BitmapSource bitmapSource) {
+            if (this.ImageSource is BitmapSource bitmapSource) {
                 try {
                     // Convert BitmapSource (including BitmapFrame) to BitmapImage
-                    var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
-                    encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmapSource));
+                    var encoder = new PngBitmapEncoder();
+                    encoder.Frames.Add(BitmapFrame.Create(bitmapSource));
 
-                    using var stream = new System.IO.MemoryStream();
+                    using var stream = new MemoryStream();
                     encoder.Save(stream);
                     stream.Position = 0;
 
                     var result = new BitmapImage();
                     result.BeginInit();
-                    result.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+                    result.CacheOption = BitmapCacheOption.OnLoad;
                     result.StreamSource = stream;
                     result.EndInit();
                     result.Freeze();
@@ -118,6 +120,7 @@ public class PostableCommandItem : IPaletteListItem {
             return null;
         }
     }
+
     public Color? ItemColor => null;
 
     public override string ToString() => this.Name;

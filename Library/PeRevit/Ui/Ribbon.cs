@@ -8,14 +8,14 @@ public class Ribbon {
     public static IEnumerable<DiscoveredTab> GetAllTabs() {
         var tabs = ComponentManager.Ribbon.Tabs;
         return (from tab in tabs
-                where tab.IsVisible && tab.IsEnabled
-                select new DiscoveredTab {
-                    Id = tab.Id,
-                    Name = tab.Title,
-                    Panels = tab.Panels,
-                    DockedPanels = tab.DockedPanelsView,
-                    RibbonControl = tab.RibbonControl
-                }).ToList();
+            where tab.IsVisible && tab.IsEnabled
+            select new DiscoveredTab {
+                Id = tab.Id,
+                Name = tab.Title,
+                Panels = tab.Panels,
+                DockedPanels = tab.DockedPanelsView,
+                RibbonControl = tab.RibbonControl
+            }).ToList();
     }
 
     public static IEnumerable<DiscoveredPanel> GetAllPanels() {
@@ -23,13 +23,10 @@ public class Ribbon {
         var panelList = new List<DiscoveredPanel>();
         foreach (var tab in tabs) {
             panelList.AddRange(from panel in tab.Panels
-                               where panel.IsVisible && panel.IsEnabled
-                               select new DiscoveredPanel {
-                                   Tab = panel.Tab,
-                                   Cookie = panel.Cookie,
-                                   Source = panel.Source,
-                                   RibbonControl = panel.RibbonControl
-                               });
+                where panel.IsVisible && panel.IsEnabled
+                select new DiscoveredPanel {
+                    Tab = panel.Tab, Cookie = panel.Cookie, Source = panel.Source, RibbonControl = panel.RibbonControl
+                });
         }
 
         return panelList;

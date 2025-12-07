@@ -83,13 +83,13 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
 
         // Process SpecTypeId and its nested classes
         var specTypeIdType = typeof(SpecTypeId);
-        AddPropertiesToLabelMap(specTypeIdType, map, isGroupType: false);
+        AddPropertiesToLabelMap(specTypeIdType, map, false);
         var nestedTypes = specTypeIdType.GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
-        foreach (var nestedType in nestedTypes) AddPropertiesToLabelMap(nestedType, map, isGroupType: false);
+        foreach (var nestedType in nestedTypes) AddPropertiesToLabelMap(nestedType, map, false);
 
         // Process GroupTypeId
         var groupTypeIdType = typeof(GroupTypeId);
-        AddPropertiesToLabelMap(groupTypeIdType, map, isGroupType: true);
+        AddPropertiesToLabelMap(groupTypeIdType, map, true);
 
         return map;
     }

@@ -50,7 +50,7 @@ public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenP
             Suffix + Clean(hubId) + "/groups/" + Clean(grpId) + "/collections/" + Clean(colId) + "/parameters"
         );
         var deserializedResponse = await DeserializeToType<ParametersApi.Parameters>(response);
-        _ = (cache?.Write(deserializedResponse));
+        _ = cache?.Write(deserializedResponse);
         return deserializedResponse;
     }
 }

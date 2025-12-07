@@ -50,8 +50,8 @@ public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
 }
 
 public class DeleteUnusedParamsSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
     [Required] public Exclude ExcludeNames { get; init; } = new();
+    public bool Enabled { get; init; } = true;
 
     public bool Filter(FamilyParameter p) => !this.IsExcluded(p);
 

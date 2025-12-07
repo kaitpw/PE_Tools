@@ -3,7 +3,7 @@ using WpfColor = System.Windows.Media.Color;
 
 namespace AddinPaletteSuite.Core.Services;
 
-/// <summary> 
+/// <summary>
 ///     Singleton service that provides color assignments for documents.
 ///     Colors are read from Revit UI (pyRevit tab colors) and cached in-memory for the session.
 ///     Cache is cleared when documents are closed to handle color reassignment.
@@ -11,13 +11,14 @@ namespace AddinPaletteSuite.Core.Services;
 /// </summary>
 public class DocumentColorService {
     private static DocumentColorService _instance;
-    private readonly Dictionary<string, WpfColor> _colorCache = new();
 
     /// <summary>
     ///     Fallback color used when UI read fails. Using a consistent color
     ///     makes it obvious when color detection isn't working.
     /// </summary>
     private static readonly WpfColor FallbackColor = Colors.DimGray;
+
+    private readonly Dictionary<string, WpfColor> _colorCache = new();
 
     private DocumentColorService() { }
 
@@ -33,16 +34,12 @@ public class DocumentColorService {
     ///     Falls back to DimGray if UI read fails (makes detection failures obvious).
     /// </summary>
     public WpfColor GetOrCreateDocumentColor(Document doc) {
-        if (doc == null) {
-            return Colors.Gray;
-        }
+        if (doc == null) return Colors.Gray;
 
         var docKey = GetDocumentKey(doc);
 
         // Check cache first
-        if (this._colorCache.TryGetValue(docKey, out var cachedColor)) {
-            return cachedColor;
-        }
+        if (this._colorCache.TryGetValue(docKey, out var cachedColor)) return cachedColor;
 
 
         // Try reading from Revit UI
@@ -62,9 +59,7 @@ public class DocumentColorService {
     ///     This allows colors to be reassigned if the document is reopened.
     /// </summary>
     public void RemoveDocument(Document doc) {
-        if (doc == null) {
-            return;
-        }
+        if (doc == null) return;
 
         var docKey = GetDocumentKey(doc);
         _ = this._colorCache.Remove(docKey);

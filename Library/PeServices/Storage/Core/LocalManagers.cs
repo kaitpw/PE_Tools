@@ -19,10 +19,12 @@ public abstract class BaseLocalManager {
         Path.Combine(this.DirectoryPath, filename ?? $"{this.Name}.json");
 
     /// <summary>
-    ///     Get the path to the JSON file with a timestamp in the filename. Uses the <see cref="Name" /> of the manager by default.
+    ///     Get the path to the JSON file with a timestamp in the filename. Uses the <see cref="Name" /> of the manager by
+    ///     default.
     /// </summary>
     public string GetDatedJsonPath(string filename = null) =>
-        Path.Combine(this.DirectoryPath, $"{filename ?? this.Name}_{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}.json");
+        Path.Combine(this.DirectoryPath,
+            $"{filename ?? this.Name}_{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}.json");
 
     /// <summary>
     ///     Get the path to the CSV file. Uses the <see cref="Name" /> of the manager by default.
@@ -31,7 +33,8 @@ public abstract class BaseLocalManager {
         Path.Combine(this.DirectoryPath, filename ?? $"{this.Name}.csv");
 
     /// <summary>
-    ///     Get the path to the CSV file with a timestamp in the filename. Uses the <see cref="Name" /> of the manager by default.
+    ///     Get the path to the CSV file with a timestamp in the filename. Uses the <see cref="Name" /> of the manager by
+    ///     default.
     /// </summary>
     public string GetDatedCsvPath(string filename = null) =>
         Path.Combine(this.DirectoryPath, $"{filename ?? this.Name}_{DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}.csv");

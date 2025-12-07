@@ -1,10 +1,7 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Nice3point.Revit.Extensions;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
-using PeServices.Storage.Core.Json.ContractResolvers;
 using PeUi.Core;
 using PeUi.Core.Services;
 using System.Windows.Media.Imaging;
@@ -41,14 +38,13 @@ public class CmdSerializeSchedule : IExternalCommand {
                         } catch (Exception ex) {
                             new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
                         }
-                    },
+                    }
                 }
             };
 
             var window = PaletteFactory.Create("Schedule Serializer", items, actions,
                 new PaletteOptions<ScheduleSerializePaletteItem> {
-                    SearchConfig = SearchConfig.PrimaryAndSecondary(),
-                    FilterKeySelector = item => item.TextPill
+                    SearchConfig = SearchConfig.PrimaryAndSecondary(), FilterKeySelector = item => item.TextPill
                 });
             window.Show();
 
