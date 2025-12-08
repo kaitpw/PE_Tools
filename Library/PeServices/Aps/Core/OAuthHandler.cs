@@ -1,241 +1,290 @@
-using Autodesk.Authentication;
-using Autodesk.Authentication.Model;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
-using System.Net;
-using System.Net.Sockets;
-using System.Security.Cryptography;
-using System.Text.RegularExpressions;
+using PeServices.Aps.Models;
 
 namespace PeServices.Aps.Core;
 
 /// <summary>
-///     Fully static class to handle Oauth flow. <see cref="Invoke3LeggedOAuth" /> will open the users
-///     default browser to give permissions to this app. Upon approval <see cref="CallbackDelegate" />
-///     will receive the bearer token.
+///     Handles OAuth 2.0 authentication flow using direct REST API calls.
+///     Opens the user's default browser for authorization, then captures the callback.
 /// </summary>
 /// <remarks>
-///     Uses a TCP listener rather than HTTP in order to sidestep need for admin privileges.
+///     <list type="bullet">
+///         <item>Uses TCP listener (not HTTP) to avoid admin privilege requirements</item>
+///         <item>Migrated from Autodesk.Authentication SDK to avoid DLL conflicts</item>
+///         <item>Supports both confidential (client secret) and public (PKCE) flows</item>
+///     </list>
 /// </remarks>
 internal static class OAuthHandler {
-    /// <summary> A delegate to hold the callback function for when 3-legged OAuth completes </summary>
-    public delegate void CallbackDelegate(ThreeLeggedToken bearer);
+    #region Public API
 
-    private const int Port = 8080;
-    private static readonly string ForgeCallback = $"http://localhost:{Port}/api/aps/callback/oauth";
-    private static readonly AuthenticationClient AuthenticationClient = new();
-    private static readonly TcpListener TcpListener = new(IPAddress.Loopback, Port);
-    private static readonly RandomNumberGenerator Rng = RandomNumberGenerator.Create();
+    /// <summary>Delegate invoked when 3-legged OAuth completes</summary>
+    /// <param name="token">The token if successful, null if failed/denied</param>
+    public delegate void CallbackDelegate(OAuthToken token);
 
-    private static readonly List<Scopes> OAuthClientScopes = [
-        Scopes.AccountRead, Scopes.DataCreate, Scopes.DataWrite, Scopes.DataRead, Scopes.BucketRead
-    ];
-
+    /// <summary>
+    ///     Initiates the 3-legged OAuth flow, opening the browser for user authorization.
+    /// </summary>
+    /// <param name="clientId">The application client ID</param>
+    /// <param name="clientSecret">The client secret (null/empty for PKCE flow)</param>
+    /// <param name="callback">Callback invoked with the result</param>
     public static void Invoke3LeggedOAuth(string clientId, string clientSecret, CallbackDelegate callback) {
-        var oAuthData = new OAuthData(clientId, clientSecret,
-            string.IsNullOrEmpty(clientSecret) ? GenerateRandomString() : null);
-
-        async Task<ThreeLeggedToken> GetToken(string code) {
-            return await Get3LeggedToken(oAuthData, code);
-        }
-
-        _Async3LegOAuth(GenerateOAuthUrl(oAuthData), GetToken, callback);
+        var flowData = OAuthFlowData.Create(clientId, clientSecret);
+        var authUrl = BuildAuthorizationUrl(flowData);
+        ExecuteOAuthFlow(authUrl, flowData, callback);
     }
 
-    private static void _Async3LegOAuth(string oAuthUrl, Get3LegTokenDelegate getToken, CallbackDelegate cb) {
+    /// <summary>
+    ///     Refreshes an access token using a refresh token.
+    /// </summary>
+    /// <param name="clientId">The application client ID</param>
+    /// <param name="clientSecret">The client secret (can be null for PKCE flow)</param>
+    /// <param name="refreshToken">The refresh token to use</param>
+    /// <param name="cancellationToken">Cancellation token for timeout control</param>
+    /// <returns>A new OAuthToken with refreshed access token</returns>
+    /// <exception cref="ArgumentException">If refresh token is null/empty</exception>
+    /// <exception cref="HttpRequestException">If the HTTP request fails</exception>
+    /// <exception cref="OperationCanceledException">If the operation is cancelled or times out</exception>
+    public static async Task<OAuthToken> RefreshTokenAsync(
+        string clientId,
+        string clientSecret,
+        string refreshToken,
+        CancellationToken cancellationToken = default) {
+        if (string.IsNullOrEmpty(refreshToken))
+            throw new ArgumentException("Refresh token cannot be null or empty", nameof(refreshToken));
+
+        var formData = BuildTokenRequestForm(
+            grantType: "refresh_token",
+            clientId: clientId,
+            clientSecret: clientSecret,
+            additionalParams: new Dictionary<string, string> { ["refresh_token"] = refreshToken }
+        );
+
+        return await PostTokenRequestAsync(formData, cancellationToken).ConfigureAwait(false);
+    }
+
+    #endregion
+
+    #region OAuth Flow Execution
+
+    // TCP listener for receiving OAuth callbacks - static because only one OAuth flow can run at a time
+    private static readonly TcpListener TcpListener = new(IPAddress.Loopback, OAuthConfig.CallbackPort);
+
+    /// <summary>
+    ///     Executes the OAuth flow: opens browser, waits for callback, exchanges code for token.
+    /// </summary>
+    private static void ExecuteOAuthFlow(string authUrl, OAuthFlowData flowData, CallbackDelegate callback) {
         try {
-            TcpListener.Stop(); // Ensure any previous listener is stopped
+            // Ensure clean state
+            TcpListener.Stop();
             TcpListener.Start();
-            if (!((IPEndPoint)TcpListener.LocalEndpoint).Port.Equals(Port))
-                throw new Exception($"Failed to start TCP listener on port {Port}");
-            _ = Process.Start(new ProcessStartInfo(oAuthUrl) { UseShellExecute = true });
-            _ = Task.Run(async () => {
-                try {
-                    var client = await TcpListener.AcceptTcpClientAsync();
-                    var request = ReadString(client);
-                    var code = ExtractCodeFromRequest(request);
 
-                    await WriteSuccessStringAsync(client,
-                        code.IsNullOrEmpty() ? CallbackPages.ErrorPage : CallbackPages.SuccessPage);
-                    client.Dispose();
+            if (((IPEndPoint)TcpListener.LocalEndpoint).Port != OAuthConfig.CallbackPort)
+                throw new InvalidOperationException($"Failed to bind TCP listener to port {OAuthConfig.CallbackPort}");
 
-                    if (!string.IsNullOrEmpty(code)) {
-                        var bearer = await getToken(code);
-                        cb?.Invoke(bearer);
-                    } else
-                        cb?.Invoke(null);
-                } catch (Exception ex) {
-                    new Ballogger().Add(Log.ERR, new StackFrame(), $"Error in OAuth flow: {ex.Message}").Show();
-                    cb?.Invoke(null);
-                } finally {
-                    TcpListener?.Stop();
-                }
-            });
+            // Open browser for user authorization
+            _ = Process.Start(new ProcessStartInfo(authUrl) { UseShellExecute = true });
+
+            // Handle callback asynchronously
+            _ = Task.Run(async () => await HandleCallbackAsync(flowData, callback).ConfigureAwait(false));
         } catch (Exception ex) {
             new Ballogger().Add(Log.ERR, new StackFrame(), ex).Show();
-            cb?.Invoke(null);
+            callback?.Invoke(null);
         }
     }
 
-    private static string GenerateOAuthUrl(OAuthData d) =>
-        d.IsNormalFlow()
-            ? AuthenticationClient.Authorize(d.ClientId, ResponseType.Code, ForgeCallback, OAuthClientScopes)
-            : d.IsPkceFlow()
-                ? AuthenticationClient.Authorize(d.ClientId, ResponseType.Code, ForgeCallback, OAuthClientScopes,
-                    codeChallenge: GenerateCodeChallenge(d.CodeVerifier), codeChallengeMethod: "S256",
-                    nonce: GenerateRandomString())
-                : null;
+    /// <summary>
+    ///     Handles the OAuth callback: reads the authorization code, exchanges it for a token.
+    /// </summary>
+    private static async Task HandleCallbackAsync(OAuthFlowData flowData, CallbackDelegate callback) {
+        try {
+            var authorizationCode = await WaitForAuthorizationCodeAsync().ConfigureAwait(false);
 
-    private static async Task<ThreeLeggedToken> Get3LeggedToken(OAuthData d, string code) =>
-        d.IsNormalFlow()
-            ? await AuthenticationClient.GetThreeLeggedTokenAsync(d.ClientId, code, ForgeCallback,
-                d.ClientSecret)
-            : d.IsPkceFlow()
-                ? await AuthenticationClient.GetThreeLeggedTokenAsync(d.ClientId, code, ForgeCallback,
-                    codeVerifier: d.CodeVerifier)
-                : null;
-
-
-    private static string ReadString(TcpClient client) {
-        var readBuffer = new byte[client.ReceiveBufferSize];
-        using var inStream = new MemoryStream();
-        var stream = client.GetStream();
-        while (stream.DataAvailable) {
-            var numberOfBytesRead = stream.Read(readBuffer, 0, readBuffer.Length);
-            if (numberOfBytesRead <= 0) break;
-            inStream.Write(readBuffer, 0, numberOfBytesRead);
+            // Exchange code for token
+            if (!string.IsNullOrEmpty(authorizationCode)) {
+                var token = await ExchangeCodeForTokenAsync(flowData, authorizationCode).ConfigureAwait(false);
+                callback?.Invoke(token);
+            } else {
+                callback?.Invoke(null);
+            }
+        } catch (Exception ex) {
+            new Ballogger().Add(Log.ERR, new StackFrame(), $"Error in OAuth callback: {ex.Message}").Show();
+            callback?.Invoke(null);
+        } finally {
+            TcpListener.Stop();
         }
-
-        return Encoding.UTF8.GetString(inStream.ToArray());
     }
 
-    private static Task WriteSuccessStringAsync(TcpClient client, string str) => Task.Run(() => {
-        using var writer = new StreamWriter(client.GetStream(), new UTF8Encoding(false));
-        writer.Write("HTTP/1.0 200 OK");
-        writer.Write(Environment.NewLine);
-        writer.Write("Content-Type: text/html; charset=UTF-8");
-        writer.Write(Environment.NewLine);
-        writer.Write("Content-Length: " + str.Length);
-        writer.Write(Environment.NewLine);
-        writer.Write("Connection: close");
-        writer.Write(Environment.NewLine);
-        writer.Write(Environment.NewLine);
-        writer.Write(str);
-        writer.Flush();
-    });
+    #endregion
 
-    private static string ExtractCodeFromRequest(string request) {
-        var lines = request.Split('\n');
-        if (lines.Length <= 0) return null;
+    #region Authorization URL
+
+    /// <summary>Generates the OAuth authorization URL with all required parameters</summary>
+    private static string BuildAuthorizationUrl(OAuthFlowData flow) {
+        var scopeParam = Uri.EscapeDataString(string.Join(" ", OAuthConfig.RequestedScopes));
+        var redirectParam = Uri.EscapeDataString(OAuthConfig.CallbackUri);
+
+        var url = $"{OAuthConfig.AuthorizeEndpoint}?response_type=code" +
+                  $"&client_id={flow.ClientId}" +
+                  $"&redirect_uri={redirectParam}" +
+                  $"&scope={scopeParam}";
+
+        // Add PKCE parameters for public client flow
+        if (flow.IsPkce) {
+            var codeChallenge = flow.GenerateCodeChallenge();
+            var nonce = OAuthFlowData.GenerateRandomString(32);
+            url += $"&code_challenge={codeChallenge}&code_challenge_method=S256&nonce={nonce}";
+        }
+
+        return url;
+    }
+
+    #endregion
+
+    #region Token Exchange
+
+    /// <summary>Exchanges an authorization code for an access token</summary>
+    private static Task<OAuthToken> ExchangeCodeForTokenAsync(OAuthFlowData flow, string code) {
+        var additionalParams = new Dictionary<string, string> {
+            ["code"] = code,
+            ["redirect_uri"] = OAuthConfig.CallbackUri
+        };
+
+        // PKCE flow sends code_verifier, confidential flow sends client_secret
+        if (flow.IsPkce)
+            additionalParams["code_verifier"] = flow.CodeVerifier;
+
+        var formData = BuildTokenRequestForm(
+            grantType: "authorization_code",
+            clientId: flow.ClientId,
+            clientSecret: flow.IsPkce ? null : flow.ClientSecret,
+            additionalParams: additionalParams
+        );
+
+        return PostTokenRequestAsync(formData, CancellationToken.None);
+    }
+
+    /// <summary>Builds the form data for a token request</summary>
+    private static Dictionary<string, string> BuildTokenRequestForm(
+        string grantType,
+        string clientId,
+        string clientSecret,
+        Dictionary<string, string> additionalParams) {
+        var form = new Dictionary<string, string> {
+            ["grant_type"] = grantType,
+            ["client_id"] = clientId
+        };
+
+        // Only include client_secret for confidential clients
+        if (!string.IsNullOrEmpty(clientSecret))
+            form["client_secret"] = clientSecret;
+
+        // Add any additional parameters
+        foreach (var (key, value) in additionalParams)
+            form[key] = value;
+
+        return form;
+    }
+
+    /// <summary>Posts a token request and deserializes the response</summary>
+    private static async Task<OAuthToken> PostTokenRequestAsync(
+        Dictionary<string, string> formData,
+        CancellationToken cancellationToken) {
+        using var content = new FormUrlEncodedContent(formData);
+        var response = await OAuthConfig.HttpClient.PostAsync(OAuthConfig.TokenEndpoint, content, cancellationToken).ConfigureAwait(false);
+
+        var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+            throw new HttpRequestException($"Token request failed: {response.StatusCode} - {responseBody}");
+
+        return JsonConvert.DeserializeObject<OAuthToken>(responseBody);
+    }
+
+    #endregion
+
+    #region Callback Listener
+
+    /// <summary>
+    ///     Accepts the OAuth callback, reads the authorization code and returns it after responding to the browser.
+    /// </summary>
+    private static async Task<string> WaitForAuthorizationCodeAsync() {
+        var client = await TcpListener.AcceptTcpClientAsync().ConfigureAwait(false);
+        var request = ReadHttpRequest(client);
+        var authorizationCode = ExtractAuthorizationCode(request);
+
+        // Send response page to browser
+        var responsePage = string.IsNullOrEmpty(authorizationCode)
+            ? OAuthCallbackPages.ErrorPage
+            : OAuthCallbackPages.SuccessPage;
+        await WriteHttpResponseAsync(client, responsePage).ConfigureAwait(false);
+        client.Dispose();
+
+        return authorizationCode;
+    }
+
+    /// <summary>Reads an HTTP request from a TCP client</summary>
+    private static string ReadHttpRequest(TcpClient client) {
+        var buffer = new byte[client.ReceiveBufferSize];
+        using var memoryStream = new MemoryStream();
+        var networkStream = client.GetStream();
+
+        while (networkStream.DataAvailable) {
+            var bytesRead = networkStream.Read(buffer, 0, buffer.Length);
+            if (bytesRead <= 0) break;
+            memoryStream.Write(buffer, 0, bytesRead);
+        }
+
+        return Encoding.UTF8.GetString(memoryStream.ToArray());
+    }
+
+    /// <summary>Writes an HTTP response to a TCP client</summary>
+    private static Task WriteHttpResponseAsync(TcpClient client, string body) =>
+        Task.Run(() => {
+            using var writer = new StreamWriter(client.GetStream(), new UTF8Encoding(false));
+            writer.Write("HTTP/1.0 200 OK\r\n");
+            writer.Write("Content-Type: text/html; charset=UTF-8\r\n");
+            writer.Write($"Content-Length: {body.Length}\r\n");
+            writer.Write("Connection: close\r\n");
+            writer.Write("\r\n");
+            writer.Write(body);
+            writer.Flush();
+        });
+
+    /// <summary>Extracts the authorization code from an HTTP GET request</summary>
+    private static string ExtractAuthorizationCode(string httpRequest) {
+        var lines = httpRequest.Split('\n');
+        if (lines.Length == 0) return null;
+
         var requestLine = lines[0].Trim();
         if (!requestLine.StartsWith("GET ")) return null;
-        var urlPart = requestLine.Split(' ')[1];
-        var queryStart = urlPart.IndexOf('?');
+
+        var parts = requestLine.Split(' ');
+        if (parts.Length < 2) return null;
+
+        var queryStart = parts[1].IndexOf('?');
         if (queryStart < 0) return null;
-        var query = urlPart[(queryStart + 1)..];
-        var parameters = query.Split('&');
-        return (from param in parameters
-            select param.Split('=')
-            into kv
-            where kv.Length == 2 && kv[0] == "code"
-            select kv[1]).FirstOrDefault();
+
+        var queryString = parts[1][(queryStart + 1)..];
+        var parameters = queryString
+            .Split('&')
+            .Select(p => p.Split('='))
+            .Where(kv => kv.Length == 2)
+            .ToDictionary(kv => kv[0], kv => kv[1]);
+
+        return parameters.GetValueOrDefault("code");
     }
 
-
-    private static string GenerateRandomString() {
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
-        var bytes = new byte[128];
-        Rng.GetBytes(bytes);
-        return new string(bytes.Select(b => chars[b % chars.Length]).ToArray());
-    }
-
-    private static string GenerateCodeChallenge(string codeVerifier) {
-        var sha256 = SHA256.Create();
-        var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(codeVerifier));
-        var b64Hash = Convert.ToBase64String(hash);
-        var code = Regex.Replace(b64Hash, "\\+", "-");
-        code = Regex.Replace(code, "\\/", "_");
-        code = Regex.Replace(code, "=+$", "");
-        return code;
-    }
-
-    private class OAuthData {
-        public readonly string ClientId;
-        public readonly string ClientSecret;
-        public readonly string CodeVerifier;
-
-        public OAuthData(string clientId, string clientSecret, string codeVerifier) {
-            var hasClientSecret = !string.IsNullOrEmpty(clientSecret);
-            var hasCodeVerifier = !string.IsNullOrEmpty(codeVerifier);
-
-            if (string.IsNullOrEmpty(clientId)) throw new Exception("ClientId is not set.");
-            this.ClientId = clientId;
-
-            if (hasClientSecret && !hasCodeVerifier) {
-                this.ClientSecret = clientSecret;
-                this.CodeVerifier = null;
-            } else if (!hasClientSecret && hasCodeVerifier) {
-                this.ClientSecret = null;
-                this.CodeVerifier = codeVerifier;
-            } else {
-                var emptyValue = string.Empty;
-                if (!hasClientSecret) emptyValue = "ClientSecret";
-                if (!hasCodeVerifier) emptyValue = "CodeVerifier";
-                throw new Exception($"{emptyValue} is not set.");
-            }
-        }
-
-        public bool IsNormalFlow() => this.ClientSecret != null && this.CodeVerifier == null;
-        public bool IsPkceFlow() => this.ClientSecret == null && this.CodeVerifier != null;
-    }
-
-    private static class CallbackPages {
-        public const string SuccessPage = """
-                                          <html>
-                                            <head>
-                                              <title>Login Status</title>
-                                              <style>
-                                                body {
-                                                  font-family: Arial, Helvetica, sans-serif;
-                                                  display: flex;
-                                                  flex-direction: column;
-                                                  justify-content: center;
-                                                  align-items: center;
-                                                  min-height: 100vh; /* Ensures the body takes at least the full viewport height */
-                                                  margin: 0; /* Remove default body margin */
-                                                }
-                                              </style>
-                                            </head>
-                                            <body>
-                                              <h2>Login Success</h2>
-                                              <p>You can now close this window!</p>
-                                            </body>
-                                          </html>
-                                          """;
-
-        public const string ErrorPage = """
-                                        <html>
-                                          <head>
-                                            <title>Login Status</title>
-                                            <style>
-                                              body {
-                                                font-family: Arial, Helvetica, sans-serif;
-                                                display: flex;
-                                                flex-direction: column;
-                                                justify-content: center;
-                                                align-items: center;
-                                                min-height: 100vh; /* Ensures the body takes at least the full viewport height */
-                                                margin: 0; /* Remove default body margin */
-                                              }
-                                            </style>
-                                          </head>
-                                          <body>
-                                            <h2>Login Failed</h2>
-                                            <p>Please try again.</p>
-                                          </body>
-                                        </html>
-                                        """;
-    }
-
-    private delegate Task<ThreeLeggedToken> Get3LegTokenDelegate(string code);
+    #endregion
 }

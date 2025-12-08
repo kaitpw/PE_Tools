@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <UseWPF>true</UseWPF>
         <LangVersion>latest</LangVersion>
@@ -104,15 +104,6 @@
         <Reference Include="Microsoft.CSharp"/>
         <!-- Polyfill for Range operators, enumerable stuff, etc.-->
         <PackageReference Include="Polyfill" Version="4.0.0"/>
-        <!-- Enable builds for .NET 4.8. Using this package WILL THROW RUNTIME ERRORS though which are unfixable 
-         See APS service and APS service-using code to see how its being handled.-->
-        <PackageReference Include="Autodesk.Authentication" Version="2.0.0-beta4"/>
-    </ItemGroup>
-
-    <!-- Packages for .NET 8.0 (Revit 2025/2026) -->
-    <ItemGroup Condition="$(TargetFramework.StartsWith('net8'))">
-        <!-- Use stable version for .NET 8.0 -->
-        <PackageReference Include="Autodesk.Authentication" Version="2.0.0"/>
     </ItemGroup>
 
     <PropertyGroup>
