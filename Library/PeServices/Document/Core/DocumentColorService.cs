@@ -1,17 +1,16 @@
 using System.Windows.Media;
 using WpfColor = System.Windows.Media.Color;
 
-namespace AddinPaletteSuite.Core.Services;
+namespace PeServices.Documents.Core;
 
 /// <summary>
-///     Singleton service that provides color assignments for documents.
+///     Service that provides color assignments for documents.
 ///     Colors are read from Revit UI (pyRevit tab colors) and cached in-memory for the session.
 ///     Cache is cleared when documents are closed to handle color reassignment.
+///     Owned by DocumentManager - not a standalone singleton.
 ///     Note: No locking needed as Revit API is single-threaded.
 /// </summary>
 public class DocumentColorService {
-    private static DocumentColorService _instance;
-
     /// <summary>
     ///     Fallback color used when UI read fails. Using a consistent color
     ///     makes it obvious when color detection isn't working.
@@ -19,15 +18,6 @@ public class DocumentColorService {
     private static readonly WpfColor FallbackColor = Colors.DimGray;
 
     private readonly Dictionary<string, WpfColor> _colorCache = new();
-
-    private DocumentColorService() { }
-
-    public static DocumentColorService Instance {
-        get {
-            _instance ??= new DocumentColorService();
-            return _instance;
-        }
-    }
 
     /// <summary>
     ///     Gets the color for the specified document from cache or by reading from Revit UI.

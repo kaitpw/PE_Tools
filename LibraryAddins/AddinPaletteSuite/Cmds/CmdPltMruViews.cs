@@ -1,6 +1,6 @@
-using AddinPaletteSuite.Core.Services;
 using PeExtensions.UiApplication;
 using PeRevit.Ui;
+using PeServices.Documents;
 using PeUi.Core;
 using System.Windows.Input;
 using System.Windows.Media.Imaging;
@@ -22,7 +22,7 @@ public class CmdPltMruViews : IExternalCommand {
     }
 
     public static void Open(UIApplication uiapp) {
-        var items = MruViewService.Instance
+        var items = DocumentManager.Instance
             .GetMruOrderedViews(uiapp)
             .Select(v => new MruViewPaletteItem(v));
 
@@ -57,7 +57,7 @@ public class MruViewPaletteItem : IPaletteListItem {
     public MruViewPaletteItem(View view) {
         this.View = view;
         Debug.WriteLine($"[MruViewPaletteItem] Creating item for view '{view.Name}' in doc '{view.Document.Title}'");
-        var color = DocumentColorService.Instance.GetOrCreateDocumentColor(view.Document);
+        var color = DocumentManager.Instance.GetDocumentColor(view.Document);
         this.ItemColor = color;
         Debug.WriteLine($"[MruViewPaletteItem] Item created with color #{color.R:X2}{color.G:X2}{color.B:X2}");
     }

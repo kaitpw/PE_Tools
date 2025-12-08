@@ -1,11 +1,11 @@
 using AddinApsAuthSuite;
 using AddinFamilyFoundrySuite.Cmds;
 using AddinPaletteSuite.Cmds;
-using AddinPaletteSuite.Core.Services;
 using Autodesk.Revit.DB.Events;
 using Autodesk.Revit.UI.Events;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
+using PeServices.Documents;
 
 namespace PE_Tools;
 
@@ -34,9 +34,11 @@ internal class App : IExternalApplication {
         const string ribbonPanelName1 = "Manage";
         const string ribbonPanelName2 = "Tools";
         const string ribbonPanelName3 = "Migration";
+        const string ribbonPanelName4 = "Dev";
         var panelManage = UiHelpers.CreateRibbonPanel(app, tabName, ribbonPanelName1);
         var panelTools = UiHelpers.CreateRibbonPanel(app, tabName, ribbonPanelName2);
         var panelMigration = UiHelpers.CreateRibbonPanel(app, tabName, ribbonPanelName3);
+        var panelDev = UiHelpers.CreateRibbonPanel(app, tabName, ribbonPanelName4);
 
         var manageStackButton = panelManage.AddPullDownButton("General");
         // var ffManagerStackButton = panelMigration.AddSplitButton("Manager");
@@ -82,26 +84,15 @@ internal class App : IExternalApplication {
 
     private static void OnViewActivated(object sender, ViewActivatedEventArgs e) {
         if (e?.CurrentActiveView == null) return;
-
-        var doc = e.CurrentActiveView.Document;
+        if (sender is not UIApplication) return;
 
         // Record view activation for MRU tracking
-        MruViewService.Instance.RecordViewActivation(doc, e.CurrentActiveView.Id);
+        DocumentManager.Instance.RecordViewActivation(e.CurrentActiveView.Document, e.CurrentActiveView.Id);
     }
 
     private static void OnDocumentClosing(object sender, DocumentClosingEventArgs e) {
-        if (e?.Document == null) {
-            Debug.WriteLine("[App] OnDocumentClosing: Document is null, ignoring");
-            return;
-        }
-
-        Debug.WriteLine($"[App] OnDocumentClosing: Title='{e.Document.Title}', PathName='{e.Document.PathName}'");
-        Debug.WriteLine("[App] OnDocumentClosing: Removing from MRU buffer...");
-        MruViewService.Instance.RemoveDocumentViews(e.Document);
-
-        Debug.WriteLine("[App] OnDocumentClosing: Removing from color cache...");
-        DocumentColorService.Instance.RemoveDocument(e.Document);
-        Debug.WriteLine("[App] OnDocumentClosing: Done");
+        if (e?.Document == null) return;
+        DocumentManager.Instance.OnDocumentClosed(e.Document);
     }
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
@@ -276,6 +267,7 @@ public static class ButtonDataHydrator {
                     "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
             }
         }
+
         // {
         //     nameof(CmdTestSettingsEditor),
         //     new ButtonDataRecord {
