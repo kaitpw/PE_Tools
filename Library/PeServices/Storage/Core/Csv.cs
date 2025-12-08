@@ -104,7 +104,6 @@ public class Csv<T> : CsvReadWriter<T> where T : class, new() {
     /// </summary>
     public string WriteRow(string key, T rowData) {
         var state = this.Read();
-        if (state.Count == 0) return string.Empty;
         state[key] = rowData;
         return this.Write(state);
     }

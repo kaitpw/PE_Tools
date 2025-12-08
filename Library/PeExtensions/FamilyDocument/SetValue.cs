@@ -34,8 +34,9 @@ public static class FamilyDocumentSetValue {
 
         if (!strategyInstance.CanMap(context)) {
             var targetDataType = targetParam?.Definition.GetDataType();
+            var dataTypeDisplay = targetDataType?.TypeId ?? "Unknown";
             throw new Exception(
-                $"Cannot map '{sourceParam.Definition.Name}' to '{targetParam.Definition.Name}' ({targetDataType}) using strategy '{strategy}'");
+                $"Cannot map '{sourceParam.Definition.Name}' to '{targetParam.Definition.Name}' ({dataTypeDisplay}) using strategy '{strategy}'");
         }
 
         var (param, err) = strategyInstance.Map(context);
@@ -73,8 +74,9 @@ public static class FamilyDocumentSetValue {
 
         if (!strategyInstance.CanMap(context)) {
             var targetDataType = targetParam?.Definition.GetDataType();
+            var dataTypeDisplay = targetDataType?.TypeId ?? "Unknown";
             throw new Exception(
-                $"Cannot map value '{sourceValue}' to '{targetParam.Definition.Name}' ({targetDataType.TypeId}) using strategy '{strategy}'");
+                $"Cannot map value '{sourceValue}' to '{targetParam.Definition.Name}' ({dataTypeDisplay}) using strategy '{strategy}'");
         }
 
         var (param, err) = strategyInstance.Map(context);
