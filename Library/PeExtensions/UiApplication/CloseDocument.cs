@@ -3,6 +3,12 @@ using System;
 using UIFramework;
 
 namespace PeExtensions.UiApplication;
+//TODO: Look into these members later too!!!!!!!!!!!!!!!!!
+// UIFrameworkServices.ManageViewsService.ActivateFrame();
+// UIFrameworkServices.ViewSwitchingService.outputViewSwitchingOrder();
+
+// UIFramework.DocSwitchManager.
+// UIFramework.TabSwitchAction.
 
 ///<summary>
 /// Provides extension methods for closing UI documents in the Revit application.

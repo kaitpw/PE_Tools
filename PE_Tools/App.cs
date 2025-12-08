@@ -57,6 +57,7 @@ internal class App : IExternalApplication {
             panelMigration.AddPushButton<CmdFFManagerSnapshot>("FF Manager Snapshot"),
             panelMigration.AddPushButton<CmdFFMigrator>("FF Migrator"),
             panelMigration.AddPushButton<CmdFFMakeATVariants>("Make AT Variants"),
+            panelMigration.AddPushButton<CmdFFParamAggregator>("FF Param Aggregator"),
             manageStackButton.AddPushButton<CmdUpdate>("Update"),
             manageStackButton.AddPushButton<CmdCacheParametersService>("Cache Params Svc"),
             // manageStackButton.AddPushButton<CmdTestSettingsEditor>("Test Settings Editor"),
@@ -265,6 +266,12 @@ public static class ButtonDataHydrator {
                 LargeImage = "Red_32.png",
                 ToolTip =
                     "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
+            }
+        }, {
+            nameof(CmdFFParamAggregator), new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Aggregate parameter metadata across families in a category and output to CSV."
             }
         }
 
