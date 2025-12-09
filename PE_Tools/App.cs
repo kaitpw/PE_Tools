@@ -70,6 +70,7 @@ internal class App : IExternalApplication {
             panelTools.AddPushButton<CmdPltSchedules>("Schedule Palette"),
             panelTools.AddPushButton<CmdPltSheets>("Sheet Palette"),
             panelTools.AddPushButton<CmdPltFamilies>("Family Palette"),
+            panelTools.AddPushButton<CmdPltFamilyElements>("Family Palette"),
             panelTools.AddPushButton<CmdTapMaker>("Tap Maker")
         ]);
 
@@ -206,6 +207,13 @@ public static class ButtonDataHydrator {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Search families in the document. Click to edit family, Ctrl+Click to select all instances."
+            }
+        }, {
+            nameof(CmdPltFamilyElements),
+            new ButtonDataRecord {
+                SmallImage = "Red_16.png",
+                LargeImage = "Red_32.png",
+                ToolTip = "Browse all family elements (parameters, connectors, dimensions, reference planes, nested families). Highlights selected elements. Only works in family documents."
             }
         }, {
             nameof(CmdTapMaker), new ButtonDataRecord {

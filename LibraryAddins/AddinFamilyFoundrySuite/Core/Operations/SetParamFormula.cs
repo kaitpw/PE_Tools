@@ -27,7 +27,7 @@ public class SetParamFormula(AddFamilyParamsSettings settings, bool setOnly = tr
                 }
 
                 if (p.Formula is not null && parameter.Formula != p.Formula && this.Settings.OverrideExistingValues)
-                    doc.FamilyManager.SetFormula(parameter, p.Formula);
+                    _ = doc.SetFormula(parameter, p.Formula);
                 logs[p.Name] = new LogEntry { Item = p.Name };
             } catch (Exception ex) {
                 parametersToRetry.Add((parameter, p));
@@ -48,7 +48,7 @@ public class SetParamFormula(AddFamilyParamsSettings settings, bool setOnly = tr
                 if (parameter is not null
                     && paramModel.Formula is not null
                     && parameter.Formula != paramModel.Formula
-                   ) doc.FamilyManager.SetFormula(parameter, paramModel.Formula);
+                   ) _ = doc.SetFormula(parameter, paramModel.Formula);
 
                 logs[paramModel.Name] = new LogEntry { Item = paramModel.Name };
             } catch (Exception ex) {

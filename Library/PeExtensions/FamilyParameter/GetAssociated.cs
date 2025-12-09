@@ -1,3 +1,6 @@
+using Autodesk.Revit.DB.Electrical;
+using Autodesk.Revit.DB.Mechanical;
+using Autodesk.Revit.DB.Plumbing;
 using PeExtensions.FamDocument;
 
 namespace PeExtensions;
@@ -42,6 +45,29 @@ public static class FamilyParameterGetAssociated {
     }
 
     /// <summary>
+    ///     Get the associated connectors (electrical, mechanical, piping) for a family parameter.
+    ///     Returns connectors that have at least one parameter associated with the given family parameter.
+    /// </summary>
+    /// <param name="param">The family parameter</param>
+    /// <param name="doc">The family document</param>
+    /// <returns>The associated connector elements</returns>
+    public static IEnumerable<ConnectorElement> AssociatedConnectors(this FamilyParameter param, FamilyDocument doc) {
+        var connectors = new FilteredElementCollector(doc)
+            .OfClass(typeof(ConnectorElement))
+            .Cast<ConnectorElement>();
+
+        foreach (var connector in connectors) {
+            foreach (Parameter connectorParam in connector.Parameters) {
+                var associated = doc.FamilyManager.GetAssociatedFamilyParameter(connectorParam);
+                if (associated?.Id == param.Id) {
+                    yield return connector;
+                    break; // Found a match, no need to check other parameters on this connector
+                }
+            }
+        }
+    }
+
+    /// <summary>
     ///     Get the family parameters containing this family parameter in their formula
     /// </summary>
     /// <param name="param">The family parameter</param>
@@ -67,7 +93,7 @@ public static class FamilyParameterGetAssociated {
             .Where(p => {
                 try {
                     var formula = p.Formula?.Trim();
-                    return !string.IsNullOrEmpty(formula) && IsParameterNameInFormula(parameterName, formula);
+                    return !string.IsNullOrEmpty(formula) && param.IsReferencedInFormula(formula);
                 } catch (InvalidOperationException) {
                     return false;
                 }
@@ -82,40 +108,19 @@ public static class FamilyParameterGetAssociated {
             if (p.AssociatedParameters.Cast<Parameter>().Any()) return true;
             if (p.AssociatedArrays(doc).Any()) return true;
             if (p.AssociatedDimensions(doc).Any()) return true;
+            if (p.AssociatedConnectors(doc).Any()) return true;
             return false;
         });
     }
 
     /// <summary>
-    ///     Checks if a parameter name is contained in a formula with strict boundary validation
-    /// </summary>
-    /// <param name="parameterName">The parameter name to search for</param>
-    /// <param name="formula">The formula to search in</param>
-    /// <returns>True if the parameter name is properly bounded in the formula</returns>
-    private static bool IsParameterNameInFormula(string parameterName, string formula) {
-        if (string.IsNullOrEmpty(parameterName) || string.IsNullOrEmpty(formula))
-            return false;
-
-        // Possible characters sandwiching a param name: =, +, -, *, /, ^, space,(, ), <, >, ", comma
-        var besideChars = new[] { '=', '+', '-', '*', '/', '^', ' ', '(', ')', '<', '>', '"', ',' };
-
-        var leftIndex = formula.IndexOf(parameterName, StringComparison.Ordinal);
-        if (leftIndex == -1) return false;
-        var leftValid = leftIndex == 0 || besideChars.Contains(formula[leftIndex - 1]);
-
-        var rightIndex = leftIndex + parameterName.Length;
-        var rightValid = rightIndex >= formula.Length || besideChars.Contains(formula[rightIndex]);
-
-        return leftValid && rightValid;
-    }
-
-    /// <summary>
-    ///     Get the associated elements for a family parameter
+    ///     Checks if the family parameter has any associations (dimensions, arrays, connectors, or formula dependencies)
     /// </summary>
     /// <param name="param">The family parameter</param>
     /// <param name="doc">The family document</param>
-    /// <returns>The associated elements</returns>
+    /// <returns>True if the parameter has any associations</returns>
     public static bool HasAssociation(this FamilyParameter param, FamilyDocument doc) =>
         param.AssociatedParameters.Cast<Parameter>().Any() || param.AssociatedArrays(doc).Any() ||
-        param.AssociatedDimensions(doc).Any() || param.AssociatedFamilyParameters(doc).Any();
+        param.AssociatedDimensions(doc).Any() || param.AssociatedConnectors(doc).Any() ||
+        param.AssociatedFamilyParameters(doc).Any();
 }

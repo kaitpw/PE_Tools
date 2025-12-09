@@ -1,3 +1,4 @@
+#nullable enable
 using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamDocument.SetValue.CoercionStrategies;
 
@@ -16,7 +17,7 @@ public static class FamilyDocumentSetValue {
     /// <returns>
     ///     The mapped (target) parameter, or null if the source value is null.
     /// </returns>
-    public static FamilyParameter SetValue(this FamilyDocument famDoc,
+    public static FamilyParameter? SetValue(this FamilyDocument famDoc,
         FamilyParameter targetParam,
         FamilyParameter sourceParam,
         ParamCoercionStrategy strategy = ParamCoercionStrategy.Strict
@@ -56,7 +57,7 @@ public static class FamilyDocumentSetValue {
     /// <returns>
     ///     The mapped (target) parameter, or null if the source value is null.
     /// </returns>
-    public static FamilyParameter SetValue(this FamilyDocument famDoc,
+    public static FamilyParameter? SetValue(this FamilyDocument famDoc,
         FamilyParameter targetParam,
         object sourceValue,
         ValueCoercionStrategy strategy = ValueCoercionStrategy.Strict

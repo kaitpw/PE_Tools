@@ -32,7 +32,7 @@ public class SetParamValueAsFormula(AddFamilyParamsSettings settings, bool setOn
                 } // TODO: make this dependent on the p.DataType
 
                 if (this.Settings.OverrideExistingValues)
-                    doc.FamilyManager.SetFormula(parameter, $"\"{p.GlobalValue}\"");
+                    _ = doc.SetFormula(parameter, $"\"{p.GlobalValue}\"");
                 logs.Add(new LogEntry { Item = p.Name });
             } catch (Exception ex) {
                 logs.Add(new LogEntry { Item = p.Name, Error = ex.Message });

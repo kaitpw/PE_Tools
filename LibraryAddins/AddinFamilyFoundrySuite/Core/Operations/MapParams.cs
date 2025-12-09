@@ -38,7 +38,7 @@ public class MapParams : TypeOperation<RuntimeMapParamsSettings> {
                         });
                     }
 
-                    doc.FamilyManager.SetFormula(sourceParam, targetParam.Definition.Name);
+                    _ = doc.SetFormula(sourceParam, targetParam.Definition.Name);
                 }
 
                 this.Settings.MarkNewNameAsProcessed(mapping.NewName);

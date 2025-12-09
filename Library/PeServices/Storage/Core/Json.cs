@@ -65,6 +65,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
             var valErrs = this._schema.Validate(this.CurrJObject());
             if (valErrs.Any())
                 throw new JsonValidationException(this.FilePath, valErrs);
+            if (saveSchema) this.WriteSchema();
             return;
         }
 

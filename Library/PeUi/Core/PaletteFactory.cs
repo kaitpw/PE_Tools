@@ -68,6 +68,14 @@ public static class PaletteFactory {
             onCtrlReleased = options.OnCtrlReleased(vmRef);
         }
 
+        // Wire up selection changed callback if provided
+        if (options.OnSelectionChanged != null) {
+            viewModel.PropertyChanged += (_, e) => {
+                if (e.PropertyName == nameof(viewModel.SelectedItem))
+                    options.OnSelectionChanged(viewModel.SelectedItem);
+            };
+        }
+
         palette.Initialize(viewModel, actions, options.CustomKeyBindings, onCtrlReleased);
         return new EphemeralWindow(palette, title);
     }
@@ -172,4 +180,19 @@ public class PaletteOptions<TItem> where TItem : class, IPaletteListItem {
     ///     </code>
     /// </example>
     public Func<PaletteViewModel<TItem>, Action> OnCtrlReleased { get; init; }
+
+    /// <summary>
+    ///     Callback invoked when the selected item changes in the palette.
+    ///     Useful for highlighting or previewing the currently selected element.
+    ///     Default: null (no selection change behavior)
+    /// </summary>
+    /// <example>
+    ///     <code>
+    ///     OnSelectionChanged = item => {
+    ///         if (item?.ElementId != null)
+    ///             highlighter.Highlight(item.ElementId);
+    ///     }
+    ///     </code>
+    /// </example>
+    public Action<TItem> OnSelectionChanged { get; init; }
 }

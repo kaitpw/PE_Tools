@@ -11,29 +11,32 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
-        var polesParamName = this.Settings.SourceParameterNames.NumberOfPoles;
+        var polesName = this.Settings.SourceParameterNames.NumberOfPoles;
         var appPowerParamName = this.Settings.SourceParameterNames.ApparentPower;
-        var voltageParamName = this.Settings.SourceParameterNames.Voltage;
-        var mcaParamName = this.Settings.SourceParameterNames.MinimumCurrentAmpacity;
+        var voltageName = this.Settings.SourceParameterNames.Voltage;
+        var mcaName = this.Settings.SourceParameterNames.MinimumCurrentAmpacity;
 
         var mappings =
             new List<(string source, BuiltInParameter target, Action<FamilyDocument, FamilyParameter> action)> {
                 (
-                    voltageParamName,
+                    voltageName,
                     BuiltInParameter.RBS_ELEC_VOLTAGE,
                     null),
                 (
-                    polesParamName,
+                    polesName,
                     BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-                    (doc, numberOfPoles) => doc.FamilyManager.SetFormula(numberOfPoles, "2")
+                    (doc, numberOfPoles) => doc.SetFormula(numberOfPoles, "2")
                 ),
                 (
                     appPowerParamName,
                     BuiltInParameter.RBS_ELEC_APPARENT_LOAD,
                     (doc, apparentPower) => {
-                        if (string.IsNullOrEmpty(voltageParamName) || string.IsNullOrEmpty(mcaParamName)) return;
-                        doc.FamilyManager.SetFormula(apparentPower,
-                            $"{voltageParamName} * {mcaParamName} * 0.8 * if({polesParamName} = 3, sqrt(3), 1)");
+                        if (string.IsNullOrEmpty(voltageName) || string.IsNullOrEmpty(mcaName)) return;
+                        var formula = $"{voltageName} * {mcaName} * 0.8 * if({polesName} = 3, sqrt(3), 1)";
+                        // var formula = $"{voltageName} * {mcaName} * 0.8";
+
+                        Debug.WriteLine(formula);
+                        doc.SetFormula(apparentPower, formula);
                     }
                 )
             };
