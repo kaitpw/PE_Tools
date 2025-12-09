@@ -39,8 +39,7 @@ public class CmdFFMigrator : IExternalCommand {
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
             var mappingDataAllNames = profile.AddAndMapSharedParams.MappingData
                 .Select(m => m.CurrName)
-                .Concat(apsParamNames)
-                .ToList();
+                .Concat(apsParamNames);
 
             var addFamilyParamsSettings = new AddFamilyParamsSettings {
                 FamilyParamData = [
@@ -78,9 +77,9 @@ public class CmdFFMigrator : IExternalCommand {
             } else {
                 var logs = processor
                     .SelectFamilies(() => {
-                            var picked = Pickers.GetSelectedFamilies(uiDoc);
-                            return picked.Any() ? picked : profile.GetFamilies(doc);
-                        }
+                        var picked = Pickers.GetSelectedFamilies(uiDoc);
+                        return picked.Any() ? picked : profile.GetFamilies(doc);
+                    }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(

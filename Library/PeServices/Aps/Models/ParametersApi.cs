@@ -4,8 +4,14 @@ using Newtonsoft.Json;
 namespace PeServices.Aps.Models;
 
 public class ParametersApi {
+    public class Pagination {
+        [UsedImplicitly] public int Offset { get; init; }
+        [UsedImplicitly] public int Limit { get; init; }
+        [UsedImplicitly] public int TotalResults { get; init; }
+    }
+
     public class Groups {
-        [UsedImplicitly] public object Pagination { get; init; }
+        [UsedImplicitly] public Pagination Pagination { get; init; }
         [UsedImplicitly] public List<GroupResults> Results { get; init; }
 
         public class GroupResults {
@@ -20,7 +26,7 @@ public class ParametersApi {
     }
 
     public class Collections {
-        [UsedImplicitly] public object Pagination { get; init; }
+        [UsedImplicitly] public Pagination Pagination { get; init; }
 
         [UsedImplicitly] public List<CollectionResults> Results { get; init; }
 
@@ -43,6 +49,7 @@ public class ParametersApi {
     }
 
     public class Parameters {
+        [UsedImplicitly] public Pagination Pagination { get; init; }
         [UsedImplicitly] public List<ParametersResult> Results { get; set; }
 
         public class ParametersResult {

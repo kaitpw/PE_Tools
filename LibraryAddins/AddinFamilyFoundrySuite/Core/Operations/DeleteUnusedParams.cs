@@ -5,11 +5,11 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
-    public DeleteUnusedParams(DeleteUnusedParamsSettings settings, List<string> ExcludeNamesEqualing) :
+    public DeleteUnusedParams(DeleteUnusedParamsSettings settings, IEnumerable<string> ExcludeNamesEqualing) :
         base(settings) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
 
-    public List<string> ExternalExcludeNamesEqualing { get; set; } = [];
+    public IEnumerable<string> ExternalExcludeNamesEqualing { get; set; } = [];
     public override string Description => "Recursively delete unused parameters from the family";
 
     public override OperationLog Execute(FamilyDocument doc) {
@@ -20,10 +20,11 @@ public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
 
     private void RecursiveDelete(FamilyDocument doc, List<LogEntry> logs) {
         var deleteCount = 0;
+        var excludeSet = this.ExternalExcludeNamesEqualing.ToHashSet();
 
         var parameters = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
-            .Where(p => !this.ExternalExcludeNamesEqualing.Contains(p.Definition.Name))
+            .Where(p => !excludeSet.Contains(p.Definition.Name))
             .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
             .Where(this.Settings.Filter)
             .OrderByDescending(p => p.Formula?.Length ?? 0)

@@ -4,42 +4,49 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 
-public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
+public class MapAndAddSharedParams : OperationGroup<RuntimeMapParamsSettings> {
     public MapAndAddSharedParams(
         MapParamsSettings settings,
-        List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+    ) : this(new RuntimeMapParamsSettings(settings.MappingData), sharedParams) {
+    }
+
+    private MapAndAddSharedParams(
+        RuntimeMapParamsSettings runtimeSettings,
+        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
     ) : base(
         "Map and add shared parameters (replace, add unmapped, and remap)",
         [
-            new MapReplaceParams(settings, sharedParams),
-            new AddUnmappedSharedParams(settings, sharedParams),
-            new MapParams(settings)
+            new MapReplaceParams(runtimeSettings, sharedParams),
+            new AddUnmappedSharedParams(runtimeSettings, sharedParams),
+            new MapParams(runtimeSettings)
         ]
     ) {
     }
 }
 
-public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
-    private readonly List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
+public class AddUnmappedSharedParams : DocOperation<RuntimeMapParamsSettings> {
+    private readonly IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
         _sharedParams;
 
     public AddUnmappedSharedParams(
+        RuntimeMapParamsSettings runtimeSettings,
+        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+    ) : base(runtimeSettings) => this._sharedParams = sharedParams;
+
+    public AddUnmappedSharedParams(
         MapParamsSettings settings,
-        List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
-    ) : base(settings) => this._sharedParams = sharedParams;
+        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+    ) : this(new RuntimeMapParamsSettings(settings.MappingData), sharedParams) { }
 
     public override string Description =>
         "Add shared parameters that are not already processed by a previous operation";
 
     public override OperationLog Execute(FamilyDocument doc) {
-        // Compute skip list from already-processed mappings
-        var sharedParamsToSkip = this.Settings.MappingData
-            .Where(m => m.isProcessed)
-            .Select(m => m.NewName)
-            .ToList();
+        var processedParams = this.Settings.ProcessedMappingData.Select(m => m.NewName).ToHashSet();
+        var addParams = this._sharedParams.Where(p => !processedParams.Contains(p.externalDefinition.Name));
 
-        var addsharedParams =
-            new AddSharedParams(this._sharedParams, sharedParamsToSkip) { Name = this.Name };
-        return addsharedParams.Execute(doc);
+        var addSharedParams = new AddSharedParams(addParams) { Name = this.Name };
+        return addSharedParams.Execute(doc);
     }
 }

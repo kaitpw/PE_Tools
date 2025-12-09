@@ -40,8 +40,7 @@ public class CmdFFTagMigrator : IExternalCommand {
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
             var mappingDataAllNames = profile.AddAndMapSharedParams.MappingData
                 .Select(m => m.CurrName)
-                .Concat(apsParamNames)
-                .ToList();
+                .Concat(apsParamNames);
 
             var addFamilyParamsSettings = new AddFamilyParamsSettings {
                 FamilyParamData = [
@@ -121,7 +120,8 @@ public class DebugLogAnnoInfo : DocOperation {
 
             if (categoryName != "Generic Annotations") {
                 logs.Add(new LogEntry {
-                    Item = "Category Check", Error = $"Family is not a Generic Annotation (found: {categoryName})"
+                    Item = "Category Check",
+                    Error = $"Family is not a Generic Annotation (found: {categoryName})"
                 });
                 return new OperationLog(this.Name, logs);
             }

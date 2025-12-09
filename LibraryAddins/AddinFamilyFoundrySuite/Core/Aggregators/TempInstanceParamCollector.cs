@@ -4,10 +4,8 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators;
 ///     Collects parameter metadata by placing a temporary family instance and rolling back.
 ///     This is more performant than EditFamily for read-only parameter inspection.
 /// </summary>
-public class TempInstanceParamCollector : IFamilyParamCollector
-{
-    public List<ParamCollectionResult> CollectParams(Document doc, Family family)
-    {
+public class TempInstanceParamCollector : IFamilyParamCollector {
+    public List<ParamCollectionResult> CollectParams(Document doc, Family family) {
         var results = new List<ParamCollectionResult>();
 
         var symbol = GetFirstSymbol(family);
@@ -16,8 +14,7 @@ public class TempInstanceParamCollector : IFamilyParamCollector
         using var tx = new Transaction(doc, "Temp Instance for Param Collection");
         _ = tx.Start();
 
-        try
-        {
+        try {
             if (!symbol.IsActive) symbol.Activate();
 
             var tempInstance = doc.Create.NewFamilyInstance(
@@ -25,8 +22,7 @@ public class TempInstanceParamCollector : IFamilyParamCollector
                 symbol,
                 Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
 
-            if (tempInstance == null)
-            {
+            if (tempInstance == null) {
                 _ = tx.RollBack();
                 return results;
             }
@@ -35,15 +31,13 @@ public class TempInstanceParamCollector : IFamilyParamCollector
             var instanceParams = tempInstance.GetOrderedParameters()
                 .Where(p => p.Definition != null);
 
-            foreach (var p in instanceParams)
-            {
+            foreach (var p in instanceParams) {
                 var result = CreateResult(p, isInstance: true);
                 if (result != null) results.Add(result);
             }
 
             // Collect type parameters via Symbol
-            foreach (Parameter p in tempInstance.Symbol.Parameters)
-            {
+            foreach (Parameter p in tempInstance.Symbol.Parameters) {
                 if (p.Definition == null) continue;
 
                 // Skip if we already have this param from instance (avoid duplicates)
@@ -52,9 +46,7 @@ public class TempInstanceParamCollector : IFamilyParamCollector
                 var result = CreateResult(p, isInstance: false);
                 if (result != null) results.Add(result);
             }
-        }
-        finally
-        {
+        } finally {
             // Always rollback - instance is never committed
             if (tx.HasStarted()) _ = tx.RollBack();
         }
@@ -62,30 +54,24 @@ public class TempInstanceParamCollector : IFamilyParamCollector
         return results;
     }
 
-    private static FamilySymbol? GetFirstSymbol(Family family)
-    {
+    private static FamilySymbol? GetFirstSymbol(Family family) {
         var symbolIds = family.GetFamilySymbolIds();
         if (symbolIds == null || symbolIds.Count == 0) return null;
 
         return family.Document.GetElement(symbolIds.First()) as FamilySymbol;
     }
 
-    private static ParamCollectionResult? CreateResult(Parameter param, bool isInstance)
-    {
+    private static ParamCollectionResult? CreateResult(Parameter param, bool isInstance) {
         var definition = param.Definition;
         if (definition == null) return null;
 
         var isBuiltIn = ParameterUtils.IsBuiltInParameter(param.Id);
         Guid? sharedGuid = null;
 
-        if (param.IsShared)
-        {
-            try
-            {
+        if (param.IsShared) {
+            try {
                 sharedGuid = param.GUID;
-            }
-            catch
-            {
+            } catch {
                 // GUID access can throw if parameter is not actually shared
             }
         }

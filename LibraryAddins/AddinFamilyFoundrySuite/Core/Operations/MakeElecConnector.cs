@@ -19,6 +19,10 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
         var mappings =
             new List<(string source, BuiltInParameter target, Action<FamilyDocument, FamilyParameter> action)> {
                 (
+                    voltageParamName,
+                    BuiltInParameter.RBS_ELEC_VOLTAGE,
+                    null),
+                (
                     polesParamName,
                     BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
                     (doc, numberOfPoles) => doc.FamilyManager.SetFormula(numberOfPoles, "2")
@@ -31,11 +35,7 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
                         doc.FamilyManager.SetFormula(apparentPower,
                             $"{voltageParamName} * {mcaParamName} * 0.8 * if({polesParamName} = 3, sqrt(3), 1)");
                     }
-                ),
-                (
-                    voltageParamName,
-                    BuiltInParameter.RBS_ELEC_VOLTAGE,
-                    null)
+                )
             };
 
         try {
@@ -149,7 +149,7 @@ public class MakeElecConnectorSettings : IOperationSettings {
     public class Parameters {
         [Required] public string NumberOfPoles { get; init; } = "PE_E___NumberOfPoles";
         [Required] public string ApparentPower { get; init; } = "PE_E___ApparentPower";
-        [Required] public string MinimumCurrentAmpacity { get; init; } = "PE_E___MinimumCurrentAmpacity";
+        [Required] public string MinimumCurrentAmpacity { get; init; } = "PE_E___MCA";
         [Required] public string Voltage { get; init; } = "PE_E___Voltage";
     }
 }

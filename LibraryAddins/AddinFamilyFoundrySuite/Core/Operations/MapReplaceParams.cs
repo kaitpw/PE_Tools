@@ -4,23 +4,29 @@ using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapReplaceParams : DocOperation<MapParamsSettings> {
+public class MapReplaceParams : DocOperation<RuntimeMapParamsSettings> {
     private readonly
         Dictionary<string, (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
         _sharedParamsDict;
 
     public MapReplaceParams(
+        RuntimeMapParamsSettings runtimeSettings,
+        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+    ) : base(runtimeSettings) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
+
+    public MapReplaceParams(
         MapParamsSettings settings,
-        List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
-    ) : base(settings) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
+        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+    ) : this(new RuntimeMapParamsSettings(settings.MappingData), sharedParams) { }
 
     public override string Description => "Replace a family's existing parameters with APS shared parameters";
 
     public override OperationLog Execute(FamilyDocument doc) {
+        this.Settings.Reset();
         var logs = new List<LogEntry>();
         var fm = doc.FamilyManager;
 
-        foreach (var mapping in this.Settings.MappingData) {
+        foreach (var mapping in this.Settings.UnProcessedMappingData) {
             if (!this._sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam)) {
                 logs.Add(new LogEntry { Item = mapping.NewName, Error = "APS parameter not found in cache" });
                 continue;
@@ -28,17 +34,9 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
 
             try {
                 var currentParam = fm.FindParameter(mapping.CurrName);
-                if (currentParam == null) continue; // skip silently, errors will show in MapParams operation
+                if (currentParam == null) continue;
                 if (ParameterUtils.IsBuiltInParameter(currentParam.Id)) {
                     continue;
-
-                    // TODO: Make another operation that will replace uses of builtin parameters with shared parameters, then delete the builtin.
-                    // if (currentParam.StorageType == StorageType.String) continue;
-
-                    // if (currentParam.AssociatedParameters.Cast<Parameter>().Any()) continue;
-                    // if (currentParam.AssociatedArrays(doc).Any()) continue;
-                    // if (currentParam.AssociatedDimensions(doc).Any()) continue;
-                    // if (currentParam.AssociatedFamilyParameters(doc, true).Any()) continue;
                 }
 
                 if (currentParam.Definition.GetDataType() != sharedParam.externalDefinition.GetDataType()) continue;
@@ -49,7 +47,7 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                     sharedParam.groupTypeId,
                     sharedParam.isInstance
                 );
-                this.Settings.MappingData.First(m => m.NewName == mapping.NewName).isProcessed = true;
+                this.Settings.MarkNewNameAsProcessed(mapping.NewName);
                 logs.Add(new LogEntry { Item = $"{mapping.CurrName} → {replaced.Definition.Name}" });
             } catch (Exception ex) {
                 logs.Add(new LogEntry { Item = mapping.NewName, Error = ex.Message });
