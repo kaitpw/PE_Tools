@@ -148,15 +148,65 @@ Other important notes related to compilation troubleshooting are:
 2. OnAssemblyResolve in `App.cs` is crucial because wpf-ui cannot be resolved on
    its own.
 
-### Generic Classes and XAML Inheritance
+### Assembly Loading and BAML Resource Lookup (CRITICAL)
+
+WPF's `InitializeComponent()` uses `Application.LoadComponent(this, uri)` which
+internally calls `this.GetType().Assembly` to find BAML resources. This creates
+two failure modes in Revit add-ins:
+
+#### Failure Mode 1: Assembly Load Context Mismatch (Duplicate Loading)
+
+The problem is **loading the same assembly multiple times**, NOT `LoadFrom`
+itself. When `AssemblyResolve` fires multiple times for the same assembly (due
+to GC pressure, certain command sequences, or Revit internals), each call to
+`LoadFrom` creates a new assembly instance. Types from different instances are
+considered DIFFERENT even if identical - this breaks BAML resource lookup.
+
+**Symptom**: Error like "component does not have a resource identified by URI"
+that appears intermittently after Revit has been open for a while.
+
+**Wrong:**
+
+```csharp
+private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
+    var path = Path.Combine(addinDir, $"{name}.dll");
+    return Assembly.LoadFrom(path);  // BROKEN if called multiple times!
+}
+```
+
+**Also Wrong** (for WPF assemblies):
+
+```csharp
+// Assembly.Load(bytes) creates anonymous context - types NEVER unify
+return Assembly.Load(File.ReadAllBytes(path));  // Breaks WPF style TargetType matching!
+```
+
+**Correct:**
+
+```csharp
+private static readonly Dictionary<string, Assembly> _cache = new();
+
+private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
+    var name = new AssemblyName(args.Name).Name;
+    
+    // Return cached or already-loaded assembly first - CRITICAL!
+    if (_cache.TryGetValue(name, out var cached)) return cached;
+    foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+        if (asm.GetName().Name == name) return _cache[name] = asm;
+    
+    // LoadFrom is fine for FIRST load - the caching above prevents duplicates
+    var path = Path.Combine(addinDir, $"{name}.dll");
+    if (!File.Exists(path)) return null;
+    return _cache[name] = Assembly.LoadFrom(path);
+}
+```
+
+#### Failure Mode 2: Generic Classes Inheriting XAML Partials
 
 **Generic classes CANNOT inherit from XAML-backed partial classes.** When
 `InitializeComponent()` runs, WPF uses `this.GetType()` to locate BAML
 resources. If `this` is a generic type like `MyControl<T>`, WPF looks for XAML
 compiled for that generic type—which doesn't exist.
-
-This bug is insidious: it may work initially due to WPF's internal caching, then
-fail intermittently after Revit has been open for a while.
 
 **Wrong:**
 

@@ -97,28 +97,56 @@ internal class App : IExternalApplication {
         DocumentManager.Instance.OnDocumentClosed(e.Document);
     }
 
+    // Cache resolved assemblies to prevent loading the same assembly multiple times
+    // which would create duplicate types in different load contexts and break WPF BAML lookup
+    private static readonly Dictionary<string, Assembly> _resolvedAssemblies = new();
+
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
         Debug.WriteLine($"Assembly Resolution Requested: {args.Name}");
 
-        // Get the assembly name being requested
         var assemblyName = new AssemblyName(args.Name);
+        var simpleName = assemblyName.Name;
+
+        // Return cached assembly if we've already resolved this one
+        if (_resolvedAssemblies.TryGetValue(simpleName, out var cached))
+            return cached;
+
+        // Check if already loaded in the current AppDomain first
+        // This prevents creating duplicate assembly instances in different load contexts
+        var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+        foreach (var loaded in loadedAssemblies) {
+            if (loaded.GetName().Name == simpleName) {
+                _resolvedAssemblies[simpleName] = loaded;
+                Debug.WriteLine($"Using already-loaded assembly: {loaded.FullName}");
+                return loaded;
+            }
+        }
 
         // Get the directory where this add-in's DLL is located
         var addinPath = typeof(App).Assembly.Location;
         var addinDirectory = Path.GetDirectoryName(addinPath);
         if (addinDirectory is null) return null;
 
-        // Construct the path to the requested assembly
-        var assemblyPath = Path.Combine(addinDirectory, $"{assemblyName.Name}.dll");
+        var assemblyPath = Path.Combine(addinDirectory, $"{simpleName}.dll");
 
-        // Load and return the assembly if it exists in our add-in directory
-        if (File.Exists(assemblyPath)) {
-            Debug.WriteLine($"Loading assembly from: {assemblyPath}");
-            return Assembly.LoadFrom(assemblyPath);
+        if (!File.Exists(assemblyPath)) {
+            Debug.WriteLine($"Assembly not found in add-in directory: {assemblyPath}");
+            return null;
         }
 
-        Debug.WriteLine($"Assembly not found in add-in directory: {assemblyPath}");
-        return null;
+        // Use LoadFrom for first-time loads. The key insight is that LoadFrom itself
+        // isn't the problem - the problem was calling LoadFrom MULTIPLE TIMES for the
+        // same assembly, creating duplicate instances in different load contexts.
+        // With the caching and already-loaded checks above, this only runs once per assembly.
+        // 
+        // NOTE: Do NOT use Assembly.Load(bytes) here - that creates an anonymous/neither
+        // context where types are completely isolated and will never match XAML-compiled
+        // type references, breaking WPF styles with "TargetType does not match" errors.
+        Debug.WriteLine($"Loading assembly via LoadFrom (first time): {assemblyPath}");
+        var resolved = Assembly.LoadFrom(assemblyPath);
+
+        _resolvedAssemblies[simpleName] = resolved;
+        return resolved;
     }
 }
 
