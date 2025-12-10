@@ -14,6 +14,9 @@ public class MapParams : TypeOperation<RuntimeMapParamsSettings> {
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
+        Debug.WriteLine("MAP PARAMS: Unprocessed mapping data:");
+        this.Settings.LogUnProcessedMappingData();
+
         foreach (var mapping in this.Settings.UnProcessedMappingData) {
             var mappingDesc = $"{mapping.CurrName} → {mapping.NewName}";
 
@@ -21,6 +24,7 @@ public class MapParams : TypeOperation<RuntimeMapParamsSettings> {
                 var sourceParam = doc.FamilyManager.FindParameter(mapping.CurrName);
                 var targetParam = doc.FamilyManager.FindParameter(mapping.NewName);
 
+                if (sourceParam is null) continue;
                 if (sourceParam is null || targetParam is null) {
                     var notFoundParam = sourceParam is null ? mapping.CurrName : mapping.NewName;
                     logs.Add(new LogEntry { Item = mappingDesc, Error = $"{notFoundParam} not found in the family" });

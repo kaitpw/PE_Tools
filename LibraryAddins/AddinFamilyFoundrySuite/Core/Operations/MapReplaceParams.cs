@@ -26,6 +26,9 @@ public class MapReplaceParams : DocOperation<RuntimeMapParamsSettings> {
         var logs = new List<LogEntry>();
         var fm = doc.FamilyManager;
 
+        Debug.WriteLine("MAP REPLACE PARAMS: Unprocessed mapping data:");
+        this.Settings.LogUnProcessedMappingData();
+
         foreach (var mapping in this.Settings.UnProcessedMappingData) {
             if (!this._sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam)) {
                 logs.Add(new LogEntry { Item = mapping.NewName, Error = "APS parameter not found in cache" });
@@ -33,11 +36,14 @@ public class MapReplaceParams : DocOperation<RuntimeMapParamsSettings> {
             }
 
             try {
+                // Validate current parameter exists and is not built-in param. 
                 var currentParam = fm.FindParameter(mapping.CurrName);
                 if (currentParam == null) continue;
-                if (ParameterUtils.IsBuiltInParameter(currentParam.Id)) {
-                    continue;
-                }
+                if (ParameterUtils.IsBuiltInParameter(currentParam.Id)) continue;
+
+                // Verify that new parameter does not already exist, replacement errors if it does
+                if (fm.FindParameter(mapping.NewName) != null) continue;
+
 
                 if (currentParam.Definition.GetDataType() != sharedParam.externalDefinition.GetDataType()) continue;
 

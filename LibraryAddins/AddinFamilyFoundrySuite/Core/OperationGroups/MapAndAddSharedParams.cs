@@ -43,8 +43,16 @@ public class AddUnmappedSharedParams : DocOperation<RuntimeMapParamsSettings> {
         "Add shared parameters that are not already processed by a previous operation";
 
     public override OperationLog Execute(FamilyDocument doc) {
-        var processedParams = this.Settings.ProcessedMappingData.Select(m => m.NewName).ToHashSet();
-        var addParams = this._sharedParams.Where(p => !processedParams.Contains(p.externalDefinition.Name));
+        var processedParams = this.Settings.ProcessedMappingData
+            .Select(m => m.NewName)
+            .ToHashSet();
+        var existingParams = doc.FamilyManager.Parameters
+            .OfType<FamilyParameter>()
+            .Select(p => p.Definition.Name)
+            .ToHashSet();
+        var addParams = this._sharedParams
+            .Where(p => !processedParams.Contains(p.externalDefinition.Name))
+            .Where(p => !existingParams.Contains(p.externalDefinition.Name));
 
         var addSharedParams = new AddSharedParams(addParams) { Name = this.Name };
         return addSharedParams.Execute(doc);

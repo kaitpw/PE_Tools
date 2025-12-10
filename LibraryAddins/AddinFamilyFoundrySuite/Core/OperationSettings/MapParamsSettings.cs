@@ -44,6 +44,13 @@ public class RuntimeMapParamsSettings : IOperationSettings {
     public IEnumerable<MappingData> ProcessedMappingData =>
         this._materializedMappings.Where(m => m.IsProcessed);
 
+    // TODO: remove later
+    public void LogUnProcessedMappingData() {
+        foreach (var mapping in this.UnProcessedMappingData) {
+            Debug.WriteLine($"Unprocessed mapping: {mapping.CurrName} → {mapping.NewName}");
+        }
+    }
+
     public void MarkNewNameAsProcessed(string newName) {
         foreach (var mapping in this._materializedMappings.Where(m => m.NewName == newName)) {
             mapping.IsProcessed = true;
