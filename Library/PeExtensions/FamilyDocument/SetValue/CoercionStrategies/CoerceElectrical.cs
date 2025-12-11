@@ -20,7 +20,7 @@ public class CoerceElectrical : ICoercionStrategy {
             var t when t == SpecTypeId.Number => context.SourceValue as double? ?? 0,
             var t when t == SpecTypeId.Int.Integer => context.SourceValue as int? ?? 0,
             _ => throw new ArgumentException(
-                $"Unsupported source type {context.SourceDataType} for electrical coercion")
+                $"Unsupported source type {LabelUtils.GetLabelForSpec(context.SourceDataType)} for electrical coercion")
         };
 
         var convertedVal = UnitUtils.ConvertToInternalUnits(currVal, context.TargetUnitType);

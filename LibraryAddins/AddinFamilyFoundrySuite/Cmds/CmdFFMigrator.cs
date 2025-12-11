@@ -41,25 +41,41 @@ public class CmdFFMigrator : IExternalCommand {
                 .Select(m => m.CurrName)
                 .Concat(apsParamNames);
 
-            var addFamilyParamsSettings = new AddFamilyParamsSettings {
-                FamilyParamData = [
-                    new FamilyParamModel {
+            var addTimestamp = new AddAndSetParamsSettings {
+                Parameters = [
+                    new SetParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
                         PropertiesGroup = new ForgeTypeId(""),
                         DataType = SpecTypeId.String.Text,
                         IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy_MM_dd HH:mm:ss")
+                        ValueOrFormula = DateTime.Now.ToString("yyyy_MM_dd HH:mm:ss")
                     }
                 ]
             };
+
+            var addFamParams = new AddAndSetParamsSettings {
+                Parameters = [
+                    new SetParamModel {
+                        Name = "PE_E___NumberOfPoles",
+                        ValueOrFormula = "if(PE_E___Voltage = 120, 1, if(PE_E___Voltage = 208, 2, (if(PE_E___Voltage = 240, 2, 1))))"
+                    },
+                    new SetParamModel {
+                        Name = "PE_E___ApparentPower",
+                        ValueOrFormula = "PE_E___Voltage * PE_E___MCA * 0.8 * if(PE_E___NumberOfPoles = 3, sqrt(3), 1)"
+                    }
+                ]
+            };
+
 
             var queue = new OperationQueue()
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, mappingDataAllNames))
                 .Add(new DeleteUnusedNestedFamilies(profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
+                .Add(new UnwrapFormulas(apsParamNames))
+                .Add(new AddAndSetParams(addFamParams))
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, apsParamNames))
-                .Add(new SetParamValueAsValue(addFamilyParamsSettings, false));
+                .Add(new AddAndSetParams(addTimestamp));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -77,9 +93,9 @@ public class CmdFFMigrator : IExternalCommand {
             } else {
                 var logs = processor
                     .SelectFamilies(() => {
-                            var picked = Pickers.GetSelectedFamilies(uiDoc);
-                            return picked.Any() ? picked : profile.GetFamilies(doc);
-                        }
+                        var picked = Pickers.GetSelectedFamilies(uiDoc);
+                        return picked.Any() ? picked : profile.GetFamilies(doc);
+                    }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(

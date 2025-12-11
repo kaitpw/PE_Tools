@@ -1,10 +1,15 @@
 using Autodesk.Revit.DB.Electrical;
+using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperation<MakeElecConnectorSettings>(settings) {
+    /// <summary>Attempting to associate these will throw a "This parameter cannot be associated" exception.</summary>
+    public List<string> UnassociableConnParams =
+        ["Category", "System Type", "Power Factor State", "Design Option", "Family Name", "Type Name"];
+
     public override string Description =>
         "Configure electrical connector parameters and associate them with family parameters";
 
@@ -16,99 +21,72 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
         var voltageName = this.Settings.SourceParameterNames.Voltage;
         var mcaName = this.Settings.SourceParameterNames.MinimumCurrentAmpacity;
 
-        var mappings =
-            new List<(string source, BuiltInParameter target, Action<FamilyDocument, FamilyParameter> action)> {
-                (
-                    voltageName,
-                    BuiltInParameter.RBS_ELEC_VOLTAGE,
-                    null),
-                (
-                    polesName,
-                    BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES,
-                    (doc, numberOfPoles) => doc.SetFormula(numberOfPoles, "2")
-                ),
-                (
-                    appPowerParamName,
-                    BuiltInParameter.RBS_ELEC_APPARENT_LOAD,
-                    (doc, apparentPower) => {
-                        if (string.IsNullOrEmpty(voltageName) || string.IsNullOrEmpty(mcaName)) return;
-                        var formula = $"{voltageName} * {mcaName} * 0.8 * if({polesName} = 3, sqrt(3), 1)";
-                        // var formula = $"{voltageName} * {mcaName} * 0.8";
+        FamilyParameter GetSourceParameter(string name) =>
+            doc.FamilyManager.Parameters
+                .OfType<FamilyParameter>()
+                .FirstOrDefault(fp => fp.Definition.Name == name);
 
-                        Debug.WriteLine(formula);
-                        doc.SetFormula(apparentPower, formula);
-                    }
-                )
+        // TODO: Figure out PE_E___LoadClassification migration!!!!!!!!!
+        // Note: Load Classification (RBS_ELEC_LOAD_CLASSIFICATION) is intentionally NOT mapped here.
+        // Load Classification is a Reference type (SpecTypeId.Reference.LoadClassification) that requires
+        // an ElementId pointing to an ElectricalLoadClassification element. These elements only exist
+        // in project documents, not family documents, so we cannot set a default value in the family.
+        // Load Classification must be set at the project level when family instances are placed.
+        var targetMappings =
+            new Dictionary<BuiltInParameter, FamilyParameter> {
+                { BuiltInParameter.RBS_ELEC_VOLTAGE, GetSourceParameter(voltageName) },
+                { BuiltInParameter.RBS_ELEC_NUMBER_OF_POLES, GetSourceParameter(polesName) },
+                { BuiltInParameter.RBS_ELEC_APPARENT_LOAD, GetSourceParameter(appPowerParamName) }
             };
 
-        try {
-            var connectorElements = new FilteredElementCollector(doc)
-                .OfClass(typeof(ConnectorElement))
-                .Cast<ConnectorElement>()
-                .Where(ce => ce.Domain == Domain.DomainElectrical)
-                .ToList();
+        var connectorElements = new FilteredElementCollector(doc)
+            .OfClass(typeof(ConnectorElement))
+            .Cast<ConnectorElement>()
+            .Where(ce => ce.Domain == Domain.DomainElectrical)
+            .ToList();
 
-            if (!connectorElements.Any()) {
-                connectorElements.Add(MakeElectricalConnector(doc));
-                logs.Add(new LogEntry { Item = "Create connector" });
-            }
+        if (!connectorElements.Any()) {
+            connectorElements.Add(MakeElectricalConnector(doc));
+            logs.Add(new LogEntry { Item = "Create connector" });
+        }
 
-            var targetMappings = mappings
-                .Where(m => !string.IsNullOrEmpty(m.source))
-                .ToDictionary(
-                    m => m.target,
-                    m => (
-                        doc.FamilyManager.Parameters
-                            .OfType<FamilyParameter>()
-                            .FirstOrDefault(fp => fp.Definition.Name == m.source),
-                        m.action
-                    )
-                );
-
-            foreach (var connectorElement in connectorElements) {
-                foreach (Parameter connectorParam in connectorElement.Parameters) {
-                    try {
-                        var bip = (BuiltInParameter)connectorParam.Id.Value();
-                        var currentAssociation = doc.FamilyManager.GetAssociatedFamilyParameter(connectorParam);
-
-                        if (targetMappings.TryGetValue(bip, out var mapping)) {
-                            var (sourceParam, _) = mapping;
-                            if (sourceParam == null) {
-                                logs.Add(new LogEntry { Item = $"Map {bip}", Error = "Parameter not found" });
-                                continue;
-                            }
-
-                            if (currentAssociation?.Id != sourceParam.Id) {
-                                doc.FamilyManager.AssociateElementParameterToFamilyParameter(connectorParam,
-                                    sourceParam);
-                                logs.Add(new LogEntry { Item = $"Map {sourceParam.Definition.Name}" });
-                            }
-                        } else if (currentAssociation != null) {
-                            doc.FamilyManager.AssociateElementParameterToFamilyParameter(connectorParam, null);
-                            logs.Add(new LogEntry { Item = $"Disassociate {currentAssociation.Definition.Name}" });
-                        }
-                    } catch (Exception ex) {
-                        logs.Add(
-                            new LogEntry { Item = $"Process {connectorParam.Definition.Name}", Error = ex.Message });
-                    }
-                }
-            }
-
-            foreach (var kvp in targetMappings) {
-                var (sourceParam, action) = kvp.Value;
-                if (sourceParam == null) continue;
-
-                try {
-                    action?.Invoke(doc, sourceParam);
-                } catch (Exception ex) {
-                    logs.Add(new LogEntry { Item = $"Action for {sourceParam.Definition.Name}", Error = ex.Message });
-                }
-            }
-        } catch (Exception ex) {
-            logs.Add(new LogEntry { Item = "Hydrate connector", Error = ex.Message });
+        foreach (var connectorElement in connectorElements) {
+            logs.AddRange(this.HandleConnectorParameters(doc, connectorElement.Parameters, targetMappings));
         }
 
         return new OperationLog(this.Name, logs);
+    }
+
+    private List<LogEntry> HandleConnectorParameters(FamilyDocument doc,
+        ParameterSet connectorParameters,
+        Dictionary<BuiltInParameter, FamilyParameter> targetMappings
+    ) {
+        List<LogEntry> logs = [];
+        foreach (Parameter targetParam in connectorParameters) {
+            if (this.UnassociableConnParams.Contains(targetParam.Definition.Name)) continue;
+            try {
+                var bip = targetParam.Definition.Cast<InternalDefinition>().BuiltInParameter;
+                var tgtAssociations = doc.FamilyManager.GetAssociatedFamilyParameter(targetParam);
+                _ = targetMappings.TryGetValue(bip, out var sourceParam);
+                if (sourceParam == null || tgtAssociations?.Id == sourceParam.Id) continue;
+
+                // Dissociate everything and it explicitly
+                if (tgtAssociations != null) {
+                    logs.Add(new LogEntry { Item = $"Unassociate {tgtAssociations.Definition.Name}" });
+                    doc.FamilyManager.AssociateElementParameterToFamilyParameter(targetParam, null);
+                }
+
+                // Associate only if we can
+                if (targetParam.Definition.GetDataType() == sourceParam.Definition.GetDataType()) {
+                    logs.Add(new LogEntry { Item = $"Associate {sourceParam.Definition.Name}" });
+                    doc.FamilyManager.AssociateElementParameterToFamilyParameter(targetParam, sourceParam);
+                }
+            } catch (Exception ex) {
+                logs.Add(new LogEntry { Item = $"{targetParam.Definition.Name}", Error = $"{ex} {ex.Message}" });
+            }
+        }
+
+        return logs;
     }
 
     /// <summary>
