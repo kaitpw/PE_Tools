@@ -42,7 +42,7 @@ public static class FamilyDocumentUnwrapFormula {
         var fm = doc.FamilyManager;
 
         // Get referenced parameters ONCE - don't iterate all params multiple times
-        var referencedParams = FamilyParameterFormulaUtils.GetReferencedParameters(formula, fm).ToList();
+        var referencedParams = FormulaUtils.GetReferencedParameters(formula, fm).ToList();
 
         // Case 1: Constant formula (no parameter references) - unwrap to value
         if (referencedParams.Count == 0)

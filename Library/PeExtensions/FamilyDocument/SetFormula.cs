@@ -1,6 +1,6 @@
 using PeExtensions.FamDocument;
 
-namespace PeExtensions;
+namespace PeExtensions.FamDocument;
 
 public static class Formula {
     /// <summary>
@@ -41,7 +41,7 @@ public static class Formula {
         var familyManager = famDoc.FamilyManager;
 
         // Validate all parameter-like tokens in the formula reference existing parameters
-        var invalidParams = FamilyParameterFormulaUtils.GetInvalidParameterReferences(formula, familyManager).ToList();
+        var invalidParams = FormulaUtils.GetInvalidParameterReferences(formula, familyManager).ToList();
         if (invalidParams.Any()) {
             throw new InvalidOperationException(
                 $"Cannot set formula on parameter '{targetParam.Name()}'. " +
@@ -50,7 +50,7 @@ public static class Formula {
 
         // Type parameters can only reference other type parameters
         if (!targetParam.IsInstance) {
-            var referencedParams = FamilyParameterFormulaUtils.GetReferencedParameters(formula, familyManager);
+            var referencedParams = FormulaUtils.GetReferencedParameters(formula, familyManager);
             var instanceParams = referencedParams.Where(p => p.IsInstance).ToList();
 
             if (instanceParams.Count > 0) {
@@ -62,7 +62,7 @@ public static class Formula {
         }
 
         // Check for circular references before Revit throws a cryptic error
-        var cycleResult = FamilyParameterFormulaUtils.DetectCycle(targetParam, formula, familyManager);
+        var cycleResult = FormulaUtils.DetectCycle(targetParam, formula, familyManager);
         if (cycleResult.WouldCycle) {
             var cyclePath = cycleResult.FormatCyclePath();
             var message = $"Cannot set formula '{formula}' on parameter '{targetParam.Name()}'. " +

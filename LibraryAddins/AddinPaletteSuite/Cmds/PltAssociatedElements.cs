@@ -2,6 +2,7 @@
 using AddinPaletteSuite.Helpers;
 using Autodesk.Revit.DB.Electrical;
 using PeExtensions.FamDocument;
+using PeExtensions.FamParameter;
 using PeUi.Core;
 using PeUi.Core.Services;
 using System.Windows.Media.Imaging;

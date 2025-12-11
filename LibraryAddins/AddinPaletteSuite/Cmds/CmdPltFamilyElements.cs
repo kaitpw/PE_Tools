@@ -3,6 +3,7 @@ using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinPaletteSuite.Helpers;
 using Autodesk.Revit.DB.Electrical;
 using PeExtensions.FamDocument;
+using PeExtensions.FamParameter;
 using PeServices.Storage;
 using PeUi.Core;
 using PeUi.Core.Services;
@@ -225,23 +226,33 @@ public class FamilyElementItem : IPaletteListItem {
 
         var dims = this.FamilyParam.AssociatedDimensions(this._familyDoc).ToList();
         lines.Add($"Dimensions: {dims.Count}");
+        foreach (var dim in dims) {
+            var dimType = dim.DimensionType?.Name ?? "Unknown Type";
+            lines.Add($"  - {dimType} (ID: {dim.Id})");
+        }
 
         var arrays = this.FamilyParam.AssociatedArrays(this._familyDoc).ToList();
         lines.Add($"Arrays: {arrays.Count}");
+        foreach (var array in arrays) {
+            lines.Add($"  - Array (ID: {array.Id})");
+        }
 
         var connectors = this.FamilyParam.AssociatedConnectors(this._familyDoc).ToList();
         lines.Add($"Connectors: {connectors.Count}");
+        foreach (var connector in connectors) {
+            lines.Add($"  - {connector.Domain} Connector (ID: {connector.Id})");
+        }
 
         var directParams = this.FamilyParam.AssociatedParameters.Cast<Parameter>().ToList();
         lines.Add($"Direct Element Params: {directParams.Count}");
+        foreach (var param in directParams) {
+            lines.Add($"  - {param.Definition.Name} (ID: {param.Id})");
+        }
 
         var formulaParams = this.FamilyParam.FormulaDependents(this._familyDoc).ToList();
         lines.Add($"Formula Dependents: {formulaParams.Count}");
-        if (formulaParams.Count > 0) {
-            foreach (var fp in formulaParams.Take(5))
-                lines.Add($"  - {fp.Definition.Name}");
-            if (formulaParams.Count > 5)
-                lines.Add($"  ... and {formulaParams.Count - 5} more");
+        foreach (var fp in formulaParams) {
+            lines.Add($"  - {fp.Definition.Name} (ID: {fp.Id})");
         }
 
         return string.Join(Environment.NewLine, lines);
@@ -249,7 +260,7 @@ public class FamilyElementItem : IPaletteListItem {
 
     #endregion
 
-    #region Connector Methods
+    #region Connector Methods 
 
     private string GetConnectorSecondary() {
         var associations = this.GetConnectorAssociations();

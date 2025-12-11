@@ -3,7 +3,7 @@ using Autodesk.Revit.DB.Mechanical;
 using Autodesk.Revit.DB.Plumbing;
 using PeExtensions.FamDocument;
 
-namespace PeExtensions;
+namespace PeExtensions.FamParameter;
 
 public static class FamilyParameterGetAssociated {
     /// <summary>

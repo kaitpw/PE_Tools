@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 
 namespace PeExtensions;
 
-public static class FamilyParameterFormulaUtils {
+public static class FormulaUtils {
     // Revit formula functions (case-insensitive)
     public static readonly HashSet<string> RevitFunctions = new(StringComparer.OrdinalIgnoreCase) {
         "sin",
@@ -57,13 +57,14 @@ public static class FamilyParameterFormulaUtils {
     }
 
     /// <summary>
-    ///     Gets all family parameters referenced in a formula string.
+    ///     Gets all family parameters referenced in THIS formula string.
     ///     Use this when validating a formula before setting it on a parameter.
     /// </summary>
-    /// <param name="formula">The formula string to analyze</param>
-    /// <param name="familyManager">The family manager containing all parameters</param>
     /// <returns>Collection of family parameters referenced in the formula</returns>
-    public static IEnumerable<FamilyParameter> GetReferencedParameters(string formula, FamilyManager familyManager) {
+    public static IEnumerable<FamilyParameter> GetReferencedParameters(
+        string formula,
+        FamilyManager familyManager
+    ) {
         if (string.IsNullOrWhiteSpace(formula))
             return [];
 
@@ -76,22 +77,21 @@ public static class FamilyParameterFormulaUtils {
     ///     Gets all family parameters that THIS parameter's formula references.
     ///     Direction: What do I depend on? (downstream dependencies)
     /// </summary>
-    /// <param name="param">The family parameter whose formula to analyze</param>
-    /// <param name="familyManager">The family manager containing all parameters</param>
     /// <returns>Collection of family parameters referenced in the formula, empty if no formula or no references</returns>
-    public static IEnumerable<FamilyParameter> FormulaDependencies(this FamilyParameter param,
-        FamilyManager familyManager) =>
-        GetReferencedParameters(param.Formula, familyManager);
+    public static IEnumerable<FamilyParameter> FormulaDependencies(
+        this FamilyParameter param,
+        FamilyManager familyManager
+    ) => GetReferencedParameters(param.Formula, familyManager);
 
     /// <summary>
     ///     Gets all family parameters that reference THIS parameter in their formulas.
     ///     Direction: Who depends on me? (upstream dependents)
     /// </summary>
-    /// <param name="param">The family parameter to find dependents for</param>
-    /// <param name="doc">The family document</param>
     /// <returns>Collection of family parameters that use this parameter in their formulas</returns>
-    public static IEnumerable<FamilyParameter> FormulaDependents(this FamilyParameter param, FamilyDocument doc) =>
-        doc.FamilyManager.Parameters
+    public static IEnumerable<FamilyParameter> FormulaDependents(
+        this FamilyParameter param,
+        FamilyDocument doc
+    ) => doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
             .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
             .Where(p => param.IsReferencedInFormula(p.Formula));
@@ -99,11 +99,9 @@ public static class FamilyParameterFormulaUtils {
     /// <summary>
     ///     Checks if this parameter's formula references another parameter.
     /// </summary>
-    /// <param name="param">The family parameter whose formula to check</param>
-    /// <param name="otherParam">The parameter to check for in the formula</param>
     /// <returns>True if otherParam is referenced in this parameter's formula</returns>
-    public static bool ReferencesParameter(this FamilyParameter param, FamilyParameter otherParam) {
-        var formula = param.Formula;
+    public static bool ReferencesParameter(this FamilyParameter thisParam, FamilyParameter otherParam) {
+        var formula = thisParam.Formula;
         if (string.IsNullOrWhiteSpace(formula))
             return false;
 
@@ -114,10 +112,11 @@ public static class FamilyParameterFormulaUtils {
     ///     Validates that all parameter-like tokens in a formula reference existing parameters.
     ///     Returns empty list if valid, otherwise returns the invalid parameter names.
     /// </summary>
-    /// <param name="formula">The formula string to validate</param>
-    /// <param name="familyManager">The family manager containing all parameters</param>
     /// <returns>Collection of invalid parameter names, empty if all tokens are valid</returns>
-    public static IEnumerable<string> GetInvalidParameterReferences(string formula, FamilyManager familyManager) {
+    public static IEnumerable<string> GetInvalidParameterReferences(
+        string formula,
+        FamilyManager familyManager
+    ) {
         if (string.IsNullOrWhiteSpace(formula))
             return [];
 
@@ -159,8 +158,6 @@ public static class FamilyParameterFormulaUtils {
     ///     Constant formulas include literals like "20", "7.75\"", "60 Hz", "\"text\"",
     ///     and constant expressions like "2 A + 5 A".
     /// </summary>
-    /// <param name="formula">The formula string to check</param>
-    /// <param name="familyManager">The family manager containing all parameters</param>
     /// <returns>True if the formula has no parameter references</returns>
     public static bool IsConstantFormula(string formula, FamilyManager familyManager) {
         if (string.IsNullOrWhiteSpace(formula)) return false;
