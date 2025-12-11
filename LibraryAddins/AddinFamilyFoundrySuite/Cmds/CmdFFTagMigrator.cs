@@ -39,17 +39,18 @@ public class CmdFFTagMigrator : IExternalCommand {
                 profile.ExecutionOptions);
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
             var mappingDataAllNames = profile.AddAndMapSharedParams.MappingData
-                .Select(m => m.CurrName)
+                .SelectMany(m => m.CurrName)
                 .Concat(apsParamNames);
 
-            var addFamilyParamsSettings = new AddFamilyParamsSettings {
-                FamilyParamData = [
-                    new FamilyParamModel {
+            var timestampSettings = new AddAndSetParamsSettings {
+                CreateFamParamIfMissing = true,
+                Parameters = [
+                    new SetParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
                         PropertiesGroup = new ForgeTypeId(""),
                         DataType = SpecTypeId.String.Text,
                         IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                        ValueOrFormula = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                     }
                 ]
             };
@@ -59,7 +60,7 @@ public class CmdFFTagMigrator : IExternalCommand {
                 .Add(new DeleteUnusedNestedFamilies(profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new DebugLogAnnoInfo())
-                .Add(new SetParamValueAsFormula(addFamilyParamsSettings));
+                .Add(new AddAndSetParams(timestampSettings));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);

@@ -38,7 +38,7 @@ public class CmdFFMigrator : IExternalCommand {
                 profile.ExecutionOptions);
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
             var mappingDataAllNames = profile.AddAndMapSharedParams.MappingData
-                .Select(m => m.CurrName)
+                .SelectMany(m => m.CurrName)
                 .Concat(apsParamNames);
 
             var addTimestamp = new AddAndSetParamsSettings {
@@ -57,7 +57,8 @@ public class CmdFFMigrator : IExternalCommand {
                 Parameters = [
                     new SetParamModel {
                         Name = "PE_E___NumberOfPoles",
-                        ValueOrFormula = "if(PE_E___Voltage = 120, 1, if(PE_E___Voltage = 208, 2, (if(PE_E___Voltage = 240, 2, 1))))"
+                        ValueOrFormula =
+                            "if(PE_E___Voltage = 120, 1, if(PE_E___Voltage = 208, 2, (if(PE_E___Voltage = 240, 2, 1))))"
                     },
                     new SetParamModel {
                         Name = "PE_E___ApparentPower",
@@ -71,9 +72,9 @@ public class CmdFFMigrator : IExternalCommand {
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, mappingDataAllNames))
                 .Add(new DeleteUnusedNestedFamilies(profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
-                .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
-                .Add(new UnwrapFormulas(apsParamNames))
                 .Add(new AddAndSetParams(addFamParams))
+                .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
+                // .Add(new UnwrapFormulas(apsParamNames))
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, apsParamNames))
                 .Add(new AddAndSetParams(addTimestamp));
 

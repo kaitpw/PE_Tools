@@ -1,11 +1,12 @@
 using PeExtensions.FamManager;
 
-namespace PeExtensions.FamDocument;
+namespace PeExtensions.FamDocument.GetValue;
 
 public static class FamilyManagerGetValue {
     /// <summary>
-    ///     Get a parameter value using the current family type. Returns null if the familyParameter is null.
+    ///     Get a parameter value using the current family type.
     /// </summary>
+    /// <returns>The parameter value, or null if the parameter is null or has no value</returns>
     /// <remarks>
     ///     Only use this when the type-safety of the parameter value is unimportant, like logging,
     ///     or for example when used in conjunction with the SetValue extension methods.
@@ -49,6 +50,18 @@ public static class FamilyManagerGetValue {
             StorageType.ElementId => famType.AsElementId(familyParameter),
             _ => null
         };
+    }
+
+    /// <summary>
+    ///     Checks if a parameter has a value set, either via a formula or a direct value.
+    /// </summary>
+    /// <param name="doc">The family document</param>
+    /// <param name="param">The parameter to check</param>
+    /// <returns>True if the parameter has a value set, false otherwise</returns>
+    public static bool HasValue(this FamilyDocument doc, FamilyParameter param) {
+        if (!string.IsNullOrWhiteSpace(param.Formula)) return true;
+        var value = doc.GetValue(param);
+        return value is not null;
     }
 
     /// <summary>

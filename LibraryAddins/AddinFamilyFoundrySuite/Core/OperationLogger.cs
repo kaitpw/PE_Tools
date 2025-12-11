@@ -81,9 +81,7 @@ public class OperationLogger {
 
                         return new Dictionary<string, object> {
                             ["OperationName"] = log.OperationName,
-                            ["SecondsElapsed"] = Math.Round(log.MsElapsed / 1000.0, 3),
-                            ["SuccessCount"] = log.SuccessCount,
-                            ["FailedCount"] = log.FailedCount,
+                            ["Success/Total"] = $"{log.SuccessCount}/{log.SuccessCount + log.FailedCount}",
                             ["Errors"] = groupedErrors
                         };
                     }).ToList()
@@ -94,6 +92,7 @@ public class OperationLogger {
         // Detailed log with all entries
         var detailed = new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            TotalSecondsElapsed = Math.Round(totalMs / 1000.0, 3),
             ProcessedFamilies = familyResults.Select(output => {
                 var (logs, err) = output.Logs;
                 var operationLogs = err != null ? new List<OperationLog>() : logs;
@@ -101,6 +100,7 @@ public class OperationLogger {
                     output.FamilyName,
                     Operations = operationLogs.Select(log => new {
                         log.OperationName,
+                        SecondsElapsed = Math.Round(log.MsElapsed / 1000.0, 3),
                         Successes = log.Entries.Where(e => e.Error == null)
                             .GroupBy(e => new { e.Item, e.Error })
                             .Select(g => {

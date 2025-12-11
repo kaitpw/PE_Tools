@@ -1,4 +1,5 @@
 #nullable enable
+using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
 using PeExtensions.PolyFill;
@@ -70,7 +71,7 @@ public static class ParamRelationshipDialog {
         });
 
         _ = headerPanel.Children.Add(new TextBlock {
-            Text = $"{param.GetTypeInstanceDesignation()} • {LabelUtils.GetLabelForSpec(param.Definition.GetDataType())}",
+            Text = $"{param.GetTypeInstanceDesignation()} • {param.Definition.GetDataType().ToLabel()}",
             FontSize = 12,
             Foreground = new SolidColorBrush(WpfColor.FromRgb(180, 180, 180)),
             Margin = new Thickness(0, 4, 0, 0)
@@ -104,7 +105,7 @@ public static class ParamRelationshipDialog {
 
         var item = new TreeViewItem {
             Header = CreateItemHeader(param.Definition.Name, "Parameter",
-                $"{param.GetTypeInstanceDesignation()} • {LabelUtils.GetLabelForSpec(param.Definition.GetDataType())}"),
+                $"{param.GetTypeInstanceDesignation()} • {param.Definition.GetDataType().ToLabel()}"),
             IsExpanded = depth < 2,
             Foreground = Brushes.White
         };

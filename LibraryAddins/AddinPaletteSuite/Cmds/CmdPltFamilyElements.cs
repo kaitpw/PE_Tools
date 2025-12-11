@@ -2,6 +2,7 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinPaletteSuite.Helpers;
 using Autodesk.Revit.DB.Electrical;
+using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
 using PeServices.Storage;
@@ -196,8 +197,7 @@ public class FamilyElementItem : IPaletteListItem {
     #region Parameter Methods
 
     private string GetParameterSecondary() {
-        var dataType = this.FamilyParam!.Definition.GetDataType();
-        var label = LabelUtils.GetLabelForSpec(dataType);
+        var label = this.FamilyParam!.Definition.GetDataType().ToLabel();
         var associationCount = this.GetAssociationCount();
         return associationCount > 0 ? $"{label} ({associationCount} associations)" : label;
     }
@@ -212,7 +212,7 @@ public class FamilyElementItem : IPaletteListItem {
         var lines = new List<string> {
             $"Name: {this.FamilyParam!.Definition.Name}",
             $"Type/Instance: {this.FamilyParam.GetTypeInstanceDesignation()}",
-            $"Data Type: {LabelUtils.GetLabelForSpec(this.FamilyParam.Definition.GetDataType())}",
+            $"Data Type: {this.FamilyParam.Definition.GetDataType().ToLabel()}",
             $"Storage Type: {this.FamilyParam.StorageType}",
             $"Is Built-In: {this.FamilyParam.IsBuiltInParameter()}",
             $"Is Shared: {this.FamilyParam.IsShared}"

@@ -1,6 +1,7 @@
 #nullable enable
 using AddinPaletteSuite.Helpers;
 using Autodesk.Revit.DB.Electrical;
+using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
 using PeUi.Core;
@@ -226,7 +227,7 @@ public class AssociatedElementItem : IPaletteListItem {
 
     private string GetFamilyParamDetails() {
         if (this.FamilyParam == null) return string.Empty;
-        var dataType = LabelUtils.GetLabelForSpec(this.FamilyParam.Definition.GetDataType());
+        var dataType = this.FamilyParam.Definition.GetDataType().ToLabel();
         return $"{this.FamilyParam.GetTypeInstanceDesignation()} - {dataType}";
     }
 
@@ -235,7 +236,7 @@ public class AssociatedElementItem : IPaletteListItem {
         var sb = new StringBuilder()
         .AppendLine($"Name: {this.FamilyParam.Definition.Name}")
         .AppendLine($"Type/Instance: {this.FamilyParam.GetTypeInstanceDesignation()}")
-        .AppendLine($"Data Type: {LabelUtils.GetLabelForSpec(this.FamilyParam.Definition.GetDataType())}");
+        .AppendLine($"Data Type: {this.FamilyParam.Definition.GetDataType().ToLabel()}");
         if (!string.IsNullOrEmpty(this.FamilyParam.Formula))
             _ = sb.AppendLine($"Formula: {this.FamilyParam.Formula}");
 

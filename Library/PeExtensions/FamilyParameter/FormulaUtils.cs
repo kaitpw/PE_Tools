@@ -30,9 +30,11 @@ public static class FormulaUtils {
         "ln"
     };
 
-    // Boundary chars: operators + structural formula characters
+    /// <summary>
+    /// Boundary chars: operators + structural formula characters. Excludes quotes (") because they are used to delimit string literals.
+    /// </summary>
     public static readonly char[] BoundaryChars = [
-        '+', '-', '*', '/', '^', '=', '>', '<', ' ', '[', ']', '(', ')', '"', ',', '\t', '\r', '\n'
+        '+', '-', '*', '/', '^', '=', '>', '<', ' ', '[', ']', '(', ')', ',', '\t', '\r', '\n'
     ];
 
     /// <summary>
@@ -46,14 +48,20 @@ public static class FormulaUtils {
         var parameterName = param.Definition.Name;
         if (string.IsNullOrEmpty(parameterName) || string.IsNullOrEmpty(formula)) return false;
 
-        var leftIndex = formula.IndexOf(parameterName, StringComparison.Ordinal);
-        if (leftIndex == -1) return false;
-        var leftValid = leftIndex == 0 || BoundaryChars.Contains(formula[leftIndex - 1]);
+        var searchStart = 0;
+        while (searchStart < formula.Length) {
+            var leftIndex = formula.IndexOf(parameterName, searchStart, StringComparison.Ordinal);
+            if (leftIndex == -1) return false;
+            var leftValid = leftIndex == 0 || BoundaryChars.Contains(formula[leftIndex - 1]);
 
-        var rightIndex = leftIndex + parameterName.Length;
-        var rightValid = rightIndex >= formula.Length || BoundaryChars.Contains(formula[rightIndex]);
+            var rightIndex = leftIndex + parameterName.Length;
+            var rightValid = rightIndex >= formula.Length || BoundaryChars.Contains(formula[rightIndex]);
+            if (leftValid && rightValid) return true;
 
-        return leftValid && rightValid;
+            // Ok to only move index by 1 because this invalidates whatever parameter name was here (first letter chopped off)
+            searchStart = leftIndex + 1;
+        }
+        return false;
     }
 
     /// <summary>

@@ -42,12 +42,27 @@ public class CmdFFManager : IExternalCommand {
                 new() { Strength = RpStrength.CenterFB, Name = "Center", Color = new Color(115, 0, 253) }
             };
 
-            var timestampParam = new AddFamilyParamsSettings {
-                FamilyParamData = [
-                    new FamilyParamModel {
+            // Convert old AddFamilyParamsSettings to new AddAndSetParamsSettings
+            var addAndSetParamsSettings = new AddAndSetParamsSettings {
+                OverrideExistingValues = profile.AddFamilyParams.OverrideExistingValues,
+                Parameters = profile.AddFamilyParams.FamilyParamData
+                    .Select(p => new SetParamModel {
+                        Name = p.Name,
+                        ValueOrFormula = p.GlobalValue?.ToString() ?? p.Formula,
+                        PropertiesGroup = p.PropertiesGroup,
+                        DataType = p.DataType,
+                        IsInstance = p.IsInstance
+                    })
+                    .ToList()
+            };
+
+            var timestampSettings = new AddAndSetParamsSettings {
+                CreateFamParamIfMissing = true,
+                Parameters = [
+                    new SetParamModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
                         DataType = SpecTypeId.String.Text,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                        ValueOrFormula = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
                     }
                 ]
             };
@@ -55,10 +70,9 @@ public class CmdFFManager : IExternalCommand {
                 .Add(new AddSharedParams(apsParamData))
                 .Add(new AddFamilyParams(profile.AddFamilyParams))
                 .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
-                .Add(new AddAndSetFamilyParams(profile
-                    .AddFamilyParams)) // must come after AddAllFamilyParams and RP/dims
+                .Add(new AddAndSetParams(addAndSetParamsSettings)) // must come after AddAllFamilyParams and RP/dims
                 .Add(new MakeRefPlaneSubcategories(specs))
-                .Add(new SetParamValueAsFormula(timestampParam, false))
+                .Add(new AddAndSetParams(timestampSettings))
                 .Add(new SortParams(new SortParamsSettings()));
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);

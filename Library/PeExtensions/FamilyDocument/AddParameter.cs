@@ -68,11 +68,11 @@ public static class FamilyDocumentAddParameter {
     }
 #else
     public static Result<SharedParameterElement> AddApsParameterSlow(
+#pragma warning disable IDE0060 // Remove unused parameter
         this FamilyDocument famDoc,
         ParamModelRes apsParamModel
-    ) {
-        return new Exception("This functionality is not available in this Revit version.");
-    }
+#pragma warning restore IDE0060 // Remove unused parameter
+    ) => new Exception("This functionality is not available in this Revit version.");
 #endif
 
     public static FamilyParameter AddSharedParameter(

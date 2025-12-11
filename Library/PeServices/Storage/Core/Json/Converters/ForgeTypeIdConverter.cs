@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Nice3point.Revit.Extensions;
 
 namespace PeServices.Storage.Core.Json.Converters;
 
@@ -26,26 +27,12 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
         }
 
         // Special case: Empty ForgeTypeId (or empty TypeId string) represents "Other" in Revit UI
-        if (string.IsNullOrEmpty(value.TypeId)) {
+        if (string.IsNullOrEmpty(value.TypeId)) { // TODO: test this more, This is for GroupTypeId, but we need to handle all forgeTypeId cases
             writer.WriteValue("Other");
             return;
         }
 
-        // Try to get a human-readable label using LabelUtils
-        string label;
-        try {
-            label = LabelUtils.GetLabelForSpec(value);
-        } catch {
-            // Not a spec type, try group type
-            try {
-                label = LabelUtils.GetLabelForGroup(value);
-            } catch {
-                // If both fail, fall back to the TypeId string
-                label = value.TypeId;
-            }
-        }
-
-        writer.WriteValue(label);
+        writer.WriteValue(value.ToLabel());
     }
 
     public override ForgeTypeId ReadJson(JsonReader reader,
@@ -82,15 +69,14 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
         var map = new Dictionary<string, ForgeTypeId>(StringComparer.OrdinalIgnoreCase);
 
         // Process SpecTypeId and its nested classes
-        var specTypeIdType = typeof(SpecTypeId);
-        AddPropertiesToLabelMap(specTypeIdType, map, false);
-        var nestedTypes = specTypeIdType.GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
-        foreach (var nestedType in nestedTypes) AddPropertiesToLabelMap(nestedType, map, false);
+        AddPropertiesToLabelMap(typeof(SpecTypeId), map);
+        typeof(SpecTypeId)
+            .GetNestedTypes(BindingFlags.Public | BindingFlags.Static)
+            .ToList()
+            .ForEach(type => AddPropertiesToLabelMap(type, map));
 
         // Process GroupTypeId
-        var groupTypeIdType = typeof(GroupTypeId);
-        AddPropertiesToLabelMap(groupTypeIdType, map, true);
-
+        AddPropertiesToLabelMap(typeof(GroupTypeId), map);
         return map;
     }
 
@@ -98,7 +84,7 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
     ///     Adds all static ForgeTypeId properties from a type to the label map.
     ///     For each ForgeTypeId, gets its label using LabelUtils and adds it to the map.
     /// </summary>
-    private static void AddPropertiesToLabelMap(Type type, Dictionary<string, ForgeTypeId> map, bool isGroupType) {
+    private static void AddPropertiesToLabelMap(Type type, Dictionary<string, ForgeTypeId> map) {
         var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Static);
 
         foreach (var property in properties) {
@@ -110,9 +96,7 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
             // Get label using the appropriate LabelUtils method based on the source type
             string label;
             try {
-                label = isGroupType
-                    ? LabelUtils.GetLabelForGroup(value)
-                    : LabelUtils.GetLabelForSpec(value);
+                label = value.ToLabel();
             } catch {
                 // Skip ForgeTypeIds that can't be labeled (e.g., SpecTypeId.Custom)
                 // We only map ForgeTypeIds that have valid labels
