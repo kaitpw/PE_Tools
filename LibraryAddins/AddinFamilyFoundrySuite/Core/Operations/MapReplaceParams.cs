@@ -26,8 +26,8 @@ public class MapReplaceParams : DocOperation<RuntimeMapParamsSettings> {
         var logs = new List<LogEntry>();
         var fm = doc.FamilyManager;
 
-        Debug.WriteLine("MAP REPLACE PARAMS: Unprocessed mapping data:");
-        this.Settings.LogUnProcessedMappingData();
+        // Debug.WriteLine("MAP REPLACE PARAMS: Unprocessed mapping data:");
+        // this.Settings.LogUnProcessedMappingData();
 
         foreach (var mapping in this.Settings.UnProcessedMappingData) {
             if (!this._sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam)) {

@@ -158,7 +158,7 @@ public static class ParamRelationshipDialog {
         }
 
         // Add formula-dependent parameters (recursive)
-        var formulaParams = param.AssociatedFamilyParameters(familyDoc).ToList();
+        var formulaParams = param.FormulaDependents(familyDoc).ToList();
         if (formulaParams.Count > 0) {
             var paramsFolder = new TreeViewItem {
                 Header = CreateFolderHeader($"Formula Dependencies ({formulaParams.Count})"),

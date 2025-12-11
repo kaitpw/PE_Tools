@@ -68,59 +68,26 @@ public static class FamilyParameterGetAssociated {
     }
 
     /// <summary>
-    ///     Get the family parameters containing this family parameter in their formula
+    ///     Checks if the family parameter has any DIRECT physical associations
+    ///     (element parameters, dimensions, arrays, connectors).
+    ///     Does NOT include formula dependencies - use FormulaDependents for that.
     /// </summary>
     /// <param name="param">The family parameter</param>
     /// <param name="doc">The family document</param>
-    /// <param name="excludeUnused">
-    ///     If true, only return parameters that are actually being used (have direct associations like
-    ///     connectors, dimensions, or arrays - NOT formula usage)
-    /// </param>
-    public static IEnumerable<FamilyParameter> AssociatedFamilyParameters(this FamilyParameter param,
-        FamilyDocument doc,
-        bool excludeUnused = false) {
-        // Get the parameter name safely. Some built-in parameters throw invalid when accessing Definition properties
-        string parameterName = null;
-        try {
-            parameterName = param.Definition.Name?.Trim();
-        } catch (InvalidOperationException) { }
-
-        if (string.IsNullOrEmpty(parameterName)) return [];
-
-        var candidateParams = doc.FamilyManager.Parameters
-            .OfType<FamilyParameter>()
-            .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
-            .Where(p => {
-                try {
-                    var formula = p.Formula?.Trim();
-                    return !string.IsNullOrEmpty(formula) && param.IsReferencedInFormula(formula);
-                } catch (InvalidOperationException) {
-                    return false;
-                }
-            });
-
-        if (!excludeUnused) return candidateParams;
-
-        // When excluding unused, only return parameters that have DIRECT associations (not formula usage)
-        // This prevents circular dependencies where A and B reference each other in formulas
-        return candidateParams.Where(p => {
-            // Check if parameter has any DIRECT associations (not formula usage)
-            if (p.AssociatedParameters.Cast<Parameter>().Any()) return true;
-            if (p.AssociatedArrays(doc).Any()) return true;
-            if (p.AssociatedDimensions(doc).Any()) return true;
-            if (p.AssociatedConnectors(doc).Any()) return true;
-            return false;
-        });
-    }
+    /// <returns>True if the parameter has any direct physical associations</returns>
+    public static bool HasDirectAssociation(this FamilyParameter param, FamilyDocument doc) =>
+        param.AssociatedParameters.Cast<Parameter>().Any() ||
+        param.AssociatedArrays(doc).Any() ||
+        param.AssociatedDimensions(doc).Any() ||
+        param.AssociatedConnectors(doc).Any();
 
     /// <summary>
-    ///     Checks if the family parameter has any associations (dimensions, arrays, connectors, or formula dependencies)
+    ///     Checks if the family parameter has any associations
+    ///     (direct physical associations OR formula dependents)
     /// </summary>
     /// <param name="param">The family parameter</param>
     /// <param name="doc">The family document</param>
     /// <returns>True if the parameter has any associations</returns>
-    public static bool HasAssociation(this FamilyParameter param, FamilyDocument doc) =>
-        param.AssociatedParameters.Cast<Parameter>().Any() || param.AssociatedArrays(doc).Any() ||
-        param.AssociatedDimensions(doc).Any() || param.AssociatedConnectors(doc).Any() ||
-        param.AssociatedFamilyParameters(doc).Any();
+    public static bool HasAnyAssociation(this FamilyParameter param, FamilyDocument doc) =>
+        param.HasDirectAssociation(doc) || param.FormulaDependents(doc).Any();
 }

@@ -48,7 +48,7 @@ public class CmdFFMigrator : IExternalCommand {
                         PropertiesGroup = new ForgeTypeId(""),
                         DataType = SpecTypeId.String.Text,
                         IsInstance = false,
-                        GlobalValue = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")
+                        GlobalValue = DateTime.Now.ToString("yyyy_MM_dd HH:mm:ss")
                     }
                 ]
             };
@@ -59,7 +59,7 @@ public class CmdFFMigrator : IExternalCommand {
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
                 .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, apsParamNames))
-                .Add(new SetParamValueAsFormula(addFamilyParamsSettings));
+                .Add(new SetParamValueAsValue(addFamilyParamsSettings, false));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -77,9 +77,9 @@ public class CmdFFMigrator : IExternalCommand {
             } else {
                 var logs = processor
                     .SelectFamilies(() => {
-                        var picked = Pickers.GetSelectedFamilies(uiDoc);
-                        return picked.Any() ? picked : profile.GetFamilies(doc);
-                    }
+                            var picked = Pickers.GetSelectedFamilies(uiDoc);
+                            return picked.Any() ? picked : profile.GetFamilies(doc);
+                        }
                     )
                     .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
                 var logPath = OperationLogger.OutputProcessingResults(

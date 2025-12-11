@@ -1,10 +1,36 @@
 #nullable enable
 using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamDocument.SetValue.CoercionStrategies;
+using System.Globalization;
 
 namespace PeExtensions.FamDocument;
 
 public static class FamilyDocumentSetValue {
+    /// <summary>
+    ///     Sets a value on a parameter for ALL family types at once.
+    ///     Uses a formula workaround to avoid looping through each type.
+    ///     Automatically converts the value to the appropriate formula format based on the parameter's StorageType.
+    /// </summary>
+    /// <param name="famDoc">The family document</param>
+    /// <param name="param">The target parameter</param>
+    /// <param name="value">The value to set (will be coerced based on parameter's StorageType)</param>
+    /// <returns>The parameter if the value was set successfully, otherwise null</returns>
+    /// <exception cref="System.InvalidOperationException">Thrown if the StorageType is not supported</exception>
+    public static FamilyParameter? SetGlobalValue(this FamilyDocument famDoc, FamilyParameter param, object value) {
+        var formula = param.StorageType switch {
+            StorageType.String => $"\"{value}\"",
+            StorageType.Double => Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture),
+            StorageType.Integer => Convert.ToInt32(value).ToString(),
+            _ => throw new InvalidOperationException(
+                $"SetGlobalValue not supported for parameter '{param.Definition.Name}' with StorageType.{param.StorageType}")
+        };
+
+        // We could skip validation, but may be a good way to keep tabs on whether our formula parsing works
+        if (!famDoc.SetFormula(param, formula)) return null;
+        if (!famDoc.UnsetFormula(param)) return null;
+        return param;
+    }
+
     /// <summary>
     ///     Set a family's parameter value on the <c>FamilyManager.CurrentType</c> using the specified strategy.
     ///     If no strategy is specified, uses the <c>Strict</c> strategy.

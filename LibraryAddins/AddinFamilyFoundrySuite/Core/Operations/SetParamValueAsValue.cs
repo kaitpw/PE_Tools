@@ -1,14 +1,12 @@
-// TODO: Migrate this!!!!!!!!!!
-
 using AddinFamilyFoundrySuite.Core.OperationSettings;
+using PeExtensions;
 using PeExtensions.FamDocument;
-using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class SetParamValueAsValue(AddFamilyParamsSettings settings, bool setOnly = true)
-    : TypeOperation<AddFamilyParamsSettings>(settings) {
+    : DocOperation<AddFamilyParamsSettings>(settings) {
     public readonly bool SetOnly = setOnly;
 
     public override string Description =>
@@ -27,9 +25,19 @@ public class SetParamValueAsValue(AddFamilyParamsSettings settings, bool setOnly
                 continue;
             }
 
-            if (this.Settings.OverrideExistingValues)
-                _ = doc.SetValue(parameter, p.GlobalValue, ValueCoercionStrategy.CoerceSimple);
-            logs[p.Name] = new LogEntry { Item = p.Name };
+            if (!this.Settings.OverrideExistingValues) {
+                logs[p.Name] = new LogEntry { Item = p.Name };
+                continue;
+            }
+
+            try {
+                var param = doc.SetGlobalValue(parameter, p.GlobalValue);
+                logs[p.Name] = param is not null
+                    ? new LogEntry { Item = p.Name }
+                    : new LogEntry { Item = p.Name, Error = $"Failed to set value '{p.Name}' to '{p.GlobalValue}'" };
+            } catch (Exception ex) {
+                logs[p.Name] = new LogEntry { Item = p.Name, Error = $"Failed to set value: {ex.Message}" };
+            }
         }
 
         return new OperationLog(this.Name, logs.Values.ToList());

@@ -31,10 +31,8 @@ public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
             .ToList();
 
         foreach (var param in parameters) {
-            if (param.AssociatedParameters.Cast<Parameter>().Any()) continue;
-            if (param.AssociatedArrays(doc).Any()) continue;
-            if (param.AssociatedDimensions(doc).Any()) continue;
-            if (param.AssociatedFamilyParameters(doc, true).Any()) continue;
+            if (param.HasDirectAssociation(doc)) continue;
+            if (param.FormulaDependents(doc).Any(p => p.HasDirectAssociation(doc))) continue;
 
             try {
                 var paramName = param.Definition.Name;

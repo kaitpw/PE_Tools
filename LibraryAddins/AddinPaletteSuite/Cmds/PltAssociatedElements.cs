@@ -32,7 +32,7 @@ public static class PltAssociatedElements {
             items.Add(new AssociatedElementItem(connector, familyDoc));
 
         // Add formula-dependent family parameters
-        foreach (var fp in param.AssociatedFamilyParameters(familyDoc))
+        foreach (var fp in param.FormulaDependents(familyDoc))
             items.Add(new AssociatedElementItem(fp, familyDoc));
 
         if (items.Count == 0) return;
@@ -240,7 +240,7 @@ public class AssociatedElementItem : IPaletteListItem {
 
         var dims = this.FamilyParam.AssociatedDimensions(this._familyDoc).Count();
         var arrays = this.FamilyParam.AssociatedArrays(this._familyDoc).Count();
-        var formulaDeps = this.FamilyParam.AssociatedFamilyParameters(this._familyDoc).Count();
+        var formulaDeps = this.FamilyParam.FormulaDependents(this._familyDoc).Count();
         return sb.AppendLine($"Associations: {dims} dims, {arrays} arrays, {formulaDeps} params").ToString().TrimEnd();
     }
 }

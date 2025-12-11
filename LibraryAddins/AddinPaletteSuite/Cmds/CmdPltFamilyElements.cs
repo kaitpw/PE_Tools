@@ -190,10 +190,7 @@ public class FamilyElementItem : IPaletteListItem {
     public Color? ItemColor => null;
 
     public bool HasAnyAssociation => this.ElementType == FamilyElementType.Parameter &&
-        (this.FamilyParam!.AssociatedDimensions(this._familyDoc).Any() ||
-         this.FamilyParam.AssociatedArrays(this._familyDoc).Any() ||
-         this.FamilyParam.AssociatedConnectors(this._familyDoc).Any() ||
-         this.FamilyParam.AssociatedFamilyParameters(this._familyDoc).Any());
+        this.FamilyParam!.HasAnyAssociation(this._familyDoc);
 
     #region Parameter Methods
 
@@ -208,7 +205,7 @@ public class FamilyElementItem : IPaletteListItem {
         this.FamilyParam!.AssociatedDimensions(this._familyDoc).Count() +
         this.FamilyParam.AssociatedArrays(this._familyDoc).Count() +
         this.FamilyParam.AssociatedConnectors(this._familyDoc).Count() +
-        this.FamilyParam.AssociatedFamilyParameters(this._familyDoc).Count();
+        this.FamilyParam.FormulaDependents(this._familyDoc).Count();
 
     private string GetParameterTooltip() {
         var lines = new List<string> {
@@ -238,8 +235,8 @@ public class FamilyElementItem : IPaletteListItem {
         var directParams = this.FamilyParam.AssociatedParameters.Cast<Parameter>().ToList();
         lines.Add($"Direct Element Params: {directParams.Count}");
 
-        var formulaParams = this.FamilyParam.AssociatedFamilyParameters(this._familyDoc).ToList();
-        lines.Add($"Formula Dependencies: {formulaParams.Count}");
+        var formulaParams = this.FamilyParam.FormulaDependents(this._familyDoc).ToList();
+        lines.Add($"Formula Dependents: {formulaParams.Count}");
         if (formulaParams.Count > 0) {
             foreach (var fp in formulaParams.Take(5))
                 lines.Add($"  - {fp.Definition.Name}");

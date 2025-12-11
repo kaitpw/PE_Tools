@@ -14,8 +14,8 @@ public class MapParams : TypeOperation<RuntimeMapParamsSettings> {
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
-        Debug.WriteLine("MAP PARAMS: Unprocessed mapping data:");
-        this.Settings.LogUnProcessedMappingData();
+        // Debug.WriteLine("MAP PARAMS: Unprocessed mapping data:");
+        // this.Settings.LogUnProcessedMappingData();
 
         foreach (var mapping in this.Settings.UnProcessedMappingData) {
             var mappingDesc = $"{mapping.CurrName} → {mapping.NewName}";
