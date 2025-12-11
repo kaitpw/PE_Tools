@@ -1,4 +1,6 @@
 using PeServices.Documents.Core;
+using PeExtensions.PolyFill;
+
 
 namespace PeServices.Documents;
 
@@ -93,7 +95,7 @@ public class DocumentManager {
 
         if (view != null)
             _ = sb.AppendLine($"Target Document: {view.Document.Title} (Path: {view.Document.PathName})")
-                .AppendLine($"Target View: {view.Name} (ID: {view.Id.Value})");
+                .AppendLine($"Target View: {view.Name} (ID: {view.Id.Value()})");
 
         _ = sb.AppendLine($"Active Document: {activeDoc?.Title ?? "None"} (Path: {activeDoc?.PathName ?? "N/A"})")
             .AppendLine($"Active View: {activeView?.Name ?? "None"} (ID: {activeViewId?.Value ?? -1})")

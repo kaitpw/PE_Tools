@@ -1,5 +1,6 @@
 #nullable enable
 using PeExtensions.FamDocument;
+using PeExtensions.PolyFill;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -94,7 +95,7 @@ public static class ParamRelationshipDialog {
     private static TreeViewItem BuildTreeItem(FamilyParameter param, FamilyDocument familyDoc, int depth,
         HashSet<long> visited) {
         // Prevent infinite recursion from circular formula references
-        if (!visited.Add(param.Id.Value))
+        if (!visited.Add(param.Id.Value()))
             return new TreeViewItem {
                 Header = CreateItemHeader(param.Definition.Name, "Parameter", "(circular reference)"),
                 Foreground = new SolidColorBrush(WpfColor.FromRgb(255, 100, 100))
@@ -180,7 +181,7 @@ public static class ParamRelationshipDialog {
         }
 
         // Remove from visited when leaving this branch to allow the same param in different branches
-        _ = visited.Remove(param.Id.Value);
+        _ = visited.Remove(param.Id.Value());
 
         return item;
     }

@@ -68,11 +68,7 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
             foreach (var connectorElement in connectorElements) {
                 foreach (Parameter connectorParam in connectorElement.Parameters) {
                     try {
-#if REVIT2024 || REVIT2025 || REVIT2026
-                        var bip = (BuiltInParameter)connectorParam.Id.Value;
-#else
-                        var bip = (BuiltInParameter)connectorParam.Id.IntegerValue;
-#endif
+                        var bip = (BuiltInParameter)connectorParam.Id.Value();
                         var currentAssociation = doc.FamilyManager.GetAssociatedFamilyParameter(connectorParam);
 
                         if (targetMappings.TryGetValue(bip, out var mapping)) {

@@ -1,3 +1,5 @@
+using PeExtensions.PolyFill;
+
 namespace PeServices.Documents.Core;
 
 /// <summary>
@@ -50,7 +52,7 @@ public class MruViewBuffer {
 
         // Add current view first if it exists and is open
         if (currentView != null && DocumentManager.IsViewOpen(uiApp, currentView.Id)) {
-            var currentViewKey = $"{GetDocumentKey(currentView.Document)}|{currentView.Id.Value}";
+            var currentViewKey = $"{GetDocumentKey(currentView.Document)}|{currentView.Id.Value()}";
             views.Add(currentView);
             _ = seenViews.Add(currentViewKey);
         }
@@ -58,7 +60,7 @@ public class MruViewBuffer {
         // Add views from buffer (previous views, in MRU order)
         foreach (var viewRef in this._buffer) {
             // Skip if we've already added this view (prevent duplicates)
-            var viewKey = $"{viewRef.DocumentKey}|{viewRef.ViewId.Value}";
+            var viewKey = $"{viewRef.DocumentKey}|{viewRef.ViewId.Value()}";
             if (seenViews.Contains(viewKey)) continue;
 
             var targetDoc = DocumentManager.FindDocumentByName(uiApp, viewRef.DocumentTitle);
@@ -106,7 +108,7 @@ public class MruViewBuffer {
         var duration = DateTime.Now - previousViewRef.ActivatedAt;
         var wasOpenLongEnough = duration >= MinViewDuration;
 
-        Debug.WriteLine($"[MruViewBuffer] ShouldCommit '{previousViewRef.DocumentTitle}' viewId={previousViewRef.ViewId.Value}: " +
+        Debug.WriteLine($"[MruViewBuffer] ShouldCommit '{previousViewRef.DocumentTitle}' viewId={previousViewRef.ViewId.Value()}: " +
                         $"duration={duration.TotalSeconds:F1}s, minRequired={MinViewDuration.TotalSeconds}s, commit={wasOpenLongEnough}");
 
         return wasOpenLongEnough;
