@@ -16,18 +16,35 @@ public static class FamilyDocumentSetValue {
     /// <param name="value">The value to set (will be coerced based on parameter's StorageType)</param>
     /// <returns>The parameter if the value was set successfully, otherwise null</returns>
     /// <exception cref="System.InvalidOperationException">Thrown if the StorageType is not supported</exception>
-    public static FamilyParameter? SetGlobalValue(this FamilyDocument famDoc, FamilyParameter param, object value) {
-        var formula = param.StorageType switch {
+    /// <summary>
+    ///     Converts a value to a formula string appropriate for the parameter's StorageType and DataType.
+    ///     Handles unit formatting for measurable specs (Length, Voltage, etc.).
+    /// </summary>
+    /// <remarks>
+    ///     The value should be in Revit's internal units (feet, radians, etc.) for Double parameters.
+    ///     This method will format it with the document's display units for Revit to parse.
+    /// </remarks>
+    private static string ValueToFormulaString(FamilyDocument famDoc, FamilyParameter param, object value) {
+        var dataType = param.Definition.GetDataType();
+
+        return param.StorageType switch {
             StorageType.String => $"\"{value}\"",
-            StorageType.Double => Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture),
             StorageType.Integer => Convert.ToInt32(value).ToString(),
+            StorageType.Double when UnitUtils.IsMeasurableSpec(dataType) =>
+                UnitFormatUtils.Format(famDoc.GetUnits(), dataType, Convert.ToDouble(value), forEditing: true),
+            StorageType.Double =>
+                Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture),
             _ => throw new InvalidOperationException(
                 $"SetGlobalValue not supported for parameter '{param.Definition.Name}' with StorageType.{param.StorageType}")
         };
+    }
 
-        // We could skip validation, but may be a good way to keep tabs on whether our formula parsing works
-        if (!famDoc.SetFormula(param, formula)) return null;
+    public static FamilyParameter? SetGlobalValue(this FamilyDocument famDoc, FamilyParameter param, object value) {
+        var formula = ValueToFormulaString(famDoc, param, value);
+
+        famDoc.SetFormulaNative(param, formula);
         if (!famDoc.UnsetFormula(param)) return null;
+
         return param;
     }
 

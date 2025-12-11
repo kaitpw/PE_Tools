@@ -61,7 +61,44 @@ public static class Formula {
             }
         }
 
+        // Check for circular references before Revit throws a cryptic error
+        var cycleResult = FamilyParameterFormulaUtils.DetectCycle(targetParam, formula, familyManager);
+        if (cycleResult.WouldCycle) {
+            var cyclePath = cycleResult.FormatCyclePath();
+            var message = $"Cannot set formula '{formula}' on parameter '{targetParam.Name()}'. " +
+                          $"This would create a circular reference: {targetParam.Name()} → {cyclePath}";
+            throw new InvalidOperationException(message);
+        }
+
         famDoc.FamilyManager.SetFormula(targetParam, formula);
         return true;
+    }
+
+    /// <summary>
+    ///     Set a formula on a family parameter without validation.
+    ///     Use this for batch operations where you trust the input and need performance.
+    ///     Revit will still throw if there's a cycle, but the error will be less descriptive.
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         <b>When to use:</b> Migrations, imports, or batch operations with known-good formulas.
+    ///     </para>
+    ///     <para>
+    ///         <b>When NOT to use:</b> User-entered formulas, untrusted input, or when you need helpful error messages.
+    ///     </para>
+    /// </remarks>
+    /// <param name="famDoc">The family document</param>
+    /// <param name="targetParam">The parameter to set the formula on</param>
+    /// <param name="formula">The formula string, use null or empty string to clear the formula</param>
+    /// <exception cref="Autodesk.Revit.Exceptions.InvalidOperationException">
+    ///     Thrown by Revit if the formula is invalid (cryptic message).
+    /// </exception>
+    public static void SetFormulaNative(this FamilyDocument famDoc, FamilyParameter targetParam, string formula) {
+        if (string.IsNullOrWhiteSpace(formula)) {
+            famDoc.FamilyManager.SetFormula(targetParam, null);
+            return;
+        }
+
+        famDoc.FamilyManager.SetFormula(targetParam, formula);
     }
 }

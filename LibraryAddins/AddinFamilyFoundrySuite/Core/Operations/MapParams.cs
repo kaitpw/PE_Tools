@@ -14,9 +14,6 @@ public class MapParams : TypeOperation<RuntimeMapParamsSettings> {
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
 
-        // Debug.WriteLine("MAP PARAMS: Unprocessed mapping data:");
-        // this.Settings.LogUnProcessedMappingData();
-
         foreach (var mapping in this.Settings.UnProcessedMappingData) {
             var mappingDesc = $"{mapping.CurrName} → {mapping.NewName}";
 
@@ -25,13 +22,14 @@ public class MapParams : TypeOperation<RuntimeMapParamsSettings> {
                 var targetParam = doc.FamilyManager.FindParameter(mapping.NewName);
 
                 if (sourceParam is null) continue;
-                if (sourceParam is null || targetParam is null) {
-                    var notFoundParam = sourceParam is null ? mapping.CurrName : mapping.NewName;
-                    logs.Add(new LogEntry { Item = mappingDesc, Error = $"{notFoundParam} not found in the family" });
+                if (targetParam is null) {
+                    logs.Add(new LogEntry { Item = mappingDesc, Error = $"{mapping.NewName} not found in the family" });
                     continue;
                 }
 
                 _ = doc.SetValue(targetParam, sourceParam, mapping.MappingStrategy);
+
+                // Backlink: if original source is built-in, set source.Formula = target.Name
                 if (ParameterUtils.IsBuiltInParameter(sourceParam.Id)) {
                     if (sourceParam.IsInstance != targetParam.IsInstance) {
                         logs.Add(new LogEntry {
@@ -40,9 +38,9 @@ public class MapParams : TypeOperation<RuntimeMapParamsSettings> {
                                     $"({sourceParam.Name()} is {sourceParam.GetTypeInstanceDesignation()} " +
                                     $"but {targetParam.Name()} is {targetParam.GetTypeInstanceDesignation()})"
                         });
+                    } else {
+                        doc.SetFormulaNative(sourceParam, targetParam.Definition.Name);
                     }
-
-                    _ = doc.SetFormula(sourceParam, targetParam.Definition.Name);
                 }
 
                 this.Settings.MarkNewNameAsProcessed(mapping.NewName);
