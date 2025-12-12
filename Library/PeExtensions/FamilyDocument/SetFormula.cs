@@ -1,3 +1,4 @@
+using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 
 namespace PeExtensions.FamDocument;
@@ -78,6 +79,7 @@ public static class Formula {
     ///     Set a formula on a family parameter without validation.
     ///     Use this for batch operations where you trust the input and need performance.
     ///     Revit will still throw if there's a cycle, but the error will be less descriptive.
+    ///     Thiswill check if the target datatype is settable
     /// </summary>
     /// <remarks>
     ///     <para>
@@ -93,12 +95,38 @@ public static class Formula {
     /// <exception cref="Autodesk.Revit.Exceptions.InvalidOperationException">
     ///     Thrown by Revit if the formula is invalid (cryptic message).
     /// </exception>
-    public static void SetFormulaNative(this FamilyDocument famDoc, FamilyParameter targetParam, string formula) {
+    public static bool SetFormulaFast(this FamilyDocument famDoc, FamilyParameter targetParam, string formula, out string errorMessage) {
+        errorMessage = null;
+
         if (string.IsNullOrWhiteSpace(formula)) {
             famDoc.FamilyManager.SetFormula(targetParam, null);
-            return;
+            return true;
+        }
+
+        var forbidden = new List<ForgeTypeId> {
+            SpecTypeId.String.Url
+            // SpecTypeId.Reference.LoadClassification, // TODO: Need to do due diligence on this one, MakeElecConnector throws an exception if this is set
+        };
+
+        if (forbidden.Contains(targetParam.Definition.GetDataType())) {
+            errorMessage = $"Cannot set formula on parameter '{targetParam.Name()}'. " +
+                           $"This datatype formula-forbidden, among these others:{string.Join(", ", forbidden.Select(d => d.ToLabel()))}.";
+            return false;
         }
 
         famDoc.FamilyManager.SetFormula(targetParam, formula);
+        return true;
+    }
+
+
+    public static bool SetFormulaFast(this FamilyDocument famDoc, FamilyParameter targetParam, FamilyParameter sourceParam, out string errorMessage) {
+        var tgtIsTypeParam = !targetParam.IsInstance;
+        var srcIsInstanceParam = sourceParam.IsInstance;
+        if (tgtIsTypeParam && srcIsInstanceParam) {
+            errorMessage = $"Cannot set formula type parameter '{targetParam.Name()}' to instance parameter '{sourceParam.Name()}'";
+            return false;
+        }
+
+        return famDoc.SetFormulaFast(targetParam, sourceParam.Formula, out errorMessage);
     }
 }

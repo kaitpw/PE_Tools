@@ -20,6 +20,9 @@ public class CoerceElectrical : ICoercionStrategy {
                 context.TargetParam),
             var t when t == SpecTypeId.Number => context.SourceValue as double? ?? 0,
             var t when t == SpecTypeId.Int.Integer => context.SourceValue as int? ?? 0,
+            var t when t?.TypeId.Contains(".electrical:") == true => this.ExtractDouble(
+                context.SourceValueString ?? context.SourceValue.ToString() ?? string.Empty,
+                context.TargetParam),
             _ => throw new ArgumentException(
                 $"Unsupported source type {context.SourceDataType.ToLabel()} for electrical coercion")
         };

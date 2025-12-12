@@ -76,7 +76,7 @@ public class ProcessingResultBuilder {
 
             WriteJson(settingsPath, new { Profile = this._profileName, ProfileSettings = this._profileSettings });
             WriteJson(abridgedPath, BuildAbridged(ctx));
-            WriteJson(detailedPath, BuildDetailed(ctx));
+            WriteJson(detailedPath, this.BuildDetailed(ctx));
 
             firstAbridgedPath ??= abridgedPath;
         }
@@ -128,7 +128,6 @@ public class ProcessingResultBuilder {
             FamilyTotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
             Error = err?.Message,
             Profile = this._profileName,
-            ProfileSettings = this._profileSettings,
             OperationMetadata = this._operationMetadata.Select(op => new {
                 op.Name,
                 op.Description,

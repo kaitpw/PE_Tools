@@ -13,8 +13,8 @@ public class OperationProcessor(
     IFamilyDocSnapshotCollector familyDocCollector = null
 ) : IDisposable {
     private readonly ExecutionOptions _exOpts = executionOptions ?? new ExecutionOptions();
-    private readonly IProjectSnapshotCollector _projectCollector = projectCollector;
     private readonly IFamilyDocSnapshotCollector _familyDocCollector = familyDocCollector;
+    private readonly IProjectSnapshotCollector _projectCollector = projectCollector;
 
     /// <summary>
     ///     A function to select families in the Document. If the document is a family document, this will not be called
@@ -115,7 +115,7 @@ public class OperationProcessor(
                 var familyFuncs = queue.ToFuncs(
                     this._exOpts.OptimizeTypeOperations,
                     this._exOpts.SingleTransaction);
-                
+
                 _ = this.OpenDoc
                     .GetFamilyDocument(family)
                     .EnsureDefaultType()
@@ -135,7 +135,8 @@ public class OperationProcessor(
                 context.OperationLogs = logs;
                 context.TotalMs = familySw.Elapsed.TotalMilliseconds;
             } catch (Exception ex) {
-                context.OperationLogs = new Exception($"Failed to process family {familyName}: {ex.Message}\n{ex.ToStringDemystified()}");
+                context.OperationLogs =
+                    new Exception($"Failed to process family {familyName}: {ex.Message}\n{ex.ToStringDemystified()}");
                 context.TotalMs = 0;
             }
 
@@ -181,7 +182,9 @@ public class OperationProcessor(
             context.OperationLogs = logs;
             context.TotalMs = familySw.Elapsed.TotalMilliseconds;
         } catch (Exception ex) {
-            context.OperationLogs = new Exception($"Failed to process family {this.OpenDoc.Title}: {ex.Message}\n{ex.ToStringDemystified()}");
+            context.OperationLogs =
+                new Exception(
+                    $"Failed to process family {this.OpenDoc.Title}: {ex.Message}\n{ex.ToStringDemystified()}");
             context.TotalMs = 0;
         }
 

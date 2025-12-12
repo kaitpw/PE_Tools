@@ -12,6 +12,10 @@ public class SetParamModel : AddAndSetData {
     public const string ByDefaultString = $"The default behavior is to set <{nameof(ValueOrFormula)}> as a formula, " +
                                             "not a value (even if it contains no parameter references).";
 
+    /// <summary>
+    ///     The value or formula to set. When setting this in code, wrap plain strings in double quotes
+    ///     to prevent them from being interpreted as formulas that might reference parameters.
+    /// </summary>
     [Description(
         $"{ByDefaultString} Unitted strings (eg. \"10 A\", \"10\"\", \"10in\", etc.) are acceptable but may be unreliable. " +
         "Prefer simply writing a number (ie. \"10\") without units")]

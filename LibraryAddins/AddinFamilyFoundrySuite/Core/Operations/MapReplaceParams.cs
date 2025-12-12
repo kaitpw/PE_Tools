@@ -38,13 +38,14 @@ public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareO
             }
 
             // Prioritize CurrName options by which have values for all types (when snapshot available)
-            var prioritizedNames = this.PrioritizeCurrNames(mapping.CurrName);
+            var prioritizedNames = this.PrioritizeCurrNames(mapping.CurrName).ToList();
+            if (prioritizedNames.FirstOrDefault() != null && prioritizedNames.First().Contains("Voltage")) {
+                prioritizedNames.ToList().ForEach(name => Debug.WriteLine(name));
+            }
 
             // Try each CurrName in priority order until one succeeds
             var foundMatch = false;
-            foreach (var currName in prioritizedNames) {
-                if (foundMatch) break;
-
+            foreach (var currName in prioritizedNames.TakeWhile(_ => !foundMatch)) {
                 try {
                     // Validate current parameter exists and is not built-in param. 
                     var currentParam = fm.FindParameter(currName);
@@ -69,19 +70,28 @@ public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareO
                     // Formula is constant: Unset formula but DO NOT mark as processed, instead set CurrName to NewName 
                     // (CurrName is gone at this point). This allows SetValue to coerce later which is
                     // necessary for electrical parameters using ElectricalCoercionStrategy)
-                    if (replaced.FormulaDependents(doc).Any()) {
+                    var dependents = replaced.FormulaDependents(doc);
+                    if (dependents.Any()) {
+                        // TODO: experimental, in the spirit of simplification, this is like the Unwrap Operation
+                        if (dependents.Count() == 1) _ = doc.UnsetFormula(dependents.First());
                         mapping.IsProcessed = true;
                         logs.Add(new LogEntry { Item = $"{currName} → {replaced.Definition.Name}" });
-                    }
-
-                    if (replaced.Formula == null || FormulaUtils.IsConstantFormula(replaced.Formula, doc.FamilyManager)) {
+                    } else if (replaced.Formula == null || FormulaUtils.IsConstantFormula(replaced.Formula, doc.FamilyManager)) {
                         _ = doc.UnsetFormula(replaced);
+                        var ignoreCoercion = new List<ForgeTypeId> { SpecTypeId.Number, SpecTypeId.String.Text, SpecTypeId.Length };
+                        // skip datatypes that will never need coercion, boosts speed and cleans logs
+                        if (ignoreCoercion.Contains(replaced.Definition.GetDataType())) continue;
                         // Update CurrName in LOCAL mutableMappings
                         var mappingToUpdate = mutableMappings.First(m => m.NewName == mapping.NewName);
                         mappingToUpdate.CurrName = [mapping.NewName];
                         logs.Add(new LogEntry {
-                            Item = $"passing to coercion {currName} → {replaced.Definition.Name}"
+                            Item = $"Replaced/waiting to coerce {currName} → {replaced.Definition.Name}"
                         });
+                    } else {
+                        // Fallback: formula exists but has no dependencies and is not constant (edge case)
+                        logs.Add(new LogEntry { Item = $"Replaced {currName} → {replaced.Definition.Name}" });
+                        mapping.IsProcessed = true;
+
                     }
                 } catch (Exception ex) {
                     logs.Add(new LogEntry { Item = $"{currName} → {mapping.NewName}", Error = ex.Message });
@@ -96,14 +106,17 @@ public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareO
     ///     Prioritizes CurrName options by which have values for all types.
     ///     Falls back to original order when snapshot is not available.
     /// </summary>
+    /// <remarks>
+    ///     Does not prioritize by number of types with values. while technically a good idea
+    ///     it may add excessive complexity to the operation, making it harder for users to understand.
+    /// </remarks>
     private IEnumerable<string> PrioritizeCurrNames(List<string> currNames) {
         if (this._context?.PreProcessSnapshot?.Parameters == null || this._context.PreProcessSnapshot.Parameters.Count == 0)
             return currNames;
 
-        // Sort by: HasValueForAllTypes first, then TypesWithValue descending, then original order
+        // Sort by: HasValueForAllTypes first, then original order
         return currNames
             .OrderByDescending(this._context.ParamHasValueForAllTypes)
-            .ThenByDescending(this._context.GetTypesWithValue)
             .ThenBy(currNames.IndexOf);
     }
 }

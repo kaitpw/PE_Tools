@@ -1,5 +1,5 @@
-using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinFamilyFoundrySuite.Core.OperationGroups;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
 
@@ -33,34 +33,30 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
                 var mappingDesc = $"{currName} → {mapping.NewName}";
 
                 try {
-                    var sourceParam = doc.FamilyManager.FindParameter(currName);
-                    var targetParam = doc.FamilyManager.FindParameter(mapping.NewName);
+                    var srcParam = doc.FamilyManager.FindParameter(currName);
+                    var tgtParam = doc.FamilyManager.FindParameter(mapping.NewName);
 
-                    if (sourceParam is null) continue;
-                    if (targetParam is null) {
-                        logs.Add(new LogEntry { Item = mappingDesc, Error = $"{mapping.NewName} not found in the family" });
+                    if (srcParam is null) continue;
+                    if (tgtParam is null) {
+                        logs.Add(new LogEntry {
+                            Item = mappingDesc,
+                            Error = $"{mapping.NewName} not found in the family"
+                        });
                         continue;
                     }
 
-                    _ = doc.SetValue(targetParam, sourceParam, mapping.MappingStrategy);
+                    if (tgtParam.Formula != null) _ = doc.UnsetFormula(tgtParam);
+
+                    _ = doc.SetValue(tgtParam, srcParam, mapping.MappingStrategy);
+                    if (tgtParam != srcParam) {
+                        logs.Add(new LogEntry { Item = $"Coerced {mappingDesc} using {mapping.MappingStrategy}" });
+                    } else {
+                        logs.Add(new LogEntry { Item = $"Set {mappingDesc}" });
+                    }
+                    var backlinkLog = Backlink(doc, srcParam, tgtParam);
+                    if (backlinkLog is not null) logs.Add(backlinkLog);
                     foundMatch = true;
 
-                    // Backlink: if original source is built-in, set source.Formula = target.Name
-                    if (ParameterUtils.IsBuiltInParameter(sourceParam.Id)) {
-                        if (sourceParam.IsInstance != targetParam.IsInstance) {
-                            logs.Add(new LogEntry {
-                                Item = $"Backlink {mapping.NewName} → {currName}",
-                                Error = $"Cannot set formulas for mismatching instance/type " +
-                                        $"({sourceParam.Name()} is {sourceParam.GetTypeInstanceDesignation()} " +
-                                        $"but {targetParam.Name()} is {targetParam.GetTypeInstanceDesignation()})"
-                            });
-                        } else {
-                            doc.SetFormulaNative(sourceParam, targetParam.Definition.Name);
-                        }
-                    }
-
-                    mapping.IsProcessed = true;
-                    logs.Add(new LogEntry { Item = mappingDesc });
                 } catch (Exception ex) {
                     logs.Add(new LogEntry { Item = mappingDesc, Error = ex.Message });
                 }
@@ -70,18 +66,37 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
         return new OperationLog(this.Name, logs);
     }
 
+    public static LogEntry Backlink(FamilyDocument doc, FamilyParameter srcParam, FamilyParameter tgtParam) {
+        var srcName = srcParam.Definition.Name;
+        var tgtName = tgtParam.Definition.Name;
+        if (ParameterUtils.IsBuiltInParameter(srcParam.Id)) {
+            if (tgtParam.Formula is null) {
+                var success = doc.SetFormulaFast(srcParam, tgtName, out var errorMessage);
+                if (!success) {
+                    return new LogEntry { Item = $"Backlink {tgtName} → {srcName}", Error = errorMessage };
+                } else {
+                    return new LogEntry { Item = $"Backlink {tgtName} → {srcName}" };
+                }
+            }
+        }
+        return null;
+    }
+
     /// <summary>
     ///     Prioritizes CurrName options by which have values for all types.
     ///     Falls back to original order when snapshot is not available.
     /// </summary>
+    /// <remarks>
+    ///     Does not prioritize by number of types with values. while technically a good idea
+    ///     it may add excessive complexity to the operation, making it harder for users to understand.
+    /// </remarks>
     private IEnumerable<string> PrioritizeCurrNames(List<string> currNames) {
         if (this._context?.PreProcessSnapshot?.Parameters == null || this._context.PreProcessSnapshot.Parameters.Count == 0)
             return currNames;
 
-        // Sort by: HasValueForAllTypes first, then TypesWithValue descending, then original order
+        // Sort by: HasValueForAllTypes first, then original order
         return currNames
             .OrderByDescending(this._context.ParamHasValueForAllTypes)
-            .ThenByDescending(this._context.GetTypesWithValue)
             .ThenBy(currNames.IndexOf);
     }
 }

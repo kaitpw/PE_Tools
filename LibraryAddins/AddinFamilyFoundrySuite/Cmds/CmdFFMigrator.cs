@@ -55,7 +55,7 @@ public class CmdFFMigrator : IExternalCommand {
                         PropertiesGroup = new ForgeTypeId(""),
                         DataType = SpecTypeId.String.Text,
                         IsInstance = false,
-                        ValueOrFormula = DateTime.Now.ToString("yyyy_MM_dd HH:mm:ss")
+                        ValueOrFormula = $"\"{DateTime.Now:yyyy_MM_dd HH:mm:ss}\""
                     }
                 ]
             };

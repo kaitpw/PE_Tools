@@ -102,7 +102,8 @@ public static class FamilyDocumentUnwrapFormula {
         if (ParameterUtils.IsBuiltInParameter(ultimateSource.Id) &&
             ultimateSource.IsInstance == param.IsInstance) {
             try {
-                doc.SetFormulaNative(ultimateSource, param.Definition.Name);
+                var success = doc.SetFormulaFast(ultimateSource, param.Definition.Name, out var errorMessage);
+                if (!success) throw new Exception(errorMessage);
             } catch (InvalidOperationException) {
                 // Backlink failed - continue anyway
             }
