@@ -27,12 +27,19 @@ public class ForgeTypeIdConverter : JsonConverter<ForgeTypeId> {
         }
 
         // Special case: Empty ForgeTypeId (or empty TypeId string) represents "Other" in Revit UI
-        if (string.IsNullOrEmpty(value.TypeId)) { // TODO: test this more, This is for GroupTypeId, but we need to handle all forgeTypeId cases
+        if (string.IsNullOrEmpty(value.TypeId)) {
             writer.WriteValue("Other");
             return;
         }
 
-        writer.WriteValue(value.ToLabel());
+        // Try to get a human-readable label; fall back to raw TypeId if labeling fails
+        // (e.g., discipline types or malformed ForgeTypeIds can throw in LabelUtils)
+        try {
+            writer.WriteValue(value.ToLabel());
+        } catch (Exception ex) {
+            Debug.WriteLine($"Failed to get label for ForgeTypeId: {value.TypeId}\n\t error message: {ex.Message}");
+            writer.WriteValue(value.TypeId);
+        }
     }
 
     public override ForgeTypeId ReadJson(JsonReader reader,

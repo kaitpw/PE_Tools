@@ -1,3 +1,4 @@
+using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using PeServices.Storage;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators;
@@ -6,9 +7,9 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators;
 ///     Orchestrates parameter collection and aggregation across multiple families.
 /// </summary>
 public class FamilyParamAggregator {
-    private readonly IFamilyParamCollector _collector;
+    private readonly IProjectSnapshotCollector _collector;
 
-    public FamilyParamAggregator(IFamilyParamCollector collector) {
+    public FamilyParamAggregator(IProjectSnapshotCollector collector) {
         this._collector = collector;
     }
 
@@ -23,16 +24,17 @@ public class FamilyParamAggregator {
 
         foreach (var family in families) {
             var familyName = family.Name;
-            List<ParamCollectionResult> paramResults;
+            FamilySnapshot snapshot;
 
             try {
-                paramResults = this._collector.CollectParams(doc, family);
+                snapshot = new FamilySnapshot { FamilyName = familyName };
+                this._collector.Collect((doc, family), snapshot);
             } catch {
                 // Skip families that fail to process
                 continue;
             }
 
-            foreach (var param in paramResults) {
+            foreach (var param in snapshot.Parameters) {
                 var key = GenerateKey(param);
 
                 if (!aggregated.TryGetValue(key, out var existing)) {
@@ -91,9 +93,9 @@ public class FamilyParamAggregator {
     /// <summary>
     ///     Generates a unique key for a parameter based on name and instance/type distinction.
     /// </summary>
-    private static string GenerateKey(ParamCollectionResult param) {
+    private static string GenerateKey(ParamSnapshot param) {
         var instanceMarker = param.IsInstance ? "INST" : "TYPE";
-        return $"{param.ParamName}|{instanceMarker}";
+        return $"{param.Name}|{instanceMarker}";
     }
 
     /// <summary>

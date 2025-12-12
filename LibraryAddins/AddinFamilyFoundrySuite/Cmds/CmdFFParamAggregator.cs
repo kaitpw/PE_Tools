@@ -44,10 +44,10 @@ public class CmdFFParamAggregator : IExternalCommand {
             }
 
             // Create collector based on settings (extensible for future collectors)
-            IFamilyParamCollector collector = profile.CollectorType switch {
-                ParamCollectorType.TempInstance => new TempInstanceParamCollector(),
-                // Future: ParamCollectorType.EditFamily => new EditFamilyParamCollector(),
-                _ => new TempInstanceParamCollector()
+            IProjectSnapshotCollector collector = profile.CollectorType switch {
+                ParamCollectorType.TempInstance => new ProjectParamCollector(),
+                // Future: ParamCollectorType.EditFamily => new FamilyDocParamCollector() via EditFamily context
+                _ => new ProjectParamCollector()
             };
 
             var aggregator = new FamilyParamAggregator(collector);

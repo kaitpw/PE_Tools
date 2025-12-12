@@ -1,3 +1,4 @@
+using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using Nice3point.Revit.Extensions;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators;
@@ -6,11 +7,11 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators;
 ///     Aggregated parameter data across multiple families for CSV output.
 /// </summary>
 public class AggregatedParamData {
-    public AggregatedParamData(ParamCollectionResult param) {
-        this.ParamName = param.ParamName;
+    public AggregatedParamData(ParamSnapshot param) {
+        this.ParamName = param.Name;
         this.DataTypeLabel = param.DataType.ToLabel();
         this.ForgeTypeId = param.DataType?.TypeId ?? string.Empty;
-        this.StorageType = param.StorageType.ToString();
+        this.StorageType = param.StorageType?.ToString() ?? string.Empty;
         this.IsInstance = param.IsInstance;
         this.IsBuiltIn = param.IsBuiltIn;
         this.SharedGuid = param.SharedGuid?.ToString() ?? string.Empty;

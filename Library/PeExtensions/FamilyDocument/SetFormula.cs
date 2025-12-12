@@ -61,14 +61,14 @@ public static class Formula {
             }
         }
 
-        // Check for circular references before Revit throws a cryptic error
-        var cycleResult = FormulaUtils.DetectCycle(targetParam, formula, familyManager);
-        if (cycleResult.WouldCycle) {
-            var cyclePath = cycleResult.FormatCyclePath();
-            var message = $"Cannot set formula '{formula}' on parameter '{targetParam.Name()}'. " +
-                          $"This would create a circular reference: {targetParam.Name()} → {cyclePath}";
-            throw new InvalidOperationException(message);
-        }
+        // Check for circular references before Revit throws a cryptic error. This is slow, maybe uncomment later
+        // var cycleResult = FormulaUtils.DetectCycle(targetParam, formula, familyManager);
+        // if (cycleResult.WouldCycle) {
+        //     var cyclePath = cycleResult.FormatCyclePath();
+        //     var message = $"Cannot set formula '{formula}' on parameter '{targetParam.Name()}'. " +
+        //                   $"This would create a circular reference: {targetParam.Name()} → {cyclePath}";
+        //     throw new InvalidOperationException(message);
+        // }
 
         famDoc.FamilyManager.SetFormula(targetParam, formula);
         return true;

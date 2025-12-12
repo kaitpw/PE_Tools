@@ -11,6 +11,18 @@ public interface IOperation : IExecutable {
 }
 
 /// <summary>
+///     Interface for operations that can use pre-processing parameter snapshots.
+///     Operations that implement this interface will receive the snapshot before execution.
+/// </summary>
+public interface ISnapshotAwareOperation : IOperation {
+    /// <summary>
+    ///     Sets the processing context. Usually set by OperationProcessor before opening the FamilyDocument execution.
+    /// NOTE FOR FUTURE: enable/allow resettingt he context periodically with a typeoperation to get inter-operation snapshots too.
+    /// </summary>
+    void SetContext(FamilyProcessingContext context);
+}
+
+/// <summary>
 ///     Base abstract class for document-level operations.
 ///     Document-level operations are executed on the entire family document all at once.
 /// </summary>

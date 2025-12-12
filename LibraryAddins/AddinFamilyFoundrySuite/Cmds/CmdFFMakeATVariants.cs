@@ -33,14 +33,14 @@ public class CmdFFMakeATVariants : IExternalCommand {
             var outputs = processor.ProcessFamilyDocumentIntoVariants(variants, outputFolderPath);
 
             var balloon = new Ballogger();
-            foreach (var output in outputs) {
-                var (logs, error) = output.Logs;
+            foreach (var ctx in outputs) {
+                var (logs, error) = ctx.OperationLogs;
                 if (error != null) {
                     _ = balloon.Add(Log.ERR, new StackFrame(),
-                        $"Failed to process {output.FamilyName}: {error.Message}");
+                        $"Failed to process {ctx.FamilyName}: {error.Message}");
                 } else {
                     _ = balloon.Add(Log.INFO, new StackFrame(),
-                        $"Processed {output.FamilyName} with {variants.Count} variants in {output.TotalMs:F0}ms");
+                        $"Processed {ctx.FamilyName} with {variants.Count} variants in {ctx.TotalMs:F0}ms");
                     foreach (var log in logs) {
                         _ = balloon.Add(Log.INFO, new StackFrame(),
                             $"  {log.OperationName}: {log.Entries.Count} entries");

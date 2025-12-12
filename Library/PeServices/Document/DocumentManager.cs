@@ -98,11 +98,11 @@ public class DocumentManager {
                 .AppendLine($"Target View: {view.Name} (ID: {view.Id.Value()})");
 
         _ = sb.AppendLine($"Active Document: {activeDoc?.Title ?? "None"} (Path: {activeDoc?.PathName ?? "N/A"})")
-            .AppendLine($"Active View: {activeView?.Name ?? "None"} (ID: {activeViewId?.Value ?? -1})")
+            .AppendLine($"Active View: {activeView?.Name ?? "None"} (ID: {activeViewId?.Value() ?? -1})")
             .AppendLine(
                 $"Open Documents ({openDocs.Count}): {string.Join("\n  - ", openDocs.Select(d => $"{d.Title} (Path: {d.PathName})"))}")
             .AppendLine(
-                $"Open Views ({openUiViews.Count}): {string.Join("\n  - ", openUiViews.Select(v => v.ViewId.Value))}");
+                $"Open Views ({openUiViews.Count}): {string.Join("\n  - ", openUiViews.Select(v => v.ViewId.Value()))}");
 
         return sb.ToString();
     }

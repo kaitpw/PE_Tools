@@ -1,4 +1,5 @@
 using AddinFamilyFoundrySuite.Core;
+using AddinFamilyFoundrySuite.Core.Aggregators;
 using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
@@ -42,16 +43,18 @@ public class CmdFFManager : IExternalCommand {
                 new() { Strength = RpStrength.CenterFB, Name = "Center", Color = new Color(115, 0, 253) }
             };
 
-            // Convert old AddFamilyParamsSettings to new AddAndSetParamsSettings
+            // Convert legacy AddFamilyParamsSettings to AddAndSetParamsSettings
             var addAndSetParamsSettings = new AddAndSetParamsSettings {
                 OverrideExistingValues = profile.AddFamilyParams.OverrideExistingValues,
+                CreateFamParamIfMissing = true,
                 Parameters = profile.AddFamilyParams.FamilyParamData
                     .Select(p => new SetParamModel {
                         Name = p.Name,
                         ValueOrFormula = p.GlobalValue?.ToString() ?? p.Formula,
                         PropertiesGroup = p.PropertiesGroup,
                         DataType = p.DataType,
-                        IsInstance = p.IsInstance
+                        IsInstance = p.IsInstance,
+                        SetAsFormula = p.GlobalValue == null && !string.IsNullOrWhiteSpace(p.Formula)
                     })
                     .ToList()
             };
@@ -68,7 +71,6 @@ public class CmdFFManager : IExternalCommand {
             };
             var queue = new OperationQueue()
                 .Add(new AddSharedParams(apsParamData))
-                .Add(new AddFamilyParams(profile.AddFamilyParams))
                 .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
                 .Add(new AddAndSetParams(addAndSetParamsSettings)) // must come after AddAllFamilyParams and RP/dims
                 .Add(new MakeRefPlaneSubcategories(specs))
@@ -85,31 +87,34 @@ public class CmdFFManager : IExternalCommand {
             };
 
             if (executionOptions.PreviewRun) {
-                OperationLogger.OutputDryRunResults(
-                    apsParamData,
-                    doc,
-                    queue,
-                    profile.GetFamilies,
-                    storage,
-                    settings.CurrentProfile,
-                    settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
+                _ = new DryRunResultBuilder(storage)
+                    .WithProfile(profile, settings.CurrentProfile)
+                    .WithApsParams(apsParamData)
+                    .WithFamilies(profile.GetFamilies(doc))
+                    .WithOperationMetadata(queue)
+                    .WriteOutput(settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
                 return Result.Succeeded;
             }
 
-            using var processor = new OperationProcessor(doc, executionOptions);
+            // Create collectors for pre/post snapshots (project doc vs family doc)
+            var projectCollector = new ProjectParamCollector();
+            var familyDocCollector = new FamilyDocParamCollector();
+
+            using var processor = new OperationProcessor(doc, executionOptions, projectCollector, familyDocCollector);
             var logs = processor
-                .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc)
-                )
+                .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc))
                 .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
-            var logPath = OperationLogger.OutputProcessingResults(
-                logs.familyResults,
-                logs.totalMs,
-                storage,
-                settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
+
+            _ = new ProcessingResultBuilder(storage)
+                .WithProfile(profile, settings.CurrentProfile)
+                .WithOperationMetadata(queue)
+                .WithFamilyResults(logs.familyContexts)
+                .WithTotalTime(logs.totalMs)
+                .WriteOutput(settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
 
             var balloon = new Ballogger();
-            foreach (var output in logs.familyResults)
-                _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.FamilyName} in {output.TotalMs}ms");
+            foreach (var ctx in logs.familyContexts)
+                _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {ctx.FamilyName} in {ctx.TotalMs}ms");
             balloon.Show();
             return Result.Succeeded;
         } catch (Exception ex) {

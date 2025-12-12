@@ -8,6 +8,11 @@ namespace AddinFamilyFoundrySuite.Core;
 public class OperationQueue {
     private readonly List<IOperation> _operations = new();
 
+    /// <summary>
+    ///     Gets all operations in the queue for inspection/injection.
+    /// </summary>
+    public IReadOnlyList<IOperation> Operations => this._operations;
+
     public OperationQueue Add<TOpSettings>(
         IOperation<TOpSettings> operation,
         bool internalOperation = false

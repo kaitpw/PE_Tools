@@ -5,11 +5,12 @@ using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapReplaceParams : DocOperation<MapParamsSettings> {
+public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareOperation {
     private readonly
         Dictionary<string, (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
         _sharedParamsDict;
     private readonly MapParamsSharedState _sharedState;
+    private FamilyProcessingContext _context;
 
     public MapReplaceParams(
         MapParamsSettings settings,
@@ -22,14 +23,13 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
 
     public override string Description => "Replace a family's existing parameters with APS shared parameters";
 
+    public void SetContext(FamilyProcessingContext context) => this._context = context;
+
     public override OperationLog Execute(FamilyDocument doc) {
         // Create fresh state for THIS family execution
         var mutableMappings = this._sharedState.CreateFreshMappings();
         var logs = new List<LogEntry>();
         var fm = doc.FamilyManager;
-
-        // Debug.WriteLine("MAP REPLACE PARAMS: Unprocessed mapping data:");
-        // this._sharedState.LogUnProcessedMappingData();
 
         foreach (var mapping in mutableMappings.Where(m => !m.IsProcessed)) {
             if (!this._sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam)) {
@@ -37,9 +37,12 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                 continue;
             }
 
+            // Prioritize CurrName options by which have values for all types (when snapshot available)
+            var prioritizedNames = this.PrioritizeCurrNames(mapping.CurrName);
+
             // Try each CurrName in priority order until one succeeds
             var foundMatch = false;
-            foreach (var currName in mapping.CurrName) {
+            foreach (var currName in prioritizedNames) {
                 if (foundMatch) break;
 
                 try {
@@ -50,7 +53,6 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
 
                     // Verify that new parameter does not already exist, replacement errors if it does
                     if (fm.FindParameter(mapping.NewName) != null) continue;
-
 
                     if (currentParam.Definition.GetDataType() != sharedParam.externalDefinition.GetDataType()) continue;
 
@@ -71,11 +73,6 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                         mapping.IsProcessed = true;
                         logs.Add(new LogEntry { Item = $"{currName} → {replaced.Definition.Name}" });
                     }
-                    //
-                    // if (replaced.Definition.Name.Contains("Voltage")) {
-                    //     var res = FormulaUtils.IsConstantFormula(replaced.Formula, doc.FamilyManager);
-                    //     Debug.WriteLine(res);
-                    // }
 
                     if (replaced.Formula == null || FormulaUtils.IsConstantFormula(replaced.Formula, doc.FamilyManager)) {
                         _ = doc.UnsetFormula(replaced);
@@ -93,5 +90,20 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
         }
 
         return new OperationLog(this.Name, logs);
+    }
+
+    /// <summary>
+    ///     Prioritizes CurrName options by which have values for all types.
+    ///     Falls back to original order when snapshot is not available.
+    /// </summary>
+    private IEnumerable<string> PrioritizeCurrNames(List<string> currNames) {
+        if (this._context?.PreProcessSnapshot?.Parameters == null || this._context.PreProcessSnapshot.Parameters.Count == 0)
+            return currNames;
+
+        // Sort by: HasValueForAllTypes first, then TypesWithValue descending, then original order
+        return currNames
+            .OrderByDescending(this._context.ParamHasValueForAllTypes)
+            .ThenByDescending(this._context.GetTypesWithValue)
+            .ThenBy(currNames.IndexOf);
     }
 }

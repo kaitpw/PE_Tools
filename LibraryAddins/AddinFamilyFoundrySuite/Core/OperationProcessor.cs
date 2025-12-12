@@ -1,16 +1,20 @@
+using AddinFamilyFoundrySuite.Core.Aggregators;
+using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using PeExtensions.FamDocument;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core;
 
-public record FamilyProcessOutput(string FamilyName, Result<List<OperationLog>> Logs, double TotalMs);
-
 public class OperationProcessor(
     Document doc,
-    ExecutionOptions executionOptions = null
+    ExecutionOptions executionOptions = null,
+    IProjectSnapshotCollector projectCollector = null,
+    IFamilyDocSnapshotCollector familyDocCollector = null
 ) : IDisposable {
     private readonly ExecutionOptions _exOpts = executionOptions ?? new ExecutionOptions();
+    private readonly IProjectSnapshotCollector _projectCollector = projectCollector;
+    private readonly IFamilyDocSnapshotCollector _familyDocCollector = familyDocCollector;
 
     /// <summary>
     ///     A function to select families in the Document. If the document is a family document, this will not be called
@@ -35,76 +39,83 @@ public class OperationProcessor(
 
     /// <summary>
     ///     Execute a configured processor with full initialization and document handling.
-    ///     Execution options (preview run, single transaction, optimize type operations) are controlled by
-    ///     ExecutionOptions.
+    ///     Returns FamilyProcessingContext with pre/post snapshots when a collector is provided.
     /// </summary>
-    public (List<FamilyProcessOutput> familyResults, double totalMs) ProcessQueue(
+    public (List<FamilyProcessingContext> familyContexts, double totalMs) ProcessQueue(
         OperationQueue queue,
         string outputFolderPath = null,
         LoadAndSaveOptions loadAndSaveOptions = null) {
-        var familyResults = new List<FamilyProcessOutput>();
         var totalSw = Stopwatch.StartNew();
 
-        var familyFuncs = queue.ToFuncs(
-            this._exOpts.OptimizeTypeOperations,
-            this._exOpts.SingleTransaction);
-        var outputs = this.OpenDoc.IsFamilyDocument
-            ? this.ProcessFamilyDocument(familyFuncs)
-            : this.ProcessNormalDocument(familyFuncs, loadAndSaveOptions, outputFolderPath);
+        var contexts = this.OpenDoc.IsFamilyDocument
+            ? this.ProcessFamilyDocument(queue)
+            : this.ProcessNormalDocument(queue, loadAndSaveOptions, outputFolderPath);
 
-        familyResults.AddRange(outputs);
         totalSw.Stop();
-        return (familyResults, totalSw.Elapsed.TotalMilliseconds);
+        return (contexts, totalSw.Elapsed.TotalMilliseconds);
     }
 
-    public (List<FamilyProcessOutput> familyResults, double totalMs) ProcessQueueDangerously(
+    public (List<FamilyProcessingContext> familyContexts, double totalMs) ProcessQueueDangerously(
         OperationQueue queue,
         string outputFolderPath = null,
         LoadAndSaveOptions loadAndSaveOptions = null
     ) {
-        var familyResults = new List<FamilyProcessOutput>();
         var totalSw = Stopwatch.StartNew();
 
-        var familyFuncs = queue.ToFuncs(
-            this._exOpts.OptimizeTypeOperations,
-            this._exOpts.SingleTransaction);
-        var outputs = this.OpenDoc.IsFamilyDocument
-            ? this.ProcessFamilyDocument(familyFuncs)
-            : this.ProcessNormalDocument(familyFuncs, loadAndSaveOptions, outputFolderPath);
-        var errors = outputs
-            .Where(output => {
-                var (_, err) = output.Logs;
+        var contexts = this.OpenDoc.IsFamilyDocument
+            ? this.ProcessFamilyDocument(queue)
+            : this.ProcessNormalDocument(queue, loadAndSaveOptions, outputFolderPath);
+
+        var errors = contexts
+            .Where(ctx => {
+                var (_, err) = ctx.OperationLogs;
                 return err != null;
-            }).Select(output => {
-                var (_, err) = output.Logs;
+            }).Select(ctx => {
+                var (_, err) = ctx.OperationLogs;
                 return err;
             }).ToList();
         if (errors.Any()) throw errors.First();
 
-        familyResults.AddRange(outputs);
         totalSw.Stop();
-        return (familyResults, totalSw.Elapsed.TotalMilliseconds);
+        return (contexts, totalSw.Elapsed.TotalMilliseconds);
     }
 
-    private List<FamilyProcessOutput> ProcessNormalDocument(
-        Func<FamilyDocument, List<OperationLog>>[] familyFuncs,
+    private List<FamilyProcessingContext> ProcessNormalDocument(
+        OperationQueue queue,
         LoadAndSaveOptions loadAndSaveOptions,
         string outputFolderPath
     ) {
-        var familyResults = new List<FamilyProcessOutput>();
+        var contexts = new List<FamilyProcessingContext>();
         var families = this._documentFamilySelector();
         if (families == null || families.Count == 0) {
             var err = new ArgumentNullException(nameof(families),
                 @"There must be families specified for processing if the open document is a normal model document");
-            familyResults.Add(new FamilyProcessOutput("ERROR", err, 0));
-            return familyResults;
+            contexts.Add(new FamilyProcessingContext { FamilyName = "ERROR", OperationLogs = err, TotalMs = 0 });
+            return contexts;
         }
 
         foreach (var family in families) {
-            var familyName = family.Name; // Capture name 
+            var familyName = family.Name;
+            var context = new FamilyProcessingContext { FamilyName = familyName };
             var logs = new List<OperationLog>();
+
             try {
                 var familySw = Stopwatch.StartNew();
+
+                // Collect pre-snapshot before EditFamily
+                if (this._projectCollector is not null) {
+                    var pre = new FamilySnapshot { FamilyName = familyName };
+                    this._projectCollector.Collect((this.OpenDoc, family), pre);
+                    context.PreProcessSnapshot = pre;
+                }
+
+                // Inject context into snapshot-aware operations
+                InjectContextIntoOperations(queue, context);
+
+                var familyFuncs = queue.ToFuncs(
+                    this._exOpts.OptimizeTypeOperations,
+                    this._exOpts.SingleTransaction);
+                
                 _ = this.OpenDoc
                     .GetFamilyDocument(family)
                     .EnsureDefaultType()
@@ -112,51 +123,90 @@ public class OperationProcessor(
                     .SaveToLocations(famDoc =>
                         GetSaveLocations(famDoc, loadAndSaveOptions ?? new LoadAndSaveOptions(), outputFolderPath))
                     .LoadAndClose(this.OpenDoc, new EditAndLoadFamilyOptions());
+
+                // Collect post-snapshot after LoadAndClose
+                if (this._projectCollector is not null) {
+                    var post = new FamilySnapshot { FamilyName = familyName };
+                    this._projectCollector.Collect((this.OpenDoc, family), post);
+                    context.PostProcessSnapshot = post;
+                }
+
                 familySw.Stop();
-                familyResults.Add(new FamilyProcessOutput(familyName, logs, familySw.Elapsed.TotalMilliseconds));
+                context.OperationLogs = logs;
+                context.TotalMs = familySw.Elapsed.TotalMilliseconds;
             } catch (Exception ex) {
-                familyResults.Add(new FamilyProcessOutput(
-                    familyName,
-                    new Exception($"Failed to process family {familyName}: {ex.Message}"),
-                    0));
+                context.OperationLogs = new Exception($"Failed to process family {familyName}: {ex.Message}\n{ex.ToStringDemystified()}");
+                context.TotalMs = 0;
             }
+
+            contexts.Add(context);
         }
 
-        return familyResults;
+        return contexts;
     }
 
-
-    private List<FamilyProcessOutput> ProcessFamilyDocument(
-        Func<FamilyDocument, List<OperationLog>>[] familyFuncs
-    ) {
+    private List<FamilyProcessingContext> ProcessFamilyDocument(OperationQueue queue) {
+        var context = new FamilyProcessingContext { FamilyName = this.OpenDoc.Title };
         var logs = new List<OperationLog>();
+
         try {
             var familySw = Stopwatch.StartNew();
-            _ = this.OpenDoc
+
+            // Inject context for snapshot-aware operations
+            InjectContextIntoOperations(queue, context);
+
+            var familyFuncs = queue.ToFuncs(
+                this._exOpts.OptimizeTypeOperations,
+                this._exOpts.SingleTransaction);
+
+            var famDoc = this.OpenDoc
                 .GetFamilyDocument()
-                .EnsureDefaultType()
-                .ProcessWithoutSaving(this.CaptureLogs(familyFuncs, logs));
+                .EnsureDefaultType();
+
+            if (this._familyDocCollector is not null) {
+                var pre = new FamilySnapshot { FamilyName = context.FamilyName };
+                this._familyDocCollector.Collect(famDoc, pre);
+                context.PreProcessSnapshot = pre;
+            }
+
+            _ = famDoc.ProcessWithoutSaving(this.CaptureLogs(familyFuncs, logs));
+
+            if (this._familyDocCollector is not null) {
+                var post = new FamilySnapshot { FamilyName = context.FamilyName };
+                this._familyDocCollector.Collect(famDoc, post);
+                context.PostProcessSnapshot = post;
+            }
+
             familySw.Stop();
-            return new List<FamilyProcessOutput> { new(this.OpenDoc.Title, logs, familySw.Elapsed.TotalMilliseconds) };
+            context.OperationLogs = logs;
+            context.TotalMs = familySw.Elapsed.TotalMilliseconds;
         } catch (Exception ex) {
-            return new List<FamilyProcessOutput> {
-                new(
-                    this.OpenDoc.Title,
-                    new Exception($"Failed to process family {this.OpenDoc.Title}: {ex.Message}"),
-                    0)
-            };
+            context.OperationLogs = new Exception($"Failed to process family {this.OpenDoc.Title}: {ex.Message}\n{ex.ToStringDemystified()}");
+            context.TotalMs = 0;
         }
+
+        return [context];
     }
 
-    public List<FamilyProcessOutput> ProcessFamilyDocumentIntoVariants(
+    /// <summary>
+    ///     Injects the processing context into any snapshot-aware operations in the queue.
+    /// </summary>
+    private static void InjectContextIntoOperations(OperationQueue queue, FamilyProcessingContext context) {
+        foreach (var op in queue.Operations.OfType<ISnapshotAwareOperation>())
+            op.SetContext(context);
+    }
+
+    public List<FamilyProcessingContext> ProcessFamilyDocumentIntoVariants(
         List<(string variant, OperationQueue queue)> variants,
         string outputDirectory
     ) {
+        var context = new FamilyProcessingContext { FamilyName = this.OpenDoc.Title };
         var logs = new List<OperationLog>();
+
         try {
             var familySw = Stopwatch.StartNew();
 
-            if (variants == null || variants.Count == 0) return new List<FamilyProcessOutput>();
+            if (variants == null || variants.Count == 0) return [];
             if (outputDirectory != null && !Directory.Exists(outputDirectory))
                 _ = Directory.CreateDirectory(outputDirectory);
 
@@ -174,15 +224,14 @@ public class OperationProcessor(
             }
 
             familySw.Stop();
-            return new List<FamilyProcessOutput> { new(this.OpenDoc.Title, logs, familySw.Elapsed.TotalMilliseconds) };
+            context.OperationLogs = logs;
+            context.TotalMs = familySw.Elapsed.TotalMilliseconds;
         } catch (Exception ex) {
-            return new List<FamilyProcessOutput> {
-                new(
-                    this.OpenDoc.Title,
-                    new Exception($"Failed to process family {this.OpenDoc.Title}: {ex.Message}"),
-                    0)
-            };
+            context.OperationLogs = new Exception($"Failed to process family {this.OpenDoc.Title}: {ex.Message}");
+            context.TotalMs = 0;
         }
+
+        return [context];
     }
 
     private Action<FamilyDocument>[] CaptureLogs(

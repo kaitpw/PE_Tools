@@ -1,4 +1,5 @@
 using AddinFamilyFoundrySuite.Core;
+using AddinFamilyFoundrySuite.Core.Aggregators;
 using AddinFamilyFoundrySuite.Core.Operations;
 using PeRevit.Lib;
 using PeRevit.Ui;
@@ -23,26 +24,34 @@ public class CmdFFManagerSnapshot : IExternalCommand {
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
-                SingleTransaction = false, PreviewRun = false, OptimizeTypeOperations = true
+                SingleTransaction = false,
+                PreviewRun = false,
+                OptimizeTypeOperations = true
             };
 
-            using var processor = new OperationProcessor(doc, executionOptions);
+            var projectCollector = new ProjectParamCollector();
+            var familyDocCollector = new FamilyDocParamCollector();
+            using var processor = new OperationProcessor(doc, executionOptions, projectCollector, familyDocCollector);
 
             var queue = new OperationQueue()
-                .Add(new LogFamilyParamsState(outputFolderPath))
                 .Add(new LogRefPlaneAndDims(outputFolderPath));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
 
             var logs = processor
-                .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc)
-                )
+                .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc))
                 .ProcessQueue(queue, outputFolderPath);
 
+            _ = new ProcessingResultBuilder(storage)
+                .WithOperationMetadata(queue)
+                .WithFamilyResults(logs.familyContexts)
+                .WithTotalTime(logs.totalMs)
+                .WriteOutput(openOnFinish: true);
+
             var balloon = new Ballogger();
-            foreach (var output in logs.familyResults)
-                _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {output.FamilyName} in {output.TotalMs}ms");
+            foreach (var ctx in logs.familyContexts)
+                _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {ctx.FamilyName} in {ctx.TotalMs}ms");
             balloon.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
