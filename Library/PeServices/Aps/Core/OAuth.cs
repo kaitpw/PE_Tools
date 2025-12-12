@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using PeRevit.Ui;
 using PeServices.Aps.Models;
 
@@ -19,35 +18,6 @@ namespace PeServices.Aps.Core;
 ///     </list>
 /// </remarks>
 public class OAuth(TokenProviders.IAuth tokenProvider) {
-    #region Static Cache Infrastructure
-
-    /// <summary>Cache of tokens keyed by client ID, shared across all OAuth instances</summary>
-    private static readonly Dictionary<string, CachedToken> TokenCache = new();
-
-    /// <summary>Lock for thread-safe cache access - kept minimal scope</summary>
-    private static readonly object CacheLock = new();
-
-    /// <summary>
-    ///     Tracks which client IDs are currently being refreshed.
-    ///     Prevents multiple threads from attempting simultaneous refreshes for the same client.
-    /// </summary>
-    private static readonly HashSet<string> RefreshInProgress = new();
-
-    #endregion
-
-    #region Configuration Constants
-
-    /// <summary>Buffer time before expiration to trigger refresh (60 seconds)</summary>
-    private const int ExpirationBufferSeconds = 60;
-
-    /// <summary>Default token lifetime if server doesn't specify (1 hour)</summary>
-    private const int DefaultExpirationSeconds = 3600;
-
-    /// <summary>Timeout for token refresh HTTP requests</summary>
-    private static readonly TimeSpan RefreshTimeout = TimeSpan.FromSeconds(10);
-
-    #endregion
-
     private readonly TokenProviders.IAuth _tokenProvider = tokenProvider;
 
     /// <summary>
@@ -78,6 +48,76 @@ public class OAuth(TokenProviders.IAuth tokenProvider) {
         return this.PerformFullOAuthFlow(clientId, clientSecret);
     }
 
+    #region Full OAuth Flow
+
+    /// <summary>
+    ///     Performs the full 3-legged OAuth flow, opening browser for user consent.
+    /// </summary>
+    private string PerformFullOAuthFlow(string clientId, string clientSecret) {
+        var tcs = new TaskCompletionSource<Result<string>>();
+
+        OAuthHandler.Invoke3LeggedOAuth(clientId, clientSecret, token => {
+            if (token == null) {
+                tcs.SetResult(new Exception(
+                    "Authentication was denied or failed. Please try again. " +
+                    "In the event of unexpected failure after 2 or 3 attempts, contact the developer."));
+                return;
+            }
+
+            try {
+                var newCached = CreateCachedToken(token);
+                UpdateCache(clientId, newCached);
+                tcs.SetResult(token.AccessToken);
+            } catch (Exception ex) {
+                tcs.SetResult(new Exception($"Failed to cache token: {ex.Message}"));
+            }
+        });
+
+        // Wait for callback - this is intentional blocking as we need the token before returning
+        tcs.Task.Wait();
+
+        var (accessToken, error) = tcs.Task.Result;
+        return error is not null ? throw error : accessToken;
+    }
+
+    #endregion
+
+    #region Types
+
+    /// <summary>Internal record for caching token data including refresh token</summary>
+    private sealed record CachedToken(string AccessToken, string RefreshToken, DateTime ExpiresAt);
+
+    #endregion
+
+    #region Static Cache Infrastructure
+
+    /// <summary>Cache of tokens keyed by client ID, shared across all OAuth instances</summary>
+    private static readonly Dictionary<string, CachedToken> TokenCache = new();
+
+    /// <summary>Lock for thread-safe cache access - kept minimal scope</summary>
+    private static readonly object CacheLock = new();
+
+    /// <summary>
+    ///     Tracks which client IDs are currently being refreshed.
+    ///     Prevents multiple threads from attempting simultaneous refreshes for the same client.
+    /// </summary>
+    private static readonly HashSet<string> RefreshInProgress = new();
+
+    #endregion
+
+    #region Configuration Constants
+
+    /// <summary>Buffer time before expiration to trigger refresh (60 seconds)</summary>
+    private const int ExpirationBufferSeconds = 60;
+
+    /// <summary>Default token lifetime if server doesn't specify (1 hour)</summary>
+    private const int DefaultExpirationSeconds = 3600;
+
+    /// <summary>Timeout for token refresh HTTP requests</summary>
+    private static readonly TimeSpan RefreshTimeout = TimeSpan.FromSeconds(10);
+
+    #endregion
+
     #region Cache Operations
 
     /// <summary>
@@ -99,9 +139,7 @@ public class OAuth(TokenProviders.IAuth tokenProvider) {
     ///     Updates the cache with a new token. Lock scope is minimal - just the dictionary write.
     /// </summary>
     private static void UpdateCache(string clientId, CachedToken newToken) {
-        lock (CacheLock) {
-            TokenCache[clientId] = newToken;
-        }
+        lock (CacheLock) TokenCache[clientId] = newToken;
     }
 
     /// <summary>
@@ -152,9 +190,7 @@ public class OAuth(TokenProviders.IAuth tokenProvider) {
             return newCached.AccessToken;
         } finally {
             // Always clear the refresh-in-progress flag
-            lock (CacheLock) {
-                _ = RefreshInProgress.Remove(clientId);
-            }
+            lock (CacheLock) _ = RefreshInProgress.Remove(clientId);
         }
     }
 
@@ -170,9 +206,8 @@ public class OAuth(TokenProviders.IAuth tokenProvider) {
                 if (!RefreshInProgress.Contains(clientId)) {
                     // Other thread finished - check if we got a fresh token
                     if (TokenCache.TryGetValue(clientId, out var cached) &&
-                        DateTime.UtcNow < cached.ExpiresAt.AddSeconds(-ExpirationBufferSeconds)) {
+                        DateTime.UtcNow < cached.ExpiresAt.AddSeconds(-ExpirationBufferSeconds))
                         return cached.AccessToken;
-                    }
                     break; // Refresh finished but failed, we'll need to try ourselves or do full flow
                 }
             }
@@ -205,47 +240,6 @@ public class OAuth(TokenProviders.IAuth tokenProvider) {
             return null;
         }
     }
-
-    #endregion
-
-    #region Full OAuth Flow
-
-    /// <summary>
-    ///     Performs the full 3-legged OAuth flow, opening browser for user consent.
-    /// </summary>
-    private string PerformFullOAuthFlow(string clientId, string clientSecret) {
-        var tcs = new TaskCompletionSource<Result<string>>();
-
-        OAuthHandler.Invoke3LeggedOAuth(clientId, clientSecret, token => {
-            if (token == null) {
-                tcs.SetResult(new Exception(
-                    "Authentication was denied or failed. Please try again. " +
-                    "In the event of unexpected failure after 2 or 3 attempts, contact the developer."));
-                return;
-            }
-
-            try {
-                var newCached = CreateCachedToken(token);
-                UpdateCache(clientId, newCached);
-                tcs.SetResult(token.AccessToken);
-            } catch (Exception ex) {
-                tcs.SetResult(new Exception($"Failed to cache token: {ex.Message}"));
-            }
-        });
-
-        // Wait for callback - this is intentional blocking as we need the token before returning
-        tcs.Task.Wait();
-
-        var (accessToken, error) = tcs.Task.Result;
-        return error is not null ? throw error : accessToken;
-    }
-
-    #endregion
-
-    #region Types
-
-    /// <summary>Internal record for caching token data including refresh token</summary>
-    private sealed record CachedToken(string AccessToken, string RefreshToken, DateTime ExpiresAt);
 
     #endregion
 }

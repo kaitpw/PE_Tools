@@ -1,13 +1,10 @@
-using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinFamilyFoundrySuite.Core.OperationGroups;
-using PeExtensions;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
-using PeExtensions.FamManager;
 using PeExtensions.FamDocument.GetValue;
+using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
-
-
 
 /// <summary>
 ///     Sets parameter values or formulas based on SetAsFormula property.
@@ -17,7 +14,6 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 /// </summary>
 public class SetParamValues(AddAndSetParamsSettings settings, SetParamSharedState sharedState = null)
     : DocOperation<AddAndSetParamsSettings>(settings) {
-
     public override string Description =>
         "Set parameter values or formulas based on SetAsFormula property.";
 
@@ -53,7 +49,10 @@ public class SetParamValues(AddAndSetParamsSettings settings, SetParamSharedStat
         return new OperationLog(this.Name, logs.Values.ToList());
     }
 
-    private static SetResult SetValueOrFormula(FamilyDocument doc, FamilyParameter param, string valueOrFormula, bool setAsFormula) {
+    private static SetResult SetValueOrFormula(FamilyDocument doc,
+        FamilyParameter param,
+        string valueOrFormula,
+        bool setAsFormula) {
         if (setAsFormula) {
             _ = doc.SetFormula(param, valueOrFormula);
             return SetResult.Success;
@@ -74,6 +73,3 @@ public class SetParamValues(AddAndSetParamsSettings settings, SetParamSharedStat
         public static SetResult NeedsFallbackResult => new(true);
     }
 }
-
-
-

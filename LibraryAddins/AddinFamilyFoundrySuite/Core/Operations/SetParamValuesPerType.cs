@@ -1,11 +1,9 @@
-using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinFamilyFoundrySuite.Core.OperationGroups;
-using PeExtensions;
+using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
-using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamDocument.GetValue;
+using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamManager;
-using PeExtensions.FamParameter;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -14,7 +12,6 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     Handles two scenarios:
 ///     1. Explicit per-type values from PerTypeParameters (different value per named type)
 ///     2. Fallback for Parameters that failed SetGlobalValue (uses same value for all types)
-///
 ///     Values are context-aware but must NOT contain parameter references
 ///     (formulas with param refs should use SetParamValues instead).
 /// </summary>
@@ -57,8 +54,8 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings, SetParamSha
 
         // 2. Handle fallback for failed global values (SetGlobalValue failures)
         if (sharedState is not null) {
-            foreach (var p in this.Settings.Parameters.Where(
-                         param => sharedState.FailedGlobalValueParams.Contains(param.Name))) {
+            foreach (var p in this.Settings.Parameters.Where(param =>
+                         sharedState.FailedGlobalValueParams.Contains(param.Name))) {
                 if (string.IsNullOrWhiteSpace(p.ValueOrFormula))
                     continue;
 
@@ -89,9 +86,10 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings, SetParamSha
 
         // Reject values that contain parameter references (should use SetParamValues for formulas)
         var referencedParams = FormulaUtils.GetReferencedParameters(userValue, fm).ToList();
-        if (referencedParams.Any())
+        if (referencedParams.Any()) {
             throw new InvalidOperationException(
                 $"Per-type value '{userValue}' contains parameter references. Use {nameof(SetParamModel.ValueOrFormula)} (not {nameof(SetParamPerTypeModel.ValuesPertype)}) for formulas.");
+        }
 
         // Check for double-quoted string literal: "\"text\"" → strip quotes
         var actualValue = IsQuotedStringLiteral(userValue) ? userValue.Trim()[1..^1] : userValue;
@@ -108,6 +106,3 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings, SetParamSha
         return trimmed.Length >= 2 && trimmed.StartsWith("\"") && trimmed.EndsWith("\"");
     }
 }
-
-
-

@@ -26,8 +26,8 @@ public class MappingData {
     public ParamCoercionStrategy MappingStrategy { get; init; } = ParamCoercionStrategy.CoerceByStorageType;
 
     /// <summary>
-    /// Whether to skip the param in the operation. Use this to dictate upfront which params to skip.
-    /// And/or to specify that a parameter has been sufficiently processed by a previous operation/operation iteration.
+    ///     Whether to skip the param in the operation. Use this to dictate upfront which params to skip.
+    ///     And/or to specify that a parameter has been sufficiently processed by a previous operation/operation iteration.
     /// </summary>
     public bool IsProcessed { get; set; } = false;
 }

@@ -48,4 +48,3 @@ public class AddParamsFromSettings(AddAndSetParamsSettings settings)
         return new OperationLog(this.Name, logs);
     }
 }
-

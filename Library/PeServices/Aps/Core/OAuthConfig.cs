@@ -28,7 +28,5 @@ internal static class OAuthConfig {
     ///     Static HttpClient - best practice for avoiding socket exhaustion.
     ///     Owned here because it's a shared infrastructure concern.
     /// </summary>
-    internal static readonly HttpClient HttpClient = new() {
-        Timeout = TimeSpan.FromSeconds(30)
-    };
+    internal static readonly HttpClient HttpClient = new() { Timeout = TimeSpan.FromSeconds(30) };
 }

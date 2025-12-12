@@ -2,7 +2,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using PeServices.Storage.Core.Json.ContractResolvers;
 using PeServices.Storage.Core.Json.Converters;
-using System.Text;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 
@@ -37,15 +36,13 @@ public static class SnapshotSerializer {
 
         foreach (var s in snapshots.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)) {
             var fixedCols = new[] {
-                s.Name,
-                s.IsInstance.ToString(),
-                SerializeForgeTypeIdLabel(s.PropertiesGroup),
-                SerializeForgeTypeIdLabel(s.DataType),
-                s.Formula ?? string.Empty
+                s.Name, s.IsInstance.ToString(), SerializeForgeTypeIdLabel(s.PropertiesGroup),
+                SerializeForgeTypeIdLabel(s.DataType), s.Formula ?? string.Empty
             };
 
             var valueCols = typeNames
-                .Select(typeName => s.ValuesPerType.TryGetValue(typeName, out var v) ? (v ?? string.Empty) : string.Empty);
+                .Select(typeName =>
+                    s.ValuesPerType.TryGetValue(typeName, out var v) ? v ?? string.Empty : string.Empty);
 
             lines.Add(string.Join(",", fixedCols.Concat(valueCols).Select(EscapeCsvField)));
         }
@@ -67,7 +64,8 @@ public static class SnapshotSerializer {
 
         var header = ParseCsvLine(lines[0]);
         if (header.Count < 5)
-            throw new InvalidOperationException("CSV header must include Name,IsInstance,PropertiesGroup,DataType,Formula");
+            throw new InvalidOperationException(
+                "CSV header must include Name,IsInstance,PropertiesGroup,DataType,Formula");
 
         var typeColumns = header.Skip(5).ToList();
         var snapshots = new List<ParamSnapshot>();

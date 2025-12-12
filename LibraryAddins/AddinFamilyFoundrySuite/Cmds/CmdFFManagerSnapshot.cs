@@ -24,9 +24,7 @@ public class CmdFFManagerSnapshot : IExternalCommand {
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
-                SingleTransaction = false,
-                PreviewRun = false,
-                OptimizeTypeOperations = true
+                SingleTransaction = false, PreviewRun = false, OptimizeTypeOperations = true
             };
 
             var projectCollector = new ProjectParamCollector();
@@ -47,7 +45,7 @@ public class CmdFFManagerSnapshot : IExternalCommand {
                 .WithOperationMetadata(queue)
                 .WithFamilyResults(logs.familyContexts)
                 .WithTotalTime(logs.totalMs)
-                .WriteOutput(openOnFinish: true);
+                .WriteOutput(true);
 
             var balloon = new Ballogger();
             foreach (var ctx in logs.familyContexts)

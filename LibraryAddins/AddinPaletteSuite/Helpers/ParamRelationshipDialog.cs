@@ -77,7 +77,7 @@ public static class ParamRelationshipDialog {
             Margin = new Thickness(0, 4, 0, 0)
         });
 
-        if (!string.IsNullOrEmpty(param.Formula))
+        if (!string.IsNullOrEmpty(param.Formula)) {
             _ = headerPanel.Children.Add(new TextBlock {
                 Text = $"Formula: {param.Formula}",
                 FontSize = 11,
@@ -85,6 +85,7 @@ public static class ParamRelationshipDialog {
                 Margin = new Thickness(0, 4, 0, 0),
                 TextWrapping = TextWrapping.Wrap
             });
+        }
 
         return new Border {
             Child = headerPanel,
@@ -94,14 +95,17 @@ public static class ParamRelationshipDialog {
         };
     }
 
-    private static TreeViewItem BuildTreeItem(FamilyParameter param, FamilyDocument familyDoc, int depth,
+    private static TreeViewItem BuildTreeItem(FamilyParameter param,
+        FamilyDocument familyDoc,
+        int depth,
         HashSet<long> visited) {
         // Prevent infinite recursion from circular formula references
-        if (!visited.Add(param.Id.Value()))
+        if (!visited.Add(param.Id.Value())) {
             return new TreeViewItem {
                 Header = CreateItemHeader(param.Definition.Name, "Parameter", "(circular reference)"),
                 Foreground = new SolidColorBrush(WpfColor.FromRgb(255, 100, 100))
             };
+        }
 
         var item = new TreeViewItem {
             Header = CreateItemHeader(param.Definition.Name, "Parameter",
@@ -118,12 +122,14 @@ public static class ParamRelationshipDialog {
                 IsExpanded = true,
                 Foreground = new SolidColorBrush(WpfColor.FromRgb(78, 201, 176))
             };
-            foreach (var dim in dimensions)
+            foreach (var dim in dimensions) {
                 _ = dimsFolder.Items.Add(new TreeViewItem {
                     Header = CreateItemHeader($"{dim.DimensionType?.Name ?? "Dimension"} ({dim.Id})", "Dimension",
                         dim.Value.HasValue ? $"Value: {dim.Value.Value:F4}" : "Multi-segment"),
                     Foreground = new SolidColorBrush(WpfColor.FromRgb(220, 220, 220))
                 });
+            }
+
             _ = item.Items.Add(dimsFolder);
         }
 
@@ -135,11 +141,13 @@ public static class ParamRelationshipDialog {
                 IsExpanded = true,
                 Foreground = new SolidColorBrush(WpfColor.FromRgb(78, 201, 176))
             };
-            foreach (var array in arrays)
+            foreach (var array in arrays) {
                 _ = arraysFolder.Items.Add(new TreeViewItem {
                     Header = CreateItemHeader($"Array ({array.Id})", "Array", $"Members: {array.NumMembers}"),
                     Foreground = new SolidColorBrush(WpfColor.FromRgb(220, 220, 220))
                 });
+            }
+
             _ = item.Items.Add(arraysFolder);
         }
 
@@ -151,12 +159,14 @@ public static class ParamRelationshipDialog {
                 IsExpanded = true,
                 Foreground = new SolidColorBrush(WpfColor.FromRgb(78, 201, 176))
             };
-            foreach (var connector in connectors)
+            foreach (var connector in connectors) {
                 _ = connectorsFolder.Items.Add(new TreeViewItem {
                     Header = CreateItemHeader($"{connector.Domain} Connector ({connector.Id})", "Connector",
                         $"Domain: {connector.Domain}"),
                     Foreground = new SolidColorBrush(WpfColor.FromRgb(220, 220, 220))
                 });
+            }
+
             _ = item.Items.Add(connectorsFolder);
         }
 
@@ -192,9 +202,7 @@ public static class ParamRelationshipDialog {
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
 
         _ = panel.Children.Add(new TextBlock {
-            Text = name,
-            FontWeight = FontWeights.SemiBold,
-            Margin = new Thickness(0, 0, 8, 0)
+            Text = name, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 8, 0)
         });
 
         _ = panel.Children.Add(new Border {
@@ -222,15 +230,8 @@ public static class ParamRelationshipDialog {
 
     private static StackPanel CreateFolderHeader(string text) {
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
-        _ = panel.Children.Add(new TextBlock {
-            Text = "📁 ",
-            FontSize = 12
-        });
-        _ = panel.Children.Add(new TextBlock {
-            Text = text,
-            FontWeight = FontWeights.SemiBold
-        });
+        _ = panel.Children.Add(new TextBlock { Text = "📁 ", FontSize = 12 });
+        _ = panel.Children.Add(new TextBlock { Text = text, FontWeight = FontWeights.SemiBold });
         return panel;
     }
 }
-

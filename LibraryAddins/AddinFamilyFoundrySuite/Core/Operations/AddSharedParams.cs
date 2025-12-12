@@ -5,7 +5,8 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 public class AddSharedParams(
     IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
 ) : DocOperation {
-    private IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> SharedParams {
+    private IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
+        SharedParams {
         get;
     } = sharedParams;
 

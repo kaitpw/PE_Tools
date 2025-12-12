@@ -1,4 +1,6 @@
+using Autodesk.Revit.Exceptions;
 using PeServices.Documents;
+using System.Windows;
 
 namespace PeExtensions.UiApplication;
 
@@ -54,8 +56,7 @@ public static class OpenDocumentExtensions {
 
                     // For cloud documents, use a timeout warning mechanism
                     if (isCloud) {
-                        if (!TryOpenCloudDocumentWithTimeout(uiApp, existingDocPath, targetView, timeoutSeconds: 3)) {
-                            return; // Error was shown to user
+                        if (!TryOpenCloudDocumentWithTimeout(uiApp, existingDocPath, targetView, 3)) {
                         }
                     } else {
                         // Local documents - just open directly (fast)
@@ -64,6 +65,7 @@ public static class OpenDocumentExtensions {
                         var activatedUiDoc = uiApp.OpenAndActivateDocument(existingDocPath, existingDocOptions, false);
                         activatedUiDoc.RequestViewChange(targetView);
                     }
+
                     return;
                 }
 
@@ -93,8 +95,8 @@ public static class OpenDocumentExtensions {
     ///     Logic flow:
     ///     1. If family doc is already open AND active -> do nothing (already there)
     ///     2. If family doc is already open but NOT active:
-    ///        a. If it has a PathName (from previous activation) -> use OpenAndActivateDocument directly
-    ///        b. If no PathName -> SaveAs to stable temp path, then OpenAndActivateDocument
+    ///     a. If it has a PathName (from previous activation) -> use OpenAndActivateDocument directly
+    ///     b. If no PathName -> SaveAs to stable temp path, then OpenAndActivateDocument
     ///     3. If family doc is NOT open -> use EditFamily to open it, then activate via step 2
     ///     OPTIMIZATION: Once a family has been saved to a stable temp path, subsequent activations
     ///     skip SaveAs and use OpenAndActivateDocument directly with the existing path.
@@ -153,7 +155,8 @@ public static class OpenDocumentExtensions {
     private static void ActivateOpenFamilyDocument(UIApplication uiApp, Document famDoc, string familyName) {
         // OPTIMIZATION: If family already has a PathName, try direct activation first
         if (!string.IsNullOrEmpty(famDoc.PathName)) {
-            Debug.WriteLine($"[ActivateOpenFamilyDocument] Family has PathName, trying direct activation: {famDoc.PathName}");
+            Debug.WriteLine(
+                $"[ActivateOpenFamilyDocument] Family has PathName, trying direct activation: {famDoc.PathName}");
             try {
                 _ = uiApp.OpenAndActivateDocument(famDoc.PathName);
                 Debug.WriteLine("[ActivateOpenFamilyDocument] Direct activation succeeded!");
@@ -179,7 +182,8 @@ public static class OpenDocumentExtensions {
 
         // OPTIMIZATION: If family already has a PathName, try direct activation first
         if (!string.IsNullOrEmpty(famDoc.PathName)) {
-            Debug.WriteLine($"[ActivateOpenFamilyDocumentAndView] Family has PathName, trying direct activation: {famDoc.PathName}");
+            Debug.WriteLine(
+                $"[ActivateOpenFamilyDocumentAndView] Family has PathName, trying direct activation: {famDoc.PathName}");
             try {
                 activatedUiDoc = uiApp.OpenAndActivateDocument(famDoc.PathName);
                 Debug.WriteLine("[ActivateOpenFamilyDocumentAndView] Direct activation succeeded!");
@@ -254,28 +258,29 @@ public static class OpenDocumentExtensions {
         ModelPath modelPath,
         View targetView,
         int timeoutSeconds) {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
         var timerFired = false;
-        System.Threading.Timer timeoutTimer = null;
+        Timer timeoutTimer = null;
 
         try {
-            Debug.WriteLine($"[TryOpenCloudDocument] Starting cloud document activation (timeout={timeoutSeconds}s)...");
+            Debug.WriteLine(
+                $"[TryOpenCloudDocument] Starting cloud document activation (timeout={timeoutSeconds}s)...");
 
             // Start a timer that will show a warning if the operation takes too long
-            timeoutTimer = new System.Threading.Timer(_ => {
+            timeoutTimer = new Timer(_ => {
                 timerFired = true;
                 Debug.WriteLine($"[TryOpenCloudDocument] Timeout reached after {timeoutSeconds}s, showing warning...");
 
                 // Show warning on UI thread via WPF Dispatcher
-                _ = System.Windows.Application.Current?.Dispatcher?.BeginInvoke(() =>
-                    System.Windows.MessageBox.Show(
+                _ = Application.Current?.Dispatcher?.BeginInvoke(() =>
+                    MessageBox.Show(
                         "The cloud model is taking a long time to respond.\n\n" +
                         "This usually means there's a network connectivity issue.\n" +
                         "The operation will continue, but you may need to wait or check your connection.",
                         "Cloud Model - Slow Response",
-                        System.Windows.MessageBoxButton.OK,
-                        System.Windows.MessageBoxImage.Warning));
-            }, null, timeoutSeconds * 1000, System.Threading.Timeout.Infinite);
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning));
+            }, null, timeoutSeconds * 1000, Timeout.Infinite);
 
             // Make the blocking API call
             var openOptions = new OpenOptions { DetachFromCentralOption = DetachFromCentralOption.DoNotDetach };
@@ -286,7 +291,7 @@ public static class OpenDocumentExtensions {
             // Success - switch to the target view
             activatedUiDoc.RequestViewChange(targetView);
             return true;
-        } catch (Autodesk.Revit.Exceptions.RevitServerCommunicationException ex) {
+        } catch (RevitServerCommunicationException ex) {
             Debug.WriteLine($"[TryOpenCloudDocument] Network error after {sw.ElapsedMilliseconds}ms: {ex.Message}");
 
             // Show friendly error dialog
@@ -309,7 +314,8 @@ public static class OpenDocumentExtensions {
             timeoutTimer?.Dispose();
 
             if (timerFired)
-                Debug.WriteLine($"[TryOpenCloudDocument] Operation completed after timeout warning (total: {sw.ElapsedMilliseconds}ms)");
+                Debug.WriteLine(
+                    $"[TryOpenCloudDocument] Operation completed after timeout warning (total: {sw.ElapsedMilliseconds}ms)");
         }
     }
 }

@@ -21,10 +21,11 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
         var voltageName = this.Settings.SourceParameterNames.Voltage;
         var mcaName = this.Settings.SourceParameterNames.MinimumCurrentAmpacity;
 
-        FamilyParameter GetSourceParameter(string name) =>
-            doc.FamilyManager.Parameters
+        FamilyParameter GetSourceParameter(string name) {
+            return doc.FamilyManager.Parameters
                 .OfType<FamilyParameter>()
                 .FirstOrDefault(fp => fp.Definition.Name == name);
+        }
 
         // TODO: Figure out PE_E___LoadClassification migration!!!!!!!!!
         // Note: Load Classification (RBS_ELEC_LOAD_CLASSIFICATION) is intentionally NOT mapped here.
@@ -50,9 +51,8 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
             logs.Add(new LogEntry { Item = "Create connector" });
         }
 
-        foreach (var connectorElement in connectorElements) {
+        foreach (var connectorElement in connectorElements)
             logs.AddRange(this.HandleConnectorParameters(doc, connectorElement.Parameters, targetMappings));
-        }
 
         return new OperationLog(this.Name, logs);
     }

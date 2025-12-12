@@ -1,6 +1,3 @@
-using Autodesk.Revit.DB.Electrical;
-using Autodesk.Revit.DB.Mechanical;
-using Autodesk.Revit.DB.Plumbing;
 using PeExtensions.FamDocument;
 
 namespace PeExtensions.FamParameter;

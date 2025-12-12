@@ -1,7 +1,6 @@
 #nullable enable
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinPaletteSuite.Helpers;
-using Autodesk.Revit.DB.Electrical;
 using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
@@ -70,23 +69,28 @@ public class CmdPltFamilyElements : IExternalCommand {
 
     private static IEnumerable<FamilyElementItem> CollectFamilyElements(Document doc, FamilyDocument familyDoc) {
         // Family Parameters
-        foreach (var param in familyDoc.FamilyManager.Parameters.OfType<FamilyParameter>().OrderBy(p => p.Definition.Name))
+        foreach (var param in familyDoc.FamilyManager.Parameters.OfType<FamilyParameter>()
+                     .OrderBy(p => p.Definition.Name))
             yield return new FamilyElementItem(param, familyDoc);
 
         // Connectors
-        foreach (var connector in new FilteredElementCollector(doc).OfClass(typeof(ConnectorElement)).Cast<ConnectorElement>())
+        foreach (var connector in new FilteredElementCollector(doc).OfClass(typeof(ConnectorElement))
+                     .Cast<ConnectorElement>())
             yield return new FamilyElementItem(connector, familyDoc);
 
         // Dimensions (excluding SpotDimensions)
-        foreach (var dim in new FilteredElementCollector(doc).OfClass(typeof(Dimension)).Cast<Dimension>().Where(d => d is not SpotDimension))
+        foreach (var dim in new FilteredElementCollector(doc).OfClass(typeof(Dimension)).Cast<Dimension>()
+                     .Where(d => d is not SpotDimension))
             yield return new FamilyElementItem(dim, familyDoc);
 
         // Reference Planes
-        foreach (var refPlane in new FilteredElementCollector(doc).OfClass(typeof(ReferencePlane)).Cast<ReferencePlane>())
+        foreach (var refPlane in new FilteredElementCollector(doc).OfClass(typeof(ReferencePlane))
+                     .Cast<ReferencePlane>())
             yield return new FamilyElementItem(refPlane, familyDoc);
 
         // Nested Families
-        foreach (var instance in new FilteredElementCollector(doc).OfClass(typeof(FamilyInstance)).Cast<FamilyInstance>())
+        foreach (var instance in new FilteredElementCollector(doc).OfClass(typeof(FamilyInstance))
+                     .Cast<FamilyInstance>())
             yield return new FamilyElementItem(instance, familyDoc);
     }
 }
@@ -101,16 +105,6 @@ public enum FamilyElementType {
 
 public class FamilyElementItem : IPaletteListItem {
     private readonly FamilyDocument _familyDoc;
-
-    // Backing fields for each element type
-    public FamilyParameter? FamilyParam { get; }
-    public ConnectorElement? Connector { get; }
-    public Dimension? Dimension { get; }
-    public ReferencePlane? RefPlane { get; }
-    public FamilyInstance? NestedInstance { get; }
-
-    public FamilyElementType ElementType { get; }
-    public ElementId? ElementId { get; }
 
     public FamilyElementItem(FamilyParameter param, FamilyDocument familyDoc) {
         this._familyDoc = familyDoc;
@@ -147,10 +141,23 @@ public class FamilyElementItem : IPaletteListItem {
         this.ElementId = instance.Id;
     }
 
+    // Backing fields for each element type
+    public FamilyParameter? FamilyParam { get; }
+    public ConnectorElement? Connector { get; }
+    public Dimension? Dimension { get; }
+    public ReferencePlane? RefPlane { get; }
+    public FamilyInstance? NestedInstance { get; }
+
+    public FamilyElementType ElementType { get; }
+    public ElementId? ElementId { get; }
+
     public string PersistenceKey => this.ElementType switch {
         FamilyElementType.Parameter => $"param:{this.FamilyParam!.Id}",
         _ => $"{this.ElementType.ToString().ToLower()}:{this.ElementId}"
     };
+
+    public bool HasAnyAssociation => this.ElementType == FamilyElementType.Parameter &&
+                                     this.FamilyParam!.HasAnyAssociation(this._familyDoc);
 
     public string TextPrimary => this.ElementType switch {
         FamilyElementType.Parameter => this.FamilyParam!.Definition.Name,
@@ -191,8 +198,36 @@ public class FamilyElementItem : IPaletteListItem {
     public BitmapImage? Icon => null;
     public Color? ItemColor => null;
 
-    public bool HasAnyAssociation => this.ElementType == FamilyElementType.Parameter &&
-        this.FamilyParam!.HasAnyAssociation(this._familyDoc);
+    #region NestedFamily Methods
+
+    private string GetNestedFamilyTooltip() {
+        var lines = new List<string> {
+            $"Family: {this.NestedInstance!.Symbol.FamilyName}",
+            $"Type: {this.NestedInstance.Symbol.Name}",
+            $"Element ID: {this.NestedInstance.Id}"
+        };
+
+        // Get parameter associations
+        var associations = new List<(string instParam, string famParam)>();
+        foreach (Parameter param in this.NestedInstance.Parameters) {
+            var associated = this._familyDoc.FamilyManager.GetAssociatedFamilyParameter(param);
+            if (associated != null)
+                associations.Add((param.Definition.Name, associated.Definition.Name));
+        }
+
+        if (associations.Count > 0) {
+            lines.Add(string.Empty);
+            lines.Add("--- Parameter Associations ---");
+            foreach (var (instParam, famParam) in associations.Take(10))
+                lines.Add($"  {instParam} → {famParam}");
+            if (associations.Count > 10)
+                lines.Add($"  ... and {associations.Count - 10} more");
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    #endregion
 
     #region Parameter Methods
 
@@ -233,34 +268,26 @@ public class FamilyElementItem : IPaletteListItem {
 
         var arrays = this.FamilyParam.AssociatedArrays(this._familyDoc).ToList();
         lines.Add($"Arrays: {arrays.Count}");
-        foreach (var array in arrays) {
-            lines.Add($"  - Array (ID: {array.Id})");
-        }
+        foreach (var array in arrays) lines.Add($"  - Array (ID: {array.Id})");
 
         var connectors = this.FamilyParam.AssociatedConnectors(this._familyDoc).ToList();
         lines.Add($"Connectors: {connectors.Count}");
-        foreach (var connector in connectors) {
-            lines.Add($"  - {connector.Domain} Connector (ID: {connector.Id})");
-        }
+        foreach (var connector in connectors) lines.Add($"  - {connector.Domain} Connector (ID: {connector.Id})");
 
         var directParams = this.FamilyParam.AssociatedParameters.Cast<Parameter>().ToList();
         lines.Add($"Direct Element Params: {directParams.Count}");
-        foreach (var param in directParams) {
-            lines.Add($"  - {param.Definition.Name} (ID: {param.Id})");
-        }
+        foreach (var param in directParams) lines.Add($"  - {param.Definition.Name} (ID: {param.Id})");
 
         var formulaParams = this.FamilyParam.FormulaDependents(this._familyDoc).ToList();
         lines.Add($"Formula Dependents: {formulaParams.Count}");
-        foreach (var fp in formulaParams) {
-            lines.Add($"  - {fp.Definition.Name} (ID: {fp.Id})");
-        }
+        foreach (var fp in formulaParams) lines.Add($"  - {fp.Definition.Name} (ID: {fp.Id})");
 
         return string.Join(Environment.NewLine, lines);
     }
 
     #endregion
 
-    #region Connector Methods 
+    #region Connector Methods
 
     private string GetConnectorSecondary() {
         var associations = this.GetConnectorAssociations();
@@ -274,14 +301,12 @@ public class FamilyElementItem : IPaletteListItem {
             if (associated != null)
                 associations.Add((param.Definition.Name, associated.Definition.Name));
         }
+
         return associations;
     }
 
     private string GetConnectorTooltip() {
-        var lines = new List<string> {
-            $"Element ID: {this.Connector!.Id}",
-            $"Domain: {this.Connector.Domain}"
-        };
+        var lines = new List<string> { $"Element ID: {this.Connector!.Id}", $"Domain: {this.Connector.Domain}" };
 
         var associations = this.GetConnectorAssociations();
         if (associations.Count > 0) {
@@ -310,8 +335,7 @@ public class FamilyElementItem : IPaletteListItem {
 
     private string GetDimensionTooltip() {
         var lines = new List<string> {
-            $"Element ID: {this.Dimension!.Id}",
-            $"Type: {this.Dimension.DimensionType?.Name ?? "Unknown"}"
+            $"Element ID: {this.Dimension!.Id}", $"Type: {this.Dimension.DimensionType?.Name ?? "Unknown"}"
         };
 
         if (this.Dimension.Value.HasValue)
@@ -366,40 +390,8 @@ public class FamilyElementItem : IPaletteListItem {
     }
 
     #endregion
-
-    #region NestedFamily Methods
-
-    private string GetNestedFamilyTooltip() {
-        var lines = new List<string> {
-            $"Family: {this.NestedInstance!.Symbol.FamilyName}",
-            $"Type: {this.NestedInstance.Symbol.Name}",
-            $"Element ID: {this.NestedInstance.Id}"
-        };
-
-        // Get parameter associations
-        var associations = new List<(string instParam, string famParam)>();
-        foreach (Parameter param in this.NestedInstance.Parameters) {
-            var associated = this._familyDoc.FamilyManager.GetAssociatedFamilyParameter(param);
-            if (associated != null)
-                associations.Add((param.Definition.Name, associated.Definition.Name));
-        }
-
-        if (associations.Count > 0) {
-            lines.Add(string.Empty);
-            lines.Add("--- Parameter Associations ---");
-            foreach (var (instParam, famParam) in associations.Take(10))
-                lines.Add($"  {instParam} → {famParam}");
-            if (associations.Count > 10)
-                lines.Add($"  ... and {associations.Count - 10} more");
-        }
-
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    #endregion
 }
 
 internal static class StringExtensions {
     public static string? NullIfEmpty(this string? s) => string.IsNullOrEmpty(s) ? null : s;
 }
-

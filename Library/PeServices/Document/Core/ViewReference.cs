@@ -16,6 +16,17 @@ public record ViewReference {
         this.ActivatedAt = activatedAt ?? DateTime.Now;
     }
 
+    public string DocumentTitle { get; }
+    public string DocumentPath { get; }
+    public ElementId ViewId { get; }
+    public string DocumentKey { get; }
+    public DateTime ActivatedAt { get; }
+
+    public virtual bool Equals(ViewReference other) {
+        if (other == null) return false;
+        return this.DocumentKey == other.DocumentKey && this.ViewId.Equals(other.ViewId);
+    }
+
     /// <summary>
     ///     Determines if the path is a temp directory path or a family document.
     ///     Family documents saved to temp directories get new GUIDs each time, breaking equality checks.
@@ -33,17 +44,6 @@ public record ViewReference {
         return isFamilyInTemp;
     }
 
-    public string DocumentTitle { get; }
-    public string DocumentPath { get; }
-    public ElementId ViewId { get; }
-    public string DocumentKey { get; }
-    public DateTime ActivatedAt { get; }
-
-    public virtual bool Equals(ViewReference other) {
-        if (other == null) return false;
-        return this.DocumentKey == other.DocumentKey && this.ViewId.Equals(other.ViewId);
-    }
-
     public override int GetHashCode() {
         unchecked {
             var hash = 17;
@@ -53,5 +53,3 @@ public record ViewReference {
         }
     }
 }
-
-

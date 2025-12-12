@@ -78,5 +78,3 @@ public class FamilyProcessingContext {
         return p.ValuesPerType.Values.Count(v => !string.IsNullOrWhiteSpace(v));
     }
 }
-
-

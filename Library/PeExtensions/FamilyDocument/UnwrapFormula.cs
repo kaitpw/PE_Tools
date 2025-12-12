@@ -1,21 +1,22 @@
-using PeExtensions;
 using PeExtensions.FamDocument.GetValue;
+
 namespace PeExtensions.FamDocument;
 
 /// <summary>
 ///     Result of an unwrap operation.
 /// </summary>
 public class UnwrapResult {
-    public bool WasUnwrapped { get; }
-    public FamilyParameter UltimateSource { get; }
-    public IReadOnlyList<FamilyParameter> DeletedIntermediates { get; }
-
-    public UnwrapResult(bool wasUnwrapped, FamilyParameter ultimateSource,
+    public UnwrapResult(bool wasUnwrapped,
+        FamilyParameter ultimateSource,
         IReadOnlyList<FamilyParameter> deletedIntermediates) {
         this.WasUnwrapped = wasUnwrapped;
         this.UltimateSource = ultimateSource;
         this.DeletedIntermediates = deletedIntermediates;
     }
+
+    public bool WasUnwrapped { get; }
+    public FamilyParameter UltimateSource { get; }
+    public IReadOnlyList<FamilyParameter> DeletedIntermediates { get; }
 
     public static UnwrapResult NoChange { get; } = new(false, null, Array.Empty<FamilyParameter>());
 }
@@ -78,7 +79,8 @@ public static class FamilyDocumentUnwrapFormula {
     /// <param name="doc">The family document</param>
     /// <param name="param">The parameter to unwrap</param>
     /// <param name="firstRef">The first referenced parameter (already resolved by caller)</param>
-    private static UnwrapResult UnwrapFormulaChain(FamilyDocument doc, FamilyParameter param, FamilyParameter firstRef) {
+    private static UnwrapResult
+        UnwrapFormulaChain(FamilyDocument doc, FamilyParameter param, FamilyParameter firstRef) {
         var fm = doc.FamilyManager;
 
         // Build param name lookup ONCE for chain resolution

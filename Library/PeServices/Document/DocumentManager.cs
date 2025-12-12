@@ -1,6 +1,6 @@
-using PeServices.Documents.Core;
 using PeExtensions.PolyFill;
-
+using PeServices.Documents.Core;
+using Color = System.Windows.Media.Color;
 
 namespace PeServices.Documents;
 
@@ -11,8 +11,8 @@ namespace PeServices.Documents;
 /// </summary>
 public class DocumentManager {
     private static DocumentManager _instance;
-    private readonly MruViewBuffer _mruBuffer = new();
     private readonly DocumentColorService _colorService = new();
+    private readonly MruViewBuffer _mruBuffer = new();
 
     private DocumentManager() { }
 
@@ -93,9 +93,10 @@ public class DocumentManager {
         var openDocs = GetOpenDocuments(uiApp).ToList();
         var openUiViews = GetOpenUiViews(uiApp).ToList();
 
-        if (view != null)
+        if (view != null) {
             _ = sb.AppendLine($"Target Document: {view.Document.Title} (Path: {view.Document.PathName})")
                 .AppendLine($"Target View: {view.Name} (ID: {view.Id.Value()})");
+        }
 
         _ = sb.AppendLine($"Active Document: {activeDoc?.Title ?? "None"} (Path: {activeDoc?.PathName ?? "N/A"})")
             .AppendLine($"Active View: {activeView?.Name ?? "None"} (ID: {activeViewId?.Value() ?? -1})")
@@ -126,9 +127,8 @@ public class DocumentManager {
             var userPath = ModelPathUtils.ConvertModelPathToUserVisiblePath(modelPath);
             _ = sb.AppendLine($"UserVisiblePath: {userPath}");
             _ = sb.AppendLine($"ServerPath: {modelPath.ServerPath}");
-        } else {
+        } else
             _ = sb.AppendLine("ModelPath: null (unsaved document)");
-        }
 
         return sb.ToString();
     }
@@ -153,7 +153,7 @@ public class DocumentManager {
     ///     Gets the color for the specified document (from pyRevit tab colors).
     ///     Delegates to DocumentColorService.
     /// </summary>
-    public System.Windows.Media.Color GetDocumentColor(Document doc) =>
+    public Color GetDocumentColor(Document doc) =>
         this._colorService.GetOrCreateDocumentColor(doc);
 
 
@@ -177,4 +177,3 @@ public class DocumentManager {
         Debug.WriteLine("[DocumentManager] OnDocumentClosed complete");
     }
 }
-

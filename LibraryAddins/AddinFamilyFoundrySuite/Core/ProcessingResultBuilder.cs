@@ -12,11 +12,17 @@ namespace AddinFamilyFoundrySuite.Core;
 ///     Fluent builder for generating processing result output files.
 /// </summary>
 public class ProcessingResultBuilder {
+    private static readonly JsonSerializerSettings JsonSettings = new() {
+        Formatting = Formatting.Indented,
+        ContractResolver = new RequiredAwareContractResolver(),
+        Converters = [new ForgeTypeIdConverter(), new StringEnumConverter()]
+    };
+
     private readonly Storage _storage;
-    private object _profileSettings;
-    private string _profileName;
     private List<FamilyProcessingContext> _familyContexts = [];
     private List<(string Name, string Description, string Type, string IsMerged)> _operationMetadata = [];
+    private string _profileName;
+    private object _profileSettings;
     private double _totalMs;
 
     public ProcessingResultBuilder(Storage storage) => this._storage = storage;
@@ -91,9 +97,7 @@ public class ProcessingResultBuilder {
         var (logs, err) = ctx.OperationLogs;
         if (err is not null) {
             return new {
-                Family = ctx.FamilyName,
-                TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
-                Error = err.Message
+                Family = ctx.FamilyName, TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3), Error = err.Message
             };
         }
 
@@ -119,7 +123,7 @@ public class ProcessingResultBuilder {
 
     private object BuildDetailed(FamilyProcessingContext ctx) {
         var (logs, err) = ctx.OperationLogs;
-        var operationLogs = err != null ? new List<OperationLog>() : (logs ?? []);
+        var operationLogs = err != null ? new List<OperationLog>() : logs ?? [];
 
         return new {
             Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
@@ -128,12 +132,8 @@ public class ProcessingResultBuilder {
             FamilyTotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
             Error = err?.Message,
             Profile = this._profileName,
-            OperationMetadata = this._operationMetadata.Select(op => new {
-                op.Name,
-                op.Description,
-                op.Type,
-                op.IsMerged
-            }).ToList(),
+            OperationMetadata =
+                this._operationMetadata.Select(op => new { op.Name, op.Description, op.Type, op.IsMerged }).ToList(),
             Operations = operationLogs.Select(log => new {
                 log.OperationName,
                 SecondsElapsed = Math.Round(log.MsElapsed / 1000.0, 3),
@@ -175,12 +175,6 @@ public class ProcessingResultBuilder {
         var sanitized = new string(chars).Trim();
         return string.IsNullOrWhiteSpace(sanitized) ? "Unnamed" : sanitized;
     }
-
-    private static readonly JsonSerializerSettings JsonSettings = new() {
-        Formatting = Formatting.Indented,
-        ContractResolver = new RequiredAwareContractResolver(),
-        Converters = [new ForgeTypeIdConverter(), new StringEnumConverter()]
-    };
 }
 
 /// <summary>
@@ -188,11 +182,11 @@ public class ProcessingResultBuilder {
 /// </summary>
 public class DryRunResultBuilder {
     private readonly Storage _storage;
-    private object _profileSettings;
-    private string _profileName;
     private List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> _apsParams = [];
     private List<Family> _families = [];
     private List<(string Name, string Description, string Type, string IsMerged)> _operationMetadata = [];
+    private string _profileName;
+    private object _profileSettings;
 
     public DryRunResultBuilder(Storage storage) => this._storage = storage;
 
@@ -274,5 +268,3 @@ public class DryRunResultBuilder {
         return (summary, detailed);
     }
 }
-
-

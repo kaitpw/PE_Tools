@@ -3,10 +3,10 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 
 /// <summary>
-/// Canonical parameter snapshot - single source of truth for:
-/// - Parameter definition (can recreate the param)
-/// - Assignment mode (formula vs values)
-/// - Per-type values (audit + replay)
+///     Canonical parameter snapshot - single source of truth for:
+///     - Parameter definition (can recreate the param)
+///     - Assignment mode (formula vs values)
+///     - Per-type values (audit + replay)
 /// </summary>
 public record ParamSnapshot {
     // Identity

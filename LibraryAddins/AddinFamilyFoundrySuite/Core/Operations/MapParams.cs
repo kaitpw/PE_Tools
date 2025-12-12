@@ -39,8 +39,7 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
                     if (srcParam is null) continue;
                     if (tgtParam is null) {
                         logs.Add(new LogEntry {
-                            Item = mappingDesc,
-                            Error = $"{mapping.NewName} not found in the family"
+                            Item = mappingDesc, Error = $"{mapping.NewName} not found in the family"
                         });
                         continue;
                     }
@@ -48,15 +47,13 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
                     if (tgtParam.Formula != null) _ = doc.UnsetFormula(tgtParam);
 
                     _ = doc.SetValue(tgtParam, srcParam, mapping.MappingStrategy);
-                    if (tgtParam != srcParam) {
+                    if (tgtParam != srcParam)
                         logs.Add(new LogEntry { Item = $"Coerced {mappingDesc} using {mapping.MappingStrategy}" });
-                    } else {
+                    else
                         logs.Add(new LogEntry { Item = $"Set {mappingDesc}" });
-                    }
                     var backlinkLog = Backlink(doc, srcParam, tgtParam);
                     if (backlinkLog is not null) logs.Add(backlinkLog);
                     foundMatch = true;
-
                 } catch (Exception ex) {
                     logs.Add(new LogEntry { Item = mappingDesc, Error = ex.Message });
                 }
@@ -72,13 +69,12 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
         if (ParameterUtils.IsBuiltInParameter(srcParam.Id)) {
             if (tgtParam.Formula is null) {
                 var success = doc.SetFormulaFast(srcParam, tgtName, out var errorMessage);
-                if (!success) {
-                    return new LogEntry { Item = $"Backlink {tgtName} → {srcName}", Error = errorMessage };
-                } else {
-                    return new LogEntry { Item = $"Backlink {tgtName} → {srcName}" };
-                }
+                if (!success) return new LogEntry { Item = $"Backlink {tgtName} → {srcName}", Error = errorMessage };
+
+                return new LogEntry { Item = $"Backlink {tgtName} → {srcName}" };
             }
         }
+
         return null;
     }
 
@@ -91,7 +87,8 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
     ///     it may add excessive complexity to the operation, making it harder for users to understand.
     /// </remarks>
     private IEnumerable<string> PrioritizeCurrNames(List<string> currNames) {
-        if (this._context?.PreProcessSnapshot?.Parameters == null || this._context.PreProcessSnapshot.Parameters.Count == 0)
+        if (this._context?.PreProcessSnapshot?.Parameters == null ||
+            this._context.PreProcessSnapshot.Parameters.Count == 0)
             return currNames;
 
         // Sort by: HasValueForAllTypes first, then original order

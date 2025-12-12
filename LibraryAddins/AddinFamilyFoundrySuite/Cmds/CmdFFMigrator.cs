@@ -86,7 +86,8 @@ public class CmdFFMigrator : IExternalCommand {
                 var projectCollector = new ProjectParamCollector();
                 var familyDocCollector = new FamilyDocParamCollector();
 
-                using var processor = new OperationProcessor(doc, profile.ExecutionOptions, projectCollector, familyDocCollector);
+                using var processor =
+                    new OperationProcessor(doc, profile.ExecutionOptions, projectCollector, familyDocCollector);
                 var logs = processor
                     .SelectFamilies(() => {
                         var picked = Pickers.GetSelectedFamilies(uiDoc);

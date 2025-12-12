@@ -64,9 +64,7 @@ public class CmdFFParamAggregator : IExternalCommand {
             _ = balloon.Add(Log.INFO, new StackFrame(),
                 $"Aggregated {aggregatedData.Count} unique parameters from {families.Count} families.");
 
-            if (settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish) {
-                FileUtils.OpenInDefaultApp(csvPath);
-            }
+            if (settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish) FileUtils.OpenInDefaultApp(csvPath);
 
             balloon.Show();
             return Result.Succeeded;

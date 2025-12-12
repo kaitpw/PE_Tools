@@ -4,7 +4,7 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 
 public static class ParamSnapshotCompiler {
     /// <summary>
-    /// Convert snapshot to FamilyParamModel (definition-only).
+    ///     Convert snapshot to FamilyParamModel (definition-only).
     /// </summary>
     public static FamilyParamModel ToFamilyParamModel(this ParamSnapshot p) =>
         new() {
@@ -16,7 +16,7 @@ public static class ParamSnapshotCompiler {
         };
 
     /// <summary>
-    /// Extract global assignments (formulas or uniform values across all types).
+    ///     Extract global assignments (formulas or uniform values across all types).
     /// </summary>
     public static IEnumerable<SetParamModel> ToGlobalAssignments(this IEnumerable<ParamSnapshot> snapshots) {
         foreach (var p in snapshots.Where(s => !s.IsBuiltIn)) {
@@ -52,7 +52,7 @@ public static class ParamSnapshotCompiler {
     }
 
     /// <summary>
-    /// Extract per-type assignments (different values per type).
+    ///     Extract per-type assignments (different values per type).
     /// </summary>
     public static IEnumerable<SetParamPerTypeModel> ToPerTypeAssignments(this IEnumerable<ParamSnapshot> snapshots) {
         foreach (var p in snapshots.Where(s => !s.IsBuiltIn)) {
@@ -80,7 +80,7 @@ public static class ParamSnapshotCompiler {
     }
 
     /// <summary>
-    /// Compile full snapshot list into AddAndSetParamsSettings.
+    ///     Compile full snapshot list into AddAndSetParamsSettings.
     /// </summary>
     public static AddAndSetParamsSettings ToAddAndSetSettings(this IEnumerable<ParamSnapshot> snapshots) => new() {
         Parameters = snapshots.ToGlobalAssignments().ToList(),

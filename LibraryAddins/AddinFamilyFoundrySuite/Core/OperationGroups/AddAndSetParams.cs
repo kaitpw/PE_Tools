@@ -12,12 +12,17 @@ namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 ///     3. SetParamValuesPerType - handles explicit per-type values and failed global value fallbacks
 /// </summary>
 public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
+    public AddAndSetParams(AddAndSetParamsSettings settings) : base(
+        InitializeDescription(settings), InitializeOperations(settings, out var sharedState)
+    ) => this.SharedState = sharedState;
+
     /// <summary>
     ///     Shared state for coordinating fallback between SetParamValues and SetParamValuesPerType.
     /// </summary>
     public SetParamSharedState SharedState { get; }
 
-    public static string InitializeDescription(AddAndSetParamsSettings settings) => $"Set a parameter within the family to a value or formula. " +
+    public static string InitializeDescription(AddAndSetParamsSettings settings) =>
+        $"Set a parameter within the family to a value or formula. " +
         $"By default, values are set as formulas (even simple numbers/text). Use <{nameof(SetParamModel.SetAsFormula)}>=false to set as values instead. " +
         $"If <{nameof(settings.OverrideExistingValues)}> is true, then existing parameter values will be overwritten. " +
         $"If <{nameof(settings.CreateFamParamIfMissing)}> is true, then a family parameter will be created " +
@@ -25,10 +30,6 @@ public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
         $"\n\t<{nameof(AddAndSetData.PropertiesGroup)}>: <{new AddAndSetData().PropertiesGroup.ToLabel()}>" +
         $"\n\t<{nameof(AddAndSetData.DataType)}>: <{new AddAndSetData().DataType.ToLabel()}>>" +
         $"\n\t<{nameof(AddAndSetData.IsInstance)}>: <{GetDesignation(new AddAndSetData().IsInstance)}>";
-
-    public AddAndSetParams(AddAndSetParamsSettings settings) : base(
-        InitializeDescription(settings), InitializeOperations(settings, out var sharedState)
-    ) => this.SharedState = sharedState;
 
     private static string GetDesignation(bool isInstance) => isInstance ? "Instance" : "Type";
 

@@ -31,7 +31,8 @@ public static class FormulaUtils {
     };
 
     /// <summary>
-    /// Boundary chars: operators + structural formula characters. Excludes quotes (") because they are used to delimit string literals.
+    ///     Boundary chars: operators + structural formula characters. Excludes quotes (") because they are used to delimit
+    ///     string literals.
     /// </summary>
     public static readonly char[] BoundaryChars = [
         '+', '-', '*', '/', '^', '=', '>', '<', ' ', '[', ']', '(', ')', ',', '\t', '\r', '\n'
@@ -61,6 +62,7 @@ public static class FormulaUtils {
             // Ok to only move index by 1 because this invalidates whatever parameter name was here (first letter chopped off)
             searchStart = leftIndex + 1;
         }
+
         return false;
     }
 
@@ -100,9 +102,9 @@ public static class FormulaUtils {
         this FamilyParameter param,
         FamilyDocument doc
     ) => doc.FamilyManager.Parameters
-            .OfType<FamilyParameter>()
-            .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
-            .Where(p => param.IsReferencedInFormula(p.Formula));
+        .OfType<FamilyParameter>()
+        .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
+        .Where(p => param.IsReferencedInFormula(p.Formula));
 
     /// <summary>
     ///     Checks if this parameter's formula references another parameter.
@@ -237,7 +239,8 @@ public static class FormulaUtils {
     /// <param name="formula">The formula to check</param>
     /// <param name="familyManager">The family manager containing all parameters</param>
     /// <returns>Result with cycle details if a cycle would be created, or WouldCycle=false if safe</returns>
-    public static CycleDetectionResult DetectCycle(FamilyParameter targetParam, string formula,
+    public static CycleDetectionResult DetectCycle(FamilyParameter targetParam,
+        string formula,
         FamilyManager familyManager) {
         if (string.IsNullOrWhiteSpace(formula))
             return CycleDetectionResult.NoCycle;
@@ -260,8 +263,11 @@ public static class FormulaUtils {
     ///     Recursively finds the path from 'current' to 'target' through formula dependencies.
     ///     Returns true if a path exists, populating 'path' with the parameters in the cycle.
     /// </summary>
-    private static bool FindCyclePath(FamilyParameter current, FamilyParameter target, FamilyManager familyManager,
-        List<FamilyParameter> path, HashSet<ElementId> visited) {
+    private static bool FindCyclePath(FamilyParameter current,
+        FamilyParameter target,
+        FamilyManager familyManager,
+        List<FamilyParameter> path,
+        HashSet<ElementId> visited) {
         path.Add(current);
 
         if (current.Id == target.Id)
@@ -295,6 +301,14 @@ public static class FormulaUtils {
 ///     Result of resolving a formula chain.
 /// </summary>
 public class FormulaChainResult {
+    public FormulaChainResult(FamilyParameter ultimateSource,
+        IReadOnlyList<FamilyParameter> intermediates,
+        bool sourceHasConstantFormula) {
+        this.UltimateSource = ultimateSource;
+        this.Intermediates = intermediates;
+        this.SourceHasConstantFormula = sourceHasConstantFormula;
+    }
+
     /// <summary>The final parameter in the chain (has value, constant formula, or complex formula)</summary>
     public FamilyParameter UltimateSource { get; }
 
@@ -303,19 +317,20 @@ public class FormulaChainResult {
 
     /// <summary>True if the ultimate source has a constant formula that should be unwrapped</summary>
     public bool SourceHasConstantFormula { get; }
-
-    public FormulaChainResult(FamilyParameter ultimateSource, IReadOnlyList<FamilyParameter> intermediates,
-        bool sourceHasConstantFormula) {
-        this.UltimateSource = ultimateSource;
-        this.Intermediates = intermediates;
-        this.SourceHasConstantFormula = sourceHasConstantFormula;
-    }
 }
 
 /// <summary>
 ///     Result of cycle detection when checking if a formula would create a circular reference.
 /// </summary>
 public class CycleDetectionResult {
+    public CycleDetectionResult(bool wouldCycle,
+        FamilyParameter directReference,
+        IReadOnlyList<FamilyParameter> cyclePath) {
+        this.WouldCycle = wouldCycle;
+        this.DirectReference = directReference;
+        this.CyclePath = cyclePath;
+    }
+
     /// <summary>True if setting the formula would create a cycle</summary>
     public bool WouldCycle { get; }
 
@@ -328,13 +343,6 @@ public class CycleDetectionResult {
     ///     DirectReference = B, CyclePath = [B, C, A]
     /// </summary>
     public IReadOnlyList<FamilyParameter> CyclePath { get; }
-
-    public CycleDetectionResult(bool wouldCycle, FamilyParameter directReference,
-        IReadOnlyList<FamilyParameter> cyclePath) {
-        this.WouldCycle = wouldCycle;
-        this.DirectReference = directReference;
-        this.CyclePath = cyclePath;
-    }
 
     public static CycleDetectionResult NoCycle => new(false, null, null);
 

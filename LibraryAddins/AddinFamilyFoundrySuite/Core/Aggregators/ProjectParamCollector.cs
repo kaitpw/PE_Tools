@@ -1,13 +1,13 @@
 using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
-using Nice3point.Revit.Extensions;
+using Autodesk.Revit.DB.Structure;
 using PeExtensions.PolyFill;
 using System.Globalization;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators;
 
 /// <summary>
-/// Collects parameter snapshots by placing temporary family instances and rolling back.
-/// Iterates ALL family symbols to gather per-type values.
+///     Collects parameter snapshots by placing temporary family instances and rolling back.
+///     Iterates ALL family symbols to gather per-type values.
 /// </summary>
 public class ProjectParamCollector : IProjectSnapshotCollector {
     public void Collect((Document doc, Family family) input, FamilySnapshot snapshot) {
@@ -36,7 +36,7 @@ public class ProjectParamCollector : IProjectSnapshotCollector {
                 var tempInstance = doc.Create.NewFamilyInstance(
                     XYZ.Zero,
                     symbol,
-                    Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+                    StructuralType.NonStructural);
 
                 if (tempInstance is not null)
                     CollectInstanceParams(tempInstance, typeName, typeNames, snapshots);
@@ -61,8 +61,8 @@ public class ProjectParamCollector : IProjectSnapshotCollector {
         Dictionary<string, ParamSnapshot> snapshots
     ) {
         foreach (var p in instance.GetOrderedParameters().Where(p => p.Definition != null)) {
-            var key = GetKey(p.Definition.Name, isInstance: true);
-            var snap = GetOrCreateSnapshot(p, isInstance: true, allTypeNames, snapshots, key);
+            var key = GetKey(p.Definition.Name, true);
+            var snap = GetOrCreateSnapshot(p, true, allTypeNames, snapshots, key);
             snap.ValuesPerType[typeName] = GetValueString(p);
         }
     }
@@ -77,8 +77,8 @@ public class ProjectParamCollector : IProjectSnapshotCollector {
             if (p.Definition is null)
                 continue;
 
-            var key = GetKey(p.Definition.Name, isInstance: false);
-            var snap = GetOrCreateSnapshot(p, isInstance: false, allTypeNames, snapshots, key);
+            var key = GetKey(p.Definition.Name, false);
+            var snap = GetOrCreateSnapshot(p, false, allTypeNames, snapshots, key);
             snap.ValuesPerType[typeName] = GetValueString(p);
         }
     }
@@ -99,9 +99,10 @@ public class ProjectParamCollector : IProjectSnapshotCollector {
 
         var isBuiltIn = ParameterUtils.IsBuiltInParameter(param.Id);
         Guid? sharedGuid = null;
-        if (param.IsShared) {
-            try { sharedGuid = param.GUID; } catch { /* GUID access can throw */ }
-        }
+        if (param.IsShared)
+            try { sharedGuid = param.GUID; } catch {
+                /* GUID access can throw */
+            }
 
         var values = allTypeNames.ToDictionary(t => t, _ => (string?)null, StringComparer.Ordinal);
 

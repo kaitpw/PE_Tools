@@ -1,5 +1,4 @@
 using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
-using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.GetValue;
 using PeExtensions.PolyFill;
@@ -8,8 +7,8 @@ using System.Globalization;
 namespace AddinFamilyFoundrySuite.Core.Aggregators;
 
 /// <summary>
-/// Collects parameter snapshots directly from a FamilyDocument.
-/// Iterates FamilyManager.Types and reads values without temporary instances.
+///     Collects parameter snapshots directly from a FamilyDocument.
+///     Iterates FamilyManager.Types and reads values without temporary instances.
 /// </summary>
 public class FamilyDocParamCollector : IFamilyDocSnapshotCollector {
     public void Collect(FamilyDocument input, FamilySnapshot snapshot) {
@@ -19,7 +18,7 @@ public class FamilyDocParamCollector : IFamilyDocSnapshotCollector {
         var types = fm.Types.Cast<FamilyType>().ToList();
         var typeNames = types.Select(t => t.Name).Distinct(StringComparer.Ordinal).ToList();
 
-        var familyParameters = fm.GetParameters().Cast<FamilyParameter>().ToList();
+        var familyParameters = fm.GetParameters().ToList();
         var snapshots = new Dictionary<string, ParamSnapshot>(StringComparer.Ordinal);
 
         foreach (var p in familyParameters) {
@@ -27,9 +26,10 @@ public class FamilyDocParamCollector : IFamilyDocSnapshotCollector {
 
             var isBuiltIn = ParameterUtils.IsBuiltInParameter(p.Id);
             Guid? sharedGuid = null;
-            if (p.IsShared) {
-                try { sharedGuid = p.GUID; } catch { /* GUID access can throw */ }
-            }
+            if (p.IsShared)
+                try { sharedGuid = p.GUID; } catch {
+                    /* GUID access can throw */
+                }
 
             var values = typeNames.ToDictionary(t => t, _ => (string?)null, StringComparer.Ordinal);
 

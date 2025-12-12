@@ -5,11 +5,6 @@ using PeExtensions.FamDocument;
 namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 
 public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
-    /// <summary>
-    ///     Shared state for coordinating mapping operations across replace, add, and remap steps.
-    /// </summary>
-    public MapParamsSharedState SharedState { get; }
-
     public MapAndAddSharedParams(
         MapParamsSettings settings,
         IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
@@ -17,6 +12,11 @@ public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
         "Map and add shared parameters (replace, add unmapped, and remap)",
         InitializeOperations(settings, sharedParams, out var sharedState)
     ) => this.SharedState = sharedState;
+
+    /// <summary>
+    ///     Shared state for coordinating mapping operations across replace, add, and remap steps.
+    /// </summary>
+    public MapParamsSharedState SharedState { get; }
 
     private static List<IOperation<MapParamsSettings>> InitializeOperations(
         MapParamsSettings settings,
@@ -36,6 +36,7 @@ public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
 public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
     private readonly IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
         _sharedParams;
+
     private readonly MapParamsSharedState _sharedState;
 
     public AddUnmappedSharedParams(
@@ -68,7 +69,6 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
     }
 }
 
-
 /// <summary>
 ///     Shared state factory for coordinating mapping operations.
 ///     Creates fresh state from settings for each family execution.
@@ -77,9 +77,7 @@ public class MapParamsSharedState {
     private readonly IEnumerable<MappingData> _sourceMappings;
     private List<MappingData> _currentMappings;
 
-    public MapParamsSharedState(IEnumerable<MappingData> mappingData) {
-        this._sourceMappings = mappingData;
-    }
+    public MapParamsSharedState(IEnumerable<MappingData> mappingData) => this._sourceMappings = mappingData;
 
     /// <summary>
     ///     Creates fresh mutable mappings for a new family execution.

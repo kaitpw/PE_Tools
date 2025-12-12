@@ -50,27 +50,30 @@ public class BaseProfileSettings {
             var categoryName = f.FamilyCategory?.Name;
 
             // Step 1: Filter by category if specified
-            if (this.IncludeCategoriesEqualing.Any())
+            if (this.IncludeCategoriesEqualing.Any()) {
                 if (categoryName == null || !this.IncludeCategoriesEqualing.Any(categoryName.Equals))
                     return false;
+            }
 
             // Step 2: Filter by includes if specified (otherwise all pass)
             var hasIncludeFilters = this.IncludeNames.Equaling.Any() ||
                                     this.IncludeNames.Containing.Any() ||
                                     this.IncludeNames.StartingWith.Any();
 
-            if (hasIncludeFilters)
+            if (hasIncludeFilters) {
                 if (!this.IsNameIncluded(familyName))
                     return false;
+            }
 
             // Step 3: Filter by excludes if specified (otherwise all pass)
             var hasExcludeFilters = this.ExcludeNames.Equaling.Any() ||
                                     this.ExcludeNames.Containing.Any() ||
                                     this.ExcludeNames.StartingWith.Any();
 
-            if (hasExcludeFilters)
+            if (hasExcludeFilters) {
                 if (this.IsNameExcluded(familyName))
                     return false;
+            }
 
             return true;
         }

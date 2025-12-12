@@ -1,6 +1,5 @@
 #nullable enable
 using AddinPaletteSuite.Helpers;
-using Autodesk.Revit.DB.Electrical;
 using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
@@ -44,18 +43,18 @@ public static class PltAssociatedElements {
                 Name = "Show/Select",
                 Execute = item => {
                     switch (item.ItemType) {
-                        case AssociatedItemType.Dimension:
-                        case AssociatedItemType.Array:
-                        case AssociatedItemType.Connector:
-                            var elementId = item.ElementId;
-                            if (elementId == null) return;
-                            uidoc.ShowElements(elementId);
-                            uidoc.Selection.SetElementIds([elementId]);
-                            break;
-                        case AssociatedItemType.FamilyParameter:
-                            if (item.FamilyParam == null) return;
-                            ParamRelationshipDialog.Show(item.FamilyParam, familyDoc);
-                            break;
+                    case AssociatedItemType.Dimension:
+                    case AssociatedItemType.Array:
+                    case AssociatedItemType.Connector:
+                        var elementId = item.ElementId;
+                        if (elementId == null) return;
+                        uidoc.ShowElements(elementId);
+                        uidoc.Selection.SetElementIds([elementId]);
+                        break;
+                    case AssociatedItemType.FamilyParameter:
+                        if (item.FamilyParam == null) return;
+                        ParamRelationshipDialog.Show(item.FamilyParam, familyDoc);
+                        break;
                     }
                 },
                 CanExecute = item => item != null
@@ -64,8 +63,7 @@ public static class PltAssociatedElements {
 
         var window = PaletteFactory.Create($"{param.Definition.Name} Associations", items, actions,
             new PaletteOptions<AssociatedElementItem> {
-                SearchConfig = SearchConfig.PrimaryAndSecondary(),
-                FilterKeySelector = item => item.TextPill
+                SearchConfig = SearchConfig.PrimaryAndSecondary(), FilterKeySelector = item => item.TextPill
             });
         window.Show();
     }
@@ -166,10 +164,11 @@ public class AssociatedElementItem : IPaletteListItem {
         if (this.Dimension == null) return string.Empty;
         var sb = new StringBuilder();
         return sb.AppendLine($"Type: {this.Dimension.DimensionType?.Name ?? "Unknown"}")
-        .AppendLine($"Element Id: {this.Dimension.Id}")
-        .AppendLine($"Value: {(this.Dimension.Value.HasValue ? $"{this.Dimension.Value.Value:F4}" : "Multi-segment")}")
-        .AppendLine($"Number of Segments: {this.Dimension.NumberOfSegments}")
-        .ToString().TrimEnd();
+            .AppendLine($"Element Id: {this.Dimension.Id}")
+            .AppendLine(
+                $"Value: {(this.Dimension.Value.HasValue ? $"{this.Dimension.Value.Value:F4}" : "Multi-segment")}")
+            .AppendLine($"Number of Segments: {this.Dimension.NumberOfSegments}")
+            .ToString().TrimEnd();
     }
 
     private string GetArrayName() {
@@ -187,9 +186,9 @@ public class AssociatedElementItem : IPaletteListItem {
         if (this.Array == null) return string.Empty;
         var sb = new StringBuilder();
         return sb.AppendLine($"Element Id: {this.Array.Id}")
-        .AppendLine($"Number of Members: {this.Array.NumMembers}")
-        .AppendLine($"Label: {this.Array.Label?.Definition.Name ?? "None"}")
-        .ToString().TrimEnd();
+            .AppendLine($"Number of Members: {this.Array.NumMembers}")
+            .AppendLine($"Label: {this.Array.Label?.Definition.Name ?? "None"}")
+            .ToString().TrimEnd();
     }
 
     private string GetConnectorName() {
@@ -234,9 +233,9 @@ public class AssociatedElementItem : IPaletteListItem {
     private string GetFamilyParamTooltip() {
         if (this.FamilyParam == null) return string.Empty;
         var sb = new StringBuilder()
-        .AppendLine($"Name: {this.FamilyParam.Definition.Name}")
-        .AppendLine($"Type/Instance: {this.FamilyParam.GetTypeInstanceDesignation()}")
-        .AppendLine($"Data Type: {this.FamilyParam.Definition.GetDataType().ToLabel()}");
+            .AppendLine($"Name: {this.FamilyParam.Definition.Name}")
+            .AppendLine($"Type/Instance: {this.FamilyParam.GetTypeInstanceDesignation()}")
+            .AppendLine($"Data Type: {this.FamilyParam.Definition.GetDataType().ToLabel()}");
         if (!string.IsNullOrEmpty(this.FamilyParam.Formula))
             _ = sb.AppendLine($"Formula: {this.FamilyParam.Formula}");
 
@@ -246,4 +245,3 @@ public class AssociatedElementItem : IPaletteListItem {
         return sb.AppendLine($"Associations: {dims} dims, {arrays} arrays, {formulaDeps} params").ToString().TrimEnd();
     }
 }
-

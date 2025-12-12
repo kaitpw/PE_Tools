@@ -4,7 +4,7 @@ namespace PeServices.Documents.Core;
 
 /// <summary>
 ///     Manages the Most Recently Used (MRU) view buffer for tracking view activation history.
-///     Uses <see cref="DocumentManager"/> static methods for all document/view state queries.
+///     Uses <see cref="DocumentManager" /> static methods for all document/view state queries.
 ///     Note: No locking needed as Revit API is single-threaded.
 /// </summary>
 public class MruViewBuffer {
@@ -18,8 +18,10 @@ public class MruViewBuffer {
     /// <summary>
     ///     Records a view activation. The previous view is only added to the MRU buffer if
     ///     it was active for at least 3 seconds. This filters out intermediate/transient views
-    ///     that Revit briefly activates during document switching (usually < 1 second).
-    ///     Views the user intentionally navigates to will typically be active for > 3 seconds.
+    ///     that Revit briefly activates during document switching (usually
+    ///     < 1 second).
+    ///         Views the user intentionally navigates to will typically be active for>
+    ///         3 seconds.
     /// </summary>
     public void RecordViewActivation(Document doc, ElementId viewId) {
         if (doc == null || viewId == null || viewId == ElementId.InvalidElementId) return;
@@ -108,8 +110,9 @@ public class MruViewBuffer {
         var duration = DateTime.Now - previousViewRef.ActivatedAt;
         var wasOpenLongEnough = duration >= MinViewDuration;
 
-        Debug.WriteLine($"[MruViewBuffer] ShouldCommit '{previousViewRef.DocumentTitle}' viewId={previousViewRef.ViewId.Value()}: " +
-                        $"duration={duration.TotalSeconds:F1}s, minRequired={MinViewDuration.TotalSeconds}s, commit={wasOpenLongEnough}");
+        Debug.WriteLine(
+            $"[MruViewBuffer] ShouldCommit '{previousViewRef.DocumentTitle}' viewId={previousViewRef.ViewId.Value()}: " +
+            $"duration={duration.TotalSeconds:F1}s, minRequired={MinViewDuration.TotalSeconds}s, commit={wasOpenLongEnough}");
 
         return wasOpenLongEnough;
     }

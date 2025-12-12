@@ -1,17 +1,9 @@
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
+using Newtonsoft.Json;
+using PeRevit.Ui;
+using PeServices.Aps.Models;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Nice3point.Revit.Extensions;
-using PeRevit.Ui;
-using PeServices.Aps.Models;
 
 namespace PeServices.Aps.Core;
 
@@ -27,6 +19,30 @@ namespace PeServices.Aps.Core;
 ///     </list>
 /// </remarks>
 internal static class OAuthHandler {
+    #region Authorization URL
+
+    /// <summary>Generates the OAuth authorization URL with all required parameters</summary>
+    private static string BuildAuthorizationUrl(OAuthFlowData flow) {
+        var scopeParam = Uri.EscapeDataString(string.Join(" ", OAuthConfig.RequestedScopes));
+        var redirectParam = Uri.EscapeDataString(OAuthConfig.CallbackUri);
+
+        var url = $"{OAuthConfig.AuthorizeEndpoint}?response_type=code" +
+                  $"&client_id={flow.ClientId}" +
+                  $"&redirect_uri={redirectParam}" +
+                  $"&scope={scopeParam}";
+
+        // Add PKCE parameters for public client flow
+        if (flow.IsPkce) {
+            var codeChallenge = flow.GenerateCodeChallenge();
+            var nonce = OAuthFlowData.GenerateRandomString(32);
+            url += $"&code_challenge={codeChallenge}&code_challenge_method=S256&nonce={nonce}";
+        }
+
+        return url;
+    }
+
+    #endregion
+
     #region Public API
 
     /// <summary>Delegate invoked when 3-legged OAuth completes</summary>
@@ -65,10 +81,10 @@ internal static class OAuthHandler {
             throw new ArgumentException("Refresh token cannot be null or empty", nameof(refreshToken));
 
         var formData = BuildTokenRequestForm(
-            grantType: "refresh_token",
-            clientId: clientId,
-            clientSecret: clientSecret,
-            additionalParams: new Dictionary<string, string> { ["refresh_token"] = refreshToken }
+            "refresh_token",
+            clientId,
+            clientSecret,
+            new Dictionary<string, string> { ["refresh_token"] = refreshToken }
         );
 
         return await PostTokenRequestAsync(formData, cancellationToken).ConfigureAwait(false);
@@ -115,9 +131,8 @@ internal static class OAuthHandler {
             if (!string.IsNullOrEmpty(authorizationCode)) {
                 var token = await ExchangeCodeForTokenAsync(flowData, authorizationCode).ConfigureAwait(false);
                 callback?.Invoke(token);
-            } else {
+            } else
                 callback?.Invoke(null);
-            }
         } catch (Exception ex) {
             new Ballogger().Add(Log.ERR, new StackFrame(), $"Error in OAuth callback: {ex.Message}").Show();
             callback?.Invoke(null);
@@ -128,37 +143,12 @@ internal static class OAuthHandler {
 
     #endregion
 
-    #region Authorization URL
-
-    /// <summary>Generates the OAuth authorization URL with all required parameters</summary>
-    private static string BuildAuthorizationUrl(OAuthFlowData flow) {
-        var scopeParam = Uri.EscapeDataString(string.Join(" ", OAuthConfig.RequestedScopes));
-        var redirectParam = Uri.EscapeDataString(OAuthConfig.CallbackUri);
-
-        var url = $"{OAuthConfig.AuthorizeEndpoint}?response_type=code" +
-                  $"&client_id={flow.ClientId}" +
-                  $"&redirect_uri={redirectParam}" +
-                  $"&scope={scopeParam}";
-
-        // Add PKCE parameters for public client flow
-        if (flow.IsPkce) {
-            var codeChallenge = flow.GenerateCodeChallenge();
-            var nonce = OAuthFlowData.GenerateRandomString(32);
-            url += $"&code_challenge={codeChallenge}&code_challenge_method=S256&nonce={nonce}";
-        }
-
-        return url;
-    }
-
-    #endregion
-
     #region Token Exchange
 
     /// <summary>Exchanges an authorization code for an access token</summary>
     private static Task<OAuthToken> ExchangeCodeForTokenAsync(OAuthFlowData flow, string code) {
         var additionalParams = new Dictionary<string, string> {
-            ["code"] = code,
-            ["redirect_uri"] = OAuthConfig.CallbackUri
+            ["code"] = code, ["redirect_uri"] = OAuthConfig.CallbackUri
         };
 
         // PKCE flow sends code_verifier, confidential flow sends client_secret
@@ -166,10 +156,10 @@ internal static class OAuthHandler {
             additionalParams["code_verifier"] = flow.CodeVerifier;
 
         var formData = BuildTokenRequestForm(
-            grantType: "authorization_code",
-            clientId: flow.ClientId,
-            clientSecret: flow.IsPkce ? null : flow.ClientSecret,
-            additionalParams: additionalParams
+            "authorization_code",
+            flow.ClientId,
+            flow.IsPkce ? null : flow.ClientSecret,
+            additionalParams
         );
 
         return PostTokenRequestAsync(formData, CancellationToken.None);
@@ -181,10 +171,7 @@ internal static class OAuthHandler {
         string clientId,
         string clientSecret,
         Dictionary<string, string> additionalParams) {
-        var form = new Dictionary<string, string> {
-            ["grant_type"] = grantType,
-            ["client_id"] = clientId
-        };
+        var form = new Dictionary<string, string> { ["grant_type"] = grantType, ["client_id"] = clientId };
 
         // Only include client_secret for confidential clients
         if (!string.IsNullOrEmpty(clientSecret))
@@ -202,7 +189,8 @@ internal static class OAuthHandler {
         Dictionary<string, string> formData,
         CancellationToken cancellationToken) {
         using var content = new FormUrlEncodedContent(formData);
-        var response = await OAuthConfig.HttpClient.PostAsync(OAuthConfig.TokenEndpoint, content, cancellationToken).ConfigureAwait(false);
+        var response = await OAuthConfig.HttpClient.PostAsync(OAuthConfig.TokenEndpoint, content, cancellationToken)
+            .ConfigureAwait(false);
 
         var responseBody = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
 

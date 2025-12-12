@@ -31,7 +31,7 @@ public static class FamilyDocumentSetValue {
             StorageType.String => $"\"{value}\"",
             StorageType.Integer => Convert.ToInt32(value).ToString(),
             StorageType.Double when UnitUtils.IsMeasurableSpec(dataType) =>
-                UnitFormatUtils.Format(famDoc.GetUnits(), dataType, Convert.ToDouble(value), forEditing: true),
+                UnitFormatUtils.Format(famDoc.GetUnits(), dataType, Convert.ToDouble(value), true),
             StorageType.Double =>
                 Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture),
             _ => throw new InvalidOperationException(

@@ -276,9 +276,10 @@ public partial class AutoSuggestBox : RevitHostedUserControl {
         } else if (e.Key == Key.Enter) {
             this.CommitSelection();
             e.Handled = false;
-        } else if (e.Key is Key.Escape or Key.Tab)
+        } else if (e.Key is Key.Escape or Key.Tab) {
             if (this.IsSuggestionListOpen)
                 this.IsSuggestionListOpen = false;
+        }
 
         base.OnPreviewKeyDown(e);
     }

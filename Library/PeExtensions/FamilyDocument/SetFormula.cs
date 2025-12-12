@@ -1,5 +1,4 @@
 using Nice3point.Revit.Extensions;
-using PeExtensions.FamDocument;
 
 namespace PeExtensions.FamDocument;
 
@@ -95,7 +94,10 @@ public static class Formula {
     /// <exception cref="Autodesk.Revit.Exceptions.InvalidOperationException">
     ///     Thrown by Revit if the formula is invalid (cryptic message).
     /// </exception>
-    public static bool SetFormulaFast(this FamilyDocument famDoc, FamilyParameter targetParam, string formula, out string errorMessage) {
+    public static bool SetFormulaFast(this FamilyDocument famDoc,
+        FamilyParameter targetParam,
+        string formula,
+        out string errorMessage) {
         errorMessage = null;
 
         if (string.IsNullOrWhiteSpace(formula)) {
@@ -119,11 +121,15 @@ public static class Formula {
     }
 
 
-    public static bool SetFormulaFast(this FamilyDocument famDoc, FamilyParameter targetParam, FamilyParameter sourceParam, out string errorMessage) {
+    public static bool SetFormulaFast(this FamilyDocument famDoc,
+        FamilyParameter targetParam,
+        FamilyParameter sourceParam,
+        out string errorMessage) {
         var tgtIsTypeParam = !targetParam.IsInstance;
         var srcIsInstanceParam = sourceParam.IsInstance;
         if (tgtIsTypeParam && srcIsInstanceParam) {
-            errorMessage = $"Cannot set formula type parameter '{targetParam.Name()}' to instance parameter '{sourceParam.Name()}'";
+            errorMessage =
+                $"Cannot set formula type parameter '{targetParam.Name()}' to instance parameter '{sourceParam.Name()}'";
             return false;
         }
 

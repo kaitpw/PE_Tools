@@ -17,7 +17,8 @@ public interface IOperation : IExecutable {
 public interface ISnapshotAwareOperation : IOperation {
     /// <summary>
     ///     Sets the processing context. Usually set by OperationProcessor before opening the FamilyDocument execution.
-    /// NOTE FOR FUTURE: enable/allow resettingt he context periodically with a typeoperation to get inter-operation snapshots too.
+    ///     NOTE FOR FUTURE: enable/allow resettingt he context periodically with a typeoperation to get inter-operation
+    ///     snapshots too.
     /// </summary>
     void SetContext(FamilyProcessingContext context);
 }

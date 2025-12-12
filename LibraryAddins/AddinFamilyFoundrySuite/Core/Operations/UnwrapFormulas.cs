@@ -6,7 +6,7 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     Unwraps parameter formulas that are either:
 ///     - Constant formulas (e.g., "= 20", "= 60 Hz") - converts to direct value
 ///     - Single parameter reference chains (e.g., PE_G___Model.Formula = Model) - resolves chain,
-///       sets value from ultimate source, backlinks built-ins, and cleans up intermediates.
+///     sets value from ultimate source, backlinks built-ins, and cleans up intermediates.
 ///     This operation should run AFTER all mapping and connector operations are complete.
 /// </summary>
 public class UnwrapFormulas : DocOperation<DefaultOperationSettings> {

@@ -9,9 +9,7 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators;
 public class FamilyParamAggregator {
     private readonly IProjectSnapshotCollector _collector;
 
-    public FamilyParamAggregator(IProjectSnapshotCollector collector) {
-        this._collector = collector;
-    }
+    public FamilyParamAggregator(IProjectSnapshotCollector collector) => this._collector = collector;
 
     /// <summary>
     ///     Aggregates parameter data from all provided families.
@@ -104,9 +102,8 @@ public class FamilyParamAggregator {
     private static string EscapeCsvField(string field) {
         if (string.IsNullOrEmpty(field)) return string.Empty;
 
-        if (field.Contains(',') || field.Contains('"') || field.Contains('\n')) {
+        if (field.Contains(',') || field.Contains('"') || field.Contains('\n'))
             return $"\"{field.Replace("\"", "\"\"")}\"";
-        }
 
         return field;
     }

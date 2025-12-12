@@ -272,9 +272,10 @@ public static class ScheduleHelper {
 
     private static ElementId FindCategoryByName(Document doc, string categoryName) {
         var categories = doc.Settings.Categories;
-        foreach (Category cat in categories)
+        foreach (Category cat in categories) {
             if (cat.Name.Equals(categoryName, StringComparison.OrdinalIgnoreCase))
                 return cat.Id;
+        }
 
         return ElementId.InvalidElementId;
     }

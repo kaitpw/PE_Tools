@@ -10,6 +10,10 @@ using PeServices.Documents;
 namespace PE_Tools;
 
 internal class App : IExternalApplication {
+    // Cache resolved assemblies to prevent loading the same assembly multiple times
+    // which would create duplicate types in different load contexts and break WPF BAML lookup
+    private static readonly Dictionary<string, Assembly> _resolvedAssemblies = new();
+
     public Result OnStartup(UIControlledApplication app) {
         // Set up assembly resolver for Wpf.Ui and other dependencies
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
@@ -96,10 +100,6 @@ internal class App : IExternalApplication {
         if (e?.Document == null) return;
         DocumentManager.Instance.OnDocumentClosed(e.Document);
     }
-
-    // Cache resolved assemblies to prevent loading the same assembly multiple times
-    // which would create duplicate types in different load contexts and break WPF BAML lookup
-    private static readonly Dictionary<string, Assembly> _resolvedAssemblies = new();
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
         Debug.WriteLine($"Assembly Resolution Requested: {args.Name}");
@@ -241,7 +241,8 @@ public static class ButtonDataHydrator {
             new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
-                ToolTip = "Browse all family elements (parameters, connectors, dimensions, reference planes, nested families). Highlights selected elements. Only works in family documents."
+                ToolTip =
+                    "Browse all family elements (parameters, connectors, dimensions, reference planes, nested families). Highlights selected elements. Only works in family documents."
             }
         }, {
             nameof(CmdTapMaker), new ButtonDataRecord {
@@ -297,7 +298,8 @@ public static class ButtonDataHydrator {
                     "Test command that processes a family 3 times with incrementing TEST_PROCESS_NUMBER parameter."
             }
         }, {
-            nameof(CmdFFParamAggregator), new ButtonDataRecord {
+            nameof(CmdFFParamAggregator),
+            new ButtonDataRecord {
                 SmallImage = "Red_16.png",
                 LargeImage = "Red_32.png",
                 ToolTip = "Aggregate parameter metadata across families in a category and output to CSV."
