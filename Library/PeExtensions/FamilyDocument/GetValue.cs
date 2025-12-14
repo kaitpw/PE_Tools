@@ -39,17 +39,10 @@ public static class FamilyManagerGetValue {
     /// </exception>
     public static object GetValue(this FamilyDocument famDoc, string familyParameterName) {
         var fm = famDoc.FamilyManager;
-        var famType = fm.CurrentType;
         var familyParameter = fm.FindParameter(familyParameterName);
-        if (familyParameter == null || !famType.HasValue(familyParameter)) return null;
+        if (familyParameter == null) return null;
 
-        return familyParameter.StorageType switch {
-            StorageType.Double => famType.AsDouble(familyParameter),
-            StorageType.String => famType.AsString(familyParameter),
-            StorageType.Integer => famType.AsInteger(familyParameter),
-            StorageType.ElementId => famType.AsElementId(familyParameter),
-            _ => null
-        };
+        return famDoc.GetValue(familyParameter);
     }
 
     /// <summary>

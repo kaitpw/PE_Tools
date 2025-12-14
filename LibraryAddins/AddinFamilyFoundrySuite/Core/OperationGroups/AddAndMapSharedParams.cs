@@ -28,7 +28,8 @@ public class AddAndMapSharedParams : OperationGroup<MapParamsSettings> {
         return [
             new MapReplaceParams(settings, sharedState, sharedParams),
             new AddUnmappedSharedParams(settings, sharedParams, sharedState),
-            new MapParams(settings, sharedState)
+            new MapParams(settings, sharedState),
+            new BacklinkParamsToBuiltIn(settings, sharedState)
         ];
     }
 }
@@ -70,8 +71,8 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
 }
 
 /// <summary>
-///     Shared state factory for coordinating mapping operations.
-///     Creates fresh state from settings for each family execution.
+///     Shared state for coordinating mapping operations across the operation chain.
+///     Creates fresh mutable mappings for each family execution.
 /// </summary>
 public class MapParamsSharedState {
     private readonly IEnumerable<MappingData> _sourceMappings;
@@ -80,18 +81,10 @@ public class MapParamsSharedState {
     public MapParamsSharedState(IEnumerable<MappingData> mappingData) => this._sourceMappings = mappingData;
 
     /// <summary>
-    ///     Tracks pending backlinks that should be created AFTER all types have been processed.
-    ///     This prevents the backlink formula from breaking source value reads for subsequent types.
-    ///     Cleared when CreateFreshMappings is called for a new family.
-    /// </summary>
-    public Dictionary<string, (FamilyParameter src, FamilyParameter tgt)> PendingBacklinks { get; } = new();
-
-    /// <summary>
     ///     Creates fresh mutable mappings for a new family execution.
     ///     Called by the first operation (MapReplaceParams).
     /// </summary>
     public List<MappingData> CreateFreshMappings() {
-        this.PendingBacklinks.Clear();
         this._currentMappings = this._sourceMappings.Select(m => new MappingData {
             CurrNames = m.CurrNames.ToList(),
             NewName = m.NewName,

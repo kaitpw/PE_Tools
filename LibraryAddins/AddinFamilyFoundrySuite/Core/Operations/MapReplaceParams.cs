@@ -65,10 +65,25 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                     var parameters = doc.FamilyManager.Parameters;
                     var singleReference = parameters.TryGetSingleReference(replaced.Formula);
                     if (singleReference != null) {
-                        // TODO: experimental, in the spirit of simplification, this is like the Unwrap Operation
-                        _ = doc.UnsetFormula(singleReference);
-                        mapping.IsProcessed = true;
-                        logs.Add(new LogEntry { Item = $"{currName} → {replaced.Definition.Name}" });
+                        var refName = singleReference.Definition.Name;
+                        var refIsBuiltIn = ParameterUtils.IsBuiltInParameter(singleReference.Id);
+                        var refIsInCurrNames = mapping.CurrNames.Contains(refName);
+
+                        if (refIsBuiltIn && refIsInCurrNames) {
+                            // NewName inherited formula pointing to a built-in that's in CurrNames.
+                            // Unset formula on NewName, let MapParams copy value from built-in and create backlink.
+                            _ = doc.UnsetFormula(replaced);
+                            var mappingToUpdate = mutableMappings.First(m => m.NewName == mapping.NewName);
+                            mappingToUpdate.CurrNames = [refName]; // Point to built-in for value copy
+                            logs.Add(new LogEntry {
+                                Item = $"Replaced {currName} → {replaced.Definition.Name}, deferred backlink to {refName}"
+                            });
+                        } else {
+                            // Standard unwrap: formula points to non-built-in or not in CurrNames
+                            _ = doc.UnsetFormula(singleReference);
+                            mapping.IsProcessed = true;
+                            logs.Add(new LogEntry { Item = $"{currName} → {replaced.Definition.Name}" });
+                        }
                     } else if (replaced.Formula == null ||
                                parameters.IsConstant(replaced.Formula)) {
                         _ = doc.UnsetFormula(replaced);
