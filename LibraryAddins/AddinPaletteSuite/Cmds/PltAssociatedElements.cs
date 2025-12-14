@@ -3,6 +3,7 @@ using AddinPaletteSuite.Helpers;
 using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
+using PeExtensions.FamParameter.Formula;
 using PeUi.Core;
 using PeUi.Core.Services;
 using System.Windows.Media.Imaging;
@@ -33,7 +34,7 @@ public static class PltAssociatedElements {
             items.Add(new AssociatedElementItem(connector, familyDoc));
 
         // Add formula-dependent family parameters
-        foreach (var fp in param.FormulaDependents(familyDoc))
+        foreach (var fp in param.GetDependents(familyDoc.FamilyManager.Parameters))
             items.Add(new AssociatedElementItem(fp, familyDoc));
 
         if (items.Count == 0) return;
@@ -63,7 +64,8 @@ public static class PltAssociatedElements {
 
         var window = PaletteFactory.Create($"{param.Definition.Name} Associations", items, actions,
             new PaletteOptions<AssociatedElementItem> {
-                SearchConfig = SearchConfig.PrimaryAndSecondary(), FilterKeySelector = item => item.TextPill
+                SearchConfig = SearchConfig.PrimaryAndSecondary(),
+                FilterKeySelector = item => item.TextPill
             });
         window.Show();
     }
@@ -241,7 +243,7 @@ public class AssociatedElementItem : IPaletteListItem {
 
         var dims = this.FamilyParam.AssociatedDimensions(this._familyDoc).Count();
         var arrays = this.FamilyParam.AssociatedArrays(this._familyDoc).Count();
-        var formulaDeps = this.FamilyParam.FormulaDependents(this._familyDoc).Count();
+        var formulaDeps = this.FamilyParam.GetDependents(this._familyDoc.FamilyManager.Parameters).Count();
         return sb.AppendLine($"Associations: {dims} dims, {arrays} arrays, {formulaDeps} params").ToString().TrimEnd();
     }
 }

@@ -2,6 +2,7 @@
 using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
+using PeExtensions.FamParameter.Formula;
 using PeExtensions.PolyFill;
 using System.Windows;
 using System.Windows.Controls;
@@ -171,7 +172,7 @@ public static class ParamRelationshipDialog {
         }
 
         // Add formula-dependent parameters (recursive)
-        var formulaParams = param.FormulaDependents(familyDoc).ToList();
+        var formulaParams = param.GetDependents(familyDoc.FamilyManager.Parameters).ToList();
         if (formulaParams.Count > 0) {
             var paramsFolder = new TreeViewItem {
                 Header = CreateFolderHeader($"Formula Dependencies ({formulaParams.Count})"),
@@ -202,7 +203,9 @@ public static class ParamRelationshipDialog {
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
 
         _ = panel.Children.Add(new TextBlock {
-            Text = name, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 8, 0)
+            Text = name,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 8, 0)
         });
 
         _ = panel.Children.Add(new Border {

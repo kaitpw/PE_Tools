@@ -4,6 +4,7 @@ using AddinPaletteSuite.Helpers;
 using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
+using PeExtensions.FamParameter.Formula;
 using PeServices.Storage;
 using PeUi.Core;
 using PeUi.Core.Services;
@@ -241,7 +242,7 @@ public class FamilyElementItem : IPaletteListItem {
         this.FamilyParam!.AssociatedDimensions(this._familyDoc).Count() +
         this.FamilyParam.AssociatedArrays(this._familyDoc).Count() +
         this.FamilyParam.AssociatedConnectors(this._familyDoc).Count() +
-        this.FamilyParam.FormulaDependents(this._familyDoc).Count();
+        this.FamilyParam.GetDependents(this._familyDoc.FamilyManager.Parameters).Count();
 
     private string GetParameterTooltip() {
         var lines = new List<string> {
@@ -278,7 +279,7 @@ public class FamilyElementItem : IPaletteListItem {
         lines.Add($"Direct Element Params: {directParams.Count}");
         foreach (var param in directParams) lines.Add($"  - {param.Definition.Name} (ID: {param.Id})");
 
-        var formulaParams = this.FamilyParam.FormulaDependents(this._familyDoc).ToList();
+        var formulaParams = this.FamilyParam.GetDependents(this._familyDoc.FamilyManager.Parameters).ToList();
         lines.Add($"Formula Dependents: {formulaParams.Count}");
         foreach (var fp in formulaParams) lines.Add($"  - {fp.Definition.Name} (ID: {fp.Id})");
 

@@ -4,6 +4,7 @@ using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.GetValue;
 using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamManager;
+using PeExtensions.FamParameter.Formula;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -85,7 +86,7 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings, SetParamSha
         var fm = famDoc.FamilyManager;
 
         // Reject values that contain parameter references (should use SetParamValues for formulas)
-        var referencedParams = FormulaUtils.GetReferencedParameters(userValue, fm).ToList();
+        var referencedParams = fm.Parameters.GetReferencedIn(userValue).ToList();
         if (referencedParams.Any()) {
             throw new InvalidOperationException(
                 $"Per-type value '{userValue}' contains parameter references. Use {nameof(SetParamModel.ValueOrFormula)} (not {nameof(SetParamPerTypeModel.ValuesPertype)}) for formulas.");

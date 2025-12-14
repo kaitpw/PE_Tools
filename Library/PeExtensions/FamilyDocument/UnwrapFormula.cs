@@ -1,4 +1,5 @@
 using PeExtensions.FamDocument.GetValue;
+using PeExtensions.FamParameter.Formula;
 
 namespace PeExtensions.FamDocument;
 
@@ -43,7 +44,7 @@ public static class FamilyDocumentUnwrapFormula {
         var fm = doc.FamilyManager;
 
         // Get referenced parameters ONCE - don't iterate all params multiple times
-        var referencedParams = FormulaUtils.GetReferencedParameters(formula, fm).ToList();
+        var referencedParams = fm.Parameters.GetReferencedIn(formula).ToList();
 
         // Case 1: Constant formula (no parameter references) - unwrap to value
         if (referencedParams.Count == 0)
@@ -104,7 +105,7 @@ public static class FamilyDocumentUnwrapFormula {
         if (ParameterUtils.IsBuiltInParameter(ultimateSource.Id) &&
             ultimateSource.IsInstance == param.IsInstance) {
             try {
-                var success = doc.SetFormulaFast(ultimateSource, param.Definition.Name, out var errorMessage);
+                var success = doc.TrySetFormulaFast(ultimateSource, param.Definition.Name, out var errorMessage);
                 if (!success) throw new Exception(errorMessage);
             } catch (InvalidOperationException) {
                 // Backlink failed - continue anyway

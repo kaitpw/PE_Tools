@@ -9,9 +9,16 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
     public override string Description =>
         $"Sort family parameters ({this.Settings.ParamNameSortOrder}, {this.Settings.ParamTypeSortOrder}, {this.Settings.ParamValueSortOrder})";
 
-    public IComparer<string> GetNameComparer() => this.Settings.ParamNameSortOrder == ParamNameSortOrder.Ascending
-        ? StringComparer.Ordinal
-        : Comparer<string>.Create((a, b) => StringComparer.Ordinal.Compare(b, a));
+    public IComparer<string> GetNameComparer() {
+        var order = this.Settings.ParamNameSortOrder;
+        return order switch {
+            // ParamNameSortOrder.None => null,
+            ParamNameSortOrder.Ascending => StringComparer.Ordinal,
+            ParamNameSortOrder.Descending =>
+                Comparer<string>.Create((a, b) => StringComparer.Ordinal.Compare(b, a)),
+            _ => throw new ArgumentException($"Invalid param name sort order: {order}")
+        };
+    }
 
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
@@ -39,27 +46,32 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum ParamTypeSortOrder {
+    // None,
     SharedParamsFirst,
     FamilyParamsFirst
 }
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum ParamValueSortOrder {
+    // None,
     FormulasFirst,
     ValuesFirst
 }
 
 [JsonConverter(typeof(StringEnumConverter))]
 public enum ParamNameSortOrder {
+    // None,
     Ascending,
     Descending
 }
 
 public class SortParamsSettings : IOperationSettings {
-    [Description("Sort shared parameters first or family parameters first. Takes first priority. Options are SharedParamsFirst or FamilyParamsFirst")]
+    [Description(
+        "Sort shared parameters first or family parameters first. Takes first priority. Options are SharedParamsFirst or FamilyParamsFirst")]
     public ParamTypeSortOrder ParamTypeSortOrder { get; init; } = ParamTypeSortOrder.SharedParamsFirst;
 
-    [Description("Sort parameters with formulas first or values first. Takes second priority. Options are FormulasFirst or ValuesFirst")]
+    [Description(
+        "Sort parameters with formulas first or values first. Takes second priority. Options are FormulasFirst or ValuesFirst")]
     public ParamValueSortOrder ParamValueSortOrder { get; init; } = ParamValueSortOrder.ValuesFirst;
 
     [Description("Sort parameters alphabetically. Takes third priority. Options are Ascending or Descending")]

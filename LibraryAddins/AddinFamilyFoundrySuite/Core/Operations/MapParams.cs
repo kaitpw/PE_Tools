@@ -64,7 +64,7 @@ public class MapParams : TypeOperation<MapParamsSettings> {
         var tgtName = tgtParam.Definition.Name;
         if (ParameterUtils.IsBuiltInParameter(srcParam.Id)) {
             if (tgtParam.Formula is null) {
-                var success = doc.SetFormulaFast(srcParam, tgtName, out var errorMessage);
+                var success = doc.TrySetFormulaFast(srcParam, tgtName, out var errorMessage);
                 if (!success) return new LogEntry { Item = $"Backlink {tgtName} → {srcName}", Error = errorMessage };
 
                 return new LogEntry { Item = $"Backlink {tgtName} → {srcName}" };

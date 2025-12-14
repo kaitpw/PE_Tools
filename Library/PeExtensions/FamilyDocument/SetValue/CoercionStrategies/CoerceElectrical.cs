@@ -33,14 +33,15 @@ public class CoerceElectrical : ICoercionStrategy {
     }
 
     private double ExtractDouble(string sourceValue, FamilyParameter targetParam) {
-        if (targetParam.Definition.Name.Contains("Voltage", StringComparison.OrdinalIgnoreCase)) {
-            // somewhat arbitrary ranges. 240 must account for 230. 120 must account for 110 or 115.
-            var voltRange240 = Enumerable.Range(225, 21).Select(x => (double)x).ToList();
-            voltRange240.Add(208);
-            var voltRange120 = Enumerable.Range(107, 15).Select(x => (double)x).ToList();
-            if (voltRange240.Any(x => sourceValue.Contains(x.ToString()))) return 240;
-            if (voltRange120.Any(x => sourceValue.Contains(x.ToString()))) return 120;
-        }
+        if (!targetParam.Definition.Name.Contains("Voltage", StringComparison.OrdinalIgnoreCase))
+            return Regexes.ExtractDouble(sourceValue);
+
+        // somewhat arbitrary ranges. 240 must account for 230. 120 must account for 110 or 115.
+        var voltRange240 = Enumerable.Range(225, 21).Select(x => (double)x).ToList();
+        var voltRange120 = Enumerable.Range(107, 15).Select(x => (double)x).ToList();
+        if (sourceValue.Contains(208.ToString())) return 208;
+        if (voltRange240.Any(x => sourceValue.Contains(x.ToString()))) return 240;
+        if (voltRange120.Any(x => sourceValue.Contains(x.ToString()))) return 120;
 
         return Regexes.ExtractDouble(sourceValue);
     }

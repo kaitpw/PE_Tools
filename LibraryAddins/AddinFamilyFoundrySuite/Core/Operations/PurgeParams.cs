@@ -1,6 +1,7 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
+using PeExtensions.FamParameter.Formula;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -40,18 +41,20 @@ public class PurgeParams : DocOperation<PurgeParamsSettings>, ISnapshotAwareOper
         var deleteCount = 0;
         var excludeSet = this.ExternalExcludeNamesEqualing.ToHashSet();
 
-        var parameters = doc.FamilyManager.Parameters
+        var allParams = doc.FamilyManager.Parameters;
+
+        var parameters = allParams
             .OfType<FamilyParameter>()
             .Where(p => !excludeSet.Contains(p.Definition.Name))
             .Where(this.Settings.Filter)
             .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
-            .Where(this.IsParameterEmpty)
+            .Where(p => !this.IsParameterEmpty(p))
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
 
         foreach (var param in parameters) {
             if (!this.Settings.DirectDeleteEmptyParameters) {
-                if (param.FormulaDependents(doc).Any(p => p.HasDirectAssociation(doc))) continue;
+                if (param.GetDependents(allParams).Any(p => p.HasDirectAssociation(doc))) continue;
                 if (param.HasDirectAssociation(doc)) continue;
             }
 

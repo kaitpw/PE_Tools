@@ -1,4 +1,5 @@
 using PeExtensions.FamDocument;
+using PeExtensions.FamParameter.Formula;
 
 namespace PeExtensions.FamParameter;
 
@@ -67,7 +68,7 @@ public static class FamilyParameterGetAssociated {
     /// <summary>
     ///     Checks if the family parameter has any DIRECT physical associations
     ///     (element parameters, dimensions, arrays, connectors).
-    ///     Does NOT include formula dependencies - use FormulaDependents for that.
+    ///     Does NOT include formula dependencies - use <see cref="FormulaDependencies.GetDependents"/> for that.
     /// </summary>
     /// <param name="param">The family parameter</param>
     /// <param name="doc">The family document</param>
@@ -86,5 +87,5 @@ public static class FamilyParameterGetAssociated {
     /// <param name="doc">The family document</param>
     /// <returns>True if the parameter has any associations</returns>
     public static bool HasAnyAssociation(this FamilyParameter param, FamilyDocument doc) =>
-        param.HasDirectAssociation(doc) || param.FormulaDependents(doc).Any();
+        param.HasDirectAssociation(doc) || param.GetDependents(doc.FamilyManager.Parameters).Any();
 }

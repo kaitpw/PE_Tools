@@ -39,14 +39,12 @@ public static class FamilyDocumentSetValue {
         };
     }
 
-    public static FamilyParameter? SetGlobalValue(this FamilyDocument famDoc, FamilyParameter param, object value) {
+    public static bool SetGlobalValue(this FamilyDocument famDoc, FamilyParameter param, object value) {
         var formula = ValueToFormulaString(famDoc, param, value);
 
-        var success = famDoc.SetFormulaFast(param, formula, out var errorMessage);
-        if (!success) throw new Exception(errorMessage);
-        if (!famDoc.UnsetFormula(param)) return null;
-
-        return param;
+        var success = famDoc.TrySetFormulaFast(param, formula, out var errorMessage);
+        if (!success) throw new InvalidOperationException(errorMessage);
+        return famDoc.UnsetFormula(param);
     }
 
     /// <summary>

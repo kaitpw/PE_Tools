@@ -2,6 +2,7 @@ using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
+using PeExtensions.FamParameter.Formula;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -61,14 +62,15 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                     // Formula is constant: Unset formula but DO NOT mark as processed, instead set CurrName to NewName 
                     // (CurrName is gone at this point). This allows SetValue to coerce later which is
                     // necessary for electrical parameters using ElectricalCoercionStrategy)
-                    var dependents = replaced.FormulaDependents(doc).ToList();
-                    if (dependents.Any()) {
+                    var parameters = doc.FamilyManager.Parameters;
+                    var singleReference = parameters.TryGetSingleReference(replaced.Formula);
+                    if (singleReference != null) {
                         // TODO: experimental, in the spirit of simplification, this is like the Unwrap Operation
-                        if (dependents.Count() == 1) _ = doc.UnsetFormula(dependents.First());
+                        _ = doc.UnsetFormula(singleReference);
                         mapping.IsProcessed = true;
                         logs.Add(new LogEntry { Item = $"{currName} → {replaced.Definition.Name}" });
                     } else if (replaced.Formula == null ||
-                               FormulaUtils.IsConstantFormula(replaced.Formula, doc.FamilyManager)) {
+                               parameters.IsConstant(replaced.Formula)) {
                         _ = doc.UnsetFormula(replaced);
                         var ignoreCoercion = new List<ForgeTypeId> {
                             SpecTypeId.Number, SpecTypeId.String.Text, SpecTypeId.Length

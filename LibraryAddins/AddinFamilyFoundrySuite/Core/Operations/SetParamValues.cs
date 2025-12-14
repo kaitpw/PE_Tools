@@ -52,15 +52,16 @@ public class SetParamValues(AddAndSetParamsSettings settings, SetParamSharedStat
     private static SetResult SetValueOrFormula(FamilyDocument doc,
         FamilyParameter param,
         string valueOrFormula,
-        bool setAsFormula) {
-        if (setAsFormula) {
-            _ = doc.SetFormula(param, valueOrFormula);
-            return SetResult.Success;
-        }
-
+        bool setAsFormula
+    ) {
         try {
-            var result = doc.SetGlobalValue(param, valueOrFormula);
-            return result is not null ? SetResult.Success : SetResult.NeedsFallbackResult;
+            if (setAsFormula) {
+                var success = doc.TrySetFormula(param, valueOrFormula, out _);
+                return success ? SetResult.Success : SetResult.NeedsFallbackResult;
+            } else {
+                var success = doc.SetGlobalValue(param, valueOrFormula);
+                return success ? SetResult.Success : SetResult.NeedsFallbackResult;
+            }
         } catch {
             // SetGlobalValue failed (e.g., Force datatype issues) - needs per-type fallback
             return SetResult.NeedsFallbackResult;

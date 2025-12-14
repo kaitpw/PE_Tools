@@ -1,21 +1,32 @@
 using Nice3point.Revit.Extensions;
+using PeExtensions.FamParameter.Formula;
 
 namespace PeExtensions.FamDocument;
 
 public static class Formula {
+    private static HashSet<ForgeTypeId> _forbiddenDataTypes = null;
+    /// <summary>
+    ///     Datatypes for which formulas cannot be assigned
+    /// </summary>
+    /// <remarks> Must be a getter, when it is a simple statically initialized property it errors with NullReferences</remarks>
+    public static HashSet<ForgeTypeId> ForbiddenDataTypes =>
+        _forbiddenDataTypes ??= [
+            SpecTypeId.String.Url,
+        SpecTypeId.Reference.LoadClassification
+        ];
+
     /// <summary>
     ///     Unset a formula on a family parameter. The same as calling
-    ///     <see cref="SetFormula(FamilyDocument, FamilyParameter, string)" /> with null or empty string.
+    ///     <see cref="TrySetFormula(FamilyDocument, FamilyParameter, string, out string)" /> with null or empty formula.
     /// </summary>
-    /// <returns>True if the formula was set successfully</returns>
+    /// <returns>True if the formula was set successfully. On error, no message is returned nor any exception thrown, only false is returned.</returns>
     /// <exception cref="Autodesk.Revit.Exceptions.InvalidOperationException">
     ///     Thrown when a type parameter formula references
     ///     instance parameters
     /// </exception>
     public static bool UnsetFormula(this FamilyDocument famDoc, FamilyParameter targetParam) {
-        famDoc.FamilyManager.SetFormula(targetParam, null);
-        if (targetParam.Formula is null) return true;
-        return false;
+        var success = famDoc.TrySetFormulaFast(targetParam, null, out _);
+        return success;
     }
 
     /// <summary>
@@ -23,25 +34,25 @@ public static class Formula {
     ///     only reference other type parameters. Instance parameter formulas can reference
     ///     both instance and type parameters.
     /// </summary>
-    /// <param name="famDoc">The family document</param>
-    /// <param name="targetParam">The parameter to set the formula on</param>
-    /// <param name="formula">The formula string, use null or empty string to clear the formula</param>
     /// <returns>True if the formula was set successfully</returns>
     /// <exception cref="Autodesk.Revit.Exceptions.InvalidOperationException">
     ///     Thrown when a type parameter formula references instance parameters,
     ///     there is no valid family type, the parameter cannot be assigned a formula, or the operation make a circular chain
     ///     of references among the formulas.
     /// </exception>
-    public static bool SetFormula(this FamilyDocument famDoc, FamilyParameter targetParam, string formula) {
-        if (string.IsNullOrWhiteSpace(formula)) {
-            famDoc.FamilyManager.SetFormula(targetParam, null);
-            return true;
-        }
+    public static bool TrySetFormula(
+        this FamilyDocument famDoc,
+        FamilyParameter targetParam,
+        string formula,
+        out string errorMessage
+    ) {
+        errorMessage = null;
+        if (string.IsNullOrWhiteSpace(formula)) return famDoc.TrySetFormulaFast(targetParam, null, out errorMessage);
 
-        var familyManager = famDoc.FamilyManager;
+        var parameters = famDoc.FamilyManager.Parameters;
 
         // Validate all parameter-like tokens in the formula reference existing parameters
-        var invalidParams = FormulaUtils.GetInvalidParameterReferences(formula, familyManager).ToList();
+        var invalidParams = parameters.GetInvalidReferences(formula).ToList();
         if (invalidParams.Any()) {
             throw new InvalidOperationException(
                 $"Cannot set formula on parameter '{targetParam.Name()}'. " +
@@ -50,7 +61,7 @@ public static class Formula {
 
         // Type parameters can only reference other type parameters
         if (!targetParam.IsInstance) {
-            var referencedParams = FormulaUtils.GetReferencedParameters(formula, familyManager);
+            var referencedParams = parameters.GetReferencedIn(formula);
             var instanceParams = referencedParams.Where(p => p.IsInstance).ToList();
 
             if (instanceParams.Count > 0) {
@@ -61,16 +72,8 @@ public static class Formula {
             }
         }
 
-        // Check for circular references before Revit throws a cryptic error. This is slow, maybe uncomment later
-        // var cycleResult = FormulaUtils.DetectCycle(targetParam, formula, familyManager);
-        // if (cycleResult.WouldCycle) {
-        //     var cyclePath = cycleResult.FormatCyclePath();
-        //     var message = $"Cannot set formula '{formula}' on parameter '{targetParam.Name()}'. " +
-        //                   $"This would create a circular reference: {targetParam.Name()} → {cyclePath}";
-        //     throw new InvalidOperationException(message);
-        // }
-
-        famDoc.FamilyManager.SetFormula(targetParam, formula);
+        var success = famDoc.TrySetFormulaFast(targetParam, formula, out errorMessage);
+        if (!success) throw new InvalidOperationException(errorMessage);
         return true;
     }
 
@@ -88,51 +91,28 @@ public static class Formula {
     ///         <b>When NOT to use:</b> User-entered formulas, untrusted input, or when you need helpful error messages.
     ///     </para>
     /// </remarks>
-    /// <param name="famDoc">The family document</param>
-    /// <param name="targetParam">The parameter to set the formula on</param>
-    /// <param name="formula">The formula string, use null or empty string to clear the formula</param>
     /// <exception cref="Autodesk.Revit.Exceptions.InvalidOperationException">
     ///     Thrown by Revit if the formula is invalid (cryptic message).
     /// </exception>
-    public static bool SetFormulaFast(this FamilyDocument famDoc,
+    public static bool TrySetFormulaFast(
+        this FamilyDocument famDoc,
         FamilyParameter targetParam,
         string formula,
-        out string errorMessage) {
+        out string errorMessage
+    ) {
         errorMessage = null;
-
-        if (string.IsNullOrWhiteSpace(formula)) {
-            famDoc.FamilyManager.SetFormula(targetParam, null);
-            return true;
-        }
-
-        var forbidden = new List<ForgeTypeId> {
-            SpecTypeId.String.Url
-            // SpecTypeId.Reference.LoadClassification, // TODO: Need to do due diligence on this one, MakeElecConnector throws an exception if this is set
-        };
-
-        if (forbidden.Contains(targetParam.Definition.GetDataType())) {
+        if (ForbiddenDataTypes.Contains(targetParam.Definition.GetDataType())) {
             errorMessage = $"Cannot set formula on parameter '{targetParam.Name()}'. " +
-                           $"This datatype formula-forbidden, among these others:{string.Join(", ", forbidden.Select(d => d.ToLabel()))}.";
+                           $"This datatype formula-forbidden, among these others: {string.Join(", ", ForbiddenDataTypes.Select(d => d.ToLabel()))}.";
             return false;
         }
 
-        famDoc.FamilyManager.SetFormula(targetParam, formula);
-        return true;
-    }
-
-
-    public static bool SetFormulaFast(this FamilyDocument famDoc,
-        FamilyParameter targetParam,
-        FamilyParameter sourceParam,
-        out string errorMessage) {
-        var tgtIsTypeParam = !targetParam.IsInstance;
-        var srcIsInstanceParam = sourceParam.IsInstance;
-        if (tgtIsTypeParam && srcIsInstanceParam) {
-            errorMessage =
-                $"Cannot set formula type parameter '{targetParam.Name()}' to instance parameter '{sourceParam.Name()}'";
+        try {
+            famDoc.FamilyManager.SetFormula(targetParam, string.IsNullOrWhiteSpace(formula) ? null : formula);
+            return true;
+        } catch (Exception ex) {
+            errorMessage = ex.ToStringDemystified();
             return false;
         }
-
-        return famDoc.SetFormulaFast(targetParam, sourceParam.Formula, out errorMessage);
     }
 }
