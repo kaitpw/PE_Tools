@@ -21,7 +21,7 @@ public class CmdCreateSchedule : IExternalCommand {
             var settingsManager = storage.SettingsDir();
             var settings = settingsManager.Json<ScheduleSettings>().Read();
             var profile = settingsManager.SubDir("schedules")
-                .Json<ScheduleSpec>($"{settings.CurrentProfile}.json").Read();
+                .JsonWithExtends<ScheduleSpec>($"{settings.CurrentProfile}.json").Read();
 
             using var trans = new Transaction(doc, "Create Schedule");
             _ = trans.Start();

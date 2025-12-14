@@ -55,6 +55,22 @@ public class SettingsManager : BaseLocalManager {
         new Json<T>(this.GetJsonPath(filename), this.ThrowIfDefaultCreated, this.SaveSchema);
 
     /// <summary>
+    ///     Creates a JSON reader that supports the <c>$extends</c> inheritance pattern.
+    ///     Use this for profile files that may extend other profiles in the same directory.
+    /// </summary>
+    /// <remarks>
+    ///     <para>If the JSON file contains <c>"$extends": "BaseName"</c>, it will:</para>
+    ///     <list type="number">
+    ///         <item>Load the base profile (with full recovery/validation)</item>
+    ///         <item>Merge the child's overrides on top</item>
+    ///         <item>Validate the merged result</item>
+    ///     </list>
+    ///     <para>Child files remain sparse - only overrides are stored.</para>
+    /// </remarks>
+    public JsonReader<T> JsonWithExtends<T>(string filename) where T : class, new() =>
+        new JsonWithExtends<T>(this.DirectoryPath, filename, this.ThrowIfDefaultCreated, this.SaveSchema);
+
+    /// <summary>
     ///     Navigate to a subdirectory for accessing files within nested folders.
     ///     Supports multi-level nesting via chaining or path strings (e.g., "profiles/production").
     /// </summary>

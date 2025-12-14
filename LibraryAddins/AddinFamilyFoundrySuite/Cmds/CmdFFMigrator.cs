@@ -27,7 +27,8 @@ public class CmdFFMigrator : IExternalCommand {
             var storage = new Storage("FF Migrator");
             var settingsManager = storage.SettingsDir();
             var settings = settingsManager.Json<BaseSettings<ProfileRemap>>().Read();
-            var profile = settingsManager.SubDir("profiles").Json<ProfileRemap>($"{settings.CurrentProfile}.json")
+            var profile = settingsManager.SubDir("profiles")
+                .JsonWithExtends<ProfileRemap>($"{settings.CurrentProfile}.json")
                 .Read();
             var outputFolderPath = storage.OutputDir().DirectoryPath;
 
