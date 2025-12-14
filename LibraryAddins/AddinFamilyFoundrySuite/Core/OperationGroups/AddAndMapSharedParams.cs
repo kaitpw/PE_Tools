@@ -4,8 +4,8 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 
-public class MapAndAddSharedParams : OperationGroup<MapParamsSettings> {
-    public MapAndAddSharedParams(
+public class AddAndMapSharedParams : OperationGroup<MapParamsSettings> {
+    public AddAndMapSharedParams(
         MapParamsSettings settings,
         IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
     ) : base(

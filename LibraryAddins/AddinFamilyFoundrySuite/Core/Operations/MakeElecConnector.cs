@@ -21,11 +21,10 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
         var voltageName = this.Settings.SourceParameterNames.Voltage;
         var mcaName = this.Settings.SourceParameterNames.MinimumCurrentAmpacity;
 
-        FamilyParameter GetSourceParameter(string name) {
-            return doc.FamilyManager.Parameters
+        FamilyParameter GetSourceParameter(string name) =>
+            doc.FamilyManager.Parameters
                 .OfType<FamilyParameter>()
                 .FirstOrDefault(fp => fp.Definition.Name == name);
-        }
 
         // TODO: Figure out PE_E___LoadClassification migration!!!!!!!!!
         // Note: Load Classification (RBS_ELEC_LOAD_CLASSIFICATION) is intentionally NOT mapped here.

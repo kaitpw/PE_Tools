@@ -21,6 +21,7 @@ public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
     /// </summary>
     public SetParamSharedState SharedState { get; }
 
+#pragma warning disable IDE0060 // Remove unused parameter
     public static string InitializeDescription(AddAndSetParamsSettings settings) =>
         $"Set a parameter within the family to a value or formula. " +
         $"By default, values are set as formulas (even simple numbers/text). Use <{nameof(SetParamModel.SetAsFormula)}>=false to set as values instead. " +
@@ -30,6 +31,8 @@ public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
         $"\n\t<{nameof(AddAndSetData.PropertiesGroup)}>: <{new AddAndSetData().PropertiesGroup.ToLabel()}>" +
         $"\n\t<{nameof(AddAndSetData.DataType)}>: <{new AddAndSetData().DataType.ToLabel()}>>" +
         $"\n\t<{nameof(AddAndSetData.IsInstance)}>: <{GetDesignation(new AddAndSetData().IsInstance)}>";
+#pragma warning restore IDE0060 // Remove unused parameter
+
 
     private static string GetDesignation(bool isInstance) => isInstance ? "Instance" : "Type";
 

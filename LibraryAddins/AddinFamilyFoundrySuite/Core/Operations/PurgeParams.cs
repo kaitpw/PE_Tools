@@ -15,9 +15,8 @@ public class PurgeParams : DocOperation<PurgeParamsSettings>, ISnapshotAwareOper
 
     public IEnumerable<string> ExternalExcludeNamesEqualing { get; set; } = [];
 
-    public bool IsOkToDeleteEmptyParam(FamilyParameter param) {
+    public bool IsParameterEmpty(FamilyParameter param) {
         if (this._context == null) return false;
-        if (!this.Settings.DeleteEmptyParameters) return false;
 
         foreach (var value in this._context.GetTypesWithValue(param.Definition.Name)) {
             if (value == null) return true;
@@ -46,13 +45,15 @@ public class PurgeParams : DocOperation<PurgeParamsSettings>, ISnapshotAwareOper
             .Where(p => !excludeSet.Contains(p.Definition.Name))
             .Where(this.Settings.Filter)
             .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
-            .Where(this.IsOkToDeleteEmptyParam)
+            .Where(this.IsParameterEmpty)
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
 
         foreach (var param in parameters) {
-            if (param.HasDirectAssociation(doc)) continue;
-            if (param.FormulaDependents(doc).Any(p => p.HasDirectAssociation(doc))) continue;
+            if (!this.Settings.DirectDeleteEmptyParameters) {
+                if (param.FormulaDependents(doc).Any(p => p.HasDirectAssociation(doc))) continue;
+                if (param.HasDirectAssociation(doc)) continue;
+            }
 
             try {
                 var paramName = param.Definition.Name;
@@ -75,7 +76,7 @@ public class PurgeParamsSettings : IOperationSettings {
     public bool Enabled { get; init; } = true;
 
     [Description("Whether to delete parameters that have no value for every family type, regardless of whether they are used in the family. This is rare but possible. This setting is useful for properties like url variations where there are often multiple url parameters with no value.")]
-    public bool DeleteEmptyParameters { get; init; } = true;
+    public bool DirectDeleteEmptyParameters { get; init; } = true;
     [Description("Whether to consider zero value as \"empty\" when deleting empty parameters.")]
     public bool ConsiderZeroValueAsEmpty { get; init; } = true;
 

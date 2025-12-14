@@ -39,8 +39,7 @@ public class CmdFFMigrator : IExternalCommand {
                 .SelectMany(m => m.CurrNames)
                 .Concat(apsParamNames);
 
-            var addFamParams = new AddAndSetParamsSettings {
-                Parameters = [
+            var internalParams = new List<SetParamModel> {
                     new SetParamModel {
                         Name = "PE_E___NumberOfPoles",
                         ValueOrFormula =
@@ -57,18 +56,23 @@ public class CmdFFMigrator : IExternalCommand {
                         IsInstance = false,
                         ValueOrFormula = $"\"{DateTime.Now:yyyy_MM_dd HH:mm:ss}\""
                     }
-                ]
             };
 
+            var addAndSet = new AddAndSetParamsSettings {
+                OverrideExistingValues = profile.AddAndSetParams.OverrideExistingValues,
+                CreateFamParamIfMissing = profile.AddAndSetParams.CreateFamParamIfMissing,
+                Parameters = profile.AddAndSetParams.Parameters.Concat(internalParams).ToList(),
+                ParametersPerType = profile.AddAndSetParams.ParametersPerType,
+            };
 
             var queue = new OperationQueue()
                 .Add(new PurgeParams(profile.DeleteUnusedParams, mappingDataAllNames))
                 .Add(new PurgeNestedFamilies(profile.DeleteUnusedNestedFamilies))
-                .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
-                .Add(new AddAndSetParams(addFamParams))
-                .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
-                // .Add(new UnwrapFormulas(apsParamNames))
-                .Add(new PurgeParams(profile.DeleteUnusedParams, apsParamNames));
+                .Add(new AddAndMapSharedParams(profile.AddAndMapSharedParams, apsParamData))
+                .Add(new AddAndSetParams(addAndSet))
+                .Add(new MakeElecConnector(profile.MakeElectricalConnector))
+                .Add(new PurgeParams(profile.DeleteUnusedParams, apsParamNames))
+                .Add(new SortParams(profile.SortParams));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -129,7 +133,15 @@ public class ProfileRemap : BaseProfileSettings {
     [Required]
     public MapParamsSettings AddAndMapSharedParams { get; init; } = new();
 
+    [Description("Settings for setting parameter values and adding family parameters.")]
+    [Required]
+    public AddAndSetParamsSettings AddAndSetParams { get; init; } = new();
+
     [Description("Settings for hydrating electrical connectors")]
     [Required]
-    public MakeElecConnectorSettings HydrateElectricalConnector { get; init; } = new();
+    public MakeElecConnectorSettings MakeElectricalConnector { get; init; } = new();
+
+    [Description("Settings for sorting parameters within each property group.")]
+    [Required]
+    public SortParamsSettings SortParams { get; init; } = new();
 }
