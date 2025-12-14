@@ -5,8 +5,8 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 // TODO: this still needs alot of work!!!
-public class DeleteUnusedReferencePlanes : DocOperation<DeleteUnusedReferencePlanesSettings> {
-    public DeleteUnusedReferencePlanes(DeleteUnusedReferencePlanesSettings settings) : base(settings) { }
+public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
+    public PurgeReferencePlanes(PurgeReferencePlanesSettings settings) : base(settings) { }
 
     public override string Description =>
         "Deletes reference planes in the Family which are not used by anything important";
@@ -98,7 +98,7 @@ public class DeleteUnusedReferencePlanes : DocOperation<DeleteUnusedReferencePla
     }
 }
 
-public class DeleteUnusedReferencePlanesSettings : IOperationSettings {
+public class PurgeReferencePlanesSettings : IOperationSettings {
     [Description(
         "If false, the check for unusedness is relaxed: unused means that an RP does not have a dimension with a parameter associated to it.")]
     [Required]

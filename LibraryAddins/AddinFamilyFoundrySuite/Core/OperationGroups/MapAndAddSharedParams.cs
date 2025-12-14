@@ -85,7 +85,7 @@ public class MapParamsSharedState {
     /// </summary>
     public List<MappingData> CreateFreshMappings() {
         this._currentMappings = this._sourceMappings.Select(m => new MappingData {
-            CurrName = m.CurrName.ToList(),
+            CurrNames = m.CurrNames.ToList(),
             NewName = m.NewName,
             MappingStrategy = m.MappingStrategy,
             IsProcessed = false

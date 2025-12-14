@@ -23,7 +23,7 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
 
         foreach (var mapping in mappingsToProcess.Where(m => !m.IsProcessed)) {
             // Prioritize CurrName options by which ones have values for all types (when snapshot available)
-            var prioritizedNames = this.PrioritizeCurrNames(mapping.CurrName);
+            var prioritizedNames = this.PrioritizeCurrNames(mapping.CurrNames);
 
             // Try each CurrName in priority order until one succeeds
             var foundMatch = false;
@@ -39,7 +39,8 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
                     if (srcParam is null) continue;
                     if (tgtParam is null) {
                         logs.Add(new LogEntry {
-                            Item = mappingDesc, Error = $"{mapping.NewName} not found in the family"
+                            Item = mappingDesc,
+                            Error = $"{mapping.NewName} not found in the family"
                         });
                         continue;
                     }

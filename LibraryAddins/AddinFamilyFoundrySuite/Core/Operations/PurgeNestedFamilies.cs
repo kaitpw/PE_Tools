@@ -2,8 +2,8 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class DeleteUnusedNestedFamilies : DocOperation<DefaultOperationSettings> {
-    public DeleteUnusedNestedFamilies(DefaultOperationSettings settings) : base(settings) {
+public class PurgeNestedFamilies : DocOperation<DefaultOperationSettings> {
+    public PurgeNestedFamilies(DefaultOperationSettings settings) : base(settings) {
     }
 
     public override string Description => "Delete unused nested families from the family";

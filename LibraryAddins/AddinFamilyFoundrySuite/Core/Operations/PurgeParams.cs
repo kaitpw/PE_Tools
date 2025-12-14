@@ -1,17 +1,34 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
-    public DeleteUnusedParams(DeleteUnusedParamsSettings settings, IEnumerable<string> ExcludeNamesEqualing) :
+public class PurgeParams : DocOperation<PurgeParamsSettings> {
+    public override string Description => "Recursively delete unused parameters from the family";
+    private readonly FamilyProcessingContext _context;
+    public PurgeParams(PurgeParamsSettings settings, IEnumerable<string> ExcludeNamesEqualing) :
         base(settings) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
 
     public IEnumerable<string> ExternalExcludeNamesEqualing { get; set; } = [];
-    public override string Description => "Recursively delete unused parameters from the family";
+
+    public bool IsOkToDeleteEmptyParam(FamilyParameter param) {
+        if (!this.Settings.DeleteEmptyParameters) return false;
+
+        foreach (var value in this._context.GetTypesWithValue(param.Definition.Name)) {
+            if (value == null) return true;
+            if (this.Settings.ConsiderZeroValueAsEmpty
+                && int.TryParse(value, out var intValue)
+                && intValue == 0) return true;
+            if (this.Settings.ConsiderEmptyStringAsEmpty
+                && string.IsNullOrWhiteSpace(value)) return true;
+        }
+
+        return false;
+    }
 
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
@@ -26,8 +43,9 @@ public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
         var parameters = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
             .Where(p => !excludeSet.Contains(p.Definition.Name))
-            .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
             .Where(this.Settings.Filter)
+            .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
+            .Where(this.IsOkToDeleteEmptyParam)
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
 
@@ -49,9 +67,19 @@ public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
     }
 }
 
-public class DeleteUnusedParamsSettings : IOperationSettings {
-    [Required] public Exclude ExcludeNames { get; init; } = new();
+public class PurgeParamsSettings : IOperationSettings {
     public bool Enabled { get; init; } = true;
+
+    [Description("Whether to delete parameters that have no value for every family type, regardless of whether they are used in the family. This is rare but possible. This setting is useful for properties like url variations where there are often multiple url parameters with no value.")]
+    public bool DeleteEmptyParameters { get; init; } = true;
+    [Description("Whether to consider zero value as \"empty\" when deleting empty parameters.")]
+    public bool ConsiderZeroValueAsEmpty { get; init; } = true;
+
+    [Description("Whether to consider empty string as \"empty\" when deleting empty parameters.")]
+    public bool ConsiderEmptyStringAsEmpty { get; init; } = true;
+
+    [Description("Exclude parameters from the deletion list ")]
+    [Required] public Exclude ExcludeNames { get; init; } = new();
 
     public bool Filter(FamilyParameter p) => !this.IsExcluded(p);
 

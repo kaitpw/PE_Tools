@@ -36,7 +36,7 @@ public class CmdFFMigrator : IExternalCommand {
 
             var apsParamNames = apsParamData.Select(p => p.externalDefinition.Name).ToList();
             var mappingDataAllNames = profile.AddAndMapSharedParams.MappingData
-                .SelectMany(m => m.CurrName)
+                .SelectMany(m => m.CurrNames)
                 .Concat(apsParamNames);
 
             var addFamParams = new AddAndSetParamsSettings {
@@ -62,13 +62,13 @@ public class CmdFFMigrator : IExternalCommand {
 
 
             var queue = new OperationQueue()
-                .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, mappingDataAllNames))
-                .Add(new DeleteUnusedNestedFamilies(profile.DeleteUnusedNestedFamilies))
+                .Add(new PurgeParams(profile.DeleteUnusedParams, mappingDataAllNames))
+                .Add(new PurgeNestedFamilies(profile.DeleteUnusedNestedFamilies))
                 .Add(new MapAndAddSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new AddAndSetParams(addFamParams))
                 .Add(new MakeElecConnector(profile.HydrateElectricalConnector))
                 // .Add(new UnwrapFormulas(apsParamNames))
-                .Add(new DeleteUnusedParams(profile.DeleteUnusedParams, apsParamNames));
+                .Add(new PurgeParams(profile.DeleteUnusedParams, apsParamNames));
 
             var metadataString = queue.GetExecutableMetadataString();
             Debug.WriteLine(metadataString);
@@ -119,7 +119,7 @@ public class CmdFFMigrator : IExternalCommand {
 public class ProfileRemap : BaseProfileSettings {
     [Description("Settings for deleting unused parameters")]
     [Required]
-    public DeleteUnusedParamsSettings DeleteUnusedParams { get; init; } = new();
+    public PurgeParamsSettings DeleteUnusedParams { get; init; } = new();
 
     [Description("Settings for deleting unused nested families")]
     [Required]

@@ -15,7 +15,7 @@ public class MapParamsSettings : IOperationSettings {
 public class MappingData {
     [Description("Current parameter names to map from (ordered by priority)")]
     [Required]
-    public List<string> CurrName { get; set; } = [];
+    public List<string> CurrNames { get; set; } = [];
 
     [Description("New parameter name to map to")]
     [Required]

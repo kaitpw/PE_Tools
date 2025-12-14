@@ -21,7 +21,7 @@ public record ParamSnapshot {
     public string? Formula { get; init; }
 
     // Per-type values: TypeName -> setter-acceptable string value
-    // Null/empty means no value for that type
+    // Null/empty means no value for that type. TODO: verify that this doesn't serialize null as empty string
     public Dictionary<string, string?> ValuesPerType { get; init; } = new(StringComparer.Ordinal);
 
     // Audit metadata (not required for replay, but useful)

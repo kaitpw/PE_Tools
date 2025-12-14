@@ -5,14 +5,12 @@ using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareOperation {
+public class MapReplaceParams : DocOperation<MapParamsSettings> {
     private readonly
         Dictionary<string, (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
         _sharedParamsDict;
 
     private readonly MapParamsSharedState _sharedState;
-    private FamilyProcessingContext _context;
-
     public MapReplaceParams(
         MapParamsSettings settings,
         MapParamsSharedState sharedState,
@@ -23,8 +21,6 @@ public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareO
     }
 
     public override string Description => "Replace a family's existing parameters with APS shared parameters";
-
-    public void SetContext(FamilyProcessingContext context) => this._context = context;
 
     public override OperationLog Execute(FamilyDocument doc) {
         // Create fresh state for THIS family execution
@@ -38,14 +34,9 @@ public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareO
                 continue;
             }
 
-            // Prioritize CurrName options by which have values for all types (when snapshot available)
-            var prioritizedNames = this.PrioritizeCurrNames(mapping.CurrName).ToList();
-            if (prioritizedNames.FirstOrDefault() != null && prioritizedNames.First().Contains("Voltage"))
-                prioritizedNames.ToList().ForEach(name => Debug.WriteLine(name));
-
             // Try each CurrName in priority order until one succeeds
             var foundMatch = false;
-            foreach (var currName in prioritizedNames.TakeWhile(_ => !foundMatch)) {
+            foreach (var currName in mapping.CurrNames.TakeWhile(_ => !foundMatch)) {
                 try {
                     // Validate current parameter exists and is not built-in param. 
                     var currentParam = fm.FindParameter(currName);
@@ -86,7 +77,7 @@ public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareO
                         if (ignoreCoercion.Contains(replaced.Definition.GetDataType())) continue;
                         // Update CurrName in LOCAL mutableMappings
                         var mappingToUpdate = mutableMappings.First(m => m.NewName == mapping.NewName);
-                        mappingToUpdate.CurrName = [mapping.NewName];
+                        mappingToUpdate.CurrNames = [mapping.NewName];
                         logs.Add(new LogEntry {
                             Item = $"Replaced/waiting to coerce {currName} → {replaced.Definition.Name}"
                         });
@@ -102,24 +93,5 @@ public class MapReplaceParams : DocOperation<MapParamsSettings>, ISnapshotAwareO
         }
 
         return new OperationLog(this.Name, logs);
-    }
-
-    /// <summary>
-    ///     Prioritizes CurrName options by which have values for all types.
-    ///     Falls back to original order when snapshot is not available.
-    /// </summary>
-    /// <remarks>
-    ///     Does not prioritize by number of types with values. while technically a good idea
-    ///     it may add excessive complexity to the operation, making it harder for users to understand.
-    /// </remarks>
-    private IEnumerable<string> PrioritizeCurrNames(List<string> currNames) {
-        if (this._context?.PreProcessSnapshot?.Parameters == null ||
-            this._context.PreProcessSnapshot.Parameters.Count == 0)
-            return currNames;
-
-        // Sort by: HasValueForAllTypes first, then original order
-        return currNames
-            .OrderByDescending(this._context.ParamHasValueForAllTypes)
-            .ThenBy(currNames.IndexOf);
     }
 }
