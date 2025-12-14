@@ -80,10 +80,18 @@ public class MapParamsSharedState {
     public MapParamsSharedState(IEnumerable<MappingData> mappingData) => this._sourceMappings = mappingData;
 
     /// <summary>
+    ///     Tracks pending backlinks that should be created AFTER all types have been processed.
+    ///     This prevents the backlink formula from breaking source value reads for subsequent types.
+    ///     Cleared when CreateFreshMappings is called for a new family.
+    /// </summary>
+    public Dictionary<string, (FamilyParameter src, FamilyParameter tgt)> PendingBacklinks { get; } = new();
+
+    /// <summary>
     ///     Creates fresh mutable mappings for a new family execution.
     ///     Called by the first operation (MapReplaceParams).
     /// </summary>
     public List<MappingData> CreateFreshMappings() {
+        this.PendingBacklinks.Clear();
         this._currentMappings = this._sourceMappings.Select(m => new MappingData {
             CurrNames = m.CurrNames.ToList(),
             NewName = m.NewName,
