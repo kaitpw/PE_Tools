@@ -6,9 +6,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class PurgeParams : DocOperation<PurgeParamsSettings> {
+public class PurgeParams : DocOperation<PurgeParamsSettings>, ISnapshotAwareOperation {
     public override string Description => "Recursively delete unused parameters from the family";
-    private readonly FamilyProcessingContext _context;
+    private FamilyProcessingContext _context;
     public PurgeParams(PurgeParamsSettings settings, IEnumerable<string> ExcludeNamesEqualing) :
         base(settings) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
@@ -16,6 +16,7 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
     public IEnumerable<string> ExternalExcludeNamesEqualing { get; set; } = [];
 
     public bool IsOkToDeleteEmptyParam(FamilyParameter param) {
+        if (this._context == null) return false;
         if (!this.Settings.DeleteEmptyParameters) return false;
 
         foreach (var value in this._context.GetTypesWithValue(param.Definition.Name)) {
@@ -65,6 +66,9 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
 
         if (deleteCount > 0) this.RecursiveDelete(doc, logs);
     }
+
+    public void SetContext(FamilyProcessingContext context) => this._context = context;
+
 }
 
 public class PurgeParamsSettings : IOperationSettings {

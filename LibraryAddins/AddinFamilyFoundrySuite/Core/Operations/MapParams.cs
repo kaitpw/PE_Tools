@@ -5,16 +5,13 @@ using PeExtensions.FamManager;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperation {
+public class MapParams : TypeOperation<MapParamsSettings> {
     private readonly MapParamsSharedState _sharedState;
-    private FamilyProcessingContext _context;
-
     public MapParams(MapParamsSettings settings, MapParamsSharedState sharedState = null)
         : base(settings) => this._sharedState = sharedState;
 
     public override string Description => "Map an old parameter's value to a new parameter for each family type";
 
-    public void SetContext(FamilyProcessingContext context) => this._context = context;
 
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
@@ -22,12 +19,10 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
         var mappingsToProcess = this._sharedState?.GetCurrentMappings() ?? this.Settings.MappingData;
 
         foreach (var mapping in mappingsToProcess.Where(m => !m.IsProcessed)) {
-            // Prioritize CurrName options by which ones have values for all types (when snapshot available)
-            var prioritizedNames = this.PrioritizeCurrNames(mapping.CurrNames);
 
             // Try each CurrName in priority order until one succeeds
             var foundMatch = false;
-            foreach (var currName in prioritizedNames) {
+            foreach (var currName in mapping.CurrNames) {
                 if (foundMatch) break;
 
                 var mappingDesc = $"{currName} → {mapping.NewName}";
@@ -77,24 +72,5 @@ public class MapParams : TypeOperation<MapParamsSettings>, ISnapshotAwareOperati
         }
 
         return null;
-    }
-
-    /// <summary>
-    ///     Prioritizes CurrName options by which have values for all types.
-    ///     Falls back to original order when snapshot is not available.
-    /// </summary>
-    /// <remarks>
-    ///     Does not prioritize by number of types with values. while technically a good idea
-    ///     it may add excessive complexity to the operation, making it harder for users to understand.
-    /// </remarks>
-    private IEnumerable<string> PrioritizeCurrNames(List<string> currNames) {
-        if (this._context?.PreProcessSnapshot?.Parameters == null ||
-            this._context.PreProcessSnapshot.Parameters.Count == 0)
-            return currNames;
-
-        // Sort by: HasValueForAllTypes first, then original order
-        return currNames
-            .OrderByDescending(this._context.ParamHasValueForAllTypes)
-            .ThenBy(currNames.IndexOf);
     }
 }
