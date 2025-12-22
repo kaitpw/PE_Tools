@@ -85,4 +85,63 @@ public class JsonExtendsException : Exception {
         ChildFilePath = childPath,
         BaseFilePath = basePath
     };
+
+    // ============================================================================
+    // Fragment / $include related errors
+    // ============================================================================
+
+    /// <summary>Creates an exception for when a fragment file is not found.</summary>
+    public static JsonExtendsException FragmentNotFound(
+        string fragmentPath
+    ) => new($"""
+        Fragment file not found.
+          Expected: {fragmentPath}
+          Hint: Ensure the fragment file exists and the path in '$include' is correct.
+                Fragment paths are relative to the profile's directory.
+        """);
+
+    /// <summary>Creates an exception for invalid fragment format (not a JSON array).</summary>
+    public static JsonExtendsException InvalidFragmentFormat(
+        string fragmentPath,
+        string actualType
+    ) => new($"""
+        Fragment '{Path.GetFileName(fragmentPath)}' has invalid format.
+          Expected: a JSON array (e.g., [ {{... }}, {{... }} ])
+          Found: {actualType}
+          
+        Fragment files must contain a JSON array of objects to be inserted into the parent array.
+        """);
+
+    /// <summary>Creates an exception for invalid $include value.</summary>
+    public static JsonExtendsException InvalidIncludeValue(
+        string foundType
+    ) => new($"""
+        Invalid '$include' value.
+          Expected: a non-empty string path (e.g., "_fragments/header-fields")
+          Found: {foundType}
+        """);
+
+    /// <summary>Creates an exception for circular fragment includes.</summary>
+    public static JsonExtendsException CircularFragmentInclude(
+        string fragmentPath,
+        List<string> includeChain
+    ) => new($"""
+        Circular fragment include detected.
+          Fragment: {Path.GetFileName(fragmentPath)}
+          Include chain: {string.Join(" → ", includeChain.Select(Path.GetFileName))}
+          
+        Fragment includes must form a tree, not a cycle.
+        """) {
+        InheritanceChain = includeChain
+    };
+
+    /// <summary>Creates an exception when fragment file fails to load or parse.</summary>
+    public static JsonExtendsException FragmentLoadFailed(
+        string fragmentPath,
+        Exception innerException
+    ) => new($"""
+        Failed to load fragment '{Path.GetFileName(fragmentPath)}'.
+          Path: {fragmentPath}
+          Error: {innerException.Message}
+        """, innerException);
 }

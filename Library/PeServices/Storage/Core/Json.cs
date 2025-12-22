@@ -13,6 +13,8 @@ using PeUtils.Files;
 namespace PeServices.Storage.Core;
 
 public class Json<T> : JsonReadWriter<T> where T : class, new() {
+    private const string SchemaProperty = "$schema";
+
     private readonly JsonSerializerSettings _deserialSettings = new() {
         Formatting = Formatting.Indented,
         Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter() },
@@ -21,6 +23,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
     };
 
     private readonly JsonSchema _schema;
+    private readonly bool _saveSchema;
 
     private readonly JsonSerializerSettings _serialSettings = new() {
         Formatting = Formatting.Indented,
@@ -30,6 +33,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
     };
 
     public Json(string filePath, bool throwIfDefaultCreated, bool saveSchema) {
+        this._saveSchema = saveSchema;
         FileUtils.ValidateFileNameAndExtension(filePath, "json");
         this.FilePath = filePath;
         _ = this.EnsureDirectoryExists();
@@ -90,6 +94,12 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         var validationErrs = this._schema.Validate(jsonContent).ToList();
         if (validationErrs.Any())
             throw new JsonValidationException(this.FilePath, validationErrs);
+
+        // Inject $schema property if schema saving is enabled
+        if (this._saveSchema) {
+            jsonContent = this.InjectSchemaReference(jsonContent);
+        }
+
         File.WriteAllText(this.FilePath, jsonContent);
         return this.FilePath;
     }
@@ -140,7 +150,39 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
     public void WritePossiblyInvalid(T content) {
         _ = this.EnsureDirectoryExists();
         var jsonContent = this.Serialize(content);
+
+        // Inject $schema property if schema saving is enabled
+        if (this._saveSchema) {
+            jsonContent = this.InjectSchemaReference(jsonContent);
+        }
+
         File.WriteAllText(this.FilePath, jsonContent);
+    }
+
+    /// <summary>
+    ///     Injects the $schema property as the first property in the JSON object.
+    ///     This enables LSP/IntelliSense in VS Code and Cursor.
+    /// </summary>
+    private string InjectSchemaReference(string jsonContent) {
+        var jObject = JObject.Parse(jsonContent);
+        var schemaFileName = $"./{Path.GetFileNameWithoutExtension(this.FilePath)}.schema.json";
+
+        // Check if $schema already exists and is correct
+        if (jObject.TryGetValue(SchemaProperty, out var existingSchema) &&
+            existingSchema.Value<string>() == schemaFileName) {
+            return jsonContent; // Already correct, no change needed
+        }
+
+        // Remove existing $schema if present (we'll re-add it first)
+        _ = jObject.Remove(SchemaProperty);
+
+        // Create new object with $schema first, then all other properties
+        var newObject = new JObject { [SchemaProperty] = schemaFileName };
+        foreach (var prop in jObject.Properties()) {
+            newObject[prop.Name] = prop.Value;
+        }
+
+        return newObject.ToString(Formatting.Indented);
     }
 
     /// <summary> Saves the JSON schema to a .schema.json file </summary>
@@ -179,10 +221,17 @@ public static class ValidationErrorCollectionExtensions {
 
 /// <summary> Handles JSON recovery operations for schema validation errors </summary>
 file static class JsonRecovery {
-    /// <summary> Gets all property paths from a JSON object </summary>
+    // Properties that are metadata and should be ignored when comparing for changes
+    private static readonly HashSet<string> IgnoredProperties = ["$schema", "$extends"];
+
+    /// <summary> Gets all property paths from a JSON object, excluding metadata properties </summary>
     private static List<string> GetAllPropertyPaths(JObject obj, string prefix = "") {
         var paths = new List<string>();
         foreach (var prop in obj.Properties()) {
+            // Skip metadata properties at the root level
+            if (string.IsNullOrEmpty(prefix) && IgnoredProperties.Contains(prop.Name))
+                continue;
+
             var path = string.IsNullOrEmpty(prefix) ? prop.Name : $"{prefix}.{prop.Name}";
             paths.Add(path);
             if (prop.Value is JObject nestedObj) paths.AddRange(GetAllPropertyPaths(nestedObj, path));

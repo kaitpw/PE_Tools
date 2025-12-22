@@ -13,17 +13,18 @@ using PeUtils.Files;
 namespace PeServices.Storage.Core;
 
 /// <summary>
-///     JSON reader that supports profile inheritance via the <c>$extends</c> property.
+///     JSON reader that supports profile inheritance via <c>$extends</c> and array composition via <c>$include</c>.
 ///     Child profiles can be sparse, containing only overrides of base profile values.
 /// </summary>
 /// <remarks>
-///     <para>Inheritance behavior:</para>
+///     <para>Features:</para>
 ///     <list type="bullet">
-///         <item>If no <c>$extends</c> property: behaves like standard <see cref="Json{T}" /></item>
-///         <item>If <c>$extends</c> exists: loads base profile, merges child on top, validates merged result</item>
+///         <item><c>$extends</c>: Inherit from a base profile, with child properties overriding base</item>
+///         <item><c>$include</c>: Compose arrays from reusable fragment files (e.g., shared column definitions)</item>
 ///         <item>Base profiles get full recovery (sanitize/update); child profiles stay sparse</item>
 ///         <item>Supports multi-level inheritance (A extends B extends C)</item>
 ///     </list>
+///     <para>Resolution order: 1) Resolve $extends, 2) Expand $include, 3) Validate, 4) Deserialize</para>
 /// </remarks>
 /// <typeparam name="T">The type to deserialize to</typeparam>
 public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
@@ -59,7 +60,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
     public string FilePath { get; }
 
     /// <summary>
-    ///     Reads the profile, resolving inheritance if <c>$extends</c> is present.
+    ///     Reads the profile, resolving <c>$extends</c> inheritance and <c>$include</c> array composition.
     /// </summary>
     public T Read() {
         if (!File.Exists(this.FilePath)) {
@@ -67,33 +68,54 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
             return new Json<T>(this.FilePath, this._throwIfDefaultCreated, this._saveSchema).Read();
         }
 
-        var childJObject = JObject.Parse(File.ReadAllText(this.FilePath));
+        var fileContent = File.ReadAllText(this.FilePath);
+        var profileJObject = JObject.Parse(fileContent);
 
-        // No extends? Use standard Json<T> with full recovery
-        if (!childJObject.TryGetValue(ExtendsProperty, out var extendsToken)) {
+        // Check for $extends and $include usage to determine processing path
+        var hasExtends = profileJObject.TryGetValue(ExtendsProperty, out var extendsToken);
+        var hasIncludes = this.ContainsIncludeDirectives(profileJObject);
+
+        // No special directives? Use standard Json<T> with full recovery
+        if (!hasExtends && !hasIncludes) {
             return new Json<T>(this.FilePath, this._throwIfDefaultCreated, this._saveSchema).Read();
         }
 
-        // Validate $extends value
-        if (extendsToken.Type != JTokenType.String || string.IsNullOrWhiteSpace(extendsToken.Value<string>())) {
-            throw JsonExtendsException.InvalidExtendsValue(this.FilePath, extendsToken.Type.ToString());
+        JObject resolved;
+        string? extendsName = null;
+
+        // Step 1: Resolve $extends inheritance
+        if (hasExtends) {
+            // Validate $extends value
+            if (extendsToken!.Type != JTokenType.String || string.IsNullOrWhiteSpace(extendsToken.Value<string>())) {
+                throw JsonExtendsException.InvalidExtendsValue(this.FilePath, extendsToken.Type.ToString());
+            }
+
+            extendsName = extendsToken.Value<string>()!;
+
+            // Resolve inheritance chain and merge
+            var inheritanceChain = new List<string> { Path.GetFileNameWithoutExtension(this.FilePath) };
+            resolved = this.ResolveInheritance(this.FilePath, profileJObject, extendsName, inheritanceChain);
+        } else {
+            // No extends, but has includes - start with the profile as-is
+            resolved = profileJObject;
         }
 
-        var extendsName = extendsToken.Value<string>()!;
+        // Step 2: Expand $include directives in arrays
+        JsonArrayComposer.ExpandIncludes(resolved, this._directoryPath);
 
-        // Resolve inheritance chain and merge
-        var inheritanceChain = new List<string> { Path.GetFileNameWithoutExtension(this.FilePath) };
-        var merged = this.ResolveInheritance(this.FilePath, childJObject, extendsName, inheritanceChain);
-
-        // Validate merged result
-        var validationErrors = this._schema.Validate(merged).ToList();
+        // Step 3: Validate the fully-resolved result
+        var validationErrors = this._schema.Validate(resolved).ToList();
         if (validationErrors.Any()) {
             var errorMessages = string.Join("\n  - ", validationErrors.Select(e => $"{e.Path}: {e.Kind}"));
-            throw JsonExtendsException.MergedValidationFailed(
-                this.FilePath,
-                this.GetBasePath(extendsName),
-                errorMessages
-            );
+            if (extendsName != null) {
+                throw JsonExtendsException.MergedValidationFailed(
+                    this.FilePath,
+                    this.GetBasePath(extendsName),
+                    errorMessages
+                );
+            }
+            // No extends - throw a simpler validation error
+            throw new JsonValidationException(this.FilePath, validationErrors.Select(e => $"{e.Path}: {e.Kind}"));
         }
 
         // Write schema for the profile (helps with IDE autocomplete)
@@ -101,8 +123,20 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
             this.WriteSchema();
         }
 
-        // Deserialize merged result
-        return JsonConvert.DeserializeObject<T>(merged.ToString(), this._deserialSettings)!;
+        // Step 4: Deserialize fully-resolved result
+        return JsonConvert.DeserializeObject<T>(resolved.ToString(), this._deserialSettings)!;
+    }
+
+    /// <summary>
+    ///     Checks if a JObject contains any $include directives in its arrays (recursively).
+    /// </summary>
+    private bool ContainsIncludeDirectives(JToken token) {
+        return token switch {
+            JObject obj => obj.Properties().Any(p =>
+                p.Name == "$include" || this.ContainsIncludeDirectives(p.Value)),
+            JArray arr => arr.Any(this.ContainsIncludeDirectives),
+            _ => false
+        };
     }
 
     /// <summary>
