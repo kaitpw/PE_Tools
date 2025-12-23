@@ -1,5 +1,7 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
+using AddinFamilyFoundrySuite.Core.SchemaProviders;
 using PeServices.Storage;
+using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeUtils.Files;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
@@ -41,9 +43,11 @@ public class BaseProfileSettings {
     }
 
     public class FilterFamiliesSettings {
-        [Required] public List<string> IncludeCategoriesEqualing { get; init; } = [];
-        [Required] public Include IncludeNames { get; init; } = new();
-        [Required] public Exclude ExcludeNames { get; init; } = new();
+        [Required]
+        [SchemaExamples(typeof(CategoryNamesProvider))]
+        public List<string> IncludeCategoriesEqualing { get; init; } = [];
+        [Required] public IncludeFamilies IncludeNames { get; init; } = new();
+        [Required] public ExcludeFamilies ExcludeNames { get; init; } = new();
 
         public bool Filter(Family f) {
             var familyName = f.Name;
@@ -90,8 +94,8 @@ public class BaseProfileSettings {
     }
 
     public class FilterApsParamsSettings {
-        [Required] public Include IncludeNames { get; init; } = new();
-        [Required] public Exclude ExcludeNames { get; init; } = new();
+        [Required] public IncludeSharedParameter IncludeNames { get; init; } = new();
+        [Required] public ExcludeSharedParameter ExcludeNames { get; init; } = new();
 
         public bool Filter(ParamModelRes p) => this.IsIncluded(p) || !this.IsExcluded(p);
 

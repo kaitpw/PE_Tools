@@ -8,11 +8,20 @@ namespace AddinFamilyFoundrySuite.Core;
 /// </summary>
 public class OperationContext {
     private readonly Dictionary<string, LogEntry> _entries = new();
+    private readonly HashSet<string> _touchedThisOperation = new();
 
-    public LogEntry GetOrCreate(string name) =>
-        this._entries.TryGetValue(name, out var entry)
-            ? entry
-            : this._entries[name] = new LogEntry(name);
+    public LogEntry GetOrCreate(string name) {
+        if (this._entries.TryGetValue(name, out var entry)) {
+            // Only mark as touched if not already complete (operation is modifying it)
+            if (!entry.IsComplete)
+                _ = this._touchedThisOperation.Add(name);
+            return entry;
+        }
+
+        // New entry - definitely touched
+        _ = this._touchedThisOperation.Add(name);
+        return this._entries[name] = new LogEntry(name);
+    }
 
     public LogEntry Get(string name) =>
         this._entries.GetValueOrDefault(name);
@@ -20,7 +29,22 @@ public class OperationContext {
     public IEnumerable<LogEntry> All => this._entries.Values;
     public IEnumerable<LogEntry> Pending => this.All.Where(e => !e.IsComplete);
 
-    public void Reset() => this._entries.Clear();
+    /// <summary>
+    ///     Gets a snapshot of logs touched by the current operation, then clears the touched set.
+    ///     Clones LogEntry objects to prevent Context pollution from TypeOperations.
+    /// </summary>
+    public List<LogEntry> TakeSnapshot() {
+        var snapshot = this._touchedThisOperation
+            .Select(name => this._entries[name].Clone())
+            .ToList();
+        this._touchedThisOperation.Clear();
+        return snapshot;
+    }
+
+    public void Reset() {
+        this._entries.Clear();
+        this._touchedThisOperation.Clear();
+    }
 }
 
 /// <summary>

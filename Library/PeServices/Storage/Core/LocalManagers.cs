@@ -68,7 +68,7 @@ public class SettingsManager : BaseLocalManager {
     ///     <para>Child files remain sparse - only overrides are stored.</para>
     /// </remarks>
     public JsonReader<T> JsonWithExtends<T>(string filename) where T : class, new() =>
-        new JsonWithExtends<T>(this.DirectoryPath, filename, this.ThrowIfDefaultCreated, this.SaveSchema);
+        new JsonWithExtends<T>(this.DirectoryPath, filename);
 
     /// <summary>
     ///     Navigate to a subdirectory for accessing files within nested folders.

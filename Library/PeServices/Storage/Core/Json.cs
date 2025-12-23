@@ -41,8 +41,11 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         var settings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true };
         settings.SchemaProcessors.Add(new EnumConstraintSchemaProcessor());
         settings.SchemaProcessors.Add(new ForgeTypeIdSchemaProcessor());
-        settings.SchemaProcessors.Add(new SchemaMetadataProcessor());
+        settings.SchemaProcessors.Add(new SchemaExamplesProcessor());
         this._schema = new JsonSchemaGenerator(settings).Generate(typeof(T));
+
+        // Allow $schema property in the generated schema
+        SchemaMetadataProcessor.AllowSchemaProperty(this._schema);
 
         if (!this.IsFileValid) {
             this.WritePossiblyInvalid(new T());
@@ -89,7 +92,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         return content;
     }
 
-    public string Write(T content) { 
+    public string Write(T content) {
         _ = this.EnsureDirectoryExists();
         var jsonContent = this.Serialize(content);
         var validationErrs = this._schema.Validate(jsonContent).ToList();

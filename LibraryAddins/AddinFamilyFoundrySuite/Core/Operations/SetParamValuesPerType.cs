@@ -70,7 +70,7 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
             }
         }
 
-        return new OperationLog(this.Name, groupContext.All.ToList());
+        return new OperationLog(this.Name, groupContext.TakeSnapshot());
     }
 
     /// <summary>

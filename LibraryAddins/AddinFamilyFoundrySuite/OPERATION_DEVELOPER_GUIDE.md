@@ -49,13 +49,32 @@ public class MySettings : IOperationSettings {
 
 ## Logging
 
+LogEntry uses semantic methods for clear state tracking:
+
 ```csharp
 // Success
-logs.Add(new LogEntry { Item = "ParameterName" });
+logs.Add(new LogEntry("ParameterName").Success("Action description"));
 
-// Failure
-logs.Add(new LogEntry { Item = "ParameterName", Error = ex.Message });
+// Skip (intentionally not processed)
+logs.Add(new LogEntry("ParameterName").Skip("Reason for skipping"));
+
+// Error
+logs.Add(new LogEntry("ParameterName").Error(ex));
+// or with custom message
+logs.Add(new LogEntry("ParameterName").Error("Custom error message"));
+
+// Defer (partial work, next operation will complete)
+log.Defer("Partial action");  // Use in operation groups
 ```
+
+### LogEntry Status
+
+- `Pending` - Not yet processed
+- `Success` - Successfully completed
+- `Skipped` - Intentionally not processed
+- `Error` - Failed with error
+
+Check status with `log.IsComplete` (true for Success/Skipped/Error).
 
 ## Minimal Sandbox Test
 
@@ -83,12 +102,19 @@ var (results, totalMs) = processor.ProcessQueue(
 );
 
 // 5. Print results
-foreach (var (familyName, (logs, _)) in results) {
+foreach (var context in results) {
+    var (logs, _) = context.OperationLogs;
+    if (logs == null) continue;
     foreach (var log in logs) {
-        Console.WriteLine($"{log.OperationName}: {log.SuccessCount} success, {log.FailedCount} failed");
+        Console.WriteLine($"{log.OperationName}: {log.SuccessCount} success, {log.SkippedCount} skipped, {log.ErrorCount} errors");
         foreach (var entry in log.Entries) {
-            var status = entry.Error is null ? "✓" : "✗";
-            Console.WriteLine($"  {status} {entry.Item} {entry.Error}");
+            var status = entry.Status switch {
+                LogStatus.Success => "✓",
+                LogStatus.Skipped => "○",
+                LogStatus.Error => "✗",
+                _ => "?"
+            };
+            Console.WriteLine($"  {status} {entry.Name} {entry.Message}");
         }
     }
 }
@@ -123,13 +149,14 @@ public class DeleteUnusedParams : DocOperation<DeleteUnusedParamsSettings> {
             .ToList();
         
         foreach (var param in parameters) {
+            var paramName = param.Definition.Name;
             try {
                 if (!param.AssociatedParameters.Cast<Parameter>().Any()) {
                     doc.FamilyManager.RemoveParameter(param);
-                    logs.Add(new LogEntry { Item = param.Definition.Name });
+                    logs.Add(new LogEntry(paramName).Success("Deleted"));
                 }
             } catch (Exception ex) {
-                logs.Add(new LogEntry { Item = param.Definition.Name, Error = ex.Message });
+                logs.Add(new LogEntry(paramName).Error(ex));
             }
         }
         

@@ -1,3 +1,5 @@
+using Autodesk.Revit.UI;
+using Autodesk.Revit.UI.Events;
 using PeExtensions.PolyFill;
 using PeServices.Documents.Core;
 using Color = System.Windows.Media.Color;
@@ -13,6 +15,9 @@ public class DocumentManager {
     private static DocumentManager _instance;
     private readonly DocumentColorService _colorService = new();
     private readonly MruViewBuffer _mruBuffer = new();
+
+    public static UIApplication uiapp => new RibbonItemEventArgs().Application;
+
 
     private DocumentManager() { }
 
@@ -176,4 +181,7 @@ public class DocumentManager {
 
         Debug.WriteLine("[DocumentManager] OnDocumentClosed complete");
     }
+
+    internal static Document GetActiveDocument() => GetActiveDocument(uiapp);
+
 }

@@ -40,13 +40,11 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
     };
 
     private readonly JsonSchema _schema;
-    private readonly bool _throwIfDefaultCreated;
-    private readonly bool _saveSchema;
 
-    public JsonWithExtends(string directoryPath, string filename, bool throwIfDefaultCreated, bool saveSchema) {
+
+    public JsonWithExtends(string directoryPath, string filename) {
         this._directoryPath = directoryPath;
-        this._throwIfDefaultCreated = throwIfDefaultCreated;
-        this._saveSchema = saveSchema;
+
         this.FilePath = Path.Combine(directoryPath, filename);
 
         FileUtils.ValidateFileNameAndExtension(this.FilePath, "json");
@@ -54,8 +52,12 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true };
         schemaSettings.SchemaProcessors.Add(new EnumConstraintSchemaProcessor());
         schemaSettings.SchemaProcessors.Add(new ForgeTypeIdSchemaProcessor());
-        schemaSettings.SchemaProcessors.Add(new SchemaMetadataProcessor());
+        schemaSettings.SchemaProcessors.Add(new SchemaExamplesProcessor());
         this._schema = new JsonSchemaGenerator(schemaSettings).Generate(typeof(T));
+
+        // Allow $schema property in the generated schema
+        SchemaMetadataProcessor.AllowSchemaProperty(this._schema);
+        SchemaMetadataProcessor.AllowExtendsProperty(this._schema);
     }
 
     public string FilePath { get; }
@@ -66,7 +68,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
     public T Read() {
         if (!File.Exists(this.FilePath)) {
             // No file - delegate to standard Json<T> which handles default creation
-            return new Json<T>(this.FilePath, this._throwIfDefaultCreated, this._saveSchema).Read();
+            return new Json<T>(this.FilePath, true, true).Read();
         }
 
         var fileContent = File.ReadAllText(this.FilePath);
@@ -78,7 +80,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
 
         // No special directives? Use standard Json<T> with full recovery
         if (!hasExtends && !hasIncludes) {
-            return new Json<T>(this.FilePath, this._throwIfDefaultCreated, this._saveSchema).Read();
+            return new Json<T>(this.FilePath, true, true).Read();
         }
 
         JObject resolved;
@@ -120,9 +122,8 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         }
 
         // Write schema for the profile (helps with IDE autocomplete)
-        if (this._saveSchema) {
-            this.WriteSchema();
-        }
+        this.WriteSchema();
+
 
         // Step 4: Deserialize fully-resolved result
         return JsonConvert.DeserializeObject<T>(resolved.ToString(), this._deserialSettings)!;
@@ -131,14 +132,13 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
     /// <summary>
     ///     Checks if a JObject contains any $include directives in its arrays (recursively).
     /// </summary>
-    private bool ContainsIncludeDirectives(JToken token) {
-        return token switch {
+    private bool ContainsIncludeDirectives(JToken token) =>
+        token switch {
             JObject obj => obj.Properties().Any(p =>
                 p.Name == "$include" || this.ContainsIncludeDirectives(p.Value)),
             JArray arr => arr.Any(this.ContainsIncludeDirectives),
             _ => false
         };
-    }
 
     /// <summary>
     ///     Recursively resolves the inheritance chain, loading and merging base profiles.
@@ -188,7 +188,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
             // Base has no extends - run it through standard Json<T> for recovery/validation
             try {
                 // This triggers recovery and validation on the base file
-                _ = new Json<T>(basePath, this._throwIfDefaultCreated, this._saveSchema).Read();
+                _ = new Json<T>(basePath, true, true).Read();
                 // Re-read the possibly-updated base file
                 baseJObject = JObject.Parse(File.ReadAllText(basePath));
             } catch (Exception ex) {

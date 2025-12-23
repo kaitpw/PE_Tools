@@ -1,4 +1,6 @@
+using AddinFamilyFoundrySuite.Core.SchemaProviders;
 using PeExtensions.FamDocument.SetValue;
+using PeServices.Storage.Core.Json.SchemaProcessors;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -15,10 +17,12 @@ public class MapParamsSettings : IOperationSettings {
 public class MappingData {
     [Description("Current parameter names to map from (ordered by priority)")]
     [Required]
+    [SchemaExamples(typeof(SharedParameterNamesProvider))]
     public List<string> CurrNames { get; set; } = [];
 
     [Description("New parameter name to map to")]
     [Required]
+    [SchemaExamples(typeof(SharedParameterNamesProvider))]
     public string NewName { get; init; }
 
     [Description(
