@@ -1,4 +1,3 @@
-using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
@@ -6,32 +5,31 @@ using PeExtensions.FamParameter.Formula;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapReplaceParams : DocOperation<MapParamsSettings> {
+public class MapReplaceParams : DocOperationWithGroup<MapParamsSettings> {
     private readonly
         Dictionary<string, (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
         _sharedParamsDict;
 
-    private readonly MapParamsSharedState _sharedState;
+    private readonly List<ForgeTypeId> IgnoreCoercionDataTypes = new() {
+        SpecTypeId.Number, SpecTypeId.String.Text, SpecTypeId.Length
+    };
+
     public MapReplaceParams(
         MapParamsSettings settings,
-        MapParamsSharedState sharedState,
         IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
-    ) : base(settings) {
-        this._sharedState = sharedState;
-        this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
-    }
+    ) : base(settings) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
 
     public override string Description => "Replace a family's existing parameters with APS shared parameters";
 
-    public override OperationLog Execute(FamilyDocument doc) {
-        // Create fresh state for THIS family execution
-        var mutableMappings = this._sharedState.CreateFreshMappings();
-        var logs = new List<LogEntry>();
+    public override OperationLog Execute(FamilyDocument doc, OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
-        foreach (var mapping in mutableMappings.Where(m => !m.IsProcessed)) {
+        foreach (var mapping in this.Settings.MappingData) {
+            var log = groupContext.GetOrCreate(mapping.NewName);
+            if (log.IsComplete) continue;
+
             if (!this._sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam)) {
-                logs.Add(new LogEntry { Item = mapping.NewName, Error = "APS parameter not found in cache" });
+                _ = log.Skip("Shared parameter not found");
                 continue;
             }
 
@@ -73,42 +71,30 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                             // NewName inherited formula pointing to a built-in that's in CurrNames.
                             // Unset formula on NewName, let MapParams copy value from built-in and create backlink.
                             _ = doc.UnsetFormula(replaced);
-                            var mappingToUpdate = mutableMappings.First(m => m.NewName == mapping.NewName);
-                            mappingToUpdate.CurrNames = [refName]; // Point to built-in for value copy
-                            logs.Add(new LogEntry {
-                                Item = $"Replaced {currName} → {replaced.Definition.Name}, deferred backlink to {refName}"
-                            });
+                            // Store the built-in ref name for MapParams to use>
+                            _ = log.Defer($"Replaced {currName}, deferred backlink to {refName}");
                         } else {
                             // Standard unwrap: formula points to non-built-in or not in CurrNames
                             _ = doc.UnsetFormula(singleReference);
-                            mapping.IsProcessed = true;
-                            logs.Add(new LogEntry { Item = $"{currName} → {replaced.Definition.Name}" });
+                            _ = log.Success($"{currName} → {replaced.Definition.Name}");
                         }
                     } else if (replaced.Formula == null ||
                                parameters.IsConstant(replaced.Formula)) {
                         _ = doc.UnsetFormula(replaced);
-                        var ignoreCoercion = new List<ForgeTypeId> {
-                            SpecTypeId.Number, SpecTypeId.String.Text, SpecTypeId.Length
-                        };
                         // skip datatypes that will never need coercion, boosts speed and cleans logs
-                        if (ignoreCoercion.Contains(replaced.Definition.GetDataType())) continue;
-                        // Update CurrName in LOCAL mutableMappings
-                        var mappingToUpdate = mutableMappings.First(m => m.NewName == mapping.NewName);
-                        mappingToUpdate.CurrNames = [mapping.NewName];
-                        logs.Add(new LogEntry {
-                            Item = $"Replaced/waiting to coerce {currName} → {replaced.Definition.Name}"
-                        });
+                        _ = this.IgnoreCoercionDataTypes.Contains(replaced.Definition.GetDataType())
+                            ? log.Success($"Replaced {currName} → {replaced.Definition.Name}")
+                            : log.Defer($"Replaced {currName}, awaiting coercion");
                     } else {
                         // Fallback: formula exists but has no dependencies and is not constant (edge case)
-                        logs.Add(new LogEntry { Item = $"Replaced {currName} → {replaced.Definition.Name}" });
-                        mapping.IsProcessed = true;
+                        _ = log.Success($"Replaced {currName} → {replaced.Definition.Name}");
                     }
                 } catch (Exception ex) {
-                    logs.Add(new LogEntry { Item = $"{currName} → {mapping.NewName}", Error = ex.Message });
+                    _ = log.Error($"{currName} → {mapping.NewName}", ex);
                 }
             }
         }
 
-        return new OperationLog(this.Name, logs);
+        return new OperationLog(this.Name, groupContext.TakeSnapshot());
     }
 }

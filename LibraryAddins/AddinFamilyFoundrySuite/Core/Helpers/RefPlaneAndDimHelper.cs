@@ -358,7 +358,7 @@ public class RefPlaneAndDimHelper {
 
         if (this.SpecExists(spec)) {
             Debug.WriteLine($"[CreatePlanes] Spec exists, skipping: {spec.Name}");
-            this._logs.Add(new LogEntry { Item = $"RefPlane: {spec.Name} (skipped - already exists)" });
+            this._logs.Add(new LogEntry($"RefPlane: {spec.Name}").Skip("Already exists"));
             return;
         }
 
@@ -367,9 +367,7 @@ public class RefPlaneAndDimHelper {
         var anchor = this._query.Get(spec.AnchorName);
         if (anchor == null) {
             Debug.WriteLine($"[CreatePlanes] Anchor plane not found: {spec.AnchorName}");
-            this._logs.Add(new LogEntry {
-                Item = $"RefPlane: {spec.Name}", Error = $"Anchor plane '{spec.AnchorName}' not found"
-            });
+            this._logs.Add(new LogEntry($"RefPlane: {spec.Name}").Error($"Anchor plane '{spec.AnchorName}' not found"));
             return;
         }
 
@@ -405,11 +403,11 @@ public class RefPlaneAndDimHelper {
                 rp.Name = name;
                 _ = rp.get_Parameter(BuiltInParameter.ELEM_REFERENCE_NAME).Set((int)spec.Strength);
                 _ = this._query.ReCache(name);
-                this._logs.Add(new LogEntry { Item = $"RefPlane: {name}" });
+                this._logs.Add(new LogEntry($"RefPlane: {name}").Success("Created"));
                 Debug.WriteLine($"[CreatePlanes] Successfully created plane: {name}, Id: {rp.Id}");
             } catch (Exception ex) {
                 Debug.WriteLine($"[CreatePlanes] ERROR creating plane {name}: {ex.GetType().Name} - {ex.Message}");
-                this._logs.Add(new LogEntry { Item = $"RefPlane: {name}", Error = ex.Message });
+                this._logs.Add(new LogEntry($"RefPlane: {name}").Error(ex));
             }
         }
     }
@@ -420,7 +418,7 @@ public class RefPlaneAndDimHelper {
 
         if (this.SpecExists(spec)) {
             Debug.WriteLine($"[CreateDimension] Spec exists, skipping: {spec.Name}");
-            this._logs.Add(new LogEntry { Item = $"Dimension: {spec.Name} (skipped - already exists)" });
+            this._logs.Add(new LogEntry($"Dimension: {spec.Name}").Skip("Already exists"));
             return;
         }
 
@@ -451,7 +449,7 @@ public class RefPlaneAndDimHelper {
 
         if (planes.Length < 2) {
             Debug.WriteLine($"[CreateDimension] Not enough reference planes found. Found: {planes.Length}");
-            this._logs.Add(new LogEntry { Item = $"Dimension: {spec.Name}", Error = "Reference planes not found" });
+            this._logs.Add(new LogEntry($"Dimension: {spec.Name}").Error("Reference planes not found"));
             return;
         }
 
@@ -488,13 +486,13 @@ public class RefPlaneAndDimHelper {
                 dim.FamilyLabel = this._doc.FamilyManager.get_Parameter(spec.Parameter);
             }
 
-            this._logs.Add(new LogEntry { Item = $"Dimension: {spec.Name}" });
+            this._logs.Add(new LogEntry($"Dimension: {spec.Name}").Success("Created"));
             Debug.WriteLine($"[CreateDimension] Successfully completed dimension: {spec.Name}");
         } catch (Exception ex) {
             Debug.WriteLine(
                 $"[CreateDimension] ERROR creating dimension {spec.Name}: {ex.GetType().Name} - {ex.Message}");
             Debug.WriteLine($"[CreateDimension] Stack trace: {ex.StackTrace}");
-            this._logs.Add(new LogEntry { Item = $"Dimension: {spec.Name}", Error = ex.Message });
+            this._logs.Add(new LogEntry($"Dimension: {spec.Name}").Error(ex));
         }
     }
 

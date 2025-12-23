@@ -47,7 +47,7 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
 
         if (!connectorElements.Any()) {
             connectorElements.Add(MakeElectricalConnector(doc));
-            logs.Add(new LogEntry { Item = "Create connector" });
+            logs.Add(new LogEntry("Create connector").Success());
         }
 
         foreach (var connectorElement in connectorElements)
@@ -71,17 +71,17 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
 
                 // Dissociate everything and it explicitly
                 if (tgtAssociations != null) {
-                    logs.Add(new LogEntry { Item = $"Unassociate {tgtAssociations.Definition.Name}" });
+                    logs.Add(new LogEntry($"Unassociate {tgtAssociations.Definition.Name}").Success());
                     doc.FamilyManager.AssociateElementParameterToFamilyParameter(targetParam, null);
                 }
 
                 // Associate only if we can
                 if (targetParam.Definition.GetDataType() == sourceParam.Definition.GetDataType()) {
-                    logs.Add(new LogEntry { Item = $"Associate {sourceParam.Definition.Name}" });
+                    logs.Add(new LogEntry($"Associate {sourceParam.Definition.Name}").Success());
                     doc.FamilyManager.AssociateElementParameterToFamilyParameter(targetParam, sourceParam);
                 }
             } catch (Exception ex) {
-                logs.Add(new LogEntry { Item = $"{targetParam.Definition.Name}", Error = $"{ex} {ex.Message}" });
+                logs.Add(new LogEntry(targetParam.Definition.Name).Error(ex));
             }
         }
 

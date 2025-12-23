@@ -37,9 +37,9 @@ public class PurgeNestedFamilies : DocOperation<DefaultOperationSettings> {
                 if (dependentCount > 100) continue; // skip anomalies
 
                 _ = doc.Document.Delete(family.Id);
-                logs.Add(new LogEntry { Item = familyName });
+                logs.Add(new LogEntry(familyName).Success("Deleted"));
             } catch (Exception ex) {
-                logs.Add(new LogEntry { Item = familyName, Error = ex.Message });
+                logs.Add(new LogEntry(familyName).Error(ex));
             }
         }
 

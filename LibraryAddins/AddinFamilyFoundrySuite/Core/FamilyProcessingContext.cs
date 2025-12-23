@@ -3,6 +3,27 @@ using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
+///     Inter-operation state container for coordinating log entries across operations within an OperationGroup.
+///     Created by OperationGroup, reset per-family by the OperationProcessor.
+/// </summary>
+public class OperationContext {
+    private readonly Dictionary<string, LogEntry> _entries = new();
+
+    public LogEntry GetOrCreate(string name) =>
+        this._entries.TryGetValue(name, out var entry)
+            ? entry
+            : this._entries[name] = new LogEntry(name);
+
+    public LogEntry Get(string name) =>
+        this._entries.GetValueOrDefault(name);
+
+    public IEnumerable<LogEntry> All => this._entries.Values;
+    public IEnumerable<LogEntry> Pending => this.All.Where(e => !e.IsComplete);
+
+    public void Reset() => this._entries.Clear();
+}
+
+/// <summary>
 ///     Context for a single family's processing run, containing pre/post snapshots and operation logs.
 /// </summary>
 public class FamilyProcessingContext {

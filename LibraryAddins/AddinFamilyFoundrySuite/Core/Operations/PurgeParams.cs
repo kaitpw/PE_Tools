@@ -7,19 +7,19 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class PurgeParams : DocOperation<PurgeParamsSettings>, ISnapshotAwareOperation {
+public class PurgeParams : DocOperationWithContext<PurgeParamsSettings> {
     public override string Description => "Recursively delete unused parameters from the family";
-    private FamilyProcessingContext _context;
+
     public PurgeParams(PurgeParamsSettings settings, IEnumerable<string> ExcludeNamesEqualing) :
         base(settings) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
 
     public IEnumerable<string> ExternalExcludeNamesEqualing { get; set; } = [];
 
-    public bool IsParameterEmpty(FamilyParameter param) {
-        if (this._context == null) return false;
+    public bool IsParameterEmpty(FamilyParameter param, FamilyProcessingContext context) {
+        if (context == null) return false;
 
-        foreach (var value in this._context.GetTypesWithValue(param.Definition.Name)) {
+        foreach (var value in context.GetTypesWithValue(param.Definition.Name)) {
             if (value == null) return true;
             if (this.Settings.ConsiderZeroValueAsEmpty
                 && int.TryParse(value, out var intValue)
@@ -31,13 +31,13 @@ public class PurgeParams : DocOperation<PurgeParamsSettings>, ISnapshotAwareOper
         return false;
     }
 
-    public override OperationLog Execute(FamilyDocument doc) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext context) {
         var logs = new List<LogEntry>();
-        this.RecursiveDelete(doc, logs);
+        this.RecursiveDelete(doc, logs, context);
         return new OperationLog(this.Name, logs);
     }
 
-    private void RecursiveDelete(FamilyDocument doc, List<LogEntry> logs) {
+    private void RecursiveDelete(FamilyDocument doc, List<LogEntry> logs, FamilyProcessingContext context) {
         var deleteCount = 0;
         var excludeSet = this.ExternalExcludeNamesEqualing.ToHashSet();
 
@@ -48,7 +48,7 @@ public class PurgeParams : DocOperation<PurgeParamsSettings>, ISnapshotAwareOper
             .Where(p => !excludeSet.Contains(p.Definition.Name))
             .Where(this.Settings.Filter)
             .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
-            .Where(p => !this.IsParameterEmpty(p))
+            .Where(p => !this.IsParameterEmpty(p, context))
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
 
@@ -58,21 +58,19 @@ public class PurgeParams : DocOperation<PurgeParamsSettings>, ISnapshotAwareOper
                 if (param.HasDirectAssociation(doc)) continue;
             }
 
+            var log = new LogEntry(param.Definition.Name);
             try {
-                var paramName = param.Definition.Name;
                 doc.FamilyManager.RemoveParameter(param);
-                logs.Add(new LogEntry { Item = paramName });
+                _ = log.Success("Deleted");
                 deleteCount++;
             } catch (Exception ex) {
-                logs.Add(new LogEntry { Item = param.Definition.Name, Error = ex.Message });
+                _ = log.Error(ex);
             }
+            logs.Add(log);
         }
 
-        if (deleteCount > 0) this.RecursiveDelete(doc, logs);
+        if (deleteCount > 0) this.RecursiveDelete(doc, logs, context);
     }
-
-    public void SetContext(FamilyProcessingContext context) => this._context = context;
-
 }
 
 public class PurgeParamsSettings : IOperationSettings {
@@ -87,7 +85,7 @@ public class PurgeParamsSettings : IOperationSettings {
     public bool ConsiderEmptyStringAsEmpty { get; init; } = true;
 
     [Description("Exclude parameters from the deletion list ")]
-    [Required] public Exclude ExcludeNames { get; init; } = new();
+    [Required] public ExcludeSharedParameter ExcludeNames { get; init; } = new();
 
     public bool Filter(FamilyParameter p) => !this.IsExcluded(p);
 

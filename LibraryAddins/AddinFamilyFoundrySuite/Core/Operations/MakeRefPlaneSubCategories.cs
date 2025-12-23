@@ -74,7 +74,7 @@ public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : Do
                     .ToList();
 
                 if (!refPlanes.Any()) {
-                    logs.Add(new LogEntry { Item = $"Skipping: No '{spec.Strength}' RPs found" });
+                    logs.Add(new LogEntry($"No '{spec.Strength}' RPs found").Skip());
                     continue;
                 }
 
@@ -88,12 +88,12 @@ public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : Do
                     var existing = subcategoryCache.GetExisting(spec.Name);
                     if (existing != null) {
                         subcategory = this.ApplySubcategoryStyle(existing, spec, doc.Document);
-                        logs.Add(new LogEntry { Item = $"Updated subcategory: '{spec.Name}'" });
+                        logs.Add(new LogEntry($"Subcategory: '{spec.Name}'").Success("Updated"));
                     } else {
                         var newSubCat = doc.Document.Settings.Categories.NewSubcategory(category, spec.Name);
                         subcategory = this.ApplySubcategoryStyle(newSubCat, spec, doc.Document);
                         subcategoryCache.Set(spec.Name, subcategory);
-                        logs.Add(new LogEntry { Item = $"Created subcategory: '{spec.Name}'" });
+                        logs.Add(new LogEntry($"Subcategory: '{spec.Name}'").Success("Created"));
                     }
                 }
 
@@ -102,11 +102,11 @@ public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : Do
                     var subcategoryParam = refPlane.get_Parameter(BuiltInParameter.CLINE_SUBCATEGORY);
                     _ = subcategoryParam?.Set(subcategory.Id);
 
-                    logs.Add(new LogEntry { Item = $"Applied '{subcategory.Name}' to '{refPlane.Name}'" });
+                    logs.Add(new LogEntry($"Applied '{subcategory.Name}' to '{refPlane.Name}'").Success());
                 }
             }
         } catch (Exception ex) {
-            logs.Add(new LogEntry { Item = $"{ex.GetType().Name}: {ex.Message}" });
+            logs.Add(new LogEntry(ex.GetType().Name).Error(ex));
         }
 
         return new OperationLog(nameof(MakeRefPlaneSubcategories), logs);

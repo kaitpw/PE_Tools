@@ -1,4 +1,3 @@
-using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
@@ -9,16 +8,18 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     Creates backlinks from built-in parameters to their mapped shared parameter targets.
 ///     Sets formulas like: Model = PE_G___Model, so the built-in derives from the shared param.
 /// </summary>
-public class BacklinkParamsToBuiltIn(MapParamsSettings settings, MapParamsSharedState sharedState = null)
-    : DocOperation<MapParamsSettings>(settings) {
+public class BacklinkParamsToBuiltIn(MapParamsSettings settings)
+    : DocOperationWithGroup<MapParamsSettings>(settings) {
     public override string Description => "Create backlinks from built-in params to their mapped targets";
 
-    public override OperationLog Execute(FamilyDocument doc) {
-        var logs = new List<LogEntry>();
-        var mappings = sharedState?.GetCurrentMappings() ?? this.Settings.MappingData;
+    public override OperationLog Execute(FamilyDocument doc, OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
-        foreach (var mapping in mappings) {
+        foreach (var mapping in this.Settings.MappingData) {
+            var log = groupContext.GetOrCreate(mapping.NewName);
+            // Only process if deferred or pending - skip if already completed/errored
+            if (log.IsComplete) continue;
+
             var tgtParam = fm.FindParameter(mapping.NewName);
             if (tgtParam == null) continue;
 
@@ -30,13 +31,13 @@ public class BacklinkParamsToBuiltIn(MapParamsSettings settings, MapParamsShared
 
                 // Set formula: BuiltIn = NewParam
                 var success = doc.TrySetFormulaFast(srcParam, mapping.NewName, out var err);
-                logs.Add(success
-                    ? new LogEntry { Item = $"Backlink {mapping.NewName} → {currName}" }
-                    : new LogEntry { Item = $"Backlink {mapping.NewName} → {currName}", Error = err });
+                _ = success
+                    ? log.Success($"Backlink {mapping.NewName} → {currName}")
+                    : log.Error($"Backlink {mapping.NewName} → {currName}: {err}");
                 break; // Only backlink first matching built-in per mapping
             }
         }
 
-        return new OperationLog(this.Name, logs);
+        return new OperationLog(this.Name, groupContext.TakeSnapshot());
     }
 }

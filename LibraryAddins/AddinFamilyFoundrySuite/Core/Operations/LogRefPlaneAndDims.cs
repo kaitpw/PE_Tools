@@ -84,7 +84,7 @@ public class LogRefPlaneAndDims(string outputDir) : DocOperation {
         var filePath = Path.Combine(this.OutputPath, filename);
         File.WriteAllText(filePath, json);
 
-        var log = new LogEntry { Item = $"Wrote {specs.Count} reference plane specs to {filename}" };
+        var log = new LogEntry($"Wrote {specs.Count} reference plane specs to {filename}").Success();
         return new OperationLog(this.Name, [log]);
     }
 

@@ -104,10 +104,10 @@ public class JsonExtendsException : Exception {
     public static JsonExtendsException InvalidFragmentFormat(
         string fragmentPath,
         string actualType
-    ) => new($"""
-        Fragment '{Path.GetFileName(fragmentPath)}' has invalid format.
-          Expected: a JSON array (e.g., [ {{... }}, {{... }} ])
-          Found: {actualType}
+    ) => new($$"""
+        Fragment '{{Path.GetFileName(fragmentPath)}}' has invalid format.
+          Expected: a JSON array (e.g., [ {...}, {...} ])
+          Found: {{actualType}}
           
         Fragment files must contain a JSON array of objects to be inserted into the parent array.
         """);

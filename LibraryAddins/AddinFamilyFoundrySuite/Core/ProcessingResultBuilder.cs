@@ -97,7 +97,9 @@ public class ProcessingResultBuilder {
         var (logs, err) = ctx.OperationLogs;
         if (err is not null) {
             return new {
-                Family = ctx.FamilyName, TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3), Error = err.Message
+                Family = ctx.FamilyName,
+                TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
+                Error = err.Message
             };
         }
 
@@ -107,16 +109,8 @@ public class ProcessingResultBuilder {
             TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
             Operations = operationLogs.Select(log => new {
                 log.OperationName,
-                SuccessTotal = $"{log.SuccessCount}/{log.SuccessCount + log.FailedCount}",
-                Errors = log.Entries
-                    .Where(e => e.Error != null)
-                    .GroupBy(e => new { e.Item, e.Error })
-                    .Select(g => {
-                        var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                        var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : string.Empty;
-                        return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
-                    })
-                    .ToList()
+                SuccessTotal = $"{log.SuccessCount}/{log.SuccessCount + log.ErrorCount}",
+                Errors = BuildMessages(log.Entries, LogStatus.Error),
             }).ToList()
         };
     }
@@ -137,26 +131,23 @@ public class ProcessingResultBuilder {
             Operations = operationLogs.Select(log => new {
                 log.OperationName,
                 SecondsElapsed = Math.Round(log.MsElapsed / 1000.0, 3),
-                Successes = log.Entries.Where(e => e.Error == null)
-                    .GroupBy(e => new { e.Item, e.Error })
-                    .Select(g => {
-                        var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                        var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : string.Empty;
-                        return $"{contextsStr}{g.Key.Item}";
-                    })
-                    .ToList(),
-                Errors = log.Entries
-                    .Where(e => e.Error != null)
-                    .GroupBy(e => new { e.Item, e.Error })
-                    .Select(g => {
-                        var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
-                        var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : string.Empty;
-                        return $"{contextsStr}{g.Key.Item} : {g.Key.Error}";
-                    })
-                    .ToList()
+                Successes = BuildMessages(log.Entries, LogStatus.Success),
+                Skipped = BuildMessages(log.Entries, LogStatus.Skipped),
+                Errors = BuildMessages(log.Entries, LogStatus.Error),
             }).ToList()
         };
     }
+
+    private static List<string> BuildMessages(IEnumerable<LogEntry> entries, LogStatus status) =>
+        entries.Where(e => e.Status == status)
+            .GroupBy(e => new { e.Name, e.Message })
+            .Select(g => {
+                var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
+                var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : string.Empty;
+                var messageStr = !string.IsNullOrEmpty(g.Key.Message) ? $" : {g.Key.Message}" : "";
+                return $"{contextsStr}{g.Key.Name}{messageStr}";
+            }).ToList();
+
 
     private static void WriteJson(string path, object data) {
         var json = JsonConvert.SerializeObject(data, JsonSettings);

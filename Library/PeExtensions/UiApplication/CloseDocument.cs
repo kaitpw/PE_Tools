@@ -11,7 +11,7 @@ namespace PeExtensions.UiApplication;
 
 /// <summary>
 ///     Provides extension methods for closing UI documents in the Revit application.
-///     from <href="https://gist.github.com/ricaun/ff6814faf407ee044b93ee8e787f628c">here</href>.
+///     From: https://gist.github.com/ricaun/ff6814faf407ee044b93ee8e787f628c
 /// </summary>
 public static class UIDocumentCloseExtension {
     /// <summary>

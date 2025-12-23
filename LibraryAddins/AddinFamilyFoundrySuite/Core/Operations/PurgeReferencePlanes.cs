@@ -34,10 +34,10 @@ public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
 
             try {
                 _ = doc.Document.Delete(refPlane.Id);
-                logs.Add(new LogEntry { Item = planeName });
+                logs.Add(new LogEntry(planeName).Success("Deleted"));
                 deleteCount++;
             } catch (Exception ex) {
-                logs.Add(new LogEntry { Item = planeName, Error = ex.Message });
+                logs.Add(new LogEntry(planeName).Error(ex));
             }
         }
 

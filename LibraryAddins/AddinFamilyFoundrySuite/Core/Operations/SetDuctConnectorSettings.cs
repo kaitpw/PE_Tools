@@ -20,10 +20,10 @@ public class SetDuctConnectorSettings(DuctConnectorConfigurator settings) : DocO
 
             foreach (var ce in connectorElements) {
                 this.settings.ApplyTo(ce);
-                logs.Add(new LogEntry { Item = ce.Name });
+                logs.Add(new LogEntry(ce.Name).Success("Applied"));
             }
         } catch (Exception ex) {
-            logs.Add(new LogEntry { Item = "Error", Error = ex.Message });
+            logs.Add(new LogEntry("Error applying settings").Error(ex));
         }
 
         return new OperationLog(nameof(SetDuctConnectorSettings), logs);
@@ -89,7 +89,8 @@ public class DuctConnectorConfigurator {
     public override string ToString() =>
         JsonConvert.SerializeObject(this,
             new JsonSerializerSettings {
-                Formatting = Formatting.Indented, Converters = new List<JsonConverter> { new StringEnumConverter() }
+                Formatting = Formatting.Indented,
+                Converters = new List<JsonConverter> { new StringEnumConverter() }
             });
 
     public string ToStringUnConverted() =>

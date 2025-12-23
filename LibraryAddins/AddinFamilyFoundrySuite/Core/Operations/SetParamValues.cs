@@ -1,4 +1,3 @@
-using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.GetValue;
@@ -10,43 +9,43 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     Sets parameter values or formulas based on SetAsFormula property.
 ///     - If SetAsFormula is true (default) → SetFormula (applies to all types, "locks" the parameter)
 ///     - If SetAsFormula is false → SetGlobalValue (fast path for all types at once)
-///     On SetGlobalValue failure, allows the error to pass through - SetParamValuesPerType will pick it up as fallback.
+///     On SetGlobalValue failure, defers to SetParamValuesPerType via GroupContext.
 /// </summary>
-public class SetParamValues(AddAndSetParamsSettings settings, SetParamSharedState sharedState = null)
-    : DocOperation<AddAndSetParamsSettings>(settings) {
+public class SetParamValues(AddAndSetParamsSettings settings)
+    : DocOperationWithGroup<AddAndSetParamsSettings>(settings) {
     public override string Description =>
         "Set parameter values or formulas based on SetAsFormula property.";
 
-    public override OperationLog Execute(FamilyDocument doc) {
-        var logs = new Dictionary<string, LogEntry>();
+    public override OperationLog Execute(FamilyDocument doc, OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
         foreach (var p in this.Settings.Parameters) {
+            var log = groupContext.GetOrCreate(p.Name);
+
             if (string.IsNullOrWhiteSpace(p.ValueOrFormula)) continue;
 
             var parameter = fm.FindParameter(p.Name);
             if (parameter is null) {
-                logs[p.Name] = new LogEntry { Item = p.Name, Error = $"Parameter '{p.Name}' not found" };
+                _ = log.Error($"Parameter '{p.Name}' not found");
                 continue;
             }
 
             if (!this.Settings.OverrideExistingValues && doc.HasValue(parameter)) {
-                logs[p.Name] = new LogEntry { Item = p.Name };
+                _ = log.Skip("Already has value");
                 continue;
             }
 
             try {
                 var result = SetValueOrFormula(doc, parameter, p.ValueOrFormula, p.SetAsFormula);
-                if (result.NeedsFallback && sharedState is not null)
-                    _ = sharedState.FailedGlobalValueParams.Add(p.Name);
-
-                logs[p.Name] = new LogEntry { Item = p.Name };
+                _ = result.NeedsFallback
+                    ? log.Defer("Needs per-type fallback")
+                    : log.Success("Set global value");
             } catch (Exception ex) {
-                logs[p.Name] = new LogEntry { Item = p.Name, Error = ex.Message };
+                _ = log.Error(ex);
             }
         }
 
-        return new OperationLog(this.Name, logs.Values.ToList());
+        return new OperationLog(this.Name, groupContext.TakeSnapshot());
     }
 
     private static SetResult SetValueOrFormula(FamilyDocument doc,

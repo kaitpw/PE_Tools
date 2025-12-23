@@ -20,9 +20,9 @@ public class AddSharedParams(
 
             try {
                 var addedParam = doc.AddSharedParameter(sharedParam);
-                logs.Add(new LogEntry { Item = addedParam.Definition.Name });
+                logs.Add(new LogEntry(addedParam.Definition.Name).Success("Added"));
             } catch (Exception ex) {
-                logs.Add(new LogEntry { Item = name, Error = ex.Message });
+                logs.Add(new LogEntry(name).Error(ex));
             }
         }
 

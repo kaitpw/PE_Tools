@@ -52,7 +52,7 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
 
         doc.FamilyManager.ReorderParameters(sortedParamsList);
 
-        logs.Add(new LogEntry { Item = $"Sorted {parameters.Count} parameters" });
+        logs.Add(new LogEntry($"Sorted {parameters.Count} parameters").Success());
         return new OperationLog(this.Name, logs);
     }
 }

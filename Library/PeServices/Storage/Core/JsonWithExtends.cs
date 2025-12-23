@@ -54,6 +54,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true };
         schemaSettings.SchemaProcessors.Add(new EnumConstraintSchemaProcessor());
         schemaSettings.SchemaProcessors.Add(new ForgeTypeIdSchemaProcessor());
+        schemaSettings.SchemaProcessors.Add(new SchemaMetadataProcessor());
         this._schema = new JsonSchemaGenerator(schemaSettings).Generate(typeof(T));
     }
 

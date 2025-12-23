@@ -13,13 +13,8 @@ namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 /// </summary>
 public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
     public AddAndSetParams(AddAndSetParamsSettings settings) : base(
-        InitializeDescription(settings), InitializeOperations(settings, out var sharedState)
-    ) => this.SharedState = sharedState;
-
-    /// <summary>
-    ///     Shared state for coordinating fallback between SetParamValues and SetParamValuesPerType.
-    /// </summary>
-    public SetParamSharedState SharedState { get; }
+        InitializeDescription(settings), InitializeOperations(settings)
+    ) { }
 
 #pragma warning disable IDE0060 // Remove unused parameter
     public static string InitializeDescription(AddAndSetParamsSettings settings) =>
@@ -37,33 +32,23 @@ public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
     private static string GetDesignation(bool isInstance) => isInstance ? "Instance" : "Type";
 
     private static List<IOperation<AddAndSetParamsSettings>> InitializeOperations(
-        AddAndSetParamsSettings settings,
-        out SetParamSharedState sharedState
+        AddAndSetParamsSettings settings
     ) {
         var ops = new List<IOperation<AddAndSetParamsSettings>>();
-        sharedState = new SetParamSharedState();
 
         // 1. Optionally create missing params first
         if (settings.CreateFamParamIfMissing)
             ops.Add(new AddParamsFromSettings(settings));
 
-        // 2. Set global/formula values (with per-type fallback tracking)
+        // 2. Set global/formula values (with per-type fallback tracking via OperationContext)
         if (settings.Parameters.Any()) {
-            ops.Add(new SetParamValues(settings, sharedState));
+            ops.Add(new SetParamValues(settings));
 
             // 3. Set explicit per-type values AND handle fallbacks from SetParamValues failures
             if (settings.ParametersPerType.Any())
-                ops.Add(new SetParamValuesPerType(settings, sharedState));
+                ops.Add(new SetParamValuesPerType(settings));
         }
 
         return ops;
     }
-}
-
-/// <summary>
-///     Shared state between SetParamValues and SetParamValuesPerType operations.
-///     Tracks which parameters failed SetGlobalValue and need per-type fallback.
-/// </summary>
-public class SetParamSharedState {
-    public HashSet<string> FailedGlobalValueParams { get; } = [];
 }

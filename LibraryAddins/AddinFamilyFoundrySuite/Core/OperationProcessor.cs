@@ -192,11 +192,33 @@ public class OperationProcessor(
     }
 
     /// <summary>
-    ///     Injects the processing context into any snapshot-aware operations in the queue.
+    ///     Injects the processing context into context-aware operations and resets all group contexts.
     /// </summary>
     private static void InjectContextIntoOperations(OperationQueue queue, FamilyProcessingContext context) {
-        foreach (var op in queue.Operations.OfType<ISnapshotAwareOperation>())
-            op.SetContext(context);
+        foreach (var op in queue.Operations) {
+            switch (op) {
+            // Inject family context into operations that need it
+            case DocOperationWithContext<IOperationSettings> docWithCtx:
+                docWithCtx.Context = context;
+                break;
+            case TypeOperationWithContext<IOperationSettings> typeWithCtx:
+                typeWithCtx.Context = context;
+                break;
+            }
+        }
+
+        // Reset all group contexts per-family (group context is injected by OperationGroup, not here)
+        var groupContexts = queue.Operations
+            .Select(op => op switch {
+                DocOperationWithGroup<IOperationSettings> d => d.GroupContext,
+                TypeOperationWithGroup<IOperationSettings> t => t.GroupContext,
+                _ => null
+            })
+            .Where(ctx => ctx != null)
+            .Distinct();
+
+        foreach (var ctx in groupContexts)
+            ctx.Reset();
     }
 
     public List<FamilyProcessingContext> ProcessFamilyDocumentIntoVariants(

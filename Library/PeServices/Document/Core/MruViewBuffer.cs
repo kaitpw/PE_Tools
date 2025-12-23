@@ -18,10 +18,8 @@ public class MruViewBuffer {
     /// <summary>
     ///     Records a view activation. The previous view is only added to the MRU buffer if
     ///     it was active for at least 3 seconds. This filters out intermediate/transient views
-    ///     that Revit briefly activates during document switching (usually
-    ///     < 1 second).
-    ///         Views the user intentionally navigates to will typically be active for>
-    ///         3 seconds.
+    ///     that Revit briefly activates during document switching (usually less than 1 second).
+    ///     Views the user intentionally navigates to will typically be active for more than 3 seconds.
     /// </summary>
     public void RecordViewActivation(Document doc, ElementId viewId) {
         if (doc == null || viewId == null || viewId == ElementId.InvalidElementId) return;

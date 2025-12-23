@@ -11,19 +11,6 @@ public interface IOperation : IExecutable {
 }
 
 /// <summary>
-///     Interface for operations that can use pre-processing parameter snapshots.
-///     Operations that implement this interface will receive the snapshot before execution.
-/// </summary>
-public interface ISnapshotAwareOperation : IOperation {
-    /// <summary>
-    ///     Sets the processing context. Usually set by OperationProcessor before opening the FamilyDocument execution.
-    ///     NOTE FOR FUTURE: enable/allow resettingt he context periodically with a typeoperation to get inter-operation
-    ///     snapshots too.
-    /// </summary>
-    void SetContext(FamilyProcessingContext context);
-}
-
-/// <summary>
 ///     Base abstract class for document-level operations.
 ///     Document-level operations are executed on the entire family document all at once.
 /// </summary>
@@ -45,7 +32,7 @@ public abstract class DocOperation : IOperation {
         try {
             var sw = Stopwatch.StartNew();
             var log = this.Execute(famDoc);
-            log ??= new OperationLog("IGNORE", new List<LogEntry>());
+            log ??= new OperationLog("IGNORE", []);
             sw.Stop();
             log.MsElapsed = sw.Elapsed.TotalMilliseconds;
             return [log];
@@ -53,7 +40,7 @@ public abstract class DocOperation : IOperation {
             return [
                 new OperationLog(
                     $"{this.Name}: (FATAL ERROR)",
-                    [new LogEntry { Item = ex.GetType().Name, Error = ex.Message }])
+                    [new LogEntry(ex.GetType().Name).Error(ex)])
             ];
         }
     };
@@ -104,7 +91,7 @@ public abstract class TypeOperation : IOperation {
                 ) { MsElapsed = typeLogs.Sum(log => log.MsElapsed) }
             ];
         } catch (Exception ex) {
-            return [new OperationLog(this.Name, [new LogEntry { Item = ex.GetType().Name, Error = ex.Message }])];
+            return [new OperationLog(this.Name, [new LogEntry(ex.GetType().Name).Error(ex)])];
         }
     };
 
@@ -150,10 +137,11 @@ public class MergedTypeOperation(List<TypeOperation> operations) : IExecutable {
                 })
                 .ToList();
         } catch (Exception ex) {
+            var errorLog = new LogEntry(currFamTypeName ?? "Unknown Family Type").Error(ex);
             return [
                 new OperationLog(
                     $"Operation {currOpName ?? "Unknown Operation"} (FATAL ERROR)",
-                    [new LogEntry { Item = currFamTypeName ?? "Unknown Family Type", Error = ex.Message }])
+                    [errorLog])
             ];
         }
     };
@@ -188,21 +176,96 @@ public abstract class TypeOperation<TOpSettings>(TOpSettings settings) : TypeOpe
 }
 
 /// <summary>
+///     DocOperation with FamilyProcessingContext injected.
+///     Use when operation needs access to snapshots or family-level data.
+/// </summary>
+public abstract class DocOperationWithContext<TSettings>(TSettings settings) : DocOperation<TSettings>(settings)
+    where TSettings : IOperationSettings {
+    internal FamilyProcessingContext Context { get; set; }
+
+    public sealed override OperationLog Execute(FamilyDocument doc)
+        => this.Execute(doc, this.Context);
+
+    public abstract OperationLog Execute(FamilyDocument doc, FamilyProcessingContext context);
+}
+
+/// <summary>
+///     DocOperation with OperationContext (group) injected.
+///     Use when operation needs to coordinate with other operations in a group.
+/// </summary>
+public abstract class DocOperationWithGroup<TSettings>(TSettings settings) : DocOperation<TSettings>(settings)
+    where TSettings : IOperationSettings {
+    internal OperationContext GroupContext { get; set; }
+
+    public sealed override OperationLog Execute(FamilyDocument doc)
+        => this.Execute(doc, this.GroupContext);
+
+    public abstract OperationLog Execute(FamilyDocument doc, OperationContext groupContext);
+}
+
+/// <summary>
+///     TypeOperation with FamilyProcessingContext injected.
+///     Use when type-level operation needs access to snapshots or family-level data.
+/// </summary>
+public abstract class TypeOperationWithContext<TSettings>(TSettings settings) : TypeOperation<TSettings>(settings)
+    where TSettings : IOperationSettings {
+    internal FamilyProcessingContext Context { get; set; }
+
+    public sealed override OperationLog Execute(FamilyDocument doc)
+        => this.Execute(doc, this.Context);
+
+    public abstract OperationLog Execute(FamilyDocument doc, FamilyProcessingContext context);
+}
+
+/// <summary>
+///     TypeOperation with OperationContext (group) injected.
+///     Use when type-level operation needs to coordinate with other operations in a group.
+/// </summary>
+public abstract class TypeOperationWithGroup<TSettings>(TSettings settings) : TypeOperation<TSettings>(settings)
+    where TSettings : IOperationSettings {
+    internal OperationContext GroupContext { get; set; }
+
+    public sealed override OperationLog Execute(FamilyDocument doc)
+        => this.Execute(doc, this.GroupContext);
+
+    public abstract OperationLog Execute(FamilyDocument doc, OperationContext groupContext);
+}
+
+/// <summary>
 ///     Container for grouping related operations that share settings.
 ///     Groups are not operations themselves - they are unwrapped into individual operations when added to the queue.
 ///     The name is automatically derived from the type name.
+///     Groups create a shared OperationContext for inter-operation coordination.
 /// </summary>
 public class OperationGroup<TSettings> where TSettings : IOperationSettings {
     /// <summary>
     ///     Creates an operation group with the name automatically derived from the type name.
+    ///     Injects group context into operations that use context-aware base classes.
     /// </summary>
     protected OperationGroup(string description, List<IOperation<TSettings>> operations) {
-        // Automatically derive name from the actual type (not OperationGroup<TSettings>)
         this.Description = description;
         this.Operations = operations;
+
+        // Inject group context into operations that need it
+        foreach (var op in operations) {
+            switch (op) {
+            case DocOperationWithGroup<TSettings> docWithGroup:
+                docWithGroup.GroupContext = this.GroupContext;
+                break;
+            case TypeOperationWithGroup<TSettings> typeWithGroup:
+                typeWithGroup.GroupContext = this.GroupContext;
+                break;
+            }
+        }
     }
 
     public string Name => this.GetType().Name;
+
+    /// <summary>
+    ///     Shared context for inter-operation coordination within this group.
+    ///     Reset per-family by the OperationProcessor.
+    /// </summary>
+    public OperationContext GroupContext { get; } = new();
     public string Description { get; init; }
     public List<IOperation<TSettings>> Operations { get; init; }
 }
@@ -214,15 +277,99 @@ public class OperationLog(string operationName, List<LogEntry> entries) {
     public string OperationName { get; init; } = operationName;
     public List<LogEntry> Entries { get; init; } = entries;
     public double MsElapsed { get; set; }
-    public int SuccessCount => this.Entries.Count(e => e.Error is null);
-    public int FailedCount => this.Entries.Count - this.SuccessCount;
+    public int SuccessCount => this.Entries.Count(e => e.Status == LogStatus.Success);
+    public int SkippedCount => this.Entries.Count(e => e.Status == LogStatus.Skipped);
+    public int ErrorCount => this.Entries.Count(e => e.Status == LogStatus.Error);
+    public int PendingCount => this.Entries.Count(e => e.Status == LogStatus.Pending);
 }
 
+public enum LogStatus { Pending, Success, Skipped, Error }
+
 /// <summary>
-///     Individual log entry for an operation
+///     Individual log entry for an operation with semantic state tracking.
 /// </summary>
 public class LogEntry {
-    public string Item { get; init; }
-    public string Context { get; set; }
-    public string Error { get; init; }
+    public LogEntry(string name) => this.Name = name;
+
+    // Identity (immutable)
+    public string Name { get; }
+    public string Context { get; set; }  // Preserved for type-level context
+
+    // Accumulated messages
+    private List<string> MessageList { get; } = [];
+    public string Message => this.MessageList.Count != 0 ? string.Join("; ", this.MessageList) : null;
+
+    // Final state
+    public LogStatus Status { get; private set; } = LogStatus.Pending;
+    // public string Message { get; private set; }
+    public Exception Exception { get; private set; }
+
+    // Computed
+    public bool IsComplete => this.Status != LogStatus.Pending;
+
+    // Terminal methods (mark complete)
+    public LogEntry Success(string message = null) {
+        this.EnsurePending();
+        this.Status = LogStatus.Success;
+        if (message != null) this.MessageList.Add(message);
+        return this;
+    }
+
+    public LogEntry Skip(string message = null) {
+        this.EnsurePending();
+        this.Status = LogStatus.Skipped;
+        if (message != null) this.MessageList.Add(message);
+        return this;
+    }
+
+    public LogEntry Error(Exception ex) {
+        this.EnsurePending();
+        this.Status = LogStatus.Error;
+        this.MessageList.Add(ex.Message);
+        this.Exception = ex;
+        return this;
+    }
+
+    public LogEntry Error(string message) {
+        this.EnsurePending();
+        this.Status = LogStatus.Error;
+        this.MessageList.Add(message);
+        return this;
+    }
+
+    public LogEntry Error(string message, Exception ex) {
+        this.EnsurePending();
+        this.Status = LogStatus.Error;
+        this.MessageList.Add(message);
+        this.Exception = ex;
+        return this;
+    }
+
+    // Non-terminal (stays Pending)
+    public LogEntry Defer(string action) {
+        this.EnsurePending();
+        this.MessageList.Add(action);
+        return this;
+    }
+
+    /// <summary>
+    ///     Creates a deep clone of this LogEntry, preserving all state except Exception.
+    ///     Used to snapshot logs at operation completion to prevent Context pollution.
+    /// </summary>
+    public LogEntry Clone() {
+        var clone = new LogEntry(this.Name) {
+            Context = this.Context,
+            Status = this.Status,
+            Exception = this.Exception
+        };
+        foreach (var msg in this.MessageList)
+            clone.MessageList.Add(msg);
+        return clone;
+    }
+
+    private void EnsurePending() {
+        if (this.IsComplete)
+            throw new InvalidOperationException(
+                $"LogEntry '{this.Name}' is already complete with status {this.Status}");
+    }
 }

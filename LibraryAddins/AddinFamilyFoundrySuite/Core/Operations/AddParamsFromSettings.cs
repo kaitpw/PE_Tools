@@ -39,9 +39,9 @@ public class AddParamsFromSettings(AddAndSetParamsSettings settings)
         foreach (var (name, (group, dataType, isInstance)) in paramsToCreate) {
             try {
                 _ = doc.AddFamilyParameter(name, group, dataType, isInstance);
-                logs.Add(new LogEntry { Item = name });
+                logs.Add(new LogEntry(name).Success("Created"));
             } catch (Exception ex) {
-                logs.Add(new LogEntry { Item = name, Error = ex.Message });
+                logs.Add(new LogEntry(name).Error(ex));
             }
         }
 
