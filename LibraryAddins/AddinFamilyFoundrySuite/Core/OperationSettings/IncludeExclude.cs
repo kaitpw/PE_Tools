@@ -1,5 +1,6 @@
 using AddinFamilyFoundrySuite.Core.SchemaProviders;
 using PeServices.Storage.Core.Json.SchemaProcessors;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.OperationSettings;
@@ -12,7 +13,7 @@ public class IncludeFamilies {
     public List<string> Containing { get; init; } = [];
 
     [SchemaExamples(typeof(FamilyNamesProvider))]
-    public List<string> StartingWith { get; init; } = []; 
+    public List<string> StartingWith { get; init; } = [];
 }
 
 public class ExcludeFamilies {

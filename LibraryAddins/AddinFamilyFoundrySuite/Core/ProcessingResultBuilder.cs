@@ -173,7 +173,7 @@ public class ProcessingResultBuilder {
 /// </summary>
 public class DryRunResultBuilder {
     private readonly Storage _storage;
-    private List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> _apsParams = [];
+    private List<SharedParameterDefinition> _apsParams = [];
     private List<Family> _families = [];
     private List<(string Name, string Description, string Type, string IsMerged)> _operationMetadata = [];
     private string _profileName;
@@ -187,8 +187,7 @@ public class DryRunResultBuilder {
         return this;
     }
 
-    public DryRunResultBuilder WithApsParams(
-        List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> apsParams) {
+    public DryRunResultBuilder WithApsParams(List<SharedParameterDefinition> apsParams) {
         this._apsParams = apsParams;
         return this;
     }
@@ -226,7 +225,7 @@ public class DryRunResultBuilder {
             Profile = this._profileName,
             Operations = this._operationMetadata.Select(op =>
                 new { Operation = $"[Batch {op.IsMerged}] ({op.Type}) {op.Name}", op.Description }).ToList(),
-            ApsParameters = this._apsParams.Select(p => p.externalDefinition.Name).ToList(),
+            ApsParameters = this._apsParams.Select(p => p.ExternalDefinition.Name).ToList(),
             Families = this._families.Select(f => f.Name).ToList(),
             Summary = new { TotalApsParameters = this._apsParams.Count, TotalFamilies = this._families.Count }
         };
@@ -238,12 +237,12 @@ public class DryRunResultBuilder {
             Operations = this._operationMetadata.Select(op =>
                 new { Operation = $"[Batch {op.IsMerged}] ({op.Type}) {op.Name}", op.Description }).ToList(),
             ApsParameters = this._apsParams.Select(p => new {
-                p.externalDefinition.Name,
-                GUID = p.externalDefinition.GUID.ToString(),
-                GroupTypeId = p.groupTypeId.TypeId,
-                DataType = p.externalDefinition.GetDataType().TypeId,
-                IsInstance = p.isInstance,
-                p.externalDefinition.Description
+                p.ExternalDefinition.Name,
+                GUID = p.ExternalDefinition.GUID.ToString(),
+                GroupTypeId = p.GroupTypeId.TypeId,
+                DataType = p.ExternalDefinition.GetDataType().TypeId,
+                IsInstance = p.IsInstance,
+                p.ExternalDefinition.Description
             }).ToList(),
             Families = this._families.Select(f => new {
                 f.Name,

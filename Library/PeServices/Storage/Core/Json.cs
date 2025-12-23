@@ -38,7 +38,7 @@ public class Json<T> : JsonReadWriter<T> where T : class, new() {
         this.FilePath = filePath;
         _ = this.EnsureDirectoryExists();
 
-        var settings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true };
+        var settings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true, AlwaysAllowAdditionalObjectProperties = false};
         settings.SchemaProcessors.Add(new EnumConstraintSchemaProcessor());
         settings.SchemaProcessors.Add(new ForgeTypeIdSchemaProcessor());
         settings.SchemaProcessors.Add(new SchemaExamplesProcessor());

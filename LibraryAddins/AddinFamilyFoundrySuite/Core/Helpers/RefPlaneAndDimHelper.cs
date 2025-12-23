@@ -33,7 +33,9 @@ public class PlaneQuery {
 
 public class RefPlaneAndDimHelper {
     private readonly Dictionary<string, int> _depths = new() {
-        ["Center (Left/Right)"] = 0, ["Center (Front/Back)"] = 0, ["Ref. Level"] = 0
+        ["Center (Left/Right)"] = 0,
+        ["Center (Front/Back)"] = 0,
+        ["Ref. Level"] = 0
     };
 
     private readonly Document _doc;

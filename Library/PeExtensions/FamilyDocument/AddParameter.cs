@@ -1,3 +1,4 @@
+using AddinFamilyFoundrySuite.Core;
 using PeExtensions.FamManager;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 
@@ -77,12 +78,12 @@ public static class FamilyDocumentAddParameter {
 
     public static FamilyParameter AddSharedParameter(
         this FamilyDocument famDoc,
-        (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance) sharedParam
+        SharedParameterDefinition sharedParam
     ) {
-        var sharedParamElement = famDoc.FamilyManager.FindParameter(sharedParam.externalDefinition.GUID);
+        var sharedParamElement = famDoc.FamilyManager.FindParameter(sharedParam.ExternalDefinition.GUID);
         if (sharedParamElement != null) return sharedParamElement;
 
-        return famDoc.FamilyManager.AddParameter(sharedParam.externalDefinition, sharedParam.groupTypeId,
-            sharedParam.isInstance);
+        return famDoc.FamilyManager.AddParameter(sharedParam.ExternalDefinition, sharedParam.GroupTypeId,
+            sharedParam.IsInstance);
     }
 }

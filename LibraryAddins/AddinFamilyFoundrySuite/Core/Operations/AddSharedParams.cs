@@ -1,12 +1,12 @@
+using AddinFamilyFoundrySuite.Core;
 using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class AddSharedParams(
-    IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+    IEnumerable<SharedParameterDefinition> sharedParams
 ) : DocOperation {
-    private IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
-        SharedParams {
+    private IEnumerable<SharedParameterDefinition> SharedParams {
         get;
     } = sharedParams;
 
@@ -16,7 +16,7 @@ public class AddSharedParams(
         var logs = new List<LogEntry>();
 
         foreach (var sharedParam in this.SharedParams) {
-            var name = sharedParam.externalDefinition.Name;
+            var name = sharedParam.ExternalDefinition.Name;
 
             try {
                 var addedParam = doc.AddSharedParameter(sharedParam);

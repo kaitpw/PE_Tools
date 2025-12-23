@@ -7,7 +7,7 @@ namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 public class AddAndMapSharedParams : OperationGroup<MapParamsSettings> {
     public AddAndMapSharedParams(
         MapParamsSettings settings,
-        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+        IEnumerable<SharedParameterDefinition> sharedParams
     ) : base(
         "Map and add shared parameters (replace, add unmapped, and remap)",
         InitializeOperations(settings, sharedParams)
@@ -15,7 +15,7 @@ public class AddAndMapSharedParams : OperationGroup<MapParamsSettings> {
 
     private static List<IOperation<MapParamsSettings>> InitializeOperations(
         MapParamsSettings settings,
-        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+        IEnumerable<SharedParameterDefinition> sharedParams
     ) => [
         new MapReplaceParams(settings, sharedParams),
         new AddUnmappedSharedParams(settings, sharedParams),
@@ -25,12 +25,11 @@ public class AddAndMapSharedParams : OperationGroup<MapParamsSettings> {
 }
 
 public class AddUnmappedSharedParams : DocOperationWithGroup<MapParamsSettings> {
-    private readonly IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
-        _sharedParams;
+    private readonly IEnumerable<SharedParameterDefinition> _sharedParams;
 
     public AddUnmappedSharedParams(
         MapParamsSettings settings,
-        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
+        IEnumerable<SharedParameterDefinition> sharedParams
     ) : base(settings) => this._sharedParams = sharedParams;
 
     public override string Description =>
@@ -47,8 +46,8 @@ public class AddUnmappedSharedParams : DocOperationWithGroup<MapParamsSettings> 
             .Select(p => p.Definition.Name)
             .ToHashSet();
         var addParams = this._sharedParams
-            .Where(p => !processedParams.Contains(p.externalDefinition.Name))
-            .Where(p => !existingParams.Contains(p.externalDefinition.Name));
+            .Where(p => !processedParams.Contains(p.ExternalDefinition.Name))
+            .Where(p => !existingParams.Contains(p.ExternalDefinition.Name));
 
         var addSharedParams = new AddSharedParams(addParams) { Name = this.Name };
         return addSharedParams.Execute(doc);

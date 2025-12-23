@@ -3,6 +3,7 @@ using AddinFamilyFoundrySuite.Core.SchemaProviders;
 using PeServices.Storage;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeUtils.Files;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
@@ -22,8 +23,7 @@ public class BaseProfileSettings {
             .Where(this.FilterFamilies.Filter)
             .ToList();
 
-    public List<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
-        GetAPSParams(TempSharedParamFile tempFile) {
+    public List<SharedParameterDefinition> GetAPSParams(TempSharedParamFile tempFile) {
         var apsParams = Storage.GlobalDir().StateJson<ParamModel>("parameters-service-cache").Read();
         if (apsParams.Results != null) {
             return apsParams.Results
@@ -31,7 +31,9 @@ public class BaseProfileSettings {
                 .Where(p => !p.IsArchived)
                 .Select(p => {
                     var dlOpts = p.DownloadOptions;
-                    return (dlOpts.GetExternalDefinition(tempFile.TempGroup), dlOpts.GetGroupTypeId(),
+                    return new SharedParameterDefinition(
+                        dlOpts.GetExternalDefinition(tempFile.TempGroup),
+                        dlOpts.GetGroupTypeId(),
                         dlOpts.IsInstance);
                 })
                 .ToList();
@@ -46,8 +48,12 @@ public class BaseProfileSettings {
         [Required]
         [SchemaExamples(typeof(CategoryNamesProvider))]
         public List<string> IncludeCategoriesEqualing { get; init; } = [];
-        [Required] public IncludeFamilies IncludeNames { get; init; } = new();
-        [Required] public ExcludeFamilies ExcludeNames { get; init; } = new();
+        [Required]
+        [Description("Filter families by name inclusion. If any include filters are specified (Equaling, Containing, or StartingWith), only families matching at least one filter will pass. If all include filters are empty, all families pass the include check (exclude filters may still apply).")]
+        public IncludeFamilies IncludeNames { get; init; } = new();
+        [Required]
+        [Description("Filter families by name exclusion. If any exclude filters are specified (Equaling, Containing, or StartingWith), families matching any filter will be removed. If all exclude filters are empty, no families are excluded by this filter.")]
+        public ExcludeFamilies ExcludeNames { get; init; } = new();
 
         public bool Filter(Family f) {
             var familyName = f.Name;
@@ -94,8 +100,12 @@ public class BaseProfileSettings {
     }
 
     public class FilterApsParamsSettings {
-        [Required] public IncludeSharedParameter IncludeNames { get; init; } = new();
-        [Required] public ExcludeSharedParameter ExcludeNames { get; init; } = new();
+        [Required]
+        [Description("Filter shared parameters by name inclusion. Used with ExcludeNames in an OR logic: parameters pass if they match any include filter OR if they don't match any exclude filter. If all include filters are empty, only the exclude filter applies.")]
+        public IncludeSharedParameter IncludeNames { get; init; } = new();
+        [Required]
+        [Description("Filter shared parameters by name exclusion. Used with IncludeNames in an OR logic: parameters pass if included OR not excluded. Parameters matching any exclude filter are removed only if they also don't match any include filter.")]
+        public ExcludeSharedParameter ExcludeNames { get; init; } = new();
 
         public bool Filter(ParamModelRes p) => this.IsIncluded(p) || !this.IsExcluded(p);
 

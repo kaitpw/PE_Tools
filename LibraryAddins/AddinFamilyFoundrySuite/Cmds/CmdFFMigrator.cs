@@ -67,12 +67,13 @@ public class CmdFFMigrator : IExternalCommand {
             };
 
             var queue = new OperationQueue()
-                .Add(new PurgeParams(profile.DeleteUnusedParams, mappingDataAllNames))
-                .Add(new PurgeNestedFamilies(profile.DeleteUnusedNestedFamilies))
+                .Add(new PurgeParams(profile.PurgeParams, mappingDataAllNames))
+                .Add(new PurgeNestedFamilies(profile.PurgeNestedFamilies))
+                .Add(new PurgeReferencePlanes(profile.PurgeReferencePlanes))
                 .Add(new AddAndMapSharedParams(profile.AddAndMapSharedParams, apsParamData))
                 .Add(new AddAndSetParams(addAndSet))
                 .Add(new MakeElecConnector(profile.MakeElectricalConnector))
-                .Add(new PurgeParams(profile.DeleteUnusedParams, apsParamNames))
+                .Add(new PurgeParams(profile.PurgeParams, apsParamNames))
                 .Add(new SortParams(profile.SortParams));
 
             var metadataString = queue.GetExecutableMetadataString();
@@ -124,11 +125,15 @@ public class CmdFFMigrator : IExternalCommand {
 public class ProfileRemap : BaseProfileSettings {
     [Description("Settings for deleting unused parameters")]
     [Required]
-    public PurgeParamsSettings DeleteUnusedParams { get; init; } = new();
+    public PurgeParamsSettings PurgeParams { get; init; } = new();
 
     [Description("Settings for deleting unused nested families")]
     [Required]
-    public DefaultOperationSettings DeleteUnusedNestedFamilies { get; init; } = new();
+    public DefaultOperationSettings PurgeNestedFamilies { get; init; } = new();
+
+    [Description("Settings for deleting unused reference planes")]
+    [Required]
+    public PurgeReferencePlanesSettings PurgeReferencePlanes { get; init; } = new() ;
 
     [Description("Settings for parameter mapping (add/replace and remap)")]
     [Required]

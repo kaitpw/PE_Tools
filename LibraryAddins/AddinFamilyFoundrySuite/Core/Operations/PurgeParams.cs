@@ -84,7 +84,7 @@ public class PurgeParamsSettings : IOperationSettings {
     [Description("Whether to consider empty string as \"empty\" when deleting empty parameters.")]
     public bool ConsiderEmptyStringAsEmpty { get; init; } = true;
 
-    [Description("Exclude parameters from the deletion list ")]
+    [Description("Exclude parameters from the deletion list. Parameters matching any exclude filter (Equaling, Containing, or StartingWith) will be protected from deletion.")]
     [Required] public ExcludeSharedParameter ExcludeNames { get; init; } = new();
 
     public bool Filter(FamilyParameter p) => !this.IsExcluded(p);

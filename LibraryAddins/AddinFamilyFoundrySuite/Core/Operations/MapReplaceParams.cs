@@ -1,3 +1,4 @@
+using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
@@ -6,9 +7,7 @@ using PeExtensions.FamParameter.Formula;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class MapReplaceParams : DocOperationWithGroup<MapParamsSettings> {
-    private readonly
-        Dictionary<string, (ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)>
-        _sharedParamsDict;
+    private readonly Dictionary<string, SharedParameterDefinition> _sharedParamsDict;
 
     private readonly List<ForgeTypeId> IgnoreCoercionDataTypes = new() {
         SpecTypeId.Number, SpecTypeId.String.Text, SpecTypeId.Length
@@ -16,8 +15,8 @@ public class MapReplaceParams : DocOperationWithGroup<MapParamsSettings> {
 
     public MapReplaceParams(
         MapParamsSettings settings,
-        IEnumerable<(ExternalDefinition externalDefinition, ForgeTypeId groupTypeId, bool isInstance)> sharedParams
-    ) : base(settings) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.externalDefinition.Name);
+        IEnumerable<SharedParameterDefinition> sharedParams
+    ) : base(settings) => this._sharedParamsDict = sharedParams.ToDictionary(p => p.ExternalDefinition.Name);
 
     public override string Description => "Replace a family's existing parameters with APS shared parameters";
 
@@ -45,13 +44,13 @@ public class MapReplaceParams : DocOperationWithGroup<MapParamsSettings> {
                     // Verify that new parameter does not already exist, replacement errors if it does
                     if (fm.FindParameter(mapping.NewName) != null) continue;
 
-                    if (currentParam.Definition.GetDataType() != sharedParam.externalDefinition.GetDataType()) continue;
+                    if (currentParam.Definition.GetDataType() != sharedParam.ExternalDefinition.GetDataType()) continue;
 
                     var replaced = fm.ReplaceParameter(
                         currentParam,
-                        sharedParam.externalDefinition,
-                        sharedParam.groupTypeId,
-                        sharedParam.isInstance
+                        sharedParam.ExternalDefinition,
+                        sharedParam.GroupTypeId,
+                        sharedParam.IsInstance
                     );
 
                     foundMatch = true;

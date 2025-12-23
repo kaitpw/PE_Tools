@@ -4,7 +4,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-// TODO: this still needs alot of work!!!
 public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
     public PurgeReferencePlanes(PurgeReferencePlanesSettings settings) : base(settings) { }
 
@@ -13,11 +12,16 @@ public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
 
     public override OperationLog Execute(FamilyDocument doc) {
         var logs = new List<LogEntry>();
-        this.RecursiveDeleteUnusedReferencePlanes(doc, logs);
+
+        bool deletedAny;
+        do {
+            deletedAny = this.DeleteUnusedReferencePlanes(doc, logs);
+        } while (deletedAny);
+
         return new OperationLog(this.Name, logs);
     }
 
-    private void RecursiveDeleteUnusedReferencePlanes(FamilyDocument doc, List<LogEntry> logs) {
+    private bool DeleteUnusedReferencePlanes(FamilyDocument doc, List<LogEntry> logs) {
         var deleteCount = 0;
 
         var referencePlanes = new FilteredElementCollector(doc)
@@ -29,8 +33,9 @@ public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
             var planeName = refPlane.Name ?? $"RefPlane_{refPlane.Id}";
 
             if (this.IsImportantPlane(refPlane)) continue;
-            if (this.GetSketchedCurves(doc, refPlane).Count != 0) continue;
-            if (this.Settings.SafeDelete && this.GetDependentElements(doc, refPlane).Count != 0) continue;
+
+            var dependentElements = this.GetRelevantDependentElements(doc, refPlane);
+            if (dependentElements.Count != 0) continue;
 
             try {
                 _ = doc.Document.Delete(refPlane.Id);
@@ -41,68 +46,57 @@ public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
             }
         }
 
-        if (deleteCount > 0) this.RecursiveDeleteUnusedReferencePlanes(doc, logs);
+        return deleteCount > 0;
     }
 
+    private bool IsImportantPlane(ReferencePlane refPlane) {
+        if (refPlane.Pinned) return true;
 
-    private bool IsImportantPlane(ReferencePlane refPlane) =>
-        refPlane.Pinned || refPlane.GetOrderedParameters()
-            .Where(p => p.Definition.Name.Equals("Is Reference"))
-            .Any(p => !new[] { "Not a Reference", "Weak Reference" }.Contains(p.AsValueString()));
+        var isRefParam = refPlane.GetOrderedParameters()
+            .FirstOrDefault(p => p.Definition.Name == "Is Reference");
 
+        if (isRefParam == null) return false;
 
-    private List<Element> GetDependentElements(FamilyDocument doc, ReferencePlane refPlane) {
-        var dependentElements = refPlane.GetDependentElements(null)?
-            .Where(id => id != refPlane.Id);
-
-        // Apply dimension filters when safe mode is enabled
-        if (dependentElements != null) {
-            dependentElements = dependentElements.Where(id => {
-                var element = doc.Document.GetElement(id);
-                if (element is not Dimension dimension) return true;
-
-                return !this.DimensionIsDeletable(dimension);
-            });
-        }
-
-        if (dependentElements?.Any() == true) return [.. dependentElements.Select(id => doc.Document.GetElement(id))];
-        return [];
+        var value = isRefParam.AsValueString();
+        return value is not ("Not a Reference" or "Weak Reference");
     }
+ 
+    private List<Element> GetRelevantDependentElements(FamilyDocument doc, ReferencePlane refPlane) {
+        var dependentIds = refPlane.GetDependentElements(null);
+        if (dependentIds == null || dependentIds.Count == 0) return [];
 
-    private bool DimensionIsDeletable(Dimension dimension) {
-        try {
-            return dimension.FamilyLabel != null && !dimension.AreSegmentsEqual;
-        } catch {
-            return false;
-        }
-    }
-
-    private List<CurveElement> GetSketchedCurves(FamilyDocument doc, ReferencePlane refPlane) {
-        var planeOrigin = refPlane.GetPlane().Origin;
-        var planeNormal = refPlane.Normal;
-
-        return new FilteredElementCollector(doc)
-            .OfClass(typeof(CurveElement))
-            .Cast<CurveElement>()
-            .Where(ce => ce.SketchPlane != null)
-            .Where(ce => {
-                try {
-                    var sketchPlane = ce.SketchPlane?.GetPlane();
-                    return sketchPlane?.Normal.IsAlmostEqualTo(planeNormal) == true &&
-                           sketchPlane.Origin.IsAlmostEqualTo(planeOrigin, 0.01);
-                } catch {
-                    return false;
-                }
-            })
+        var dependentElements = dependentIds
+            .Where(id => id != refPlane.Id)
+            .Select(doc.Document.GetElement)
+            .Where(e => e != null)
             .ToList();
+
+        if (this.Settings.SafeDelete) return dependentElements;
+
+        // In unsafe mode, only keep dimensions that have parameter labels
+        return dependentElements
+            .Where(e => e is not Dimension dim || this.HasParameterLabel(dim))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Returns true if the dimension has a parameter label (is important).
+    /// </summary>
+    private bool HasParameterLabel(Dimension dimension) {
+        try {
+            return dimension.FamilyLabel != null;
+        } catch {
+            return true; // If we can't determine, assume it's important
+        }
     }
 }
 
 public class PurgeReferencePlanesSettings : IOperationSettings {
     [Description(
-        "If false, the check for unusedness is relaxed: unused means that an RP does not have a dimension with a parameter associated to it.")]
+        "If true, a reference plane will only be deleted if it has NO dependent elements. " +
+        "If false, only dimensions with parameter labels are considered important dependencies.")]
     [Required]
-    public bool SafeDelete { get; init; } = false;
+    public bool SafeDelete { get; init; } = true;
 
     public bool Enabled { get; init; } = true;
 }
