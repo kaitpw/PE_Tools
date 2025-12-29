@@ -22,6 +22,7 @@ public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewMod
     where TItem : class, IPaletteListItem {
     private readonly List<TItem> _allItems;
     private readonly DispatcherTimer _debounceTimer;
+    private readonly DispatcherTimer _selectionDebounceTimer;
     private readonly Func<TItem, string>? _filterKeySelector;
     private readonly SearchFilterService<TItem> _searchService;
 
@@ -36,17 +37,25 @@ public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewMod
     public PaletteViewModel(
         IEnumerable<TItem> items,
         SearchFilterService<TItem> searchService,
-        Func<TItem, string> filterKeySelector = null
+        Func<TItem, string> filterKeySelector = null,
+        int selectionDebounceMs = 300
     ) {
         this._allItems = items.ToList();
         this._searchService = searchService;
         this._filterKeySelector = filterKeySelector;
 
-        // Initialize debounce timer (200ms delay)
+        // Initialize debounce timer for search (100ms delay)
         this._debounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         this._debounceTimer.Tick += (_, _) => {
             this._debounceTimer.Stop();
             this.FilterItems();
+        };
+
+        // Initialize debounce timer for selection changes (configurable, default 300ms)
+        this._selectionDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(selectionDebounceMs) };
+        this._selectionDebounceTimer.Tick += (_, _) => {
+            this._selectionDebounceTimer.Stop();
+            this.SelectionChangedDebounced?.Invoke(this, EventArgs.Empty);
         };
 
         this._searchService.LoadUsageData();
@@ -93,6 +102,9 @@ public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewMod
 
     /// <summary> Event raised when filtered items collection changes </summary>
     public event EventHandler FilteredItemsChanged;
+
+    /// <summary> Event raised when selection changes after debounce delay </summary>
+    public event EventHandler SelectionChangedDebounced;
 
     [RelayCommand]
     private void MoveSelectionUp() {
@@ -201,7 +213,13 @@ public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewMod
         this._debounceTimer.Start();
     }
 
-    partial void OnSelectedItemChanged(TItem value) => this._previousSelectedItem = value;
+    partial void OnSelectedItemChanged(TItem value) {
+        this._previousSelectedItem = value;
+
+        // Restart selection debounce timer
+        this._selectionDebounceTimer.Stop();
+        this._selectionDebounceTimer.Start();
+    }
 
     partial void OnSelectedIndexChanged(int value) {
         // Update selected item based on index

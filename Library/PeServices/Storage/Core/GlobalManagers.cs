@@ -21,7 +21,7 @@ public class GlobalManager {
     ///     File path is always `{basePath}/Global/settings.json`
     /// </remarks>
     public JsonReader<GlobalSettings> SettingsJson() =>
-        new Json<GlobalSettings>(Path.Combine(this._globalPath, "settings.json"), true, true);
+        new SettingsJsonReader<GlobalSettings>(Path.Combine(this._globalPath, "settings.json"));
 
     /// <summary>
     ///     Manager for global state files in the Global directory.
@@ -32,7 +32,7 @@ public class GlobalManager {
     ///     File path is `{basePath}/Global/{filename}.json` or `{basePath}/Global/{filename}.csv`
     /// </remarks>
     public JsonReadWriter<T> StateJson<T>(string filename) where T : class, new() =>
-        new Json<T>(Path.Combine(this._globalPath, $"{filename}.json"), false, true);
+        new StateJsonReaderWriter<T>(Path.Combine(this._globalPath, $"{filename}.json"));
 
     /// <summary>
     ///     Writes to the log.txt in the Global directory with auto cleanup of old logs.

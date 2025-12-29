@@ -30,7 +30,6 @@ namespace PeServices.Storage.Core;
 public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
     private const string ExtendsProperty = "$extends";
 
-    private readonly string _directoryPath;
 
     private readonly JsonSerializerSettings _deserialSettings = new() {
         Formatting = Formatting.Indented,
@@ -38,6 +37,8 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         ContractResolver = new OrderedContractResolver(),
         NullValueHandling = NullValueHandling.Ignore
     };
+
+    private readonly string _directoryPath;
 
     private readonly JsonSchema _schema;
 
@@ -50,10 +51,15 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         FileUtils.ValidateFileNameAndExtension(this.FilePath, "json");
 
         var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true };
+        var examplesProcessor = new SchemaExamplesProcessor();
         schemaSettings.SchemaProcessors.Add(new EnumConstraintSchemaProcessor());
         schemaSettings.SchemaProcessors.Add(new ForgeTypeIdSchemaProcessor());
-        schemaSettings.SchemaProcessors.Add(new SchemaExamplesProcessor());
+        schemaSettings.SchemaProcessors.Add(examplesProcessor);
+
         this._schema = new JsonSchemaGenerator(schemaSettings).Generate(typeof(T));
+
+        // Let the examples processor finalize (add $defs if consolidating)
+        examplesProcessor.Finalize(this._schema);
 
         // Allow $schema property in the generated schema
         SchemaMetadataProcessor.AllowSchemaProperty(this._schema);
@@ -68,7 +74,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
     public T Read() {
         if (!File.Exists(this.FilePath)) {
             // No file - delegate to standard Json<T> which handles default creation
-            return new Json<T>(this.FilePath, true, true).Read();
+            return new SettingsJsonReader<T>(this.FilePath).Read();
         }
 
         var fileContent = File.ReadAllText(this.FilePath);
@@ -79,19 +85,16 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         var hasIncludes = this.ContainsIncludeDirectives(profileJObject);
 
         // No special directives? Use standard Json<T> with full recovery
-        if (!hasExtends && !hasIncludes) {
-            return new Json<T>(this.FilePath, true, true).Read();
-        }
+        if (!hasExtends && !hasIncludes) return new SettingsJsonReader<T>(this.FilePath).Read();
 
         JObject resolved;
-        string? extendsName = null;
+        string extendsName = null;
 
         // Step 1: Resolve $extends inheritance
         if (hasExtends) {
             // Validate $extends value
-            if (extendsToken!.Type != JTokenType.String || string.IsNullOrWhiteSpace(extendsToken.Value<string>())) {
+            if (extendsToken!.Type != JTokenType.String || string.IsNullOrWhiteSpace(extendsToken.Value<string>()))
                 throw JsonExtendsException.InvalidExtendsValue(this.FilePath, extendsToken.Type.ToString());
-            }
 
             extendsName = extendsToken.Value<string>()!;
 
@@ -117,6 +120,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
                     errorMessages
                 );
             }
+
             // No extends - throw a simpler validation error
             throw new JsonValidationException(this.FilePath, validationErrors.Select(e => $"{e.Path}: {e.Kind}"));
         }
@@ -158,9 +162,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         }
 
         // Check base exists
-        if (!File.Exists(basePath)) {
-            throw JsonExtendsException.BaseNotFound(childPath, extendsName, basePath);
-        }
+        if (!File.Exists(basePath)) throw JsonExtendsException.BaseNotFound(childPath, extendsName, basePath);
 
         inheritanceChain.Add(extendsName);
 
@@ -176,9 +178,8 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         // Check if base also extends something (multi-level inheritance)
         if (baseJObject.TryGetValue(ExtendsProperty, out var baseExtendsToken)) {
             if (baseExtendsToken.Type != JTokenType.String ||
-                string.IsNullOrWhiteSpace(baseExtendsToken.Value<string>())) {
+                string.IsNullOrWhiteSpace(baseExtendsToken.Value<string>()))
                 throw JsonExtendsException.InvalidExtendsValue(basePath, baseExtendsToken.Type.ToString());
-            }
 
             var baseExtendsName = baseExtendsToken.Value<string>()!;
 
@@ -188,7 +189,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
             // Base has no extends - run it through standard Json<T> for recovery/validation
             try {
                 // This triggers recovery and validation on the base file
-                _ = new Json<T>(basePath, true, true).Read();
+                _ = new SettingsJsonReader<T>(basePath).Read();
                 // Re-read the possibly-updated base file
                 baseJObject = JObject.Parse(File.ReadAllText(basePath));
             } catch (Exception ex) {

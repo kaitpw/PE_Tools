@@ -31,7 +31,7 @@ public class CmdPltViews : IExternalCommand {
             var actions = new List<PaletteAction<ViewPaletteItem>> {
                 new() {
                     Name = "Open View",
-                    Execute = item => uiapp.OpenAndActivateView(item.View),
+                    Execute = async item => uiapp.OpenAndActivateView(item.View),
                     CanExecute = item => item != null && item.View.CanBePrinted
                 }
             };

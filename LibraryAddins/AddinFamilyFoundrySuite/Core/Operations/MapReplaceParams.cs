@@ -88,8 +88,8 @@ public class MapReplaceParams : DocOperationWithGroup<MapParamsSettings> {
                         // Fallback: formula exists but has no dependencies and is not constant (edge case)
                         _ = log.Success($"Replaced {currName} → {replaced.Definition.Name}");
                     }
-                } catch (Exception ex) {
-                    _ = log.Error($"{currName} → {mapping.NewName}", ex);
+                } catch (Exception) {
+                    _ = log.Defer($"{currName} → {mapping.NewName}"); // allow retrying 
                 }
             }
         }

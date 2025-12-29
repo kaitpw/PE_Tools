@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using NJsonSchema;
 using NJsonSchema.Generation;
 
 namespace PeServices.Storage.Core.Json.SchemaProcessors;
@@ -31,9 +32,20 @@ public class SchemaExamplesAttribute : Attribute {
 /// <summary>
 ///     Schema processor that injects runtime examples into properties marked with SchemaExamplesAttribute.
 ///     Examples appear as autocomplete suggestions in LSP without enforcing validation.
-///     Handles both direct string properties and array/list properties (adds examples to item schema).
+///     If ConsolidateDuplicates is true, examples are placed in $defs and referenced via allOf.
+///     If false, examples are inlined at each property (classic behavior).
 /// </summary>
 public class SchemaExamplesProcessor : ISchemaProcessor {
+    private readonly Dictionary<Type, List<string>> _providerCache = new();
+    private readonly Dictionary<Type, string> _providerToDefName = new();
+    private readonly List<(JsonSchema schema, Type providerType)> _trackedSchemas = [];
+
+    /// <summary>
+    ///     If true, examples are consolidated to $defs and referenced via allOf.
+    ///     If false, examples are inlined at each property. Default: true.
+    /// </summary>
+    public bool ConsolidateDuplicates { get; init; } = true;
+
     public void Process(SchemaProcessorContext context) {
         if (!context.ContextualType.Type.IsClass) return;
 
@@ -45,21 +57,62 @@ public class SchemaExamplesProcessor : ISchemaProcessor {
             if (!context.Schema.Properties.TryGetValue(propertyName, out var propSchema)) continue;
 
             try {
-                var provider = (ISchemaExamplesProvider)Activator.CreateInstance(attr.ProviderType);
-                var examples = provider.GetExamples().ToList();
+                // Get or create examples for this provider type (cached to avoid duplicate instantiation)
+                if (!this._providerCache.TryGetValue(attr.ProviderType, out var examples)) {
+                    var provider = (ISchemaExamplesProvider)Activator.CreateInstance(attr.ProviderType);
+                    examples = provider.GetExamples().ToList();
+                    this._providerCache[attr.ProviderType] = examples;
+                }
 
-                // For array/list types, add examples to the item schema for element autocomplete
-                if (propSchema.Item != null) {
-                    propSchema.Item.ExtensionData ??= new Dictionary<string, object>();
-                    propSchema.Item.ExtensionData["examples"] = examples;
+                // Determine target schema (item schema for arrays, property schema for direct strings)
+                var targetSchema = propSchema.Item ?? propSchema;
+
+                if (this.ConsolidateDuplicates) {
+                    // Track for later - we'll add $refs in Finalize()
+                    this._trackedSchemas.Add((targetSchema, attr.ProviderType));
                 } else {
-                    // For direct string properties
-                    propSchema.ExtensionData ??= new Dictionary<string, object>();
-                    propSchema.ExtensionData["examples"] = examples;
+                    // Inline mode: just add examples directly
+                    targetSchema.ExtensionData ??= new Dictionary<string, object>();
+                    targetSchema.ExtensionData["examples"] = examples;
                 }
             } catch {
                 // Fail silently - examples are a nicety, not critical
             }
+        }
+    }
+
+    /// <summary>
+    ///     Call this after schema generation to add $defs and update schemas with references.
+    ///     Only does work if ConsolidateDuplicates is true.
+    /// </summary>
+    public void Finalize(JsonSchema rootSchema) {
+        if (!this.ConsolidateDuplicates || !this._trackedSchemas.Any()) return;
+
+        // Create a Definitions entry for each unique provider type
+        var defCounter = 0;
+        foreach (var (providerType, examples) in this._providerCache) {
+            var defName = $"examples_{++defCounter}";
+            this._providerToDefName[providerType] = defName;
+
+            // Add examples-only schema to Definitions
+            var examplesSchema = new JsonSchema {
+                ExtensionData = new Dictionary<string, object> {
+                    ["examples"] = examples
+                }
+            };
+            rootSchema.Definitions[defName] = examplesSchema;
+        }
+
+        // Now update all tracked schemas to reference their provider's definition
+        foreach (var (schema, providerType) in this._trackedSchemas) {
+            var defName = this._providerToDefName[providerType];
+
+            // Create a reference schema
+            var refSchema = new JsonSchema();
+            refSchema.Reference = rootSchema.Definitions[defName];
+
+            // Add the reference using AllOf
+            schema.AllOf.Add(refSchema);
         }
     }
 

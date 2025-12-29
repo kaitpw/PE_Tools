@@ -93,7 +93,7 @@ public static class CommandPaletteService {
         var actions = new List<PaletteAction<PostableCommandItem>> {
             new() {
                 Name = "Execute",
-                Execute = item => {
+                Execute = async item => {
                     if (item is PostableCommandItem cmdItem) {
                         var (success, error) = PeRevit.Lib.Commands.Execute(uiApp, cmdItem.Command);
                         if (error is not null) Debug.WriteLine("Error: " + error.Message + error.StackTrace);
@@ -116,7 +116,9 @@ public static class CommandPaletteService {
         var palette = new Palette();
         palette.Initialize(viewModel, actions);
 
-        // Wrap in EphemeralWindow and return
-        return new EphemeralWindow(palette, "Command Palette");
+        // Wrap in EphemeralWindow and wire up parent reference for action deferral
+        var window = new EphemeralWindow(palette, "Command Palette");
+        palette.SetParentWindow(window);
+        return window;
     }
 }

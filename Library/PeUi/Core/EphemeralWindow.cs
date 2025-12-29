@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -17,14 +18,35 @@ namespace PeUi.Core;
 ///     Alt+Tab hiding, window deactivation detection, focus restoration, and closing logic.
 /// </summary>
 public class EphemeralWindow : Window {
-    private readonly UserControl _contentControl;
     private bool _isClosing;
+    private readonly Border _contentBorder;
+
+    public EphemeralWindow(Border contentBorder) => this._contentBorder = contentBorder;
+
+
+    /// <summary>
+    ///     Gets the UserControl content hosted by this window (typically a Palette).
+    /// </summary>
+    public UserControl ContentControl { get; }
+
+    /// <summary>
+    ///     Base width for the window (default 450). Used when collapsing sidebars.
+    /// </summary>
+    public double BaseWidth { get; init; } = 450;
+
+    /// <summary>
+    ///     Controls whether the window should automatically close when focus is lost.
+    ///     Default: true (ephemeral behavior enabled).
+    /// </summary>
+    public bool EphemeralEnabled { get; set; } = true;
 
     public EphemeralWindow(
         UserControl content,
-        string title = "Palette"
+        string title = "Palette",
+        bool ephemeralEnabled = true
     ) {
-        this._contentControl = content;
+        this.ContentControl = content;
+        this.EphemeralEnabled = ephemeralEnabled;
         this.Title = title;
         this.SizeToContent = SizeToContent.Manual;
         this.WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -37,17 +59,18 @@ public class EphemeralWindow : Window {
 
         // Create main container grid with centered alignment
         var containerGrid = new Grid {
-            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center
         };
 
         // Add to grid (both at same location so pill floats over content)
-        _ = containerGrid.Children.Add(
-            new BorderSpec()
-                .Border(UiSz.l, UiSz.ss)
-                .Width(450, 450, 450)
-                .Height(350, 350, 350)
-                .DropShadow()
-                .CreateAround(content));
+        this._contentBorder = new BorderSpec()
+            .Border(UiSz.l, UiSz.ss)
+            .Width(this.BaseWidth, this.BaseWidth, this.BaseWidth)
+            .Height(350, 350, 350)
+            .DropShadow()
+            .CreateAround(content);
+        _ = containerGrid.Children.Add(this._contentBorder);
 
         var titlePill = this.CreateTitlePill(title);
         titlePill.MouseLeftButtonDown += (_, _) => this.DragMove();
@@ -84,17 +107,39 @@ public class EphemeralWindow : Window {
     private void OnContentCloseRequested(object sender, CloseRequestedEventArgs e) =>
         this.CloseWindow(e.RestoreFocus);
 
+    /// <summary>
+    ///     Expands the window width by the specified amount (for sidebars).
+    /// </summary>
+    public void ExpandWidth(double additionalWidth) {
+        if (this._contentBorder == null) return;
+
+        var newWidth = this._contentBorder.Width + additionalWidth;
+        this._contentBorder.Width = newWidth;
+        this._contentBorder.MinWidth = newWidth;
+        this._contentBorder.MaxWidth = newWidth;
+    }
+
+    /// <summary>
+    ///     Collapses the window width by the specified amount, respecting BaseWidth minimum.
+    /// </summary>
+    public void CollapseWidth(double widthToRemove) {
+        if (this._contentBorder == null) return;
+
+        var newWidth = Math.Max(this.BaseWidth, this._contentBorder.Width - widthToRemove);
+        this._contentBorder.Width = newWidth;
+        this._contentBorder.MinWidth = newWidth;
+        this._contentBorder.MaxWidth = newWidth;
+    }
+
     public void CloseWindow(bool restoreFocus = true) {
-        try {
-            if (this._isClosing) return;
-            this._isClosing = true;
+        if (this._isClosing) return;
+        this._isClosing = true;
 
-            if (this._contentControl is ICloseRequestable closeable)
-                closeable.CloseRequested -= this.OnContentCloseRequested;
+        if (this.ContentControl is ICloseRequestable closeable)
+            closeable.CloseRequested -= this.OnContentCloseRequested;
 
-            if (restoreFocus) RestoreRevitFocus();
-            this.Close();
-        } catch { }
+        if (restoreFocus) RestoreRevitFocus();
+        this.Close();
     }
 
     /// <summary>
@@ -153,7 +198,7 @@ public class EphemeralWindow : Window {
         if (msg == WM_ACTIVATE) {
             var activateType = (int)wParam & 0xFFFF;
 
-            if (activateType == WA_INACTIVE && !this._isClosing) {
+            if (activateType == WA_INACTIVE && !this._isClosing && this.EphemeralEnabled) {
                 // lParam contains the handle of the window being activated (may be zero)
                 var newActiveWindow = lParam;
                 var revitHandle = Process.GetCurrentProcess().MainWindowHandle;

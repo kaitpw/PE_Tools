@@ -4,8 +4,11 @@ using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
 using PeExtensions.FamParameter.Formula;
+using PeUi.Components;
 using PeUi.Core;
 using PeUi.Core.Services;
+using PeUi.ViewModels;
+using System.Windows;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
 
@@ -16,9 +19,44 @@ namespace AddinPaletteSuite.Cmds;
 ///     Shows dimensions, arrays, and formula-dependent family parameters.
 /// </summary>
 public static class PltAssociatedElements {
+    /// <summary>
+    ///     Creates a palette for displaying associated elements, suitable for embedding in a sidebar.
+    /// </summary>
+    public static UIElement? CreatePalette(UIApplication uiapp, FamilyParameter param, FamilyDocument familyDoc) {
+        var uidoc = uiapp.ActiveUIDocument;
+        var items = CollectItems(param, familyDoc);
+
+        if (items.Count == 0) return null;
+
+        var actions = CreateActions(uidoc, familyDoc);
+
+        // Create palette for sidebar (no search box for association list)
+        var viewModel = new PaletteViewModel<AssociatedElementItem>(items, null);
+        var palette = new Palette(isSearchBoxHidden: true);
+        palette.Initialize(viewModel, actions);
+        return palette;
+    }
+
+    /// <summary>
+    ///     Opens a standalone window for displaying associated elements.
+    /// </summary>
     public static void Open(UIApplication uiapp, FamilyParameter param, FamilyDocument familyDoc) {
         var uidoc = uiapp.ActiveUIDocument;
+        var items = CollectItems(param, familyDoc);
 
+        if (items.Count == 0) return;
+
+        var actions = CreateActions(uidoc, familyDoc);
+
+        var window = PaletteFactory.Create($"{param.Definition.Name} Associations", items, actions,
+            new PaletteOptions<AssociatedElementItem> {
+                SearchConfig = SearchConfig.PrimaryAndSecondary(),
+                FilterKeySelector = item => item.TextPill
+            });
+        window.Show();
+    }
+
+    private static List<AssociatedElementItem> CollectItems(FamilyParameter param, FamilyDocument familyDoc) {
         var items = new List<AssociatedElementItem>();
 
         // Add associated dimensions
@@ -37,38 +75,35 @@ public static class PltAssociatedElements {
         foreach (var fp in param.GetDependents(familyDoc.FamilyManager.Parameters))
             items.Add(new AssociatedElementItem(fp, familyDoc));
 
-        if (items.Count == 0) return;
-
-        var actions = new List<PaletteAction<AssociatedElementItem>> {
-            new() {
-                Name = "Show/Select",
-                Execute = item => {
-                    switch (item.ItemType) {
-                    case AssociatedItemType.Dimension:
-                    case AssociatedItemType.Array:
-                    case AssociatedItemType.Connector:
-                        var elementId = item.ElementId;
-                        if (elementId == null) return;
-                        uidoc.ShowElements(elementId);
-                        uidoc.Selection.SetElementIds([elementId]);
-                        break;
-                    case AssociatedItemType.FamilyParameter:
-                        if (item.FamilyParam == null) return;
-                        ParamRelationshipDialog.Show(item.FamilyParam, familyDoc);
-                        break;
-                    }
-                },
-                CanExecute = item => item != null
-            }
-        };
-
-        var window = PaletteFactory.Create($"{param.Definition.Name} Associations", items, actions,
-            new PaletteOptions<AssociatedElementItem> {
-                SearchConfig = SearchConfig.PrimaryAndSecondary(),
-                FilterKeySelector = item => item.TextPill
-            });
-        window.Show();
+        return items;
     }
+
+    private static List<PaletteAction<AssociatedElementItem>> CreateActions(
+        UIDocument uidoc,
+        FamilyDocument familyDoc
+    ) =>
+    [
+        new() {
+            Name = "Show/Select",
+            Execute = async item => {
+                switch (item.ItemType) {
+                case AssociatedItemType.Dimension:
+                case AssociatedItemType.Array:
+                case AssociatedItemType.Connector:
+                    var elementId = item.ElementId;
+                    if (elementId == null) return;
+                    uidoc.ShowElements(elementId);
+                    uidoc.Selection.SetElementIds([elementId]);
+                    break;
+                case AssociatedItemType.FamilyParameter:
+                    if (item.FamilyParam == null) return;
+                    ParamRelationshipDialog.Show(item.FamilyParam, familyDoc);
+                    break;
+                }
+            },
+            CanExecute = item => item != null
+        }
+    ];
 }
 
 public enum AssociatedItemType {

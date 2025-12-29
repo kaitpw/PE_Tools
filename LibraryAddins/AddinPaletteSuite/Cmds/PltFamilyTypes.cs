@@ -1,5 +1,9 @@
 using PeRevit.Ui;
+using PeUi.Components;
 using PeUi.Core;
+using PeUi.Core.Services;
+using PeUi.ViewModels;
+using System.Windows;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
 
@@ -10,7 +14,10 @@ namespace AddinPaletteSuite.Cmds;
 ///     Opened from the family palette (CmdPltFamilies) when user selects a family.
 /// </summary>
 public static class PltFamilyTypes {
-    public static void Open(UIApplication uiapp, Family family) {
+    /// <summary>
+    ///     Creates a palette for displaying family types, suitable for embedding in a sidebar.
+    /// </summary>
+    public static UIElement CreatePalette(UIApplication uiapp, Family family) {
         var doc = uiapp.ActiveUIDocument.Document;
         var activeView = uiapp.ActiveUIDocument.ActiveView;
 
@@ -19,18 +26,19 @@ public static class PltFamilyTypes {
             .Cast<FamilySymbol>()
             .Where(f => f.Family.Id == family.Id)
             .OrderBy(f => f.Name)
-            .Select(f => new FamilyTypePaletteItem(f));
+            .Select(f => new FamilyTypePaletteItem(f))
+            .ToList();
 
         var actions = new List<PaletteAction<FamilyTypePaletteItem>> {
             new() {
                 Name = "Place",
-                Execute = item => {
+                Execute = async item => {
                     var symbol = item.FamilySymbol;
                     if (!symbol.IsActive) symbol.Activate();
 
                     try {
                         uiapp.ActiveUIDocument.PromptForFamilyInstancePlacement(symbol);
-                    } catch (OperationCanceledException) {
+                    } catch (Autodesk.Revit.Exceptions.OperationCanceledException) {
                         // User canceled placement - this is expected behavior, not an error
                     } catch (Exception ex) {
                         new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
@@ -50,9 +58,12 @@ public static class PltFamilyTypes {
             }
         };
 
-        var window = PaletteFactory.Create($"{family.Name} Types", items, actions,
-            new PaletteOptions<FamilyTypePaletteItem> { SearchConfig = null });
-        window.Show();
+        // Create palette for sidebar (no search box for type selection)
+        var searchService = new SearchFilterService<FamilyTypePaletteItem>();
+        var viewModel = new PaletteViewModel<FamilyTypePaletteItem>(items, searchService);
+        var palette = new Palette(isSearchBoxHidden: true);
+        palette.Initialize(viewModel, actions);
+        return palette;
     }
 }
 

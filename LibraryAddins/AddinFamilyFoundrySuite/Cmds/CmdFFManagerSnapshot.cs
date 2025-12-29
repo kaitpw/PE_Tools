@@ -24,7 +24,7 @@ public class CmdFFManagerSnapshot : IExternalCommand {
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
-                SingleTransaction = false, PreviewRun = false, OptimizeTypeOperations = true
+                SingleTransaction = false, OptimizeTypeOperations = true
             };
 
             var projectCollector = new ProjectParamCollector();

@@ -1,32 +1,59 @@
-UserControl_PreviewKeyDown: S
-SearchTextBox_PreviewKeyDown: S
-UserControl_KeyDown: S
+Unhandled exception. Newtonsoft.Json.JsonSerializationException: Error converting value "PE_P_LoadCalc_MinPipeSize" to type 'System.Collections.Generic.List`1[System.String]'. Path 'AddAndMapSharedParams.MappingData[0].CurrNames', line 38, position 48.
+ ---> System.ArgumentException: Could not cast or convert from System.String to System.Collections.Generic.List`1[System.String].
+   at Newtonsoft.Json.Utilities.ConvertUtils.EnsureTypeAssignable(Object value, Type initialType, Type targetType)
+   at Newtonsoft.Json.Utilities.ConvertUtils.ConvertOrCast(Object initialValue, CultureInfo culture, Type targetType)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.EnsureType(JsonReader reader, Object value, CultureInfo culture, JsonContract contract, Type targetType)
+   --- End of inner exception stack trace ---
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.EnsureType(JsonReader reader, Object value, CultureInfo culture, JsonContract contract, Type targetType)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateValueInternal(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, Object existingValue)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.SetPropertyValue(JsonProperty property, JsonConverter propertyConverter, JsonContainerContract containerContract, JsonProperty containerProperty, JsonReader reader, Object target)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.PopulateObject(Object newObject, JsonReader reader, JsonObjectContract contract, JsonProperty member, String id)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateObject(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, Object existingValue)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateValueInternal(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, Object existingValue)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.PopulateList(IList list, JsonReader reader, JsonArrayContract contract, JsonProperty containerProperty, String id)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateList(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, Object existingValue, String id)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateValueInternal(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, Object existingValue)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.SetPropertyValue(JsonProperty property, JsonConverter propertyConverter, JsonContainerContract containerContract, JsonProperty containerProperty, JsonReader reader, Object target)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.PopulateObject(Object newObject, JsonReader reader, JsonObjectContract contract, JsonProperty member, String id)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateObject(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, Object existingValue)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateValueInternal(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, Object existingValue)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.SetPropertyValue(JsonProperty property, JsonConverter propertyConverter, JsonContainerContract containerContract, JsonProperty containerProperty, JsonReader reader, Object target)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.PopulateObject(Object newObject, JsonReader reader, JsonObjectContract contract, JsonProperty member, String id)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateObject(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, Object existingValue)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.CreateValueInternal(JsonReader reader, Type objectType, JsonContract contract, JsonProperty member, JsonContainerContract containerContract, JsonProperty containerMember, Object existingValue)
+   at Newtonsoft.Json.Serialization.JsonSerializerInternalReader.Deserialize(JsonReader reader, Type objectType, Boolean checkAdditionalContent)
+   at Newtonsoft.Json.JsonSerializer.DeserializeInternal(JsonReader reader, Type objectType)
+   at Newtonsoft.Json.JsonSerializer.Deserialize(JsonReader reader, Type objectType)
+   at Newtonsoft.Json.JsonConvert.DeserializeObject(String value, Type type, JsonSerializerSettings settings)
+   at Newtonsoft.Json.JsonConvert.DeserializeObject[T](String value, JsonSerializerSettings settings)
+   at PeServices.Storage.Core.Json`1.Deserialize()
+   at PeServices.Storage.Core.Json`1.ReadAndSanitize()
+   at PeServices.Storage.Core.SettingsJsonReader`1.Read()
+   at PeServices.Storage.Core.JsonWithExtends`1.Read()
+   at AddinFamilyFoundrySuite.Cmds.CmdFFMigrator.BuildPreviewData(ProfileListItem profileItem, MigratorContext context)
+   at AddinFamilyFoundrySuite.Cmds.CmdFFMigrator.<>c__DisplayClass0_0.<Execute>b__5(ProfileListItem item)
+   at PeUi.Core.PaletteFactory.<>c__DisplayClass0_0`1.<Create>b__0(Object _, PropertyChangedEventArgs e)
+   at CommunityToolkit.Mvvm.ComponentModel.ObservableObject.OnPropertyChanged(PropertyChangedEventArgs e)
+   at PeUi.ViewModels.PaletteViewModel`1.set_SelectedItem(TItem value)
+   at PeUi.ViewModels.PaletteViewModel`1.OnSelectedIndexChanged(Int32 value)
+   at PeUi.ViewModels.PaletteViewModel`1.set_SelectedIndex(Int32 value)
+   at PeUi.ViewModels.PaletteViewModel`1.MoveSelectionUp()
+   at CommunityToolkit.Mvvm.Input.RelayCommand.Execute(Object parameter)
+   at System.Windows.Input.CommandManager.TranslateInput(IInputElement targetElement, InputEventArgs inputEventArgs)
+   at System.Windows.UIElement.OnKeyDownThunk(Object sender, KeyEventArgs e)
+   at System.Windows.RoutedEventArgs.InvokeHandler(Delegate handler, Object target)
+   at System.Windows.EventRoute.InvokeHandlersImpl(Object source, RoutedEventArgs args, Boolean reRaised)
+   at System.Windows.UIElement.RaiseEventImpl(DependencyObject sender, RoutedEventArgs args)
+   at System.Windows.UIElement.RaiseTrustedEvent(RoutedEventArgs args)
+   at System.Windows.Input.InputManager.ProcessStagingArea()
+   at System.Windows.Input.InputProviderSite.ReportInput(InputReport inputReport)
+   at System.Windows.Interop.HwndKeyboardInputProvider.ProcessKeyAction(MSG& msg, Boolean& handled)
+   at System.Windows.Interop.HwndKeyboardInputProvider.FilterMessage(IntPtr hwnd, WindowMessage message, IntPtr wParam, IntPtr lParam, Boolean& handled)
+   at System.Windows.Interop.HwndSource.InputFilterMessage(IntPtr hwnd, Int32 msg, IntPtr wParam, IntPtr lParam, Boolean& handled)
+   at MS.Win32.HwndWrapper.WndProc(IntPtr hwnd, Int32 msg, IntPtr wParam, IntPtr lParam, Boolean& handled)
+   at MS.Win32.HwndSubclass.DispatcherCallbackOperation(Object o)
+   at System.Windows.Threading.ExceptionWrapper.InternalRealCall(Delegate callback, Object args, Int32 numArgs)
+   at System.Windows.Threading.ExceptionWrapper.TryCatchWhen(Object source, Delegate callback, Object args, Int32 numArgs, Delegate catchHandler)
+   at System.Windows.Threading.Dispatcher.LegacyInvokeImpl(DispatcherPriority priority, TimeSpan timeout, Delegate method, Object args, Int32 numArgs)
+   at MS.Win32.HwndSubclass.SubclassWndProc(IntPtr hwnd, Int32 msg, IntPtr wParam, IntPtr lParam)
 
-UserControl_PreviewKeyDown: Back
-SearchTextBox_PreviewKeyDown: Back
-
-UserControl_PreviewKeyDown: Down
-SearchTextBox_PreviewKeyDown: Down
-
-UserControl_PreviewKeyDown: Left
-SearchTextBox_PreviewKeyDown: Left
-
-UserControl_PreviewKeyDown: Right
-SearchTextBox_PreviewKeyDown: Right
-
-UserControl_PreviewKeyDown: Up
-SearchTextBox_PreviewKeyDown: Up
-
-UserControl_PreviewKeyDown: Return
-SearchTextBox_PreviewKeyDown: Return
-
-UserControl_PreviewKeyDown: Tab
-SearchTextBox_PreviewKeyDown: Tab
-
-UserControl_PreviewKeyDown: S
-UserControl_KeyDown: S
-
-UserControl_PreviewKeyDown: O
-UserControl_KeyDown: O
-
-UserControl_PreviewKeyDown: Escape

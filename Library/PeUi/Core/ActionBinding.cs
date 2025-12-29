@@ -29,40 +29,6 @@ public class ActionBinding<TItem> : ActionBinding where TItem : class, IPaletteL
     public void RegisterRange(IEnumerable<PaletteAction<TItem>> actions) => this._actions.AddRange(actions);
 
     /// <summary>
-    ///     Finds and executes the matching action for a keyboard event
-    /// </summary>
-    public async Task<ExecuteResult> TryExecuteAsync(TItem item, Key key, ModifierKeys modifiers) {
-        try {
-            var action = this.FindMatchingAction(key, modifiers);
-            if (action == null || !action.CanExecute(item)) return new ExecuteResult(false, false);
-
-            var isNextPalette = await this.ExecuteActionInternalAsync(action, item);
-            return new ExecuteResult(true, isNextPalette);
-        } catch (Exception ex) {
-            Debug.WriteLine(item);
-
-            Debug.WriteLine($"Error executing action: {ex.Message} : \n{ex.StackTrace}");
-            return new ExecuteResult(false, false);
-        }
-    }
-
-    /// <summary>
-    ///     Finds and executes the matching action for a mouse event
-    /// </summary>
-    public async Task<ExecuteResult> TryExecuteAsync(TItem item, ModifierKeys modifiers) {
-        try {
-            var action = this.FindMatchingAction(null, modifiers);
-            if (action == null || !action.CanExecute(item)) return new ExecuteResult(false, false);
-
-            var isNextPalette = await this.ExecuteActionInternalAsync(action, item);
-            return new ExecuteResult(true, isNextPalette);
-        } catch (Exception ex) {
-            Debug.WriteLine($"Error executing action: {ex.Message} : \n{ex.StackTrace}");
-            return new ExecuteResult(false, false);
-        }
-    }
-
-    /// <summary>
     ///     Gets all available actions for a given item (filtered by CanExecute)
     /// </summary>
     public IEnumerable<PaletteAction<TItem>> GetAvailableActions(TItem item) =>
@@ -86,44 +52,41 @@ public class ActionBinding<TItem> : ActionBinding where TItem : class, IPaletteL
     public override IEnumerable<object> GetAllActionsUntyped() => this._actions;
 
     /// <summary>
-    ///     Executes a specific action for a given item
+    ///     Executes the action's Execute delegate for a given item.
+    ///     Throws if no Execute method is defined.
     /// </summary>
-    public async Task<bool> ExecuteActionAsync(PaletteAction<TItem> action, TItem item) {
-        if (!action.CanExecute(item))
-            throw new InvalidOperationException($"Action '{action.Name}' cannot execute for this item");
+    public async Task ExecuteAsync(PaletteAction<TItem> action, TItem item) {
+        if (action.Execute == null)
+            throw new InvalidOperationException($"Action '{action.Name}' has no Execute method defined");
 
-        return await this.ExecuteActionInternalAsync(action, item);
+        await action.Execute(item);
     }
 
     /// <summary>
-    ///     Internal helper that executes either synchronous or asynchronous action
+    ///     Finds the matching action for a keyboard event without executing it.
+    ///     Returns null if no action matches or CanExecute returns false.
     /// </summary>
-    /// <returns>True if this is a next palette action, false otherwise</returns>
-    private async Task<bool> ExecuteActionInternalAsync(PaletteAction<TItem> action, TItem item) {
-        // Check for next palette methods first
-        if (action.ExecuteNextPaletteAsync != null) {
-            await action.ExecuteNextPaletteAsync(item);
-            return true;
-        }
-
-        if (action.ExecuteNextPalette != null) {
-            action.ExecuteNextPalette(item);
-            return true;
-        }
-
-        // Regular execution methods
-        if (action.ExecuteAsync != null) {
-            await action.ExecuteAsync(item);
-            return false;
-        }
-
-        if (action.Execute != null) {
-            action.Execute(item);
-            return false;
-        }
-
-        throw new InvalidOperationException($"Action '{action.Name}' has no execution method defined");
+    public PaletteAction<TItem> TryFindAction(TItem item, Key key, ModifierKeys modifiers) {
+        var action = this.FindMatchingAction(key, modifiers);
+        if (action == null || !action.CanExecute(item)) return null;
+        return action;
     }
+
+    /// <summary>
+    ///     Finds the matching action for a mouse event without executing it.
+    ///     Returns null if no action matches or CanExecute returns false.
+    /// </summary>
+    public PaletteAction<TItem> TryFindAction(TItem item, ModifierKeys modifiers) {
+        var action = this.FindMatchingAction(null, modifiers);
+        if (action == null || !action.CanExecute(item)) return null;
+        return action;
+    }
+
+    /// <summary>
+    ///     Returns true if the action is a "next palette" type (opens another palette in sidebar).
+    /// </summary>
+    public static bool IsNextPaletteAction(PaletteAction<TItem> action) =>
+        action.NextPalette != null;
 
     /// <summary>
     ///     Finds the best matching action for the given input combination
@@ -142,9 +105,4 @@ public class ActionBinding<TItem> : ActionBinding where TItem : class, IPaletteL
             a.Modifiers == ModifierKeys.None &&
             a.Key == null);
     }
-
-    /// <summary>
-    ///     Result of executing an action
-    /// </summary>
-    public record ExecuteResult(bool Success, bool IsNextPalette);
 }

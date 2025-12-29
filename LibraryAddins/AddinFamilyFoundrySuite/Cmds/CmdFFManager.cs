@@ -27,12 +27,18 @@ public class CmdFFManager : IExternalCommand {
             var storage = new Storage("FF Manager");
             var settingsManager = storage.SettingsDir();
             var settings = settingsManager.Json<BaseSettings<ProfileFamilyManager>>().Read();
+            // TODO: Add palette UI for profile selection like CmdFFMigrator
             var profile = settingsManager.SubDir("profiles")
-                .Json<ProfileFamilyManager>($"{settings.CurrentProfile}.json").Read();
+                .Json<ProfileFamilyManager>("Default.json").Read();
             var outputFolderPath = storage.OutputDir().DirectoryPath;
 
             using var tempFile = new TempSharedParamFile(doc);
-            var apsParamData = profile.GetAPSParams(tempFile);
+            var apsParamModels = profile.GetFilteredApsParamModels();
+
+            // Build queue structure for preview (using temp file just for structure, not storing definitions)
+            using var previewTempFile = new TempSharedParamFile(doc);
+            var apsParamData = BaseProfileSettings.ConvertToSharedParameterDefinitions(
+                apsParamModels, previewTempFile);
 
 
             var specs = new List<RefPlaneSubcategorySpec> {
@@ -82,19 +88,8 @@ public class CmdFFManager : IExternalCommand {
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
                 SingleTransaction = false,
-                PreviewRun = profile.ExecutionOptions.PreviewRun,
                 OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
             };
-
-            if (executionOptions.PreviewRun) {
-                _ = new DryRunResultBuilder(storage)
-                    .WithProfile(profile, settings.CurrentProfile)
-                    .WithApsParams(apsParamData)
-                    .WithFamilies(profile.GetFamilies(doc))
-                    .WithOperationMetadata(queue)
-                    .WriteOutput(settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
-                return Result.Succeeded;
-            }
 
             // Create collectors for pre/post snapshots (project doc vs family doc)
             var projectCollector = new ProjectParamCollector();
@@ -106,7 +101,7 @@ public class CmdFFManager : IExternalCommand {
                 .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
 
             _ = new ProcessingResultBuilder(storage)
-                .WithProfile(profile, settings.CurrentProfile)
+                .WithProfile(profile, "Default")
                 .WithOperationMetadata(queue)
                 .WithFamilyResults(logs.familyContexts)
                 .WithTotalTime(logs.totalMs)

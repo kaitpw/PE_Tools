@@ -33,15 +33,15 @@ public class CmdPltFamilyElements : IExternalCommand {
         var actions = new List<PaletteAction<FamilyElementItem>> {
             new() {
                 Name = "Associated Elements",
-                ExecuteNextPalette = item => {
-                    if (item.FamilyParam != null)
-                        PltAssociatedElements.Open(uiapp, item.FamilyParam, familyDoc);
+                NextPalette = item => {
+                    if (item.FamilyParam == null) return null;
+                    return PltAssociatedElements.CreatePalette(uiapp, item.FamilyParam, familyDoc);
                 },
                 CanExecute = item => item?.ElementType == FamilyElementType.Parameter && item.HasAnyAssociation
             },
             new() {
                 Name = "Zoom to Element",
-                Execute = item => {
+                Execute = async item => {
                     if (item?.ElementId == null) return;
                     uidoc.ShowElements(item.ElementId);
                     uidoc.Selection.SetElementIds([item.ElementId]);

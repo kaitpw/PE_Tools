@@ -283,10 +283,6 @@ public class OperationProcessor(
 }
 
 public class ExecutionOptions {
-    [Description(
-        "When enabled, the command will output a JSON file with all APS parameters and families that would be processed, without actually processing them.")]
-    public bool PreviewRun { get; init; } = false;
-
     [Description("When enabled, the command will bundle the operations into a single transaction.")]
     public bool SingleTransaction { get; init; } = true;
 

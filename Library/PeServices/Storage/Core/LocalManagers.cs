@@ -8,8 +8,6 @@ public abstract class BaseLocalManager {
     }
 
     public abstract string Name { get; init; }
-    public abstract bool ThrowIfDefaultCreated { get; }
-    public abstract bool SaveSchema { get; }
     public string DirectoryPath { get; init; }
 
     /// <summary>
@@ -44,15 +42,13 @@ public class SettingsManager : BaseLocalManager {
     private const string defaultName = "settings";
     public SettingsManager(string parentPath) : base(parentPath, defaultName) { }
     private SettingsManager(string parentPath, string subDirName) : base(parentPath, subDirName) { }
-    public override bool ThrowIfDefaultCreated { get; } = true;
-    public override bool SaveSchema { get; } = true;
     public override string Name { get; init; } = defaultName;
 
     public JsonReader<T> Json<T>() where T : class, new() =>
-        new Json<T>(this.GetJsonPath(), this.ThrowIfDefaultCreated, this.SaveSchema);
+        new SettingsJsonReader<T>(this.GetJsonPath());
 
     public JsonReader<T> Json<T>(string filename) where T : class, new() =>
-        new Json<T>(this.GetJsonPath(filename), this.ThrowIfDefaultCreated, this.SaveSchema);
+        new SettingsJsonReader<T>(this.GetJsonPath(filename));
 
     /// <summary>
     ///     Creates a JSON reader that supports the <c>$extends</c> inheritance pattern.
@@ -71,6 +67,14 @@ public class SettingsManager : BaseLocalManager {
         new JsonWithExtends<T>(this.DirectoryPath, filename);
 
     /// <summary>
+    ///     Creates a dangerous JSON reader that reads without recovery or default creation.
+    ///     Throws exceptions immediately if the file is invalid or missing.
+    ///     Use for diagnostics/tooltips where you want to see raw validation errors.
+    /// </summary>
+    public DangerousJsonReader<T> JsonDangerous<T>(string filename) where T : class, new() =>
+        new DangerousJsonReader<T>(this.GetJsonPath(filename));
+
+    /// <summary>
     ///     Navigate to a subdirectory for accessing files within nested folders.
     ///     Supports multi-level nesting via chaining or path strings (e.g., "profiles/production").
     /// </summary>
@@ -87,15 +91,13 @@ public class SettingsManager : BaseLocalManager {
 public class StateManager : BaseLocalManager {
     private const string defaultName = "state";
     public StateManager(string parentPath) : base(parentPath, defaultName) { }
-    public override bool ThrowIfDefaultCreated { get; } = false;
-    public override bool SaveSchema { get; } = true;
     public override string Name { get; init; } = defaultName;
 
     public JsonReadWriter<T> Json<T>() where T : class, new() =>
-        new Json<T>(this.GetJsonPath(), this.ThrowIfDefaultCreated, this.SaveSchema);
+        new StateJsonReaderWriter<T>(this.GetJsonPath());
 
     public JsonReadWriter<T> Json<T>(string filename) where T : class, new() =>
-        new Json<T>(this.GetJsonPath(filename), this.ThrowIfDefaultCreated, this.SaveSchema);
+        new StateJsonReaderWriter<T>(this.GetJsonPath(filename));
 
     public CsvReadWriter<T> Csv<T>() where T : class, new() =>
         new Csv<T>(this.GetCsvPath());
@@ -108,11 +110,9 @@ public class OutputManager : BaseLocalManager {
     public OutputManager(string parentPath) : base(parentPath, "output") { }
     private OutputManager(string parentPath, string subDirName) : base(parentPath, subDirName) { }
     public override string Name { get; init; } = "output";
-    public override bool ThrowIfDefaultCreated { get; } = false;
-    public override bool SaveSchema { get; } = false;
 
     public JsonWriter<T> Json<T>(string filename) where T : class, new() =>
-        new Json<T>(this.GetDatedJsonPath(filename), this.ThrowIfDefaultCreated, this.SaveSchema);
+        new OutputJsonWriter<T>(this.GetDatedJsonPath(filename));
 
     public CsvWriter<T> Csv<T>(string filename) where T : class, new() =>
         new Csv<T>(this.GetDatedCsvPath(filename));

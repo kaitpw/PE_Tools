@@ -12,13 +12,18 @@ public class CategoryNamesProvider : ISchemaExamplesProvider {
     public IEnumerable<string> GetExamples() {
         try {
             var doc = DocumentManager.GetActiveDocument();
-            if (doc == null) return [];
+            // var categories = doc.Settings.Categories;
+            if (doc == null || doc.IsFamilyDocument) return [];
 
-            var categories = doc.Settings.Categories;
-            return categories.Cast<Category>()
-                .Select(c => c.Name)
-                .Where(name => !string.IsNullOrEmpty(name))
-                .OrderBy(name => name);
+            var categories = new FilteredElementCollector(doc)
+                .WhereElementIsNotElementType()
+                .OfClass(typeof(Family))
+                .OfType<Family>()
+                .Where(f => f.FamilyCategory.CategoryType == CategoryType.Model)
+                .Select(f => f.FamilyCategory.Name)
+                .Distinct();
+
+            return categories;
         } catch {
             // No document available or error - no examples, no crash
             return [];

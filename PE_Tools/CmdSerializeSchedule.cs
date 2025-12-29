@@ -38,6 +38,8 @@ public class CmdSerializeSchedule : IExternalCommand {
                         } catch (Exception ex) {
                             new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
                         }
+
+                        return Task.CompletedTask;
                     }
                 }
             };

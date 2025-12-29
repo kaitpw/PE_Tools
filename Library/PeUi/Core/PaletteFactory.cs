@@ -2,6 +2,8 @@ using PeServices.Storage;
 using PeUi.Components;
 using PeUi.Core.Services;
 using PeUi.ViewModels;
+using System.Windows;
+using System.Windows.Input;
 
 namespace PeUi.Core;
 
@@ -52,8 +54,13 @@ public static class PaletteFactory {
             ? new SearchFilterService<TItem>(options.Storage, options.PersistenceKey, options.SearchConfig)
             : new SearchFilterService<TItem>(options.SearchConfig);
 
-        // Create view model
-        var viewModel = new PaletteViewModel<TItem>(items, searchService, options.FilterKeySelector);
+        // Create view model with optional debounce delay
+        var viewModel = new PaletteViewModel<TItem>(
+            items,
+            searchService,
+            options.FilterKeySelector,
+            options.SelectionDebounceMs
+        );
         options.ViewModelMutator?.Invoke(viewModel);
 
         // Create palette - hide search box if search is disabled
@@ -68,7 +75,7 @@ public static class PaletteFactory {
             onCtrlReleased = options.OnCtrlReleased(vmRef);
         }
 
-        // Wire up selection changed callback if provided
+        // Wire up selection changed callback if provided (immediate, for highlighting)
         if (options.OnSelectionChanged != null) {
             viewModel.PropertyChanged += (_, e) => {
                 if (e.PropertyName == nameof(viewModel.SelectedItem))
@@ -76,9 +83,55 @@ public static class PaletteFactory {
             };
         }
 
-        palette.Initialize(viewModel, actions, options.CustomKeyBindings, onCtrlReleased);
-        return new EphemeralWindow(palette, title);
+        // Wire up debounced selection changed callback if provided (delayed, for expensive operations)
+        if (options.OnSelectionChangedDebounced != null) {
+            viewModel.SelectionChangedDebounced += (_, _) => {
+                options.OnSelectionChangedDebounced(viewModel.SelectedItem);
+            };
+        }
+
+        palette.Initialize(viewModel, actions, options.CustomKeyBindings, onCtrlReleased, options.Sidebar);
+
+        var window = new EphemeralWindow(palette, title);
+
+        // Wire up parent window reference so palette can coordinate window sizing
+        palette.SetParentWindow(window);
+
+        return window;
     }
+}
+
+/// <summary>
+///     Defines a sidebar for the palette.
+/// </summary>
+public class PaletteSidebar {
+    /// <summary>
+    ///     The UserControl to display in the sidebar.
+    /// </summary>
+    public UIElement Content { get; init; }
+
+    /// <summary>
+    ///     Initial state of the sidebar (collapsed or expanded).
+    /// </summary>
+    public SidebarState InitialState { get; init; } = SidebarState.Collapsed;
+
+    /// <summary>
+    ///     Width of the sidebar when expanded.
+    /// </summary>
+    public GridLength Width { get; init; } = new GridLength(400);
+
+    /// <summary>
+    ///     Keys that will collapse the sidebar and return focus to the main palette.
+    /// </summary>
+    public List<Key> ExitKeys { get; init; } = [Key.Escape];
+}
+
+/// <summary>
+///     Sidebar state enumeration.
+/// </summary>
+public enum SidebarState {
+    Collapsed,
+    Expanded
 }
 
 /// <summary>
@@ -195,4 +248,43 @@ public class PaletteOptions<TItem> where TItem : class, IPaletteListItem {
     ///     </code>
     /// </example>
     public Action<TItem> OnSelectionChanged { get; init; }
+
+    /// <summary>
+    ///     Callback invoked when the selected item changes, after a debounce delay.
+    ///     Useful for expensive operations like loading JSON, building previews, or IO.
+    ///     The delay prevents triggering on every arrow key press.
+    ///     Default: null (no debounced selection change behavior)
+    /// </summary>
+    /// <example>
+    ///     <code>
+    ///     OnSelectionChangedDebounced = item => {
+    ///         if (item != null)
+    ///             BuildExpensivePreview(item); // Only fires after user stops navigating
+    ///     }
+    ///     </code>
+    /// </example>
+    public Action<TItem> OnSelectionChangedDebounced { get; init; }
+
+    /// <summary>
+    ///     Debounce delay in milliseconds for OnSelectionChangedDebounced callback.
+    ///     Default: 300ms
+    /// </summary>
+    public int SelectionDebounceMs { get; init; } = 300;
+
+    /// <summary>
+    ///     Sidebar definition for the palette.
+    ///     Sidebars appear to the right of the main list and can be expanded/collapsed.
+    ///     Default: null (no sidebar)
+    /// </summary>
+    /// <example>
+    ///     <code>
+    ///     Sidebar = new PaletteSidebar {
+    ///         Content = previewPanel,
+    ///         InitialState = SidebarState.Collapsed,
+    ///         Width = new GridLength(400),
+    ///         ExitKeys = [Key.Escape]
+    ///     }
+    ///     </code>
+    /// </example>
+    public PaletteSidebar Sidebar { get; init; }
 }

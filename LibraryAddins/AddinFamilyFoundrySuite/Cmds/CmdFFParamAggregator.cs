@@ -25,9 +25,10 @@ public class CmdFFParamAggregator : IExternalCommand {
             var storage = new Storage("FF Param Aggregator");
             var settingsManager = storage.SettingsDir();
             var settings = settingsManager.Json<BaseSettings<ProfileParamAggregator>>().Read();
+            // TODO: Add palette UI for profile selection like CmdFFMigrator
             var profile = settingsManager
                 .SubDir("profiles")
-                .Json<ProfileParamAggregator>($"{settings.CurrentProfile}.json")
+                .Json<ProfileParamAggregator>("Default.json")
                 .Read();
 
             // Get families based on profile filter (or selected families)

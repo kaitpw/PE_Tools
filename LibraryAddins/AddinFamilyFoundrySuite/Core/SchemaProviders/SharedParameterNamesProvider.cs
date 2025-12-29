@@ -17,11 +17,10 @@ public class SharedParameterNamesProvider : ISchemaExamplesProvider {
             var cache = Storage.GlobalDir().StateJson<ParametersApi.Parameters>(CacheFilename)
                 as PeServices.Storage.Core.JsonReader<ParametersApi.Parameters>;
             if (!File.Exists(cache.FilePath)) return [];
-            return cache.Read().Results?.Select(p => p.Name) ?? [];
+            return cache.Read().Results?.Where(p => !p.IsArchived).Select(p => p.Name) ?? [];
         } catch {
             // Cache missing or invalid - no examples, no crash
             return [];
         }
     }
 }
-

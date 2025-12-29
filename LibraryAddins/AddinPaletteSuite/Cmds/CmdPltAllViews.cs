@@ -22,7 +22,7 @@ public class CmdPltAllViews : IExternalCommand {
                 .Select(v => new AllViewPaletteItem(v));
 
             var actions = new List<PaletteAction<AllViewPaletteItem>> {
-                new() { Name = "Open View", Execute = item => uiapp.OpenAndActivateView(item.View) }
+                new() { Name = "Open View", Execute = async item => uiapp.OpenAndActivateView(item.View) }
             };
 
             var window = PaletteFactory.Create("All Views Palette", items, actions,

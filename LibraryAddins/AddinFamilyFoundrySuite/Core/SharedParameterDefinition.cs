@@ -5,4 +5,3 @@ public record SharedParameterDefinition(
     ForgeTypeId GroupTypeId,
     bool IsInstance
 );
-

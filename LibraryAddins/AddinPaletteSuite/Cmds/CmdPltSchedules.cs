@@ -24,7 +24,7 @@ public class CmdPltSchedules : IExternalCommand {
                 .Select(s => new SchedulePaletteItem(s));
 
             var actions = new List<PaletteAction<SchedulePaletteItem>> {
-                new() { Name = "Open", Execute = item => uiapp.OpenAndActivateView(item.Schedule) }
+                new() { Name = "Open", Execute = async item => uiapp.OpenAndActivateView(item.Schedule) }
             };
 
             var window = PaletteFactory.Create("Schedule Palette", items, actions,

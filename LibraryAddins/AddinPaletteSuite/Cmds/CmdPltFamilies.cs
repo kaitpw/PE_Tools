@@ -26,16 +26,16 @@ public class CmdPltFamilies : IExternalCommand {
                 .Select(f => new FamilyPaletteItem(f, doc));
 
             var actions = new List<PaletteAction<FamilyPaletteItem>> {
-                // Default action: Open family types palette (Enter or Click)
+                // Default action: Open family types palette in sidebar (Enter or Click)
                 new() {
                     Name = "Types",
-                    ExecuteNextPalette = item => PltFamilyTypes.Open(uiapp, item.Family),
+                    NextPalette = item => PltFamilyTypes.CreatePalette(uiapp, item.Family),
                     CanExecute = item => item != null
                 },
                 new() {
                     Name = "Select in View",
                     Modifiers = ModifierKeys.Shift,
-                    Execute = item => {
+                    Execute = async item => {
                         var instances = new FilteredElementCollector(doc)
                             .OfClass(typeof(FamilyInstance))
                             .Cast<FamilyInstance>()
@@ -54,7 +54,7 @@ public class CmdPltFamilies : IExternalCommand {
                 new() {
                     Name = "Open/Edit",
                     Modifiers = ModifierKeys.Control,
-                    Execute = item => uiapp.OpenAndActivateFamily(item.Family),
+                    Execute = async item => uiapp.OpenAndActivateFamily(item.Family),
                     CanExecute = item => item != null && item.Family.IsEditable
                 }
             };

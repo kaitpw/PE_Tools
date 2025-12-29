@@ -24,7 +24,7 @@ public class CmdPltSheets : IExternalCommand {
             var actions = new List<PaletteAction<SheetPaletteItem>> {
                 new() {
                     Name = "Open Sheet",
-                    Execute = item => uiapp.OpenAndActivateView(item.Sheet),
+                    Execute = async item => uiapp.OpenAndActivateView(item.Sheet),
                     CanExecute = item => item != null && item.Sheet.CanBePrinted
                 }
             };

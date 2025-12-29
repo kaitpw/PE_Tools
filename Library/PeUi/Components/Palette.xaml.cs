@@ -37,6 +37,8 @@ public static class PaletteAttachedProperties {
 ///     NOT inheritance (generic classes cannot inherit from XAML partial classes).
 /// </summary>
 public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable {
+    private const double DefaultSidebarWidth = 400;
+
     private readonly bool _isSearchBoxHidden;
     private ActionBinding _actionBinding;
     private ActionMenu _actionMenu;
@@ -46,8 +48,9 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     private Func<object> _getSelectedItemFunc;
     private bool _isCtrlPressed;
     private Action _onCtrlReleased;
-    private Action _recordUsageFunc; // TODO: this probably exists from my refactors, did i mess something up?
     private SelectableTextBox _tooltipPanel;
+    private PaletteSidebar _currentSidebar;
+    private EphemeralWindow _parentWindow;
 
     public Palette(bool isSearchBoxHidden = false) {
         this.InitializeComponent();
@@ -69,7 +72,8 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         PaletteViewModel<TItem> viewModel,
         IEnumerable<PaletteAction<TItem>> actions,
         CustomKeyBindings customKeyBindings = null,
-        Action onCtrlReleased = null
+        Action onCtrlReleased = null,
+        PaletteSidebar paletteSidebar = null
     ) where TItem : class, IPaletteListItem {
         this.DataContext = viewModel;
         this._customKeyBindings = customKeyBindings;
@@ -124,7 +128,6 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
 
         // Capture typed delegates for use in non-generic handlers
         this._getSelectedItemFunc = () => viewModel.SelectedItem;
-        this._recordUsageFunc = viewModel.RecordUsage;
         this._executeItemFunc = async () => {
             var selectedItem = viewModel.SelectedItem;
             if (selectedItem == null) return false;
@@ -141,6 +144,15 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         this.Loaded += this.UserControl_Loaded;
         this.PreviewKeyDown += this.UserControl_PreviewKeyDown;
         this.PreviewKeyUp += this.UserControl_PreviewKeyUp;
+
+        // Initialize sidebar if provided
+        if (paletteSidebar != null) {
+            this._currentSidebar = paletteSidebar;
+            this.SidebarContent.Content = paletteSidebar.Content;
+
+            if (paletteSidebar.InitialState == SidebarState.Expanded)
+                this.ExpandSidebar(paletteSidebar.Width);
+        }
     }
 
     private void SetupTypedEventHandlers<TItem>(
@@ -174,33 +186,122 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
 
         // Set up action menu handlers
         actionMenu.ExitRequested += (_, _) => this.Focus();
-        actionMenu.ActionClicked += async (_, action) => {
-            if (viewModel.SelectedItem == null) return;
-            var isNextPalette = await actionBinding.ExecuteActionAsync(action, viewModel.SelectedItem);
+        actionMenu.ActionClicked += (_, action) => {
+            var selectedItem = viewModel.SelectedItem;
+            if (selectedItem == null) return;
+
             viewModel.RecordUsage();
-            this.RequestClose(!isNextPalette);
+
+            // NextPalette actions show content in sidebar
+            if (ActionBinding<TItem>.IsNextPaletteAction(action)) {
+                this.ShowNextPaletteInSidebar(action, selectedItem);
+                return;
+            }
+
+            // Regular actions: close window first, then defer execution
+            this.ExecuteDeferred(async () => await actionBinding.ExecuteAsync(action, selectedItem));
         };
 
         // Set up tooltip popover exit handler
         this._tooltipPanel.ExitRequested += (_, _) => this.Focus();
     }
 
-    private async Task<bool> ExecuteItemTyped<TItem>(
+    /// <summary>
+    ///     Expands the sidebar to the specified width.
+    ///     Only expands the parent window when transitioning from collapsed to expanded.
+    /// </summary>
+    public void ExpandSidebar(GridLength width) {
+        var wasCollapsed = this.SidebarColumn.Width.Value == 0;
+        this.SidebarColumn.Width = width;
+
+        // Only expand window when transitioning from collapsed to expanded
+        if (wasCollapsed)
+            this._parentWindow?.ExpandWidth(width.Value);
+    }
+
+    /// <summary>
+    ///     Collapses the sidebar to width 0.
+    ///     Only collapses the parent window when transitioning from expanded to collapsed.
+    /// </summary>
+    public void CollapseSidebar() {
+        var currentWidth = this.SidebarColumn.Width.Value;
+        if (currentWidth <= 0) return; // Already collapsed
+
+        this.SidebarColumn.Width = new GridLength(0);
+        this._parentWindow?.CollapseWidth(currentWidth);
+    }
+
+    /// <summary>
+    ///     Toggles the sidebar between expanded and collapsed states.
+    /// </summary>
+    public void ToggleSidebar() {
+        if (this._currentSidebar == null) return;
+
+        if (this.SidebarColumn.Width.Value > 0)
+            this.CollapseSidebar();
+        else
+            this.ExpandSidebar(this._currentSidebar.Width);
+    }
+
+    /// <summary>
+    ///     Sets the parent window reference for coordinating window size with sidebar expansion.
+    /// </summary>
+    public void SetParentWindow(EphemeralWindow window) => this._parentWindow = window;
+
+    /// <summary>
+    ///     Shows the next palette content in the sidebar.
+    /// </summary>
+    private void ShowNextPaletteInSidebar<TItem>(PaletteAction<TItem> action, TItem item)
+        where TItem : class, IPaletteListItem {
+        var nextContent = action.NextPalette(item);
+        this.SidebarContent.Content = nextContent;
+
+        var width = this._currentSidebar?.Width ?? new GridLength(DefaultSidebarWidth);
+        this.ExpandSidebar(width);
+    }
+
+    private Task<bool> ExecuteItemTyped<TItem>(
         TItem selectedItem,
         ActionBinding<TItem> actionBinding,
         PaletteViewModel<TItem> viewModel,
         ModifierKeys modifiers = ModifierKeys.None,
         Key key = Key.Enter
     ) where TItem : class, IPaletteListItem {
-        var result = await actionBinding.TryExecuteAsync(selectedItem, key, modifiers);
+        var action = actionBinding.TryFindAction(selectedItem, key, modifiers);
+        if (action == null) return Task.FromResult(false);
 
-        if (result.Success) {
-            viewModel.RecordUsage();
-            this.RequestClose(!result.IsNextPalette);
-            return true;
+        viewModel.RecordUsage();
+
+        // NextPalette actions show content in sidebar
+        if (ActionBinding<TItem>.IsNextPaletteAction(action)) {
+            this.ShowNextPaletteInSidebar(action, selectedItem);
+            return Task.FromResult(true);
         }
 
-        return false;
+        // Regular actions: close window first, then defer execution to Revit API context
+        this.ExecuteDeferred(async () => await actionBinding.ExecuteAsync(action, selectedItem));
+        return Task.FromResult(true);
+    }
+
+    /// <summary>
+    ///     Closes the window and defers action execution to Revit API context via Window.Closed event.
+    /// </summary>
+    private void ExecuteDeferred(Func<Task> action) {
+        if (this._parentWindow == null)
+            throw new InvalidOperationException(
+                "Palette parent window not set. Use PaletteFactory.Create or call SetParentWindow.");
+
+        if (!RevitTaskAccessor.IsConfigured)
+            throw new InvalidOperationException(
+                "RevitTaskAccessor not configured. Wire up in App.OnStartup.");
+
+        void ClosedHandler(object sender, EventArgs args) {
+            this._parentWindow.Closed -= ClosedHandler;
+            _ = RevitTaskAccessor.RunAsync(async () => await action());
+        }
+
+        this._parentWindow.Closed += ClosedHandler;
+        this.RequestClose(restoreFocus: true);
     }
 
     private void RequestClose(bool restoreFocus = true) =>
@@ -223,68 +324,82 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     }
 
     private async void UserControl_PreviewKeyDown(object sender, KeyEventArgs e) {
-        try {
-            // Don't handle keys if focus is in a child RevitHostedUserControl (popover or FilterBox)
-            if (Keyboard.FocusedElement is not DependencyObject focusedElement) return;
+        // Don't handle keys if focus is in a child RevitHostedUserControl (popover or FilterBox)
+        if (Keyboard.FocusedElement is not DependencyObject focusedElement) return;
 
-            // Walk up the visual tree to find if focus is inside another RevitHostedUserControl
-            var current = focusedElement;
-            while (current != null) {
-                if (current is RevitHostedUserControl control && control != this)
-                    return; // Focus is in a child component, let it handle its own keys
-                current = VisualTreeHelper.GetParent(current);
-            }
+        // Walk up the visual tree to find if focus is inside another RevitHostedUserControl
+        var current = focusedElement;
+        while (current != null) {
+            if (current is RevitHostedUserControl control && control != this)
+                return; // Focus is in a child component, let it handle its own keys
+            current = VisualTreeHelper.GetParent(current);
+        }
 
-            var modifiers = e.KeyboardDevice.Modifiers;
-            var selectedItem = this._getSelectedItemFunc?.Invoke();
+        var modifiers = e.KeyboardDevice.Modifiers;
+        var selectedItem = this._getSelectedItemFunc?.Invoke();
 
-            // Track Ctrl key state for Ctrl-release behavior
-            if ((modifiers & ModifierKeys.Control) != 0)
-                this._isCtrlPressed = true;
+        // Track Ctrl key state for Ctrl-release behavior
+        if ((modifiers & ModifierKeys.Control) != 0)
+            this._isCtrlPressed = true;
 
-            // Check custom key bindings first (and handle no search box palettes)
-            if (this._customKeyBindings != null &&
-                this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction))
-                e.Handled = await this.HandleNavigationAction(navAction);
-            else if (e.Key == Key.Escape) {
-                this.RequestClose();
-                e.Handled = true;
-            } else if (e.Key == Key.Enter && selectedItem != null)
-                e.Handled = await this._executeItemFunc();
-            // No idea why this is needed, but it is and its very counterintuitive. 
-            // Without it, when the search box is hidden, ONLY the up/down keys work, and none of the others
-            else if (e.Key == Key.Up && modifiers == ModifierKeys.None && this._isSearchBoxHidden)
-                e.Handled = await this.HandleNavigationAction(NavigationAction.MoveUp);
-            else if (e.Key == Key.Down && modifiers == ModifierKeys.None && this._isSearchBoxHidden)
-                e.Handled = await this.HandleNavigationAction(NavigationAction.MoveDown);
-            else if (e.Key == Key.Tab && modifiers == ModifierKeys.None && this._filterBox != null)
-                e.Handled = this.ShowPopover(_ => this._filterBox?.Show());
-            else if (e.Key == Key.Left && selectedItem is IPaletteListItem item) {
-                e.Handled = this.ShowPopover(placementTarget => {
-                    // Lazy evaluate tooltip text only when showing
-                    var tooltipText = item.GetTextInfo?.Invoke();
-                    this._tooltipPanel.Show(placementTarget, tooltipText);
-                });
-            } else if (e.Key == Key.Right && selectedItem != null) {
-                e.Handled = this.ShowPopover(placementTarget => {
-                    this._actionMenu?.SetActionsUntyped(this._actionBinding?.GetAllActionsUntyped());
-                    this._actionMenu?.ShowUntyped(placementTarget, selectedItem);
-                });
-            }
-        } catch { }
+        // Check if sidebar should handle this key
+        if (this._currentSidebar != null &&
+            this.SidebarColumn.Width.Value > 0 &&
+            this._currentSidebar.ExitKeys.Contains(e.Key)) {
+            this.CollapseSidebar();
+            _ = this.Focus();
+            e.Handled = true;
+            return;
+        }
+
+        // Check custom key bindings first (and handle no search box palettes)
+        if (this._customKeyBindings != null &&
+            this._customKeyBindings.TryGetAction(e.Key, modifiers, out var navAction))
+            e.Handled = await this.HandleNavigationAction(navAction);
+        else if (e.Key == Key.Escape) {
+            this.RequestClose();
+            e.Handled = true;
+        } else if (e.Key == Key.Enter && selectedItem != null)
+            e.Handled = await this._executeItemFunc();
+        // No idea why this is needed, but it is and its very counterintuitive. 
+        // Without it, when the search box is hidden, ONLY the up/down keys work, and none of the others
+        else if (e.Key == Key.Up && modifiers == ModifierKeys.None && this._isSearchBoxHidden)
+            e.Handled = await this.HandleNavigationAction(NavigationAction.MoveUp);
+        else if (e.Key == Key.Down && modifiers == ModifierKeys.None && this._isSearchBoxHidden)
+            e.Handled = await this.HandleNavigationAction(NavigationAction.MoveDown);
+        else if (e.Key == Key.Tab && modifiers == ModifierKeys.None && this._filterBox != null)
+            e.Handled = this.ShowPopover(_ => this._filterBox?.Show());
+        else if (e.Key == Key.Left && selectedItem is IPaletteListItem item) {
+            e.Handled = this.ShowPopover(placementTarget => {
+                // Lazy evaluate tooltip text only when showing
+                var tooltipText = item.GetTextInfo?.Invoke();
+                this._tooltipPanel.Show(placementTarget, tooltipText);
+            });
+        } else if (e.Key == Key.Right && selectedItem != null) {
+            e.Handled = this.ShowPopover(placementTarget => {
+                this._actionMenu?.SetActionsUntyped(this._actionBinding?.GetAllActionsUntyped());
+                this._actionMenu?.ShowUntyped(placementTarget, selectedItem);
+            });
+        }
     }
 
     private void UserControl_PreviewKeyUp(object sender, KeyEventArgs e) {
         // Handle Ctrl-release behavior
-        if (this._onCtrlReleased != null && this._isCtrlPressed) {
-            var modifiers = e.KeyboardDevice.Modifiers;
-            // Check if Ctrl was released (no longer in modifiers)
-            if ((modifiers & ModifierKeys.Control) == 0) {
-                this._isCtrlPressed = false;
-                this._onCtrlReleased?.Invoke();
-                this.RequestClose();
-            }
-        }
+        if (this._onCtrlReleased == null || !this._isCtrlPressed) return;
+
+        var modifiers = e.KeyboardDevice.Modifiers;
+
+        // Check if Ctrl was released (no longer in modifiers)
+        if ((modifiers & ModifierKeys.Control) != 0) return;
+
+        this._isCtrlPressed = false;
+
+        // Defer the Ctrl-released callback to Revit API context
+        var callback = this._onCtrlReleased;
+        this.ExecuteDeferred(() => {
+            callback();
+            return Task.CompletedTask;
+        });
     }
 
     private bool ShowPopover(Action<UIElement> action) {

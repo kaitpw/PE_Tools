@@ -24,18 +24,29 @@ public class ElementIntersectException : Exception {
 }
 
 public class JsonValidationException : Exception {
-    public JsonValidationException(string message) : base(message) { }
+    public JsonValidationException(string message) : base(message) {
+        this.ValidationErrors = new List<string>();
+    }
 
     /// <summary>Creates a JsonValidationException with a formatted list of validation errors</summary>
     /// <param name="validationErrors">List of validation error messages</param>
     public JsonValidationException(string path, IEnumerable<string> validationErrors)
         : base(FormatValidationErrors(path, validationErrors)) {
+        this.FilePath = path;
+        this.ValidationErrors = validationErrors.ToList();
     }
 
     public JsonValidationException(string path, IEnumerable<ValidationError> validationErrors)
         : base(FormatValidationErrors(path, validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}"))) {
+        this.FilePath = path;
+        this.ValidationErrors = validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}").ToList();
     }
 
+    /// <summary>Path to the JSON file that failed validation</summary>
+    public string FilePath { get; }
+
+    /// <summary>Structured list of validation errors for programmatic access</summary>
+    public List<string> ValidationErrors { get; }
 
     private static string FormatValidationErrors(string path, IEnumerable<string> errors) {
         var errorList = errors.ToList();
@@ -46,11 +57,23 @@ public class JsonValidationException : Exception {
 
 public class CrashProgramException : Exception {
     private static readonly string _prefix = "The program was intentionally crashed because";
-    public CrashProgramException(string message) : base(_prefix + FormatMessage(message)) { }
+
+    public CrashProgramException(string message) : base(_prefix + FormatMessage(message)) {
+        this.ErrorDetails = new Dictionary<string, object>();
+    }
 
     public CrashProgramException(Exception exception) : base(_prefix + " an unrecoverable error occurred:" +
                                                              FormatError(exception)) {
+        this.ErrorDetails = new Dictionary<string, object>();
     }
+
+    public CrashProgramException(string message, Dictionary<string, object> errorDetails)
+        : base(_prefix + FormatMessage(message)) {
+        this.ErrorDetails = errorDetails ?? new Dictionary<string, object>();
+    }
+
+    /// <summary>Structured error details for programmatic access by consumers</summary>
+    public Dictionary<string, object> ErrorDetails { get; }
 
     private static string FormatMessage(string message) =>
         message.Trim().Length > 0
@@ -59,6 +82,43 @@ public class CrashProgramException : Exception {
 
     private static string FormatError(Exception exception) =>
         $"\n\n{exception.Message}\n{exception.StackTrace}";
+}
+
+/// <summary>
+///     Exception thrown when JSON sanitization detects schema changes.
+///     Contains structured information about applied fixes and remaining errors.
+/// </summary>
+public class JsonSanitizationException : Exception {
+    public JsonSanitizationException(
+        string filePath,
+        List<string> addedProperties,
+        List<string> removedProperties,
+        List<string> appliedMigrations
+    ) : base(FormatMessage(filePath, addedProperties, removedProperties, appliedMigrations)) {
+        this.FilePath = filePath;
+        this.AddedProperties = addedProperties ?? new List<string>();
+        this.RemovedProperties = removedProperties ?? new List<string>();
+        this.AppliedMigrations = appliedMigrations ?? new List<string>();
+    }
+
+    public string FilePath { get; }
+    public List<string> AddedProperties { get; }
+    public List<string> RemovedProperties { get; }
+    public List<string> AppliedMigrations { get; }
+
+    private static string FormatMessage(
+        string filePath,
+        List<string> addedProperties,
+        List<string> removedProperties,
+        List<string> appliedMigrations
+    ) {
+        var message = $"JSON file {filePath} has been updated.";
+        if (addedProperties.Any()) message += $"\nAdded properties:\n\t-{string.Join("\n\t-", addedProperties)}";
+        if (removedProperties.Any()) message += $"\nRemoved properties:\n\t-{string.Join("\n\t-", removedProperties)}";
+        if (appliedMigrations.Any()) message += $"\nApplied migrations:\n\t-{string.Join("\n\t-", appliedMigrations)}";
+        message += "\nPlease review the settings before running again.";
+        return message;
+    }
 }
 
 

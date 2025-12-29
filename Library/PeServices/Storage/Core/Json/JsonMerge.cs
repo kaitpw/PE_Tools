@@ -9,7 +9,7 @@ namespace PeServices.Storage.Core.Json;
 ///     Merge rules:
 ///     <list type="bullet">
 ///         <item>Objects: recursively merge (child properties override base)</item>
-///         <item>Arrays: child replaces base entirely (no element-level merge)</item>
+///         <item>Arrays: concatenate (base elements first, then child elements)</item>
 ///         <item>Primitives: child overrides base</item>
 ///         <item>Explicit null in child: removes property from result</item>
 ///     </list>
@@ -55,7 +55,22 @@ public static class JsonMerge {
                 continue;
             }
 
-            // Arrays or primitives: child replaces entirely
+            // Both are arrays? Concatenate (base first, then child)
+            if (targetValue is JArray targetArray && childValue is JArray childArray) {
+                var mergedArray = new JArray();
+                // Add all base elements
+                foreach (var item in targetArray) {
+                    mergedArray.Add(item.DeepClone());
+                }
+                // Add all child elements
+                foreach (var item in childArray) {
+                    mergedArray.Add(item.DeepClone());
+                }
+                target[propName] = mergedArray;
+                continue;
+            }
+
+            // Primitives or mismatched types: child replaces entirely
             target[propName] = childValue.DeepClone();
         }
     }
