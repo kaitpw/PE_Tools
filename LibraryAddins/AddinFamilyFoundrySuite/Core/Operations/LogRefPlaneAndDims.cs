@@ -1,5 +1,5 @@
 using AddinFamilyFoundrySuite.Core.Helpers;
-using AddinFamilyFoundrySuite.Core.OperationSettings;
+using AddinFamilyFoundrySuite.Core.Snapshots;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using PeExtensions.FamDocument;

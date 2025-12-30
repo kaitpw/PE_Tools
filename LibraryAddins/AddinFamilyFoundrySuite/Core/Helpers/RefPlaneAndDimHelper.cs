@@ -1,4 +1,4 @@
-using AddinFamilyFoundrySuite.Core.OperationSettings;
+using AddinFamilyFoundrySuite.Core.Snapshots;
 using System.Text.Json.Serialization;
 
 namespace AddinFamilyFoundrySuite.Core.Helpers;
