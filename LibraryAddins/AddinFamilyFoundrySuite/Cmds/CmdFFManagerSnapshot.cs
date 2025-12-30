@@ -1,6 +1,7 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Aggregators;
 using AddinFamilyFoundrySuite.Core.Operations;
+using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
@@ -24,12 +25,16 @@ public class CmdFFManagerSnapshot : IExternalCommand {
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
-                SingleTransaction = false, OptimizeTypeOperations = true
+                SingleTransaction = false,
+                OptimizeTypeOperations = true
             };
 
-            var projectCollector = new ProjectParamCollector();
-            var familyDocCollector = new FamilyDocParamCollector();
-            using var processor = new OperationProcessor(doc, executionOptions, projectCollector, familyDocCollector);
+            // Request both parameter and refplane snapshots
+            var collectorQueue = new CollectorQueue()
+                .Add(new ParamSectionCollector())
+                .Add(new RefPlaneSectionCollector());
+
+            using var processor = new OperationProcessor(doc, executionOptions);
 
             var queue = new OperationQueue()
                 .Add(new LogRefPlaneAndDims(outputFolderPath));
@@ -39,7 +44,7 @@ public class CmdFFManagerSnapshot : IExternalCommand {
 
             var logs = processor
                 .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc))
-                .ProcessQueue(queue, outputFolderPath);
+                .ProcessQueue(queue, collectorQueue, outputFolderPath);
 
             _ = new ProcessingResultBuilder(storage)
                 .WithOperationMetadata(queue)

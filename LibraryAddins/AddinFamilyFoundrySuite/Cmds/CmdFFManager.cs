@@ -3,6 +3,7 @@ using AddinFamilyFoundrySuite.Core.Aggregators;
 using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
+using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
@@ -91,14 +92,15 @@ public class CmdFFManager : IExternalCommand {
                 OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
             };
 
-            // Create collectors for pre/post snapshots (project doc vs family doc)
-            var projectCollector = new ProjectParamCollector();
-            var familyDocCollector = new FamilyDocParamCollector();
+            // Request both parameter and refplane snapshots
+            var collectorQueue = new CollectorQueue()
+                .Add(new ParamSectionCollector())
+                .Add(new RefPlaneSectionCollector());
 
-            using var processor = new OperationProcessor(doc, executionOptions, projectCollector, familyDocCollector);
+            using var processor = new OperationProcessor(doc, executionOptions);
             var logs = processor
                 .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc))
-                .ProcessQueue(queue, outputFolderPath, settings.OnProcessingFinish);
+                .ProcessQueue(queue, collectorQueue, outputFolderPath, settings.OnProcessingFinish);
 
             _ = new ProcessingResultBuilder(storage)
                 .WithProfile(profile, "Default")

@@ -24,9 +24,13 @@ public class ElementIntersectException : Exception {
 }
 
 public class JsonValidationException : Exception {
-    public JsonValidationException(string message) : base(message) => this.ValidationErrors = new List<string>();
+    public JsonValidationException(string message) : base(message) {
+        this.FilePath = string.Empty;
+        this.ValidationErrors = new List<string>();
+    }
 
     /// <summary>Creates a JsonValidationException with a formatted list of validation errors</summary>
+    /// <param name="path">Path to the JSON file that failed validation</param>
     /// <param name="validationErrors">List of validation error messages</param>
     public JsonValidationException(string path, IEnumerable<string> validationErrors)
         : base(FormatValidationErrors(path, validationErrors)) {

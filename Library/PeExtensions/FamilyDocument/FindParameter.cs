@@ -6,7 +6,9 @@ public static class FamilyDocumentFindParameter {
     /// </summary>
     /// <param name="famDoc">The family document</param>
     /// <param name="parameterTypeId">The ForgeTypeId identifier of the parameter</param>
-    /// <returns>The shared parameter element, or null if the parameter is not found</returns>
+    /// <returns>The shared parameter element</returns>
+    /// <exception cref="ArgumentException">Thrown if parameterTypeId format is invalid</exception>
+    /// <exception cref="InvalidOperationException">Thrown if no parameter with the specified GUID is found</exception>
     public static SharedParameterElement FindParameter(this FamilyDocument famDoc, ForgeTypeId parameterTypeId) {
         var typeId = parameterTypeId.TypeId;
         var typeIdParts = typeId?.Split(':');
@@ -17,11 +19,12 @@ public static class FamilyDocumentFindParameter {
         var dashIndex = parameterPart.IndexOf('-');
         var guidText = dashIndex > 0 ? parameterPart[..dashIndex] : parameterPart;
 
-        return !Guid.TryParse(guidText, out var guid)
-            ? throw new ArgumentException($"Could not extract GUID from parameterTypeId: {typeId}")
-            : new FilteredElementCollector(famDoc)
-                .OfClass(typeof(SharedParameterElement))
-                .OfType<SharedParameterElement>()
-                .First(p => p.GuidValue == guid);
+        if (!Guid.TryParse(guidText, out var guid))
+            throw new ArgumentException($"Could not extract GUID from parameterTypeId: {typeId}");
+
+        return new FilteredElementCollector(famDoc)
+            .OfClass(typeof(SharedParameterElement))
+            .OfType<SharedParameterElement>()
+            .First(p => p.GuidValue == guid);
     }
 }

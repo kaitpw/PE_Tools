@@ -1,5 +1,7 @@
 using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
+using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeServices.Storage;
+using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators;
 
@@ -7,9 +9,13 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators;
 ///     Orchestrates parameter collection and aggregation across multiple families.
 /// </summary>
 public class FamilyParamAggregator {
-    private readonly IProjectSnapshotCollector _collector;
+    private readonly Action<FamilySnapshot, Document, Family> _projectCollector;
+    private readonly Action<FamilySnapshot, FamilyDocument> _famDocCollector;
 
-    public FamilyParamAggregator(IProjectSnapshotCollector collector) => this._collector = collector;
+    public FamilyParamAggregator(CollectorQueue collectorQueue) {
+        this._projectCollector = collectorQueue.ToProjectCollectorFunc();
+        this._famDocCollector = collectorQueue.ToFamilyDocCollectorFunc();
+    }
 
     /// <summary>
     ///     Aggregates parameter data from all provided families.
@@ -22,28 +28,28 @@ public class FamilyParamAggregator {
 
         foreach (var family in families) {
             var familyName = family.Name;
-            FamilySnapshot snapshot;
 
             try {
-                snapshot = new FamilySnapshot { FamilyName = familyName };
-                this._collector.Collect((doc, family), snapshot);
+                var snapshot = new FamilySnapshot { FamilyName = familyName };
+
+                // Collect from project (preferred - faster, no type cycling)
+                this._projectCollector(snapshot, doc, family);
+
+                foreach (var param in snapshot.Parameters?.Data ?? []) {
+                    var key = GenerateKey(param);
+
+                    if (!aggregated.TryGetValue(key, out var existing)) {
+                        existing = new AggregatedParamData(param);
+                        aggregated[key] = existing;
+                    }
+
+                    if (!existing.FamilyNames.Contains(familyName)) {
+                        existing.FamilyNames.Add(familyName);
+                        existing.FamilyCount = existing.FamilyNames.Count;
+                    }
+                }
             } catch {
                 // Skip families that fail to process
-                continue;
-            }
-
-            foreach (var param in snapshot.Parameters) {
-                var key = GenerateKey(param);
-
-                if (!aggregated.TryGetValue(key, out var existing)) {
-                    existing = new AggregatedParamData(param);
-                    aggregated[key] = existing;
-                }
-
-                if (!existing.FamilyNames.Contains(familyName)) {
-                    existing.FamilyNames.Add(familyName);
-                    existing.FamilyCount = existing.FamilyNames.Count;
-                }
             }
         }
 

@@ -3,6 +3,7 @@ using AddinFamilyFoundrySuite.Core.Aggregators;
 using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
+using AddinFamilyFoundrySuite.Core.Snapshots;
 using AddinFamilyFoundrySuite.Ui;
 using PeRevit.Lib;
 using PeRevit.Ui;
@@ -14,8 +15,11 @@ using PeUi.Core.Services;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Input;
+using ParameterInfo = AddinFamilyFoundrySuite.Ui.ParameterInfo;
 
 namespace AddinFamilyFoundrySuite.Cmds;
 
@@ -162,7 +166,64 @@ public class CmdFFMigrator : IExternalCommand {
         var queue = BuildQueue(profile, previewApsParamData);
         var operationMetadata = queue.GetExecutableMetadata();
         var families = profile.GetFamilies(context.Doc);
-        var apsParamNames = apsParamModels.Select(p => p.Name).ToList();
+
+        // Extract APS parameter info
+        var apsParameters = apsParamModels.Select(p => new ParameterInfo(
+            p.Name,
+            p.DownloadOptions.IsInstance,
+            GetDataTypeName(p.DownloadOptions.GetSpecTypeId())
+        )).ToList();
+
+        // Extract AddAndSet parameter info (including internal params)
+        var internalParams = BuildInternalParams();
+        var allAddAndSetParams = profile.AddAndSetParams.Parameters
+            .Concat(internalParams)
+            .Concat(profile.AddAndSetParams.ParametersPerType.Select(p => new SetParamModel {
+                Name = p.Name,
+                DataType = p.DataType,
+                IsInstance = p.IsInstance,
+                PropertiesGroup = p.PropertiesGroup
+            }));
+
+        var addAndSetParameters = allAddAndSetParams
+            .Select(p => new ParameterInfo(
+                p.Name,
+                p.IsInstance,
+                GetDataTypeName(p.DataType)
+            ))
+            .ToList();
+
+        // Extract family info with categories
+        var familyInfos = families.Select(f => new FamilyInfo(
+            f.Name,
+            f.FamilyCategory?.Name ?? "Unknown"
+        )).ToList();
+
+        // Serialize profile to JSON
+        var profileJson = JsonSerializer.Serialize(
+            profile,
+            new JsonSerializerOptions {
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+
+        // Check operation enabled status from queue
+        var operationInfos = new List<OperationInfo>();
+        foreach (var op in queue.Operations) {
+            var metadata = operationMetadata.FirstOrDefault(m => m.Name == op.Name);
+            if (metadata != default) {
+                var isEnabled = true;
+                if (op is IOperation<IOperationSettings> opWithSettings)
+                    isEnabled = opWithSettings.Settings?.Enabled ?? true;
+                operationInfos.Add(new OperationInfo(
+                    metadata.Name,
+                    metadata.Description,
+                    metadata.Type,
+                    metadata.IsMerged,
+                    isEnabled
+                ));
+            }
+        }
 
         return new PreviewData {
             ProfileName = profileItem.TextPrimary,
@@ -170,13 +231,22 @@ public class CmdFFMigrator : IExternalCommand {
             CreatedDate = profileItem._fileInfo.CreationTime,
             ModifiedDate = profileItem._fileInfo.LastWriteTime,
             LineCount = profileItem.LineCount,
-            Operations = operationMetadata
-                .Select(op => new OperationInfo(op.Name, op.Description, op.Type, op.IsMerged))
-                .ToList(),
-            ApsParameterNames = apsParamNames,
-            FamilyNames = families.Select(f => f.Name).ToList(),
+            Operations = operationInfos,
+            ApsParameters = apsParameters,
+            AddAndSetParameters = addAndSetParameters,
+            Families = familyInfos,
+            ProfileJson = profileJson,
             IsValid = true
         };
+    }
+
+    private static string GetDataTypeName(ForgeTypeId dataType) {
+        if (dataType == null || string.IsNullOrEmpty(dataType.TypeId))
+            return "Text";
+
+        var typeId = dataType.TypeId;
+        var lastDash = typeId.LastIndexOf('-');
+        return lastDash >= 0 ? typeId[(lastDash + 1)..] : typeId;
     }
 
     private static PreviewData CreateValidationErrorPreview(ProfileListItem profileItem, JsonValidationException ex) =>
@@ -326,18 +396,18 @@ public class CmdFFMigrator : IExternalCommand {
     ) {
         var outputFolderPath = storage.OutputDir().DirectoryPath;
 
-        // Create collectors for pre/post snapshots
-        var projectCollector = new ProjectParamCollector();
-        var familyDocCollector = new FamilyDocParamCollector();
+        // Request both parameter and refplane snapshots
+        var collectorQueue = new CollectorQueue()
+            .Add(new ParamSectionCollector())
+            .Add(new RefPlaneSectionCollector());
 
-        using var processor =
-            new OperationProcessor(doc, profile.ExecutionOptions, projectCollector, familyDocCollector);
+        using var processor = new OperationProcessor(doc, profile.ExecutionOptions);
         var logs = processor
             .SelectFamilies(() => {
                 var picked = Pickers.GetSelectedFamilies(uiDoc);
                 return picked.Any() ? picked : profile.GetFamilies(doc);
             })
-            .ProcessQueue(queue, outputFolderPath, onFinish);
+            .ProcessQueue(queue, collectorQueue, outputFolderPath, onFinish);
 
         _ = new ProcessingResultBuilder(storage)
             .WithProfile(profile, profileName)

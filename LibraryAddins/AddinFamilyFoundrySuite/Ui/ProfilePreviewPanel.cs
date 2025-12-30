@@ -17,7 +17,7 @@ public class ProfilePreviewPanel : UserControl {
 
     public ProfilePreviewPanel() {
         // Create scrollable rich text box for content display
-        this._richTextBox = new WpfUiRichTextBox {
+        this._richTextBox = new WpfUiRichTextBox { 
             IsReadOnly = true,
             Focusable = false,
             IsTextSelectionEnabled = true,
@@ -73,67 +73,102 @@ public class ProfilePreviewPanel : UserControl {
             summaryPara.Inlines.Add(new LineBreak());
             summaryPara.Inlines.Add(new Run($"APS Parameters: {data.ApsParameterCount}"));
             summaryPara.Inlines.Add(new LineBreak());
+            summaryPara.Inlines.Add(new Run($"AddAndSet Parameters: {data.AddAndSetParameterCount}"));
+            summaryPara.Inlines.Add(new LineBreak());
             summaryPara.Inlines.Add(new Run($"Families: {data.FamilyCount}"));
             summaryPara.Margin = new Thickness(0, 0, 0, 12);
             doc.Blocks.Add(summaryPara);
 
-            // Operations list
+            // Operations list with enabled status
             if (data.Operations.Count > 0) {
-                var opHeader = new Paragraph(new Run("Operations") { FontWeight = FontWeights.SemiBold }) {
-                    Margin = new Thickness(0, 0, 0, 4)
-                };
-                doc.Blocks.Add(opHeader);
-
+                AddSectionHeader(doc, "Operations");
                 var opList = new List { MarkerStyle = TextMarkerStyle.Decimal, Margin = new Thickness(16, 0, 0, 12) };
                 foreach (var op in data.Operations) {
-                    var listItem = new ListItem(new Paragraph(new Run($"{op.Name} ({op.Type})")));
+                    var enabledText = op.Enabled ? "✓" : "✗";
+                    var para = new Paragraph();
+                    para.Inlines.Add(new Run($"{enabledText} ") { 
+                        FontWeight = FontWeights.Bold,
+                        Foreground = op.Enabled 
+                            ? System.Windows.Media.Brushes.Green 
+                            : System.Windows.Media.Brushes.Red 
+                    });
+                    para.Inlines.Add(new Run($"{op.Name}"));
+                    para.Inlines.Add(new LineBreak());
+                    para.Inlines.Add(new Run($"  Type: {op.Type}, Batch: {op.IsMerged}") { FontSize = 10 });
+                    var listItem = new ListItem(para);
                     opList.ListItems.Add(listItem);
                 }
                 doc.Blocks.Add(opList);
             }
 
-            // APS Parameters list (abbreviated)
-            if (data.ApsParameterNames.Count > 0) {
-                var paramHeader = new Paragraph(new Run("APS Parameters") { FontWeight = FontWeights.SemiBold }) {
-                    Margin = new Thickness(0, 0, 0, 4)
-                };
-                doc.Blocks.Add(paramHeader);
-
-                var maxShow = Math.Min(data.ApsParameterNames.Count, 10);
+            // APS Parameters list with details
+            if (data.ApsParameters.Count > 0) {
+                AddSectionHeader(doc, "APS Parameters (from Parameters Service)");
                 var paramList = new List { MarkerStyle = TextMarkerStyle.Disc, Margin = new Thickness(16, 0, 0, 12) };
-                for (var i = 0; i < maxShow; i++) {
-                    var listItem = new ListItem(new Paragraph(new Run(data.ApsParameterNames[i])));
+                foreach (var param in data.ApsParameters) {
+                    var para = new Paragraph();
+                    para.Inlines.Add(new Run(param.Name) { FontWeight = FontWeights.SemiBold });
+                    para.Inlines.Add(new LineBreak());
+                    para.Inlines.Add(new Run($"  {(param.IsInstance ? "Instance" : "Type")}, {param.DataType}") { FontSize = 10 });
+                    var listItem = new ListItem(para);
                     paramList.ListItems.Add(listItem);
-                }
-                if (data.ApsParameterNames.Count > maxShow) {
-                    var more = new ListItem(new Paragraph(new Run($"... and {data.ApsParameterNames.Count - maxShow} more")));
-                    paramList.ListItems.Add(more);
                 }
                 doc.Blocks.Add(paramList);
             }
 
-            // Families list (abbreviated)
-            if (data.FamilyNames.Count > 0) {
-                var famHeader = new Paragraph(new Run("Families to Process") { FontWeight = FontWeights.SemiBold }) {
-                    Margin = new Thickness(0, 0, 0, 4)
-                };
-                doc.Blocks.Add(famHeader);
+            // AddAndSet Parameters list with details
+            if (data.AddAndSetParameters.Count > 0) {
+                AddSectionHeader(doc, "AddAndSet Parameters (set by profile)");
+                var paramList = new List { MarkerStyle = TextMarkerStyle.Disc, Margin = new Thickness(16, 0, 0, 12) };
+                foreach (var param in data.AddAndSetParameters) {
+                    var para = new Paragraph();
+                    para.Inlines.Add(new Run(param.Name) { FontWeight = FontWeights.SemiBold });
+                    para.Inlines.Add(new LineBreak());
+                    para.Inlines.Add(new Run($"  {(param.IsInstance ? "Instance" : "Type")}, {param.DataType}") { FontSize = 10 });
+                    var listItem = new ListItem(para);
+                    paramList.ListItems.Add(listItem);
+                }
+                doc.Blocks.Add(paramList);
+            }
 
-                var maxShow = Math.Min(data.FamilyNames.Count, 10);
+            // Families list with categories
+            if (data.Families.Count > 0) {
+                AddSectionHeader(doc, "Families to Process");
                 var famList = new List { MarkerStyle = TextMarkerStyle.Disc, Margin = new Thickness(16, 0, 0, 12) };
-                for (var i = 0; i < maxShow; i++) {
-                    var listItem = new ListItem(new Paragraph(new Run(data.FamilyNames[i])));
+                foreach (var fam in data.Families) {
+                    var para = new Paragraph();
+                    para.Inlines.Add(new Run(fam.Name) { FontWeight = FontWeights.SemiBold });
+                    para.Inlines.Add(new LineBreak());
+                    para.Inlines.Add(new Run($"  Category: {fam.Category}") { FontSize = 10 });
+                    var listItem = new ListItem(para);
                     famList.ListItems.Add(listItem);
                 }
-                if (data.FamilyNames.Count > maxShow) {
-                    var more = new ListItem(new Paragraph(new Run($"... and {data.FamilyNames.Count - maxShow} more")));
-                    famList.ListItems.Add(more);
-                }
                 doc.Blocks.Add(famList);
+            }
+
+            // Profile JSON section
+            if (!string.IsNullOrEmpty(data.ProfileJson)) {
+                AddSectionHeader(doc, "Profile Settings (JSON)");
+                var jsonPara = new Paragraph(new Run(data.ProfileJson)) {
+                    FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                    FontSize = 9,
+                    Margin = new Thickness(8, 0, 0, 12),
+                    Background = System.Windows.Media.Brushes.Black,
+                    Foreground = System.Windows.Media.Brushes.LightGray,
+                    Padding = new Thickness(8)
+                };
+                doc.Blocks.Add(jsonPara);
             }
         }
 
         this._richTextBox.Document = doc;
+    }
+
+    private static void AddSectionHeader(FlowDocument doc, string title) {
+        var header = new Paragraph(new Run(title) { FontWeight = FontWeights.SemiBold }) {
+            Margin = new Thickness(0, 8, 0, 4)
+        };
+        doc.Blocks.Add(header);
     }
 
     private static void AddValidationSection(FlowDocument doc, PreviewData data) {
@@ -203,11 +238,14 @@ public class ProfilePreviewPanel : UserControl {
 public class PreviewData {
     public string ProfileName { get; init; } = string.Empty;
     public int OperationCount => this.Operations.Count;
-    public int ApsParameterCount => this.ApsParameterNames.Count;
-    public int FamilyCount => this.FamilyNames.Count;
+    public int ApsParameterCount => this.ApsParameters.Count;
+    public int AddAndSetParameterCount => this.AddAndSetParameters.Count;
+    public int FamilyCount => this.Families.Count;
     public List<OperationInfo> Operations { get; init; } = [];
-    public List<string> ApsParameterNames { get; init; } = [];
-    public List<string> FamilyNames { get; init; } = [];
+    public List<ParameterInfo> ApsParameters { get; init; } = [];
+    public List<ParameterInfo> AddAndSetParameters { get; init; } = [];
+    public List<FamilyInfo> Families { get; init; } = [];
+    public string ProfileJson { get; init; } = string.Empty;
 
     // File metadata (from ProfileListItem)
     public string FilePath { get; init; } = string.Empty;
@@ -224,5 +262,15 @@ public class PreviewData {
 /// <summary>
 ///     Operation info for preview display.
 /// </summary>
-public record OperationInfo(string Name, string Description, string Type, string IsMerged);
+public record OperationInfo(string Name, string Description, string Type, string IsMerged, bool Enabled);
+
+/// <summary>
+///     Parameter info for preview display.
+/// </summary>
+public record ParameterInfo(string Name, bool IsInstance, string DataType);
+
+/// <summary>
+///     Family info for preview display.
+/// </summary>
+public record FamilyInfo(string Name, string Category);
 

@@ -1,5 +1,6 @@
 using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.Aggregators;
+using AddinFamilyFoundrySuite.Core.Snapshots;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using PeRevit.Lib;
@@ -44,14 +45,11 @@ public class CmdFFParamAggregator : IExternalCommand {
                 return Result.Cancelled;
             }
 
-            // Create collector based on settings (extensible for future collectors)
-            IProjectSnapshotCollector collector = profile.CollectorType switch {
-                ParamCollectorType.TempInstance => new ProjectParamCollector(),
-                // Future: ParamCollectorType.EditFamily => new FamilyDocParamCollector() via EditFamily context
-                _ => new ProjectParamCollector()
-            };
+            // Create collectors - uses separated IProjectCollector/IFamilyDocCollector system
+            var collectorQueue = new CollectorQueue()
+                .Add(new ParamSectionCollector());
 
-            var aggregator = new FamilyParamAggregator(collector);
+            var aggregator = new FamilyParamAggregator(collectorQueue);
 
             // Aggregate parameters
             var balloon = new Ballogger();
