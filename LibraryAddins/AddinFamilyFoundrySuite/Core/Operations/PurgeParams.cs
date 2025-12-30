@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class PurgeParams : DocOperationWithContext<PurgeParamsSettings> {
+public class PurgeParams : DocOperation<PurgeParamsSettings> {
     public override string Description => "Recursively delete unused parameters from the family";
 
     public PurgeParams(PurgeParamsSettings settings, IEnumerable<string> ExcludeNamesEqualing) :

@@ -16,7 +16,7 @@ public class ElementIntersectException : Exception {
         this.IntersectionElements = intersections;
     }
 
-    public ElementId? ReferenceElement { get; }
+    public ElementId ReferenceElement { get; }
     public ElementId[] IntersectionElements { get; }
 
     private static string FormatDefaultMessage(ElementId reference, ElementId[] intersections) =>
@@ -24,9 +24,7 @@ public class ElementIntersectException : Exception {
 }
 
 public class JsonValidationException : Exception {
-    public JsonValidationException(string message) : base(message) {
-        this.ValidationErrors = new List<string>();
-    }
+    public JsonValidationException(string message) : base(message) => this.ValidationErrors = new List<string>();
 
     /// <summary>Creates a JsonValidationException with a formatted list of validation errors</summary>
     /// <param name="validationErrors">List of validation error messages</param>

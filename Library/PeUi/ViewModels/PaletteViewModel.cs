@@ -23,7 +23,7 @@ public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewMod
     private readonly List<TItem> _allItems;
     private readonly DispatcherTimer _debounceTimer;
     private readonly DispatcherTimer _selectionDebounceTimer;
-    private readonly Func<TItem, string>? _filterKeySelector;
+    private readonly Func<TItem, string> _filterKeySelector;
     private readonly SearchFilterService<TItem> _searchService;
 
     /// <summary> Current search text </summary>
@@ -86,7 +86,7 @@ public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewMod
     public ObservableCollection<TItem> FilteredItems { get; }
 
     /// <summary> Available filter values (only populated if filtering is enabled) </summary>
-    public ObservableCollection<string>? AvailableFilterValues { get; }
+    public ObservableCollection<string> AvailableFilterValues { get; }
 
     /// <summary> Whether filtering is enabled for this palette </summary>
     public bool IsFilteringEnabled => this._filterKeySelector != null;

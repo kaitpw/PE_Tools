@@ -11,7 +11,7 @@ public class JsonExtendsException : Exception {
     public string ChildFilePath { get; init; }
 
     /// <summary>The file path of the base profile (if applicable).</summary>
-    public string? BaseFilePath { get; init; }
+    public string BaseFilePath { get; init; }
 
     /// <summary>The inheritance chain that was resolved (for debugging).</summary>
     public List<string> InheritanceChain { get; init; } = [];

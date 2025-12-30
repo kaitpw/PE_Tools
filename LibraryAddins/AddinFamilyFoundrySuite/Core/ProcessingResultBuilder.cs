@@ -68,8 +68,8 @@ public class ProcessingResultBuilder {
             var familyDir = Path.Combine(runDir, familyDirName);
             _ = Directory.CreateDirectory(familyDir);
 
-            var pre = ctx.PreProcessSnapshot?.Parameters ?? [];
-            var post = ctx.PostProcessSnapshot?.Parameters ?? [];
+            var pre = ctx.PreProcessSnapshot?.Parameters?.Data ?? [];
+            var post = ctx.PostProcessSnapshot?.Parameters?.Data ?? [];
 
             File.WriteAllText(Path.Combine(familyDir, "presnapshot.json"), pre.ToJson());
             File.WriteAllText(Path.Combine(familyDir, "presnapshot.csv"), pre.ToCsv());

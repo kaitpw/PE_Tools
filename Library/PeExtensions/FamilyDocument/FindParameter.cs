@@ -7,7 +7,7 @@ public static class FamilyDocumentFindParameter {
     /// <param name="famDoc">The family document</param>
     /// <param name="parameterTypeId">The ForgeTypeId identifier of the parameter</param>
     /// <returns>The shared parameter element, or null if the parameter is not found</returns>
-    public static SharedParameterElement? FindParameter(this FamilyDocument famDoc, ForgeTypeId parameterTypeId) {
+    public static SharedParameterElement FindParameter(this FamilyDocument famDoc, ForgeTypeId parameterTypeId) {
         var typeId = parameterTypeId.TypeId;
         var typeIdParts = typeId?.Split(':');
         if (typeIdParts == null || typeIdParts.Length < 2)
