@@ -50,8 +50,10 @@ public class ProcessingResultBuilder {
 
     /// <summary>
     ///     Writes a timestamped run directory with per-family output files:
-    ///     - presnapshot.json / presnapshot.csv
-    ///     - postsnapshot.json / postsnapshot.csv
+    ///     - pre-snapshot-parameters.json / pre-snapshot-parameters.csv
+    ///     - pre-snapshot-refplanesanddims.json / pre-snapshot-refplanesanddims.csv
+    ///     - post-snapshot-parameters.json / post-snapshot-parameters.csv
+    ///     - post-snapshot-refplanesanddims.json / post-snapshot-refplanesanddims.csv
     ///     - abridged.json / detailed.json
     ///     - settings.json
     /// </summary>
@@ -68,13 +70,15 @@ public class ProcessingResultBuilder {
             var familyDir = Path.Combine(runDir, familyDirName);
             _ = Directory.CreateDirectory(familyDir);
 
-            var pre = ctx.PreProcessSnapshot?.Parameters?.Data ?? [];
-            var post = ctx.PostProcessSnapshot?.Parameters?.Data ?? [];
+            // Serialize each section separately (pre-processing)
+            if (ctx.PreProcessSnapshot != null) {
+                SerializeSnapshotSections(ctx.PreProcessSnapshot, familyDir, "pre");
+            }
 
-            File.WriteAllText(Path.Combine(familyDir, "presnapshot.json"), pre.ToJson());
-            File.WriteAllText(Path.Combine(familyDir, "presnapshot.csv"), pre.ToCsv());
-            File.WriteAllText(Path.Combine(familyDir, "postsnapshot.json"), post.ToJson());
-            File.WriteAllText(Path.Combine(familyDir, "postsnapshot.csv"), post.ToCsv());
+            // Serialize each section separately (post-processing)
+            if (ctx.PostProcessSnapshot != null) {
+                SerializeSnapshotSections(ctx.PostProcessSnapshot, familyDir, "post");
+            }
 
             var abridgedPath = Path.Combine(familyDir, "abridged.json");
             var detailedPath = Path.Combine(familyDir, "detailed.json");
@@ -152,6 +156,22 @@ public class ProcessingResultBuilder {
     private static void WriteJson(string path, object data) {
         var json = JsonConvert.SerializeObject(data, JsonSettings);
         File.WriteAllText(path, json);
+    }
+
+    private static void SerializeSnapshotSections(FamilySnapshot snapshot, string familyDir, string prefix) {
+        // Parameters section
+        if (snapshot.Parameters?.Data != null && snapshot.Parameters.Data.Count > 0) {
+            var paramsData = snapshot.Parameters.Data;
+            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-parameters.json"), paramsData.ToJson());
+            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-parameters.csv"), paramsData.ToCsv());
+        }
+
+        // RefPlanesAndDims section
+        if (snapshot.RefPlanesAndDims?.Data != null && snapshot.RefPlanesAndDims.Data.Count > 0) {
+            var refPlanesData = snapshot.RefPlanesAndDims.Data;
+            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-refplanesanddims.json"), refPlanesData.ToJson());
+            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-refplanesanddims.csv"), refPlanesData.ToCsv());
+        }
     }
 
     private static string SanitizeDirName(string name) {

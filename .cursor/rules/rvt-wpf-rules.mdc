@@ -151,37 +151,40 @@ Other important notes related to compilation troubleshooting are:
 ### Assembly Loading and BAML Resource Lookup (CRITICAL)
 
 WPF's `InitializeComponent()` uses `Application.LoadComponent(this, uri)` which
-internally calls `this.GetType().Assembly` to find BAML resources. This creates
-two failure modes in Revit add-ins:
+resolves pack URIs like `/PE_Tools;component/path/to/file.xaml`. This has two
+failure modes in Revit add-ins:
 
-#### Failure Mode 1: Assembly Load Context Mismatch (Duplicate Loading)
+#### Failure Mode 1: Pack URI Resolution After Long Sessions
 
-The problem is **loading the same assembly multiple times**, NOT `LoadFrom`
-itself. When `AssemblyResolve` fires multiple times for the same assembly (due
-to GC pressure, certain command sequences, or Revit internals), each call to
-`LoadFrom` creates a new assembly instance. Types from different instances are
-considered DIFFERENT even if identical - this breaks BAML resource lookup.
+WPF maintains internal caches for pack URI → assembly resolution. After long
+Revit sessions, these caches can become stale. When WPF needs to re-resolve your
+main assembly for a pack URI, it may trigger `AssemblyResolve`. If your handler
+doesn't return the exact same instance Revit originally loaded, BAML lookup
+fails.
 
 **Symptom**: Error like "component does not have a resource identified by URI"
-that appears intermittently after Revit has been open for a while.
+that appears intermittently after Revit has been open for hours.
 
-**Wrong:**
+**Solution - Two parts required:**
+
+1. **Pre-cache the main assembly at startup** (before `AssemblyResolve` is
+   wired):
 
 ```csharp
-private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
-    var path = Path.Combine(addinDir, $"{name}.dll");
-    return Assembly.LoadFrom(path);  // BROKEN if called multiple times!
+public Result OnStartup(UIControlledApplication app) {
+    // Pre-cache BEFORE wiring AssemblyResolve
+    var mainAsm = typeof(App).Assembly;
+    _cache[mainAsm.GetName().Name] = mainAsm;
+    
+    AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+    
+    // Warm up WPF's pack URI caches while state is clean
+    _ = ThemeManager.WpfUiResources;
+    // ...
 }
 ```
 
-**Also Wrong** (for WPF assemblies):
-
-```csharp
-// Assembly.Load(bytes) creates anonymous context - types NEVER unify
-return Assembly.Load(File.ReadAllBytes(path));  // Breaks WPF style TargetType matching!
-```
-
-**Correct:**
+2. **Cache all resolved assemblies** to prevent duplicate loading:
 
 ```csharp
 private static readonly Dictionary<string, Assembly> _cache = new();
@@ -189,17 +192,36 @@ private static readonly Dictionary<string, Assembly> _cache = new();
 private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {
     var name = new AssemblyName(args.Name).Name;
     
-    // Return cached or already-loaded assembly first - CRITICAL!
+    // Return cached assembly (includes pre-cached main assembly)
     if (_cache.TryGetValue(name, out var cached)) return cached;
+    
+    // Check already-loaded assemblies
     foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
         if (asm.GetName().Name == name) return _cache[name] = asm;
     
-    // LoadFrom is fine for FIRST load - the caching above prevents duplicates
+    // LoadFrom for dependencies - fine for first load
     var path = Path.Combine(addinDir, $"{name}.dll");
     if (!File.Exists(path)) return null;
     return _cache[name] = Assembly.LoadFrom(path);
 }
 ```
+
+<details>
+<summary>Why caching alone wasn't enough (previous incomplete understanding)</summary>
+
+We previously believed caching in `AssemblyResolve` was sufficient. However,
+Revit loads the main assembly directly (not through `AssemblyResolve`), so the
+cache was empty for `PE_Tools` until WPF happened to trigger a resolution hours
+into a session. By then, WPF's internal state could be inconsistent.
+
+The fix has two parts: (1) pre-cache the main assembly so it's in the cache from
+the start, and (2) warm up WPF's pack URI resolution immediately at startup
+while all state is clean.
+
+</details>
+
+**Never use `Assembly.Load(bytes)`** - it creates an anonymous context where
+types never unify, breaking WPF style TargetType matching.
 
 #### Failure Mode 2: Generic Classes Inheriting XAML Partials
 

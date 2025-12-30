@@ -1,13 +1,19 @@
+using AddinFamilyFoundrySuite.Core.Snapshots;
+
 namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 
 /// <summary>
 ///     Container for all snapshot data collected from a family.
-///     Designed to be extensible - future collectors add their sections here.
+///     Each section tracks its source (Project vs FamilyDoc) and collection timestamp.
 /// </summary>
 public class FamilySnapshot {
     public required string FamilyName { get; init; }
-    public DateTime CollectedAt { get; init; } = DateTime.Now;
 
-    // Parameter snapshots (current scope)
-    public List<ParamSnapshot> Parameters { get; set; } = [];
+    /// <summary>Parameter snapshots with source tracking</summary>
+    public SnapshotSection<ParamSnapshot> Parameters { get; set; }
+
+    /// <summary>Reference plane and dimension specs with source tracking</summary>
+    public SnapshotSection<RefPlaneSpec> RefPlanesAndDims { get; set; }
+
+    // Future sections: Connectors, etc.
 }

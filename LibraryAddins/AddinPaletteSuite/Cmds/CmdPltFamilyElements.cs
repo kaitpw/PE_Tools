@@ -1,5 +1,5 @@
 #nullable enable
-using AddinFamilyFoundrySuite.Core.OperationSettings;
+using AddinFamilyFoundrySuite.Core.Snapshots;
 using AddinPaletteSuite.Helpers;
 using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;

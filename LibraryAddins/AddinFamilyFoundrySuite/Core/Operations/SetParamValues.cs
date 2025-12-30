@@ -12,11 +12,11 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     On SetGlobalValue failure, defers to SetParamValuesPerType via GroupContext.
 /// </summary>
 public class SetParamValues(AddAndSetParamsSettings settings)
-    : DocOperationWithGroup<AddAndSetParamsSettings>(settings) {
+    : DocOperation<AddAndSetParamsSettings>(settings) {
     public override string Description =>
         "Set parameter values or formulas based on SetAsFormula property.";
 
-    public override OperationLog Execute(FamilyDocument doc, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
         foreach (var p in this.Settings.Parameters) {

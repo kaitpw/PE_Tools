@@ -10,7 +10,7 @@ public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
     public override string Description =>
         "Deletes reference planes in the Family which are not used by anything important";
 
-    public override OperationLog Execute(FamilyDocument doc) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var logs = new List<LogEntry>();
 
         bool deletedAny;

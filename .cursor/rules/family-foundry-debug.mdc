@@ -1,0 +1,250 @@
+---
+alwaysApply: false
+description: Guide for debugging Family Foundry operations and interpreting output files
+---
+
+# Family Foundry Debugging Guide
+
+## Output Directory Structure
+
+When `ProcessQueue` runs, it generates a timestamped run directory:
+
+```
+output/
+└── 2024-01-15_14-30-45/           # Run timestamp
+    └── {FamilyName}/              # One folder per processed family
+        ├── settings.json          # Profile name + settings used
+        ├── abridged.json          # Quick summary (start here)
+        ├── detailed.json          # Full breakdown with timing
+        ├── pre-snapshot-parameters.json/csv
+        ├── post-snapshot-parameters.json/csv
+        ├── pre-snapshot-refplanesanddims.json/csv
+        └── post-snapshot-refplanesanddims.json/csv
+```
+
+## Reading Output Files
+
+### Start with `abridged.json`
+
+```json
+{
+  "Family": "M_Receptacle Duplex",
+  "TotalSecondsElapsed": 2.145,
+  "Operations": [
+    {
+      "OperationName": "AddAndSetParams: SetParamValues",
+      "SuccessTotal": "5/6",
+      "Errors": ["PE_Voltage : Parameter 'PE_Voltage' not found"]
+    }
+  ]
+}
+```
+
+**Key fields:**
+- `SuccessTotal`: `"5/6"` means 5 succeeded out of 6 items attempted (1 error)
+- `Errors`: Array of error messages with format `[Context] ItemName : Message`
+
+### Use `detailed.json` for Full Context
+
+```json
+{
+  "Timestamp": "2024-01-15 14:30:45",
+  "RunTotalSecondsElapsed": 5.234,
+  "Family": "M_Receptacle Duplex",
+  "FamilyTotalSecondsElapsed": 2.145,
+  "Profile": "electrical-migration",
+  "OperationMetadata": [
+    { "Name": "PurgeParams", "Description": "...", "Type": "Doc", "IsMerged": "Single" },
+    { "Name": "AddAndSetParams: SetParamValues", "Type": "Doc", "IsMerged": "Single" },
+    { "Name": "AddAndSetParams: SetParamValuesPerType", "Type": "Type", "IsMerged": "Merged" }
+  ],
+  "Operations": [
+    {
+      "OperationName": "AddAndSetParams: SetParamValues",
+      "SecondsElapsed": 0.234,
+      "Successes": ["PE_E___Voltage : Set global value"],
+      "Skipped": ["PE_E___Power : Already has value"],
+      "Errors": ["PE_Voltage : Parameter 'PE_Voltage' not found"]
+    }
+  ]
+}
+```
+
+**Key fields:**
+- `OperationMetadata`: Shows execution order, type (Doc/Type), and batching
+- `IsMerged`: "Merged" = batched TypeOperations, "Single" = standalone
+- `Successes/Skipped/Errors`: Full breakdown by status
+
+### Log Entry Format
+
+Log messages follow this pattern:
+```
+[TypeName, TypeName2] ItemName : Message
+```
+
+- **Context** (optional): Family type names when from TypeOperation
+- **ItemName**: The parameter/element being processed
+- **Message**: What happened
+
+Examples:
+```
+PE_E___Voltage : Set global value                    # DocOperation success
+[Type A, Type B] PE_Power : Set per-type            # TypeOperation success (2 types)
+PE_Unknown : Parameter 'PE_Unknown' not found        # Error
+PE_Existing : Already has value                      # Skipped
+```
+
+## Log Statuses Explained
+
+| Status | Meaning | When Used |
+|--------|---------|-----------|
+| **Success** | Operation completed as intended | Value set, param added, etc. |
+| **Skipped** | Intentionally not processed | Already exists, empty value, disabled |
+| **Error** | Operation failed | Exception, not found, validation failed |
+| **Pending** | Deferred to next operation | DocOp deferred to TypeOp via GroupContext |
+
+**Note:** Pending entries should NOT appear in final output. If you see them, the follow-up operation didn't complete the work.
+
+## Snapshot Files
+
+### Parameter Snapshots (`*-snapshot-parameters.json`)
+
+```json
+[
+  {
+    "Name": "PE_E___Voltage",
+    "IsInstance": true,
+    "DataType": "autodesk.spec.aec:electricalPotential-2.0.0",
+    "Formula": null,
+    "ValuesPerType": {
+      "120V": "120",
+      "208V": "208",
+      "240V": "240"
+    },
+    "IsBuiltIn": false,
+    "SharedGuid": "a1b2c3d4-..."
+  }
+]
+```
+
+**Use for:**
+- Verifying parameter exists before/after
+- Checking values per family type
+- Confirming formula was set/unset
+- Identifying shared vs family parameters
+
+### Comparing Pre vs Post
+
+```bash
+# Quick diff to see what changed
+diff pre-snapshot-parameters.json post-snapshot-parameters.json
+```
+
+**Common checks:**
+- Parameter added? → In post but not pre
+- Value changed? → Compare `ValuesPerType` 
+- Formula set? → `Formula` field populated in post
+- Parameter removed? → In pre but not post
+
+## Common Error Patterns
+
+### "Parameter 'X' not found"
+**Cause:** Parameter doesn't exist in family  
+**Check:** `pre-snapshot-parameters.json` - is the param listed?  
+**Fix:** Enable `CreateFamParamIfMissing` in settings, or add param first
+
+### "Already has value" (Skipped)
+**Cause:** `OverrideExistingValues = false` and param has value  
+**Check:** `pre-snapshot-parameters.json` → `ValuesPerType` for that param  
+**Fix:** Set `OverrideExistingValues = true` if override intended
+
+### "Needs per-type fallback" then Error
+**Cause:** DocOperation deferred to TypeOperation, but TypeOp also failed  
+**Check:** Look for the TypeOperation logs after the DocOperation  
+**Common:** Formula syntax error, type mismatch
+
+### Empty Operations array
+**Cause:** All operations disabled or settings filtered everything out  
+**Check:** `settings.json` → verify `Enabled: true` on operations  
+**Check:** Profile settings → verify parameter lists aren't empty
+
+### "FATAL ERROR" in operation name
+**Cause:** Unhandled exception crashed the operation  
+**Check:** `detailed.json` for stack trace in error message  
+**Fix:** Bug in operation code - check Execute() method
+
+## Debugging Workflow
+
+### 1. Operation Not Doing Anything
+
+```
+1. Open abridged.json → Check if operation appears
+2. If missing → Check settings.json → Is Enabled: true?
+3. If present with 0/0 → Check pre-snapshot → Does target data exist?
+4. If Skipped → Check detailed.json → Why skipped?
+```
+
+### 2. Wrong Value Set
+
+```
+1. Open pre-snapshot-parameters.json → What was the original value?
+2. Open post-snapshot-parameters.json → What's the new value?
+3. Open detailed.json → Find the operation → Check message
+4. Check settings.json → Is the formula/value correct in profile?
+```
+
+### 3. Parameter Missing After Processing
+
+```
+1. Was it in pre-snapshot? → If no, it was never there
+2. Was it in post-snapshot? → If no, something removed it
+3. Check detailed.json for PurgeParams → Was it purged?
+4. Check purge exclusion list in settings
+```
+
+### 4. Snapshot Data Looks Wrong
+
+```
+1. Check which collector ran → Source field in snapshot
+2. Source: "Project" → Collected via temp instance (faster but limited)
+3. Source: "FamilyDoc" → Collected from family document (complete)
+4. If mismatch → Check if family was in editable state
+```
+
+## Dry Run Output
+
+Before processing, `DryRunResultBuilder` generates preview files:
+
+```
+output/
+├── dry-run_2024-01-15_14-30-45.json          # Summary
+└── dry-run_2024-01-15_14-30-45_detailed.json # Full details
+```
+
+**Use dry run to verify:**
+- Correct families selected
+- Expected operations in queue
+- APS parameters will be available
+- Profile settings look correct
+
+## Key Files for Debugging Code
+
+| Issue | Check These Files |
+|-------|-------------------|
+| Operation logic | `Core/Operations/{OperationName}.cs` |
+| Group coordination | `Core/OperationGroups/{GroupName}.cs` |
+| Snapshot collection | `Core/Snapshots/{Collector}.cs` |
+| Queue building | Command file (e.g., `CmdFFMigrator.cs`) → `BuildQueue()` |
+| Output formatting | `Core/ProcessingResultBuilder.cs` |
+| Log entry creation | `Core/BaseOperation.cs` → `LogEntry` class |
+
+## Quick Reference: Output File Purpose
+
+| File | When to Use |
+|------|-------------|
+| `abridged.json` | First look - what failed? |
+| `detailed.json` | Deep dive - timing, all statuses, metadata |
+| `settings.json` | What profile/settings were used? |
+| `pre-snapshot-*.json` | What was the state BEFORE processing? |
+| `post-snapshot-*.json` | What is the state AFTER processing? |
+| `*.csv` versions | Import to Excel for bulk analysis |

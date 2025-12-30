@@ -13,7 +13,7 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
     public override string Description =>
         "Configure electrical connector parameters and associate them with family parameters";
 
-    public override OperationLog Execute(FamilyDocument doc) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var logs = new List<LogEntry>();
 
         var polesName = this.Settings.SourceParameterNames.NumberOfPoles;

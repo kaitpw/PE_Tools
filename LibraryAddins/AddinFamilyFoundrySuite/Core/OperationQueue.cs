@@ -13,20 +13,11 @@ public class OperationQueue {
     /// </summary>
     public IReadOnlyList<IOperation> Operations => this._operations;
 
-    public OperationQueue Add<TOpSettings>(
-        IOperation<TOpSettings> operation,
-        bool internalOperation = false
-    ) where TOpSettings : class, IOperationSettings, new() {
-        if (operation.Settings?.Enabled == false) return this;
-        if (internalOperation) operation.Name = $"INTERNAL OPERATION: {operation.Name}";
-        this._operations.Add(operation);
-        return this;
-    }
-
     public OperationQueue Add(
         IOperation operation,
         bool internalOperation = false
     ) {
+        if (operation.Settings?.Enabled == false) return this;
         if (internalOperation) operation.Name = $"INTERNAL OPERATION: {operation.Name}";
         this._operations.Add(operation);
         return this;
@@ -36,9 +27,9 @@ public class OperationQueue {
     ///     Add an operation group to the queue with explicit settings from the profile.
     ///     Groups are unwrapped into individual operations, with names prefixed by the group name.
     /// </summary>
-    public OperationQueue Add<TOpSettings>(
-        OperationGroup<TOpSettings> group
-    ) where TOpSettings : class, IOperationSettings, new() {
+    public OperationQueue Add<TSettings>(
+        OperationGroup<TSettings> group
+    ) where TSettings : IOperationSettings {
         foreach (var operation in group.Operations) {
             operation.Name = $"{group.Name}: {operation.Name}";
             if (operation.Settings?.Enabled == false) continue;
@@ -60,11 +51,8 @@ public class OperationQueue {
                 result.AddRange(mergedOp.Operations.Select(o =>
                     (o.Name, o.Description, GetOperationType(o), "Merged")));
                 break;
-            case TypeOperation typeOp:
-                result.Add((typeOp.Name, typeOp.Description, GetOperationType(typeOp), "Single"));
-                break;
-            case DocOperation docOp:
-                result.Add((docOp.Name, docOp.Description, GetOperationType(docOp), "Single"));
+            case IOperation operation:
+                result.Add((operation.Name, operation.Description, GetOperationType(operation), "Single"));
                 break;
             default:
                 throw new InvalidOperationException($"Unknown operation type: {op.GetType().Name}");
@@ -83,10 +71,17 @@ public class OperationQueue {
 
     private static string GetOperationType(IOperation op) {
         var opType = op.GetType();
-        if (typeof(DocOperation).IsAssignableFrom(opType)) return "Doc";
-        if (typeof(TypeOperation).IsAssignableFrom(opType)) return "Type";
+        // Check if it's a generic type based on DocOperation<> or TypeOperation<>
+        while (opType != null) {
+            if (opType.IsGenericType) {
+                var genericDef = opType.GetGenericTypeDefinition();
+                if (genericDef.Name.StartsWith("DocOperation")) return "Doc";
+                if (genericDef.Name.StartsWith("TypeOperation")) return "Type";
+            }
+            opType = opType.BaseType;
+        }
         throw new InvalidOperationException(
-            $"Operation {op.GetType().Name} does not inherit from DocOperation or TypeOperation");
+            $"Operation {op.GetType().Name} does not inherit from DocOperation<T> or TypeOperation<T>");
     }
 
 
@@ -102,8 +97,10 @@ public class OperationQueue {
     ///     action runs in its own transaction.
     /// </param>
     /// <returns>An array of family actions that return logs when executed.</returns>
-    public Func<FamilyDocument, List<OperationLog>>[] ToFuncs(bool optimizeTypeOperations = true,
-        bool singleTransaction = true) {
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>>[] ToFuncs(
+        bool optimizeTypeOperations = true,
+        bool singleTransaction = true
+    ) {
         var executableOps = optimizeTypeOperations
             ? this.ToTypeOptimizedExecutableList()
             : this.ToExecutableList();
@@ -118,24 +115,20 @@ public class OperationQueue {
 
     public List<IExecutable> ToTypeOptimizedExecutableList() {
         var finalOps = new List<IExecutable>();
-        var currentBatch = new List<TypeOperation>();
+        var currentBatch = new List<IOperation>();
 
         foreach (var op in this._operations) {
-            switch (op) {
-            case TypeOperation typeOp:
-                currentBatch.Add(typeOp);
-                break;
-            case DocOperation docOp:
+            var isTypeOp = IsTypeOperation(op);
+
+            if (isTypeOp) {
+                currentBatch.Add(op);
+            } else {
                 if (currentBatch.Count > 0) {
                     finalOps.Add(new MergedTypeOperation(currentBatch));
                     currentBatch = [];
                 }
 
-                finalOps.Add(docOp);
-                break;
-            default:
-                throw new InvalidOperationException(
-                    $"Operation {op.GetType().Name} does not inherit from DocOperation or TypeOperation");
+                finalOps.Add(op);
             }
         }
 
@@ -146,18 +139,31 @@ public class OperationQueue {
         return finalOps;
     }
 
+    private static bool IsTypeOperation(IOperation op) {
+        var opType = op.GetType();
+        while (opType != null) {
+            if (opType.IsGenericType) {
+                var genericDef = opType.GetGenericTypeDefinition();
+                if (genericDef.Name.StartsWith("TypeOperation")) return true;
+            }
+            opType = opType.BaseType;
+        }
+        return false;
+    }
+
     /// <summary>
     ///     Bundles all family actions into a single action to replicate single-transaction behavior.
     ///     When ProcessFamily receives this single action, it will run all operations within one transaction.
     /// </summary>
-    private Func<FamilyDocument, List<OperationLog>>[] BundleFuncs(
-        Func<FamilyDocument, List<OperationLog>>[] actions) {
+    private Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>>[] BundleFuncs(
+        Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>>[] actions
+    ) {
         if (actions.Length == 0) return actions;
 
         // Create a single action that executes all actions sequentially and collects logs
-        List<OperationLog> BundleActions(FamilyDocument famDoc) {
+        List<OperationLog> BundleActions(FamilyDocument famDoc, FamilyProcessingContext context) {
             var allLogs = new List<OperationLog>();
-            foreach (var action in actions) allLogs.AddRange(action(famDoc));
+            foreach (var action in actions) allLogs.AddRange(action(famDoc, context));
             return allLogs;
         }
 

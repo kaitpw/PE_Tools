@@ -14,7 +14,7 @@ public class AddParamsFromSettings(AddAndSetParamsSettings settings)
     public override string Description =>
         "Create missing family parameters from AddAndSetParams settings.";
 
-    public override OperationLog Execute(FamilyDocument doc) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var logs = new List<LogEntry>();
         var fm = doc.FamilyManager;
 

@@ -4,7 +4,7 @@ namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
 ///     Inter-operation state container for coordinating log entries across operations within an OperationGroup.
-///     Created by OperationGroup, reset per-family by the OperationProcessor.
+///     Created by OperationGroup, reset per-family by the OperationProcessor to ensure clean state.
 /// </summary>
 public class OperationContext {
     private readonly Dictionary<string, LogEntry> _entries = new();
@@ -48,37 +48,27 @@ public class OperationContext {
 }
 
 /// <summary>
-///     Context for a single family's processing run, containing pre/post snapshots and operation logs.
+///     Context for a single family's processing run. Properties populated by pipeline and immutable after completion.
 /// </summary>
 public class FamilyProcessingContext {
     public required string FamilyName { get; init; }
 
-    /// <summary>
-    ///     Snapshot collected before processing.
-    /// </summary>
-    public FamilySnapshot? PreProcessSnapshot { get; set; }
+    /// <summary>Snapshot collected before processing.</summary>
+    public FamilySnapshot PreProcessSnapshot { get; internal set; }
 
-    /// <summary>
-    ///     Snapshot collected after processing.
-    /// </summary>
-    public FamilySnapshot? PostProcessSnapshot { get; set; }
+    /// <summary>Snapshot collected after processing.</summary>
+    public FamilySnapshot PostProcessSnapshot { get; internal set; }
 
-    /// <summary>
-    ///     Operation logs from processing, or an error if processing failed.
-    /// </summary>
-    public Result<List<OperationLog>> OperationLogs { get; set; }
+    /// <summary>Operation logs from processing, or an error if processing failed.</summary>
+    public Result<List<OperationLog>> OperationLogs { get; internal set; }
 
-    /// <summary>
-    ///     Total processing time in milliseconds.
-    /// </summary>
-    public double TotalMs { get; set; }
+    /// <summary>Total processing time in milliseconds.</summary>
+    public double TotalMs { get; internal set; }
 
 
-    /// <summary>
-    ///     Finds a parameter in the pre-process snapshot by name.
-    /// </summary>
+    /// <summary>Finds a parameter in the pre-process snapshot by name.</summary>
     public ParamSnapshot FindParam(string paramName) {
-        var parameters = this.PreProcessSnapshot?.Parameters;
+        var parameters = this.PreProcessSnapshot?.Parameters?.Data;
         if (parameters is null || parameters.Count == 0)
             return null;
 
@@ -88,15 +78,11 @@ public class FamilyProcessingContext {
             .FirstOrDefault();
     }
 
-    /// <summary>
-    ///     Checks if a parameter has a (non-empty) value for all family types.
-    /// </summary>
+    /// <summary>Checks if a parameter has a (non-empty) value for all family types.</summary>
     public bool HasValueForAllTypes(string paramName) =>
         this.HasValueForAllTypes(this.FindParam(paramName));
 
-    /// <summary>
-    ///     Checks if a parameter has a (non-empty) value for all family types.
-    /// </summary>
+    /// <summary>Checks if a parameter has a (non-empty) value for all family types.</summary>
     public bool HasValueForAllTypes(ParamSnapshot p) {
         if (p is null) return false;
         var familyTypes = p.ValuesPerType.Count;
@@ -104,31 +90,22 @@ public class FamilyProcessingContext {
         return familyTypes == this.CountTypesWithValue(p);
     }
 
-    /// <summary>
-    ///     Gets the count of types that have a value for the specified parameter.
-    /// </summary>
+    /// <summary>Gets the count of types that have a value for the specified parameter.</summary>
     public int CountTypesWithValue(string paramName) =>
         this.CountTypesWithValue(this.FindParam(paramName));
 
-    /// <summary>
-    ///     Gets the count of types that have a value for the specified parameter.
-    /// </summary>
+    /// <summary>Gets the count of types that have a value for the specified parameter.</summary>
     public int CountTypesWithValue(ParamSnapshot p) => this.GetTypesWithValue(p).Count;
 
-    /// <summary>
-    ///     Gets the list of family types that have a value for the specified parameter.
-    /// </summary>
+    /// <summary>Gets the list of family types that have a value for the specified parameter.</summary>
     public List<string> GetTypesWithValue(string paramName) =>
         this.GetTypesWithValue(this.FindParam(paramName));
 
-    /// <summary>
-    ///     Gets the list of family types that have a value for the specified parameter.
-    /// </summary>
-
+    /// <summary>Gets the list of family types that have a value for the specified parameter.</summary>
     public List<string> GetTypesWithValue(ParamSnapshot p) {
         if (p is null
-            || this.PreProcessSnapshot?.Parameters == null
-            || this.PreProcessSnapshot.Parameters.Count == 0) {
+            || this.PreProcessSnapshot?.Parameters?.Data == null
+            || this.PreProcessSnapshot.Parameters.Data.Count == 0) {
             return [];
         }
 

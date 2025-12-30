@@ -9,10 +9,10 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     Sets formulas like: Model = PE_G___Model, so the built-in derives from the shared param.
 /// </summary>
 public class BacklinkParamsToBuiltIn(MapParamsSettings settings)
-    : DocOperationWithGroup<MapParamsSettings>(settings) {
+    : DocOperation<MapParamsSettings>(settings) {
     public override string Description => "Create backlinks from built-in params to their mapped targets";
 
-    public override OperationLog Execute(FamilyDocument doc, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
         foreach (var mapping in this.Settings.MappingData) {

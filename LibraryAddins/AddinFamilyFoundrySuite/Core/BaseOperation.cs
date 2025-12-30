@@ -3,20 +3,34 @@ using PeExtensions.FamDocument;
 namespace AddinFamilyFoundrySuite.Core;
 
 public interface IExecutable {
-    Func<FamilyDocument, List<OperationLog>> ToFunc();
+    Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc();
 }
 
 public interface IOperation : IExecutable {
     string Name { get; set; }
+    string Description { get; }
+    IOperationSettings Settings { get; }
+}
+
+/// <summary>
+///     Marker interface for operations that support group context injection.
+///     Implemented by DocOperation and TypeOperation base classes.
+/// </summary>
+public interface IGroupContextAware {
+    OperationContext GroupContext { get; set; }
 }
 
 /// <summary>
 ///     Base abstract class for document-level operations.
 ///     Document-level operations are executed on the entire family document all at once.
 /// </summary>
-public abstract class DocOperation : IOperation {
+public abstract class DocOperation<TSettings> : IOperation, IGroupContextAware
+    where TSettings : IOperationSettings {
     private string _nameOverride;
 
+    protected DocOperation(TSettings settings) => this.Settings = settings;
+
+    public TSettings Settings { get; set; }
     public abstract string Description { get; }
 
     /// <summary>
@@ -28,10 +42,14 @@ public abstract class DocOperation : IOperation {
         set => this._nameOverride = value;
     }
 
-    public Func<FamilyDocument, List<OperationLog>> ToFunc() => famDoc => {
+    IOperationSettings IOperation.Settings => this.Settings;
+    OperationContext IGroupContextAware.GroupContext { get; set; }
+    protected OperationContext GroupContext => ((IGroupContextAware)this).GroupContext;
+
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() => (famDoc, processingContext) => {
         try {
             var sw = Stopwatch.StartNew();
-            var log = this.Execute(famDoc);
+            var log = this.Execute(famDoc, processingContext, this.GroupContext);
             log ??= new OperationLog("IGNORE", []);
             sw.Stop();
             log.MsElapsed = sw.Elapsed.TotalMilliseconds;
@@ -45,7 +63,16 @@ public abstract class DocOperation : IOperation {
         }
     };
 
-    public abstract OperationLog Execute(FamilyDocument doc);
+    /// <summary>
+    ///     Execute the operation. Use the contexts you need, ignore the rest.
+    ///     - processingContext: Read-only snapshot data (parameters, types, etc.)
+    ///     - groupContext: Shared state for coordinating with other operations in a group (null if not in a group)
+    /// </summary>
+    public abstract OperationLog Execute(
+        FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext
+    );
 }
 
 /// <summary>
@@ -53,9 +80,13 @@ public abstract class DocOperation : IOperation {
 ///     Type-level operations are executed for each type in the family document.
 ///     The OperationEnqueuer batches consecutive type-operations for better performance.
 /// </summary>
-public abstract class TypeOperation : IOperation {
+public abstract class TypeOperation<TSettings> : IOperation, IGroupContextAware
+    where TSettings : IOperationSettings {
     private string _nameOverride;
 
+    protected TypeOperation(TSettings settings) => this.Settings = settings;
+
+    public TSettings Settings { get; set; }
     public abstract string Description { get; }
 
     /// <summary>
@@ -67,7 +98,11 @@ public abstract class TypeOperation : IOperation {
         set => this._nameOverride = value;
     }
 
-    public Func<FamilyDocument, List<OperationLog>> ToFunc() => famDoc => {
+    IOperationSettings IOperation.Settings => this.Settings;
+    OperationContext IGroupContextAware.GroupContext { get; set; }
+    protected OperationContext GroupContext => ((IGroupContextAware)this).GroupContext;
+
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() => (famDoc, processingContext) => {
         try {
             var fm = famDoc.FamilyManager;
             var typeLogs = new List<OperationLog>();
@@ -76,7 +111,7 @@ public abstract class TypeOperation : IOperation {
             foreach (FamilyType famType in fm.Types) {
                 var swType = Stopwatch.StartNew();
                 fm.CurrentType = famType;
-                var typeLog = this.Execute(famDoc);
+                var typeLog = this.Execute(famDoc, processingContext, this.GroupContext);
                 swType.Stop();
 
                 typeLog.MsElapsed = swType.Elapsed.TotalMilliseconds;
@@ -95,13 +130,22 @@ public abstract class TypeOperation : IOperation {
         }
     };
 
-    public abstract OperationLog Execute(FamilyDocument doc);
+    /// <summary>
+    ///     Execute the operation for the current family type. Use the contexts you need, ignore the rest.
+    ///     - processingContext: Read-only snapshot data (parameters, types, etc.)
+    ///     - groupContext: Shared state for coordinating with other operations in a group (null if not in a group)
+    /// </summary>
+    public abstract OperationLog Execute(
+        FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext
+    );
 }
 
-public class MergedTypeOperation(List<TypeOperation> operations) : IExecutable {
-    public List<TypeOperation> Operations { get; set; } = operations;
+public class MergedTypeOperation(List<IOperation> operations) : IExecutable {
+    public List<IOperation> Operations { get; set; } = operations;
 
-    public Func<FamilyDocument, List<OperationLog>> ToFunc() => famDoc => {
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() => (famDoc, processingContext) => {
         string currFamTypeName = null;
         string currOpName = null;
         try {
@@ -120,7 +164,15 @@ public class MergedTypeOperation(List<TypeOperation> operations) : IExecutable {
                 foreach (var op in this.Operations) {
                     currOpName = op.Name;
                     var opSw = Stopwatch.StartNew();
-                    var log = op.Execute(famDoc);
+
+                    // Get GroupContext if operation has one
+                    var groupContext = op is IGroupContextAware aware ? aware.GroupContext : null;
+
+                    // Call Execute via reflection to get the correct signature
+                    var executeMethod = op.GetType().GetMethod("Execute",
+                        [typeof(FamilyDocument), typeof(FamilyProcessingContext), typeof(OperationContext)]);
+                    var log = (OperationLog)executeMethod.Invoke(op, [famDoc, processingContext, groupContext]);
+
                     opSw.Stop();
 
                     log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
@@ -156,82 +208,6 @@ public class DefaultOperationSettings : IOperationSettings {
 }
 
 /// <summary>
-///     Base interface for operations with settings. It is typed with the settings type.
-/// </summary>
-public interface IOperation<TSettings> : IOperation where TSettings : IOperationSettings {
-    /// <summary>
-    ///     The settings for the operation.
-    /// </summary>
-    TSettings Settings { get; set; }
-}
-
-public abstract class DocOperation<TOpSettings>(TOpSettings settings) : DocOperation, IOperation<TOpSettings>
-    where TOpSettings : IOperationSettings {
-    public TOpSettings Settings { get; set; } = settings;
-}
-
-public abstract class TypeOperation<TOpSettings>(TOpSettings settings) : TypeOperation, IOperation<TOpSettings>
-    where TOpSettings : IOperationSettings {
-    public TOpSettings Settings { get; set; } = settings;
-}
-
-/// <summary>
-///     DocOperation with FamilyProcessingContext injected.
-///     Use when operation needs access to snapshots or family-level data.
-/// </summary>
-public abstract class DocOperationWithContext<TSettings>(TSettings settings) : DocOperation<TSettings>(settings)
-    where TSettings : IOperationSettings {
-    internal FamilyProcessingContext Context { get; set; }
-
-    public sealed override OperationLog Execute(FamilyDocument doc)
-        => this.Execute(doc, this.Context);
-
-    public abstract OperationLog Execute(FamilyDocument doc, FamilyProcessingContext context);
-}
-
-/// <summary>
-///     DocOperation with OperationContext (group) injected.
-///     Use when operation needs to coordinate with other operations in a group.
-/// </summary>
-public abstract class DocOperationWithGroup<TSettings>(TSettings settings) : DocOperation<TSettings>(settings)
-    where TSettings : IOperationSettings {
-    internal OperationContext GroupContext { get; set; }
-
-    public sealed override OperationLog Execute(FamilyDocument doc)
-        => this.Execute(doc, this.GroupContext);
-
-    public abstract OperationLog Execute(FamilyDocument doc, OperationContext groupContext);
-}
-
-/// <summary>
-///     TypeOperation with FamilyProcessingContext injected.
-///     Use when type-level operation needs access to snapshots or family-level data.
-/// </summary>
-public abstract class TypeOperationWithContext<TSettings>(TSettings settings) : TypeOperation<TSettings>(settings)
-    where TSettings : IOperationSettings {
-    internal FamilyProcessingContext Context { get; set; }
-
-    public sealed override OperationLog Execute(FamilyDocument doc)
-        => this.Execute(doc, this.Context);
-
-    public abstract OperationLog Execute(FamilyDocument doc, FamilyProcessingContext context);
-}
-
-/// <summary>
-///     TypeOperation with OperationContext (group) injected.
-///     Use when type-level operation needs to coordinate with other operations in a group.
-/// </summary>
-public abstract class TypeOperationWithGroup<TSettings>(TSettings settings) : TypeOperation<TSettings>(settings)
-    where TSettings : IOperationSettings {
-    internal OperationContext GroupContext { get; set; }
-
-    public sealed override OperationLog Execute(FamilyDocument doc)
-        => this.Execute(doc, this.GroupContext);
-
-    public abstract OperationLog Execute(FamilyDocument doc, OperationContext groupContext);
-}
-
-/// <summary>
 ///     Container for grouping related operations that share settings.
 ///     Groups are not operations themselves - they are unwrapped into individual operations when added to the queue.
 ///     The name is automatically derived from the type name.
@@ -240,22 +216,16 @@ public abstract class TypeOperationWithGroup<TSettings>(TSettings settings) : Ty
 public class OperationGroup<TSettings> where TSettings : IOperationSettings {
     /// <summary>
     ///     Creates an operation group with the name automatically derived from the type name.
-    ///     Injects group context into operations that use context-aware base classes.
+    ///     Injects group context into all operations in the group.
     /// </summary>
-    protected OperationGroup(string description, List<IOperation<TSettings>> operations) {
+    protected OperationGroup(string description, List<IOperation> operations) {
         this.Description = description;
         this.Operations = operations;
 
-        // Inject group context into operations that need it
+        // Inject group context into all operations
         foreach (var op in operations) {
-            switch (op) {
-            case DocOperationWithGroup<TSettings> docWithGroup:
-                docWithGroup.GroupContext = this.GroupContext;
-                break;
-            case TypeOperationWithGroup<TSettings> typeWithGroup:
-                typeWithGroup.GroupContext = this.GroupContext;
-                break;
-            }
+            if (op is IGroupContextAware aware)
+                aware.GroupContext = this.GroupContext;
         }
     }
 
@@ -263,11 +233,11 @@ public class OperationGroup<TSettings> where TSettings : IOperationSettings {
 
     /// <summary>
     ///     Shared context for inter-operation coordination within this group.
-    ///     Reset per-family by the OperationProcessor.
+    ///     Reset per-family by the OperationProcessor to ensure clean state for each family.
     /// </summary>
     public OperationContext GroupContext { get; } = new();
     public string Description { get; init; }
-    public List<IOperation<TSettings>> Operations { get; init; }
+    public List<IOperation> Operations { get; init; }
 }
 
 /// <summary>

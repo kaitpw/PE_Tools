@@ -20,7 +20,7 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
         };
     }
 
-    public override OperationLog Execute(FamilyDocument doc) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var logs = new List<LogEntry>();
         var parameters = doc.FamilyManager.GetParameters();
 

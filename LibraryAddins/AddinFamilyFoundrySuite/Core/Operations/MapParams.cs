@@ -9,10 +9,10 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     Iterates through CurrNames in priority order, using the first match found.
 /// </summary>
 public class MapParams(MapParamsSettings settings)
-    : TypeOperationWithGroup<MapParamsSettings>(settings) {
+    : TypeOperation<MapParamsSettings>(settings) {
     public override string Description => "Map an old parameter's value to a new parameter for each family type";
 
-    public override OperationLog Execute(FamilyDocument doc, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
         foreach (var mapping in this.Settings.MappingData) {

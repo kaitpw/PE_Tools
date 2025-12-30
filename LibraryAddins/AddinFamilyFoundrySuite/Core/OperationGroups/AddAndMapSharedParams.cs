@@ -13,7 +13,7 @@ public class AddAndMapSharedParams : OperationGroup<MapParamsSettings> {
         InitializeOperations(settings, sharedParams)
     ) { }
 
-    private static List<IOperation<MapParamsSettings>> InitializeOperations(
+    private static List<IOperation> InitializeOperations(
         MapParamsSettings settings,
         IEnumerable<SharedParameterDefinition> sharedParams
     ) => [
@@ -24,7 +24,7 @@ public class AddAndMapSharedParams : OperationGroup<MapParamsSettings> {
     ];
 }
 
-public class AddUnmappedSharedParams : DocOperationWithGroup<MapParamsSettings> {
+public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
     private readonly IEnumerable<SharedParameterDefinition> _sharedParams;
 
     public AddUnmappedSharedParams(
@@ -35,7 +35,7 @@ public class AddUnmappedSharedParams : DocOperationWithGroup<MapParamsSettings> 
     public override string Description =>
         "Add shared parameters that are not already processed by a previous operation";
 
-    public override OperationLog Execute(FamilyDocument doc, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         // Get already-processed params from GroupContext (completed by MapReplaceParams)
         var processedParams = groupContext.All
             .Where(e => e.IsComplete)
@@ -50,6 +50,6 @@ public class AddUnmappedSharedParams : DocOperationWithGroup<MapParamsSettings> 
             .Where(p => !existingParams.Contains(p.ExternalDefinition.Name));
 
         var addSharedParams = new AddSharedParams(addParams) { Name = this.Name };
-        return addSharedParams.Execute(doc);
+        return addSharedParams.Execute(doc, processingContext, groupContext);
     }
 }

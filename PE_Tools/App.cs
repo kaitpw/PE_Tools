@@ -6,6 +6,8 @@ using Autodesk.Revit.UI.Events;
 using Nice3point.Revit.Extensions;
 using PeRevit.Ui;
 using PeServices.Documents;
+using PeUi.Core;
+using ricaun.Revit.UI.Tasks;
 
 namespace PE_Tools;
 
@@ -14,15 +16,39 @@ internal class App : IExternalApplication {
     // which would create duplicate types in different load contexts and break WPF BAML lookup
     private static readonly Dictionary<string, Assembly> _resolvedAssemblies = new();
 
+    /// <summary>
+    ///     RevitTaskService for executing code in Revit API context from async/WPF contexts.
+    /// </summary>
+    private static RevitTaskService _revitTaskService;
+
     public Result OnStartup(UIControlledApplication app) {
+        // CRITICAL: Pre-cache PE_Tools assembly BEFORE wiring up AssemblyResolve.
+        // Revit loads PE_Tools directly (not through AssemblyResolve), so if WPF later
+        // tries to resolve "PE_Tools" via Assembly.Load() for a pack URI, our handler
+        // must return the SAME instance. Pre-caching ensures consistency.
+        var peToolsAssembly = typeof(App).Assembly;
+        var peToolsName = peToolsAssembly.GetName().Name;
+        _resolvedAssemblies[peToolsName] = peToolsAssembly;
+        Debug.WriteLine($"Pre-cached main assembly: {peToolsAssembly.FullName}");
+
         // Set up assembly resolver for Wpf.Ui and other dependencies
         AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+
+        // CRITICAL: Force WPF to resolve pack URIs NOW while assembly state is clean.
+        // This warms up WPF's internal caches with the correct assembly references
+        // before any long-running session can cause cache invalidation issues.
+        WarmUpWpfPackUriResolution();
 
         // Subscribe to ViewActivated event for MRU tracking
         app.ViewActivated += OnViewActivated;
 
         // Subscribe to DocumentClosing to clean up MRU buffer
         app.ControlledApplication.DocumentClosing += OnDocumentClosing;
+
+        // Initialize RevitTaskService for async/deferred execution in Revit API context
+        _revitTaskService = new RevitTaskService(app);
+        _revitTaskService.Initialize();
+        RevitTaskAccessor.RunAsync = async action => await _revitTaskService.Run(async () => await action());
 
         // 1. Create ribbon tab
         const string tabName = "PE TOOLS";
@@ -75,7 +101,7 @@ internal class App : IExternalApplication {
             panelTools.AddPushButton<CmdPltSheets>("Sheet Palette"),
             panelTools.AddPushButton<CmdPltFamilies>("Family Palette"),
             panelTools.AddPushButton<CmdPltFamilyElements>("Family Palette"),
-            panelTools.AddPushButton<CmdTapMaker>("Tap Maker")
+            panelTools.AddPushButton<CmdTapMaker>("Tap Maker"),
         ]);
 
         return Result.Succeeded;
@@ -85,6 +111,7 @@ internal class App : IExternalApplication {
         AppDomain.CurrentDomain.AssemblyResolve -= OnAssemblyResolve;
         app.ViewActivated -= OnViewActivated;
         app.ControlledApplication.DocumentClosing -= OnDocumentClosing;
+        _revitTaskService?.Dispose();
         return Result.Succeeded;
     }
 
@@ -99,6 +126,26 @@ internal class App : IExternalApplication {
     private static void OnDocumentClosing(object sender, DocumentClosingEventArgs e) {
         if (e?.Document == null) return;
         DocumentManager.Instance.OnDocumentClosed(e.Document);
+    }
+
+    /// <summary>
+    ///     Forces WPF to resolve pack URIs for PE_Tools resources immediately at startup.
+    ///     This warms up WPF's internal assembly caches while the CLR's assembly state is clean,
+    ///     preventing issues where WPF's pack URI resolution fails after long sessions due to
+    ///     cache invalidation or stale state.
+    /// </summary>
+    private static void WarmUpWpfPackUriResolution() {
+        try {
+            // Access ThemeManager.WpfUiResources which creates a ResourceDictionary
+            // with a pack URI to PE_Tools. This forces WPF to resolve the pack URI
+            // and cache the assembly reference NOW.
+            var resources = ThemeManager.WpfUiResources;
+            Debug.WriteLine($"WPF pack URI warmup complete. Resources loaded: {resources.Count} keys");
+        } catch (Exception ex) {
+            // Log but don't fail startup - the palette commands will still work
+            // (or fail with a clear error) when first invoked
+            Debug.WriteLine($"WPF pack URI warmup failed (non-fatal): {ex.Message}");
+        }
     }
 
     private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) {

@@ -31,10 +31,10 @@ public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
 
     private static string GetDesignation(bool isInstance) => isInstance ? "Instance" : "Type";
 
-    private static List<IOperation<AddAndSetParamsSettings>> InitializeOperations(
+    private static List<IOperation> InitializeOperations(
         AddAndSetParamsSettings settings
     ) {
-        var ops = new List<IOperation<AddAndSetParamsSettings>>();
+        var ops = new List<IOperation>();
 
         // 1. Optionally create missing params first
         if (settings.CreateFamParamIfMissing)

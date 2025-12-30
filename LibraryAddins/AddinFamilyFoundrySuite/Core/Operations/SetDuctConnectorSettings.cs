@@ -5,11 +5,11 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class SetDuctConnectorSettings(DuctConnectorConfigurator settings) : DocOperation {
+public class SetDuctConnectorSettings(DuctConnectorConfigurator settings) : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
     private readonly DuctConnectorConfigurator settings = settings;
     public override string Description => "Make Duct Connector Variants";
 
-    public override OperationLog Execute(FamilyDocument famDoc) {
+    public override OperationLog Execute(FamilyDocument famDoc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var logs = new List<LogEntry>();
         try {
             var connectorElements = new FilteredElementCollector(famDoc)

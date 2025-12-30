@@ -18,14 +18,20 @@ public record ParamSnapshot {
     public ForgeTypeId DataType { get; init; } = SpecTypeId.String.Text;
 
     // Assignment mode - if Formula != null, it is the authoritative assignment
-    public string? Formula { get; init; }
+    public string Formula { get; init; } = null;
 
     // Per-type values: TypeName -> setter-acceptable string value
     // Null/empty means no value for that type. TODO: verify that this doesn't serialize null as empty string
-    public Dictionary<string, string?> ValuesPerType { get; init; } = new(StringComparer.Ordinal);
+    public Dictionary<string, string> ValuesPerType { get; init; } = new(StringComparer.Ordinal);
 
     // Audit metadata (not required for replay, but useful)
     public bool IsBuiltIn { get; init; } = false;
-    public Guid? SharedGuid { get; init; }
-    public StorageType? StorageType { get; init; }
+    public Guid? SharedGuid { get; init; } = null;
+    public StorageType? StorageType { get; init; } = null;
+
+    /// <summary>
+    ///     Indicates if this is a project parameter (exists in Document.ParameterBindings).
+    ///     Only populated when collecting from project document. Always false for family doc collection.
+    /// </summary>
+    public bool IsProjectParameter { get; init; } = false;
 }

@@ -55,11 +55,11 @@ public record RefPlaneSubcategorySpec {
     }
 }
 
-public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : DocOperation {
+public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
     private readonly List<RefPlaneSubcategorySpec> _specs = specs;
     public override string Description => "Make reference planes subcategories with custom colors and line patterns";
 
-    public override OperationLog Execute(FamilyDocument doc) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var logs = new List<LogEntry>();
 
         try {

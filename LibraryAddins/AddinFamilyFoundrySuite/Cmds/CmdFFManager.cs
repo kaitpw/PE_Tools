@@ -105,12 +105,12 @@ public class CmdFFManager : IExternalCommand {
             _ = new ProcessingResultBuilder(storage)
                 .WithProfile(profile, "Default")
                 .WithOperationMetadata(queue)
-                .WithFamilyResults(logs.familyContexts)
+                .WithFamilyResults(logs.contexts)
                 .WithTotalTime(logs.totalMs)
                 .WriteOutput(settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
 
             var balloon = new Ballogger();
-            foreach (var ctx in logs.familyContexts)
+            foreach (var ctx in logs.contexts)
                 _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {ctx.FamilyName} in {ctx.TotalMs}ms");
             balloon.Show();
             return Result.Succeeded;

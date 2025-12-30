@@ -1,32 +1,26 @@
+using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using AddinFamilyFoundrySuite.Core.Helpers;
-using AddinFamilyFoundrySuite.Core.Snapshots;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using PeExtensions.FamDocument;
-using PeServices.Storage.Core.Json.ContractResolvers;
 
-namespace AddinFamilyFoundrySuite.Core.Operations;
+namespace AddinFamilyFoundrySuite.Core.Snapshots;
 
 /// <summary>
-///     Ad-hoc operation that logs existing reference planes and dimensions in a format
-///     compatible with MakeRefPlaneAndDimsSettings for copying into profile JSON.
-///     <para>
-///         Usage example:
-///         <code>
-///     queue.Add(new LogRefPlaneAndDims(storage.Output().GetFolderPath()), new LogRefPlaneAndDimsSettings());
-///     </code>
-///     </para>
+///     Collects reference planes and dimensions from family document.
+///     Can ONLY collect from family document (data not accessible from project).
 /// </summary>
-public class LogRefPlaneAndDims(string outputDir) : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
-    public string OutputPath { get; } = outputDir;
-    public override string Description => "Log existing reference planes and dimensions in profile JSON format";
+public class RefPlaneSectionCollector : IFamilyDocCollector {
+    public bool ShouldCollect(FamilySnapshot snapshot) =>
+        snapshot.RefPlanesAndDims?.Data?.Count == 0 || snapshot.RefPlanesAndDims == null;
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public void Collect(FamilySnapshot snapshot, FamilyDocument famDoc) =>
+        snapshot.RefPlanesAndDims = this.CollectFromFamilyDoc(famDoc);
+
+    private SnapshotSection<RefPlaneSpec> CollectFromFamilyDoc(FamilyDocument famDoc) {
         var specs = new List<RefPlaneSpec>();
         var processedMirrorPlanes = new HashSet<(ReferencePlane, ReferencePlane)>();
 
         // Get all dimensions
-        var dimensions = new FilteredElementCollector(doc)
+        var dimensions = new FilteredElementCollector(famDoc.Document)
             .OfClass(typeof(Dimension))
             .Cast<Dimension>()
             .Where(d => d is not SpotDimension)
@@ -35,12 +29,12 @@ public class LogRefPlaneAndDims(string outputDir) : DocOperation<DefaultOperatio
         // First pass: Process 3-plane mirror patterns (dimensions with AreSegmentsEqual) and track their side planes
         foreach (var dimension in dimensions) {
             if (dimension.References.Size == 3 && dimension.AreSegmentsEqual) {
-                var spec = RefPlaneAndDimHelper.SerializeDimensionToSpec(dimension, doc);
+                var spec = RefPlaneAndDimHelper.SerializeDimensionToSpec(dimension, famDoc.Document);
                 if (spec != null && spec.Placement == Placement.Mirror) {
                     specs.Add(spec);
 
                     // Track the side planes from this mirror pattern
-                    var refPlanes = GetReferencePlanes(dimension, doc);
+                    var refPlanes = GetReferencePlanes(dimension, famDoc.Document);
                     if (refPlanes.Count == 3) {
                         var centerPlane = RefPlaneAndDimHelper.FindCenterPlaneGeometrically(refPlanes);
                         if (centerPlane != null) {
@@ -57,10 +51,10 @@ public class LogRefPlaneAndDims(string outputDir) : DocOperation<DefaultOperatio
 
         // Second pass: Process remaining dimensions (2-plane that aren't part of mirror patterns)
         foreach (var dimension in dimensions) {
-            var spec = RefPlaneAndDimHelper.SerializeDimensionToSpec(dimension, doc);
+            var spec = RefPlaneAndDimHelper.SerializeDimensionToSpec(dimension, famDoc.Document);
             if (spec != null && spec.Placement != Placement.Mirror) {
                 // Check if this 2-plane dimension is part of a mirror pattern
-                var refPlanes = GetReferencePlanes(dimension, doc);
+                var refPlanes = GetReferencePlanes(dimension, famDoc.Document);
                 if (refPlanes.Count == 2) {
                     var isMirrorPair = processedMirrorPlanes.Contains((refPlanes[0], refPlanes[1])) ||
                                        processedMirrorPlanes.Contains((refPlanes[1], refPlanes[0]));
@@ -70,22 +64,10 @@ public class LogRefPlaneAndDims(string outputDir) : DocOperation<DefaultOperatio
             }
         }
 
-        // Output JSON format
-        var jsonOptions = new JsonSerializerSettings {
-            Formatting = Formatting.Indented,
-            ContractResolver = new RequiredAwareContractResolver(),
-            Converters = [new StringEnumConverter()]
+        return new SnapshotSection<RefPlaneSpec> {
+            Source = SnapshotSource.FamilyDoc,
+            Data = specs
         };
-
-        var json = JsonConvert.SerializeObject(specs, jsonOptions);
-
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        var filename = $"ref-planes-dims_{timestamp}.json";
-        var filePath = Path.Combine(this.OutputPath, filename);
-        File.WriteAllText(filePath, json);
-
-        var log = new LogEntry($"Wrote {specs.Count} reference plane specs to {filename}").Success();
-        return new OperationLog(this.Name, [log]);
     }
 
     private static List<ReferencePlane> GetReferencePlanes(Dimension dim, Document doc) {
@@ -100,3 +82,4 @@ public class LogRefPlaneAndDims(string outputDir) : DocOperation<DefaultOperatio
         return refPlanes;
     }
 }
+

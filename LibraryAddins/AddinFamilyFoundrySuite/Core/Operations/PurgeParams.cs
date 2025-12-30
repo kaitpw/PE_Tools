@@ -16,10 +16,10 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
 
     public IEnumerable<string> ExternalExcludeNamesEqualing { get; set; } = [];
 
-    public bool IsParameterEmpty(FamilyParameter param, FamilyProcessingContext context) {
-        if (context == null) return false;
+    public bool IsParameterEmpty(FamilyParameter param, FamilyProcessingContext processingContext) {
+        if (processingContext == null) return false;
 
-        foreach (var value in context.GetTypesWithValue(param.Definition.Name)) {
+        foreach (var value in processingContext.GetTypesWithValue(param.Definition.Name)) {
             if (value == null) return true;
             if (this.Settings.ConsiderZeroValueAsEmpty
                 && int.TryParse(value, out var intValue)
@@ -31,13 +31,13 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
         return false;
     }
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext context) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var logs = new List<LogEntry>();
-        this.RecursiveDelete(doc, logs, context);
+        this.RecursiveDelete(doc, logs, processingContext);
         return new OperationLog(this.Name, logs);
     }
 
-    private void RecursiveDelete(FamilyDocument doc, List<LogEntry> logs, FamilyProcessingContext context) {
+    private void RecursiveDelete(FamilyDocument doc, List<LogEntry> logs, FamilyProcessingContext processingContext) {
         var deleteCount = 0;
         var excludeSet = this.ExternalExcludeNamesEqualing.ToHashSet();
 
@@ -48,7 +48,7 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
             .Where(p => !excludeSet.Contains(p.Definition.Name))
             .Where(this.Settings.Filter)
             .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
-            .Where(p => !this.IsParameterEmpty(p, context))
+            .Where(p => !this.IsParameterEmpty(p, processingContext))
             .OrderByDescending(p => p.Formula?.Length ?? 0)
             .ToList();
 
@@ -69,7 +69,7 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
             logs.Add(log);
         }
 
-        if (deleteCount > 0) this.RecursiveDelete(doc, logs, context);
+        if (deleteCount > 0) this.RecursiveDelete(doc, logs, processingContext);
     }
 }
 

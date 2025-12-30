@@ -10,12 +10,8 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators;
 /// </summary>
 public class FamilyParamAggregator {
     private readonly Action<FamilySnapshot, Document, Family> _projectCollector;
-    private readonly Action<FamilySnapshot, FamilyDocument> _famDocCollector;
 
-    public FamilyParamAggregator(CollectorQueue collectorQueue) {
-        this._projectCollector = collectorQueue.ToProjectCollectorFunc();
-        this._famDocCollector = collectorQueue.ToFamilyDocCollectorFunc();
-    }
+    public FamilyParamAggregator(CollectorQueue collectorQueue) => this._projectCollector = collectorQueue.ToProjectCollectorFunc();
 
     /// <summary>
     ///     Aggregates parameter data from all provided families.

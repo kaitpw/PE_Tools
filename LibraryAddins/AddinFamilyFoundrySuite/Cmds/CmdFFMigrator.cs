@@ -63,14 +63,7 @@ public class CmdFFMigrator : IExternalCommand {
 
             // Define actions for the palette
             var actions = new List<PaletteAction<ProfileListItem>> {
-                new() {
-                    Name = "Toggle Preview",
-                    Execute = async _ => {
-                        if (window?.ContentControl is Palette palette)
-                            palette.ToggleSidebar();
-                    },
-                    CanExecute = _ => true
-                },
+
                 new() {
                     Name = "Process Families",
                     Execute = async _ => this.HandleProcessFamilies(context),
@@ -81,7 +74,7 @@ public class CmdFFMigrator : IExternalCommand {
                     Execute = async _ => this.HandleRegenerateSchema(context),
                     CanExecute = _ => context.SelectedProfile != null
                 }
-            };
+            }; 
 
             // Create the palette with sidebar
             window = PaletteFactory.Create("FF Migrator - Select Profile", profiles, actions,
@@ -212,9 +205,7 @@ public class CmdFFMigrator : IExternalCommand {
         foreach (var op in queue.Operations) {
             var metadata = operationMetadata.FirstOrDefault(m => m.Name == op.Name);
             if (metadata != default) {
-                var isEnabled = true;
-                if (op is IOperation<IOperationSettings> opWithSettings)
-                    isEnabled = opWithSettings.Settings?.Enabled ?? true;
+                var isEnabled = op.Settings?.Enabled ?? true;
                 operationInfos.Add(new OperationInfo(
                     metadata.Name,
                     metadata.Description,
@@ -257,8 +248,7 @@ public class CmdFFMigrator : IExternalCommand {
             AppliedFixes = new List<string>()
         };
 
-    private static PreviewData
-        CreateSanitizationErrorPreview(ProfileListItem profileItem, JsonSanitizationException ex) {
+    private static PreviewData CreateSanitizationErrorPreview(ProfileListItem profileItem, JsonSanitizationException ex) {
         var preview = new PreviewData {
             ProfileName = profileItem.TextPrimary,
             IsValid = false,
@@ -295,9 +285,9 @@ public class CmdFFMigrator : IExternalCommand {
             .Show();
     }
 
-    private void HandleProcessFamilies(MigratorContext context) {
-        if (context.SelectedProfile == null) return;
-        if (!context.PreviewData.IsValid) {
+    private void HandleProcessFamilies(MigratorContext ctx) {
+        if (ctx.SelectedProfile == null) return;
+        if (!ctx.PreviewData.IsValid) {
             new Ballogger()
                 .Add(Log.ERR, new StackFrame(), "Cannot process families - profile has validation errors")
                 .Show();
@@ -305,8 +295,8 @@ public class CmdFFMigrator : IExternalCommand {
         }
 
         // Load profile fresh for execution
-        var profile = context.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json")
+        var profile = ctx.SettingsManager.SubDir("profiles")
+            .JsonWithExtends<ProfileRemap>($"{ctx.SelectedProfile.TextPrimary}.json")
             .Read();
 
         // Get raw APS parameter models and convert with fresh TempSharedParamFile
@@ -314,21 +304,38 @@ public class CmdFFMigrator : IExternalCommand {
 
         // Create fresh TempSharedParamFile and convert raw APS models to SharedParameterDefinitions.
         // The temp file stays alive for the entire ProcessFamilies operation.
-        using var tempFile = new TempSharedParamFile(context.Doc);
+        using var tempFile = new TempSharedParamFile(ctx.Doc);
         var apsParamData = BaseProfileSettings.ConvertToSharedParameterDefinitions(
             apsParamModels, tempFile);
 
         var queue = BuildQueue(profile, apsParamData);
 
-        ProcessFamilies(
-            context.Doc,
-            context.UiDoc,
-            context.Storage,
-            profile,
-            queue,
-            context.SelectedProfile.TextPrimary,
-            context.OnFinishSettings
-        );
+        var outputFolderPath = ctx.Storage.OutputDir().DirectoryPath;
+
+        // Request both parameter and refplane snapshots
+        var collectorQueue = new CollectorQueue()
+            .Add(new ParamSectionCollector())
+            .Add(new RefPlaneSectionCollector());
+
+        using var processor = new OperationProcessor(ctx.Doc, profile.ExecutionOptions);
+        var logs = processor
+            .SelectFamilies(() => {
+                var picked = Pickers.GetSelectedFamilies(ctx.UiDoc);
+                return picked.Any() ? picked : profile.GetFamilies(ctx.Doc);
+            })
+            .ProcessQueue(queue, collectorQueue, outputFolderPath, ctx.OnFinishSettings);
+
+        _ = new ProcessingResultBuilder(ctx.Storage)
+            .WithProfile(profile, ctx.SelectedProfile.TextPrimary)
+            .WithOperationMetadata(queue)
+            .WithFamilyResults(logs.contexts)
+            .WithTotalTime(logs.totalMs)
+            .WriteOutput(ctx.OnFinishSettings.OpenOutputFilesOnCommandFinish);
+
+        var balloon = new Ballogger();
+        foreach (var logCtx in logs.contexts)
+            _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {logCtx.FamilyName} in {logCtx.TotalMs}ms");
+        balloon.Show();
 
         // TempSharedParamFile is disposed here AFTER ProcessFamilies completes
     }
@@ -383,43 +390,6 @@ public class CmdFFMigrator : IExternalCommand {
             .Add(new MakeElecConnector(profile.MakeElectricalConnector))
             .Add(new PurgeParams(profile.PurgeParams, apsParamNames))
             .Add(new SortParams(profile.SortParams));
-    }
-
-    private static void ProcessFamilies(
-        Document doc,
-        UIDocument uiDoc,
-        Storage storage,
-        ProfileRemap profile,
-        OperationQueue queue,
-        string profileName,
-        OnProcessingFinishSettings onFinish
-    ) {
-        var outputFolderPath = storage.OutputDir().DirectoryPath;
-
-        // Request both parameter and refplane snapshots
-        var collectorQueue = new CollectorQueue()
-            .Add(new ParamSectionCollector())
-            .Add(new RefPlaneSectionCollector());
-
-        using var processor = new OperationProcessor(doc, profile.ExecutionOptions);
-        var logs = processor
-            .SelectFamilies(() => {
-                var picked = Pickers.GetSelectedFamilies(uiDoc);
-                return picked.Any() ? picked : profile.GetFamilies(doc);
-            })
-            .ProcessQueue(queue, collectorQueue, outputFolderPath, onFinish);
-
-        _ = new ProcessingResultBuilder(storage)
-            .WithProfile(profile, profileName)
-            .WithOperationMetadata(queue)
-            .WithFamilyResults(logs.familyContexts)
-            .WithTotalTime(logs.totalMs)
-            .WriteOutput(onFinish.OpenOutputFilesOnCommandFinish);
-
-        var balloon = new Ballogger();
-        foreach (var ctx in logs.familyContexts)
-            _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {ctx.FamilyName} in {ctx.TotalMs}ms");
-        balloon.Show();
     }
 }
 

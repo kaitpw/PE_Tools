@@ -25,18 +25,15 @@ public class CmdFFParamAggregator : IExternalCommand {
         try {
             var storage = new Storage("FF Param Aggregator");
             var settingsManager = storage.SettingsDir();
-            var settings = settingsManager.Json<BaseSettings<ProfileParamAggregator>>().Read();
-            // TODO: Add palette UI for profile selection like CmdFFMigrator
-            var profile = settingsManager
-                .SubDir("profiles")
-                .Json<ProfileParamAggregator>("Default.json")
-                .Read();
 
             // Get families based on profile filter (or selected families)
             var selectedFamilies = Pickers.GetSelectedFamilies(uiDoc);
             var families = selectedFamilies.Any()
                 ? selectedFamilies
-                : profile.GetFamilies(doc);
+                : new FilteredElementCollector(doc)
+                    .OfClass(typeof(Family))
+                    .OfType<Family>()
+                    .ToList();
 
             if (!families.Any()) {
                 new Ballogger()
@@ -63,7 +60,7 @@ public class CmdFFParamAggregator : IExternalCommand {
             _ = balloon.Add(Log.INFO, new StackFrame(),
                 $"Aggregated {aggregatedData.Count} unique parameters from {families.Count} families.");
 
-            if (settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish) FileUtils.OpenInDefaultApp(csvPath);
+            FileUtils.OpenInDefaultApp(csvPath);
 
             balloon.Show();
             return Result.Succeeded;
@@ -74,23 +71,3 @@ public class CmdFFParamAggregator : IExternalCommand {
     }
 }
 
-/// <summary>
-///     Profile settings for the Param Aggregator command.
-/// </summary>
-public class ProfileParamAggregator : BaseProfileSettings {
-    [Description("The type of collector to use for gathering parameter data.")]
-    [Required]
-    public ParamCollectorType CollectorType { get; init; } = ParamCollectorType.TempInstance;
-}
-
-/// <summary>
-///     Available collector types for parameter aggregation.
-/// </summary>
-[JsonConverter(typeof(StringEnumConverter))]
-public enum ParamCollectorType {
-    [Description("Uses temporary instance placement with transaction rollback. Fast and non-destructive.")]
-    TempInstance,
-
-    [Description("Opens family document for editing. Required for advanced data like connectors. (Future)")]
-    EditFamily
-}

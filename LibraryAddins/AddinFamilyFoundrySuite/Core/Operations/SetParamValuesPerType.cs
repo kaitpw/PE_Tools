@@ -16,11 +16,11 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     (formulas with param refs should use SetParamValues instead).
 /// </summary>
 public class SetParamValuesPerType(AddAndSetParamsSettings settings)
-    : TypeOperationWithGroup<AddAndSetParamsSettings>(settings) {
+    : TypeOperation<AddAndSetParamsSettings>(settings) {
     public override string Description =>
         "Set parameter values per family type (explicit per-type values or fallback for failed global values).";
 
-    public override OperationLog Execute(FamilyDocument famDoc, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument famDoc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var fm = famDoc.FamilyManager;
         var currentTypeName = fm.CurrentType?.Name;
 

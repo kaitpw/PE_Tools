@@ -6,7 +6,7 @@ using PeExtensions.FamParameter.Formula;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class MapReplaceParams : DocOperationWithGroup<MapParamsSettings> {
+public class MapReplaceParams : DocOperation<MapParamsSettings> {
     private readonly Dictionary<string, SharedParameterDefinition> _sharedParamsDict;
 
     private readonly List<ForgeTypeId> IgnoreCoercionDataTypes = new() {
@@ -20,7 +20,7 @@ public class MapReplaceParams : DocOperationWithGroup<MapParamsSettings> {
 
     public override string Description => "Replace a family's existing parameters with APS shared parameters";
 
-    public override OperationLog Execute(FamilyDocument doc, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
         foreach (var mapping in this.Settings.MappingData) {

@@ -8,7 +8,7 @@ public class PurgeNestedFamilies : DocOperation<DefaultOperationSettings> {
 
     public override string Description => "Delete unused nested families from the family";
 
-    public override OperationLog Execute(FamilyDocument doc) {
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
         var logs = new List<LogEntry>();
 
         var allFamilies = new FilteredElementCollector(doc)

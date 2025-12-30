@@ -20,7 +20,7 @@ public class UnwrapFormulas : DocOperation<DefaultOperationSettings>
     public override string Description =>
         "Unwrap constant formulas and resolve single-parameter reference chains";
 
-    public override OperationLog Execute(FamilyDocument doc)
+    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext)
     {
         var logs = new List<LogEntry>();
 

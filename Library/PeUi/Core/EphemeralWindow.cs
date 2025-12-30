@@ -21,8 +21,10 @@ public class EphemeralWindow : Window {
     private bool _isClosing;
     private readonly Border _contentBorder;
 
-    public EphemeralWindow(Border contentBorder) => this._contentBorder = contentBorder;
-
+    public EphemeralWindow(Border contentBorder) {
+        this._contentBorder = contentBorder;
+        this.ContentControl = null;
+    }
 
     /// <summary>
     ///     Gets the UserControl content hosted by this window (typically a Palette).
