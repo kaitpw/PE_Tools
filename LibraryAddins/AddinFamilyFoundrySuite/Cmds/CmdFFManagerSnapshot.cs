@@ -1,5 +1,4 @@
 using AddinFamilyFoundrySuite.Core;
-using AddinFamilyFoundrySuite.Core.Aggregators;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeRevit.Lib;
@@ -24,10 +23,7 @@ public class CmdFFManagerSnapshot : IExternalCommand {
             var outputFolderPath = storage.OutputDir().DirectoryPath;
 
             // force this to never be single transaction
-            var executionOptions = new ExecutionOptions {
-                SingleTransaction = false,
-                OptimizeTypeOperations = true
-            };
+            var executionOptions = new ExecutionOptions { SingleTransaction = false, OptimizeTypeOperations = true };
 
             // Request both parameter and refplane snapshots
             var collectorQueue = new CollectorQueue()

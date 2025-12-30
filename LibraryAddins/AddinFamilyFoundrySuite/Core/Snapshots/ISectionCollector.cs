@@ -38,4 +38,3 @@ public interface IProjectCollector {
     /// </summary>
     void Collect(FamilySnapshot snapshot, Document projectDoc, Family family);
 }
-

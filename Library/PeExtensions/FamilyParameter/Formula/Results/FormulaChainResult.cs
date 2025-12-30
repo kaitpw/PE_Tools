@@ -1,7 +1,7 @@
 namespace PeExtensions.FamParameter.Formula;
 
 /// <summary>
-///     Result of resolving a formula chain via <see cref="FormulaAnalysis.ResolveChain"/>.
+///     Result of resolving a formula chain via <see cref="FormulaAnalysis.ResolveChain" />.
 /// </summary>
 public class FormulaChainResult {
     public FormulaChainResult(

@@ -1,4 +1,3 @@
-using Autodesk.Revit.UI;
 using Autodesk.Revit.UI.Events;
 using PeExtensions.PolyFill;
 using PeServices.Documents.Core;
@@ -16,10 +15,10 @@ public class DocumentManager {
     private readonly DocumentColorService _colorService = new();
     private readonly MruViewBuffer _mruBuffer = new();
 
-    public static UIApplication uiapp => new RibbonItemEventArgs().Application;
-
 
     private DocumentManager() { }
+
+    public static UIApplication uiapp => new RibbonItemEventArgs().Application;
 
     public static DocumentManager Instance {
         get {
@@ -183,5 +182,4 @@ public class DocumentManager {
     }
 
     internal static Document GetActiveDocument() => GetActiveDocument(uiapp);
-
 }

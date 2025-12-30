@@ -6,6 +6,7 @@ using PeUi.ViewModels;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
+using OperationCanceledException = Autodesk.Revit.Exceptions.OperationCanceledException;
 
 namespace AddinPaletteSuite.Cmds;
 
@@ -38,7 +39,7 @@ public static class PltFamilyTypes {
 
                     try {
                         uiapp.ActiveUIDocument.PromptForFamilyInstancePlacement(symbol);
-                    } catch (Autodesk.Revit.Exceptions.OperationCanceledException) {
+                    } catch (OperationCanceledException) {
                         // User canceled placement - this is expected behavior, not an error
                     } catch (Exception ex) {
                         new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
@@ -61,7 +62,7 @@ public static class PltFamilyTypes {
         // Create palette for sidebar (no search box for type selection)
         var searchService = new SearchFilterService<FamilyTypePaletteItem>();
         var viewModel = new PaletteViewModel<FamilyTypePaletteItem>(items, searchService);
-        var palette = new Palette(isSearchBoxHidden: true);
+        var palette = new Palette(true);
         palette.Initialize(viewModel, actions);
         return palette;
     }

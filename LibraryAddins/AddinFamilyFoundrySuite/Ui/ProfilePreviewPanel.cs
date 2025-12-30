@@ -1,8 +1,8 @@
-using AddinFamilyFoundrySuite.Core;
 using PeUi.Core;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Media;
 using Wpf.Ui.Markup;
 using WpfUiRichTextBox = Wpf.Ui.Controls.RichTextBox;
 
@@ -17,7 +17,7 @@ public class ProfilePreviewPanel : UserControl {
 
     public ProfilePreviewPanel() {
         // Create scrollable rich text box for content display
-        this._richTextBox = new WpfUiRichTextBox { 
+        this._richTextBox = new WpfUiRichTextBox {
             IsReadOnly = true,
             Focusable = false,
             IsTextSelectionEnabled = true,
@@ -61,15 +61,14 @@ public class ProfilePreviewPanel : UserControl {
         doc.Blocks.Add(headerPara);
 
         // Validation Status Section (if there are fixes or errors)
-        if (!data.IsValid || data.AppliedFixes.Any() || data.RemainingErrors.Any()) {
-            AddValidationSection(doc, data);
-        }
+        if (!data.IsValid || data.AppliedFixes.Any() || data.RemainingErrors.Any()) AddValidationSection(doc, data);
 
         // Only show operations/params/families if profile is valid
         if (data.IsValid) {
             // Summary section
             var summaryPara = new Paragraph();
-            summaryPara.Inlines.Add(new Run($"Operations: {data.OperationCount}") { FontWeight = FontWeights.SemiBold });
+            summaryPara.Inlines.Add(
+                new Run($"Operations: {data.OperationCount}") { FontWeight = FontWeights.SemiBold });
             summaryPara.Inlines.Add(new LineBreak());
             summaryPara.Inlines.Add(new Run($"APS Parameters: {data.ApsParameterCount}"));
             summaryPara.Inlines.Add(new LineBreak());
@@ -86,11 +85,11 @@ public class ProfilePreviewPanel : UserControl {
                 foreach (var op in data.Operations) {
                     var enabledText = op.Enabled ? "✓" : "✗";
                     var para = new Paragraph();
-                    para.Inlines.Add(new Run($"{enabledText} ") { 
+                    para.Inlines.Add(new Run($"{enabledText} ") {
                         FontWeight = FontWeights.Bold,
-                        Foreground = op.Enabled 
-                            ? System.Windows.Media.Brushes.Green 
-                            : System.Windows.Media.Brushes.Red 
+                        Foreground = op.Enabled
+                            ? Brushes.Green
+                            : Brushes.Red
                     });
                     para.Inlines.Add(new Run($"{op.Name}"));
                     para.Inlines.Add(new LineBreak());
@@ -98,6 +97,7 @@ public class ProfilePreviewPanel : UserControl {
                     var listItem = new ListItem(para);
                     opList.ListItems.Add(listItem);
                 }
+
                 doc.Blocks.Add(opList);
             }
 
@@ -109,10 +109,12 @@ public class ProfilePreviewPanel : UserControl {
                     var para = new Paragraph();
                     para.Inlines.Add(new Run(param.Name) { FontWeight = FontWeights.SemiBold });
                     para.Inlines.Add(new LineBreak());
-                    para.Inlines.Add(new Run($"  {(param.IsInstance ? "Instance" : "Type")}, {param.DataType}") { FontSize = 10 });
+                    para.Inlines.Add(
+                        new Run($"  {(param.IsInstance ? "Instance" : "Type")}, {param.DataType}") { FontSize = 10 });
                     var listItem = new ListItem(para);
                     paramList.ListItems.Add(listItem);
                 }
+
                 doc.Blocks.Add(paramList);
             }
 
@@ -124,10 +126,12 @@ public class ProfilePreviewPanel : UserControl {
                     var para = new Paragraph();
                     para.Inlines.Add(new Run(param.Name) { FontWeight = FontWeights.SemiBold });
                     para.Inlines.Add(new LineBreak());
-                    para.Inlines.Add(new Run($"  {(param.IsInstance ? "Instance" : "Type")}, {param.DataType}") { FontSize = 10 });
+                    para.Inlines.Add(
+                        new Run($"  {(param.IsInstance ? "Instance" : "Type")}, {param.DataType}") { FontSize = 10 });
                     var listItem = new ListItem(para);
                     paramList.ListItems.Add(listItem);
                 }
+
                 doc.Blocks.Add(paramList);
             }
 
@@ -143,6 +147,7 @@ public class ProfilePreviewPanel : UserControl {
                     var listItem = new ListItem(para);
                     famList.ListItems.Add(listItem);
                 }
+
                 doc.Blocks.Add(famList);
             }
 
@@ -150,11 +155,11 @@ public class ProfilePreviewPanel : UserControl {
             if (!string.IsNullOrEmpty(data.ProfileJson)) {
                 AddSectionHeader(doc, "Profile Settings (JSON)");
                 var jsonPara = new Paragraph(new Run(data.ProfileJson)) {
-                    FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                    FontFamily = new FontFamily("Consolas"),
                     FontSize = 9,
                     Margin = new Thickness(8, 0, 0, 12),
-                    Background = System.Windows.Media.Brushes.Black,
-                    Foreground = System.Windows.Media.Brushes.LightGray,
+                    Background = Brushes.Black,
+                    Foreground = Brushes.LightGray,
                     Padding = new Thickness(8)
                 };
                 doc.Blocks.Add(jsonPara);
@@ -173,25 +178,18 @@ public class ProfilePreviewPanel : UserControl {
 
     private static void AddValidationSection(FlowDocument doc, PreviewData data) {
         // Status indicator
-        var statusPara = new Paragraph {
-            Margin = new Thickness(0, 0, 0, 8)
-        };
+        var statusPara = new Paragraph { Margin = new Thickness(0, 0, 0, 8) };
 
         if (data.IsValid) {
-            var validRun = new Run("✓ Valid Profile") {
-                FontWeight = FontWeights.Bold,
-                FontSize = 12
-            };
+            var validRun = new Run("✓ Valid Profile") { FontWeight = FontWeights.Bold, FontSize = 12 };
             validRun.SetResourceReference(Run.ForegroundProperty, "SystemFillColorSuccessBrush");
             statusPara.Inlines.Add(validRun);
         } else {
-            var invalidRun = new Run("✗ Invalid Profile") {
-                FontWeight = FontWeights.Bold,
-                FontSize = 12
-            };
+            var invalidRun = new Run("✗ Invalid Profile") { FontWeight = FontWeights.Bold, FontSize = 12 };
             invalidRun.SetResourceReference(Run.ForegroundProperty, "SystemFillColorCriticalBrush");
             statusPara.Inlines.Add(invalidRun);
         }
+
         doc.Blocks.Add(statusPara);
 
         // Applied fixes section (green)
@@ -209,6 +207,7 @@ public class ProfilePreviewPanel : UserControl {
                 var listItem = new ListItem(para);
                 fixesList.ListItems.Add(listItem);
             }
+
             doc.Blocks.Add(fixesList);
         }
 
@@ -227,6 +226,7 @@ public class ProfilePreviewPanel : UserControl {
                 var listItem = new ListItem(para);
                 errorsList.ListItems.Add(listItem);
             }
+
             doc.Blocks.Add(errorsList);
         }
     }
@@ -273,4 +273,3 @@ public record ParameterInfo(string Name, bool IsInstance, string DataType);
 ///     Family info for preview display.
 /// </summary>
 public record FamilyInfo(string Name, string Category);
-

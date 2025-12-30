@@ -1,7 +1,6 @@
 using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeServices.Storage;
-using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators;
 
@@ -11,7 +10,8 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators;
 public class FamilyParamAggregator {
     private readonly Action<FamilySnapshot, Document, Family> _projectCollector;
 
-    public FamilyParamAggregator(CollectorQueue collectorQueue) => this._projectCollector = collectorQueue.ToProjectCollectorFunc();
+    public FamilyParamAggregator(CollectorQueue collectorQueue) =>
+        this._projectCollector = collectorQueue.ToProjectCollectorFunc();
 
     /// <summary>
     ///     Aggregates parameter data from all provided families.

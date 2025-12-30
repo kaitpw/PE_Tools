@@ -22,7 +22,7 @@ public readonly struct FamilyProcessingPipeline {
     }
 
     internal FamilyProcessingPipeline FromPipeline(FamilyProcessingPipeline pipeline) =>
-        new FamilyProcessingPipeline(
+        new(
             pipeline.FamDoc,
             pipeline.ProjectDoc,
             pipeline.SourceFamily,
@@ -75,7 +75,7 @@ public static class FamilyProcessingPipelineExtensions {
                 famDoc,
                 projectDoc,
                 sourceFamily,
-                loadedFamily: null,
+                null,
                 context);
 
             configure(pipeline);
@@ -91,7 +91,8 @@ public static class FamilyProcessingPipelineExtensions {
     }
 
     /// <summary>
-    ///     Starts pipeline in family-doc mode for in-place processing. Creates context, executes configure lambda, captures timing/exceptions.
+    ///     Starts pipeline in family-doc mode for in-place processing. Creates context, executes configure lambda, captures
+    ///     timing/exceptions.
     ///     Load() and Close() not available in this mode.
     /// </summary>
     public static FamilyDocument StartPipeline(
@@ -108,9 +109,9 @@ public static class FamilyProcessingPipelineExtensions {
         try {
             var pipeline = new FamilyProcessingPipeline(
                 famDoc,
-                projectDoc: null,
-                sourceFamily: null,
-                loadedFamily: null,
+                null,
+                null,
+                null,
                 context);
 
             configure(pipeline);
@@ -263,4 +264,3 @@ public static class FamilyProcessingPipelineExtensions {
             .TapFamilyDoc(famDoc => famDocCollector(snapshot, famDoc));
     }
 }
-

@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,29 +17,13 @@ namespace PeUi.Core;
 ///     Alt+Tab hiding, window deactivation detection, focus restoration, and closing logic.
 /// </summary>
 public class EphemeralWindow : Window {
-    private bool _isClosing;
     private readonly Border _contentBorder;
+    private bool _isClosing;
 
     public EphemeralWindow(Border contentBorder) {
         this._contentBorder = contentBorder;
         this.ContentControl = null;
     }
-
-    /// <summary>
-    ///     Gets the UserControl content hosted by this window (typically a Palette).
-    /// </summary>
-    public UserControl ContentControl { get; }
-
-    /// <summary>
-    ///     Base width for the window (default 450). Used when collapsing sidebars.
-    /// </summary>
-    public double BaseWidth { get; init; } = 450;
-
-    /// <summary>
-    ///     Controls whether the window should automatically close when focus is lost.
-    ///     Default: true (ephemeral behavior enabled).
-    /// </summary>
-    public bool EphemeralEnabled { get; set; } = true;
 
     public EphemeralWindow(
         UserControl content,
@@ -61,8 +44,7 @@ public class EphemeralWindow : Window {
 
         // Create main container grid with centered alignment
         var containerGrid = new Grid {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center
         };
 
         // Add to grid (both at same location so pill floats over content)
@@ -83,6 +65,22 @@ public class EphemeralWindow : Window {
         // Subscribe to CloseRequested event if content implements it
         if (content is ICloseRequestable closeable) closeable.CloseRequested += this.OnContentCloseRequested;
     }
+
+    /// <summary>
+    ///     Gets the UserControl content hosted by this window (typically a Palette).
+    /// </summary>
+    public UserControl ContentControl { get; }
+
+    /// <summary>
+    ///     Base width for the window (default 450). Used when collapsing sidebars.
+    /// </summary>
+    public double BaseWidth { get; init; } = 450;
+
+    /// <summary>
+    ///     Controls whether the window should automatically close when focus is lost.
+    ///     Default: true (ephemeral behavior enabled).
+    /// </summary>
+    public bool EphemeralEnabled { get; set; } = true;
 
     private Border CreateTitlePill(string title) {
         var border = new BorderSpec()

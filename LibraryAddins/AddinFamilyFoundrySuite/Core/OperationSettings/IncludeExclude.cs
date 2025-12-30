@@ -1,7 +1,5 @@
 using AddinFamilyFoundrySuite.Core.SchemaProviders;
 using PeServices.Storage.Core.Json.SchemaProcessors;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.OperationSettings;
 

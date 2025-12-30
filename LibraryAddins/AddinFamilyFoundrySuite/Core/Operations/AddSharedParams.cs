@@ -1,4 +1,3 @@
-using AddinFamilyFoundrySuite.Core;
 using PeExtensions.FamDocument;
 using PeServices.Storage;
 
@@ -13,7 +12,9 @@ public class AddSharedParams(
 
     public override string Description => "Download and add shared parameters from Autodesk Parameters Service";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var logs = new List<LogEntry>();
 
         // Create diagnostic logger
@@ -45,7 +46,8 @@ public class AddSharedParams(
                 diagnosticLogger.Log($"WARNING: Could not read GUID or SpecTypeId for {name}: {ex.Message}");
             }
 
-            diagnosticLogger.LogParameterAttempt(name, guid, specTypeId, groupTypeId, sharedParam.IsInstance, familyCategory);
+            diagnosticLogger.LogParameterAttempt(name, guid, specTypeId, groupTypeId, sharedParam.IsInstance,
+                familyCategory);
             diagnosticLogger.LogExternalDefinitionState(sharedParam.ExternalDefinition);
 
             try {

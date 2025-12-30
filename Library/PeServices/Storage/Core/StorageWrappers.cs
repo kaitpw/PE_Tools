@@ -30,7 +30,8 @@ public interface CsvWriter<T> {
     string WriteRow(string key, T rowData);
 }
 
-public interface CsvReadWriter<T> : CsvReader<T>, CsvWriter<T> where T : class, new() { }
+public interface CsvReadWriter<T> : CsvReader<T>, CsvWriter<T> where T : class, new() {
+}
 
 // ============================================================
 // JSON WRAPPERS - Thin orchestrators that compose Json<T> methods
@@ -47,7 +48,7 @@ public class SettingsJsonReader<T> : JsonReader<T> where T : class, new() {
         this._json = new Json<T>(filePath);
 
         if (!this._json.FileExists) {
-            this._json.WriteUnvalidated(new T(), injectSchemaRef: true);
+            this._json.WriteUnvalidated(new T(), true);
             this._json.WriteSchema();
             throw new CrashProgramException(
                 $"File {filePath} did not exist. A default file was created, please review it and try again.");
@@ -105,7 +106,7 @@ public class StateJsonReaderWriter<T> : JsonReadWriter<T> where T : class, new()
     }
 
     public string Write(T data) {
-        this._json.Write(data, injectSchemaRef: true);
+        this._json.Write(data, true);
         this._json.WriteSchema();
         return this._json.FilePath;
     }

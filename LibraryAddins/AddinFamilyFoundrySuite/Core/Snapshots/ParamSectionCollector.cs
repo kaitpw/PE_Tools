@@ -13,22 +13,22 @@ namespace AddinFamilyFoundrySuite.Core.Snapshots;
 ///     Family doc collection runs if: no data exists, data is empty, or data is partial.
 /// </summary>
 public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
-    // IProjectCollector implementation (preferred - runs first)
-    bool IProjectCollector.ShouldCollect(FamilySnapshot snapshot) =>
-        snapshot.Parameters?.Data?.Count == 0 || snapshot.Parameters == null;
-
     // IFamilyDocCollector implementation (fallback - runs if project collection was partial or skipped)
     bool IFamilyDocCollector.ShouldCollect(FamilySnapshot snapshot) =>
         snapshot.Parameters == null ||
         snapshot.Parameters.Data?.Count == 0 ||
         snapshot.Parameters.IsPartial;
 
-    public void Collect(FamilySnapshot snapshot, Document projectDoc, Family family) =>
-        snapshot.Parameters = this.CollectFromProject(projectDoc, family);
-
     // IFamilyDocCollector implementation (fallback)
     void IFamilyDocCollector.Collect(FamilySnapshot snapshot, FamilyDocument famDoc) =>
         snapshot.Parameters = this.CollectFromFamilyDoc(famDoc);
+
+    // IProjectCollector implementation (preferred - runs first)
+    bool IProjectCollector.ShouldCollect(FamilySnapshot snapshot) =>
+        snapshot.Parameters?.Data?.Count == 0 || snapshot.Parameters == null;
+
+    public void Collect(FamilySnapshot snapshot, Document projectDoc, Family family) =>
+        snapshot.Parameters = this.CollectFromProject(projectDoc, family);
 
     private SnapshotSection<ParamSnapshot> CollectFromProject(Document doc, Family family) {
         var symbols = GetAllSymbols(family);
@@ -82,9 +82,11 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
         return new SnapshotSection<ParamSnapshot> {
             Source = SnapshotSource.Project,
             IsPartial = isPartial,
-            Data = [.. snapshots.Values
-                .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
-                .ThenByDescending(s => s.IsInstance)]
+            Data = [
+                .. snapshots.Values
+                    .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+                    .ThenByDescending(s => s.IsInstance)
+            ]
         };
     }
 
@@ -102,10 +104,11 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
 
             var isBuiltIn = ParameterUtils.IsBuiltInParameter(p.Id);
             Guid? sharedGuid = null;
-            if (p.IsShared)
+            if (p.IsShared) {
                 try { sharedGuid = p.GUID; } catch {
                     /* GUID access can throw */
                 }
+            }
 
             var values = typeNames.ToDictionary(t => t, _ => (string)null, StringComparer.Ordinal);
 
@@ -292,7 +295,7 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
             iterator.Reset();
 
             while (iterator.MoveNext()) {
-                var definition = iterator.Key as Definition;
+                var definition = iterator.Key;
                 if (definition != null)
                     _ = projectParamNames.Add(definition.Name);
             }
@@ -304,4 +307,3 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
         return projectParamNames;
     }
 }
-

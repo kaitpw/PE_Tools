@@ -10,13 +10,15 @@ public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
     public override string Description =>
         "Deletes reference planes in the Family which are not used by anything important";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var logs = new List<LogEntry>();
 
         bool deletedAny;
-        do {
+        do
             deletedAny = this.DeleteUnusedReferencePlanes(doc, logs);
-        } while (deletedAny);
+        while (deletedAny);
 
         return new OperationLog(this.Name, logs);
     }
@@ -60,7 +62,7 @@ public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
         var value = isRefParam.AsValueString();
         return value is not ("Not a Reference" or "Weak Reference");
     }
- 
+
     private List<Element> GetRelevantDependentElements(FamilyDocument doc, ReferencePlane refPlane) {
         var dependentIds = refPlane.GetDependentElements(null);
         if (dependentIds == null || dependentIds.Count == 0) return [];
@@ -80,7 +82,7 @@ public class PurgeReferencePlanes : DocOperation<PurgeReferencePlanesSettings> {
     }
 
     /// <summary>
-    /// Returns true if the dimension has a parameter label (is important).
+    ///     Returns true if the dimension has a parameter label (is important).
     /// </summary>
     private bool HasParameterLabel(Dimension dimension) {
         try {

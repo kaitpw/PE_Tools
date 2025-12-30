@@ -34,5 +34,3 @@ public enum RpStrength {
     StrongRef = 13,
     WeakRef = 14
 }
-
-

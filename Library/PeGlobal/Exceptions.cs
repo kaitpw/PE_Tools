@@ -60,19 +60,16 @@ public class JsonValidationException : Exception {
 public class CrashProgramException : Exception {
     private static readonly string _prefix = "The program was intentionally crashed because";
 
-    public CrashProgramException(string message) : base(_prefix + FormatMessage(message)) {
+    public CrashProgramException(string message) : base(_prefix + FormatMessage(message)) =>
         this.ErrorDetails = new Dictionary<string, object>();
-    }
 
     public CrashProgramException(Exception exception) : base(_prefix + " an unrecoverable error occurred:" +
-                                                             FormatError(exception)) {
+                                                             FormatError(exception)) =>
         this.ErrorDetails = new Dictionary<string, object>();
-    }
 
     public CrashProgramException(string message, Dictionary<string, object> errorDetails)
-        : base(_prefix + FormatMessage(message)) {
+        : base(_prefix + FormatMessage(message)) =>
         this.ErrorDetails = errorDetails ?? new Dictionary<string, object>();
-    }
 
     /// <summary>Structured error details for programmatic access by consumers</summary>
     public Dictionary<string, object> ErrorDetails { get; }

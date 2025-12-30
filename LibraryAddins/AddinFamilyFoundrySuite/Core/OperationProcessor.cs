@@ -1,4 +1,3 @@
-using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeExtensions.FamDocument;
 using System.ComponentModel;
@@ -11,6 +10,7 @@ public class OperationProcessor(
     ExecutionOptions executionOptions = null
 ) : IDisposable {
     private readonly ExecutionOptions _exOpts = executionOptions ?? new ExecutionOptions();
+
     /// <summary>
     ///     A function to select families in the Document. If the document is a family document, this will not be called
     /// </summary>
@@ -99,7 +99,7 @@ public class OperationProcessor(
             queue.Operations
                 .OfType<IGroupContextAware>()
                 .Select(op => op.GroupContext)
-                .Where(ctx => ctx != null)  // Filter out null contexts from standalone operations
+                .Where(ctx => ctx != null) // Filter out null contexts from standalone operations
                 .Distinct()
                 .ToList().ForEach(ctx => ctx.Reset());
 
@@ -111,13 +111,13 @@ public class OperationProcessor(
                 .GetFamilyDocument(family)
                 .EnsureDefaultType()
                 .StartPipeline(this.OpenDoc, family, pipeline =>
-                    pipeline
-                        .CollectPreSnapshot(collectorQueue)
-                        .Process(familyFuncs)
-                        .SaveToLocations(d => GetSaveLocations(d, saveOpts, outputFolderPath))
-                        .Load(new DefaultFamilyLoadOptions())
-                        .CollectPostSnapshot(collectorQueue),
-                out var context);
+                        pipeline
+                            .CollectPreSnapshot(collectorQueue)
+                            .Process(familyFuncs)
+                            .SaveToLocations(d => GetSaveLocations(d, saveOpts, outputFolderPath))
+                            .Load(new DefaultFamilyLoadOptions())
+                            .CollectPostSnapshot(collectorQueue),
+                    out var context);
 
             if (!famDoc.Close(false))
                 throw new InvalidOperationException($"Failed to close family document for {family.Name}");
@@ -136,16 +136,15 @@ public class OperationProcessor(
             .GetFamilyDocument()
             .EnsureDefaultType()
             .StartPipeline(pipeline =>
-                pipeline
-                    .CollectPreSnapshot(collectorQueue)
-                    .Process(familyFuncs)
-                    .CollectPostSnapshot(collectorQueue),
-            out var context);
+                    pipeline
+                        .CollectPreSnapshot(collectorQueue)
+                        .Process(familyFuncs)
+                        .CollectPostSnapshot(collectorQueue),
+                out var context);
         // Note: No Close() call - we don't close the active family document
 
         return [context];
     }
-
 
 
     public List<FamilyProcessingContext> ProcessFamilyDocumentIntoVariants(
@@ -233,4 +232,3 @@ public class LoadAndSaveOptions {
     [Required]
     public bool SaveFamilyToOutputDir { get; set; } = false;
 }
-

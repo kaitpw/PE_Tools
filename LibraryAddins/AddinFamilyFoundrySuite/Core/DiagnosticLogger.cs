@@ -1,6 +1,4 @@
-using System.Text;
 using Autodesk.Revit.ApplicationServices;
-using Autodesk.Revit.DB;
 
 namespace AddinFamilyFoundrySuite.Core;
 
@@ -9,8 +7,8 @@ namespace AddinFamilyFoundrySuite.Core;
 ///     Thread-safe, writes to a file in the output directory.
 /// </summary>
 public class DiagnosticLogger : IDisposable {
-    private readonly string _logFilePath;
     private readonly object _lock = new();
+    private readonly string _logFilePath;
     private StreamWriter _writer;
 
     public DiagnosticLogger(string outputDirectory, string familyName) {
@@ -19,11 +17,21 @@ public class DiagnosticLogger : IDisposable {
         this._logFilePath = Path.Combine(outputDirectory, $"diagnostic_{sanitizedFamilyName}_{timestamp}.log");
 
         Directory.CreateDirectory(outputDirectory);
-        this._writer = new StreamWriter(this._logFilePath, append: true, Encoding.UTF8);
+        this._writer = new StreamWriter(this._logFilePath, true, Encoding.UTF8);
         this.Log("=== Diagnostic Log Started ===");
         this.Log($"Family: {familyName}");
         this.Log($"Timestamp: {timestamp}");
         this.Log("");
+    }
+
+    public void Dispose() {
+        lock (this._lock) {
+            this.Log("");
+            this.Log("=== Diagnostic Log Ended ===");
+            this._writer?.Flush();
+            this._writer?.Dispose();
+            this._writer = null;
+        }
     }
 
     public void Log(string message) {
@@ -116,9 +124,7 @@ public class DiagnosticLogger : IDisposable {
                 // Note: DefinitionFile is not directly accessible from DefinitionGroup in Revit API
                 // It's accessed through Application.OpenSharedParameterFile()
                 // We log this limitation for diagnostic purposes
-                if (ownerGroup != null) {
-                    this.Log($"    OwnerGroup exists (DefinitionFile access not available via API)");
-                }
+                if (ownerGroup != null) this.Log("    OwnerGroup exists (DefinitionFile access not available via API)");
             } catch (Exception ex) {
                 this.Log($"    OwnerGroup: ERROR - {ex.Message}");
             }
@@ -144,20 +150,9 @@ public class DiagnosticLogger : IDisposable {
         this.Log($"  File Still Exists After Disposal: {stillExists}");
     }
 
-    public void Dispose() {
-        lock (this._lock) {
-            this.Log("");
-            this.Log("=== Diagnostic Log Ended ===");
-            this._writer?.Flush();
-            this._writer?.Dispose();
-            this._writer = null;
-        }
-    }
-
     private static string SanitizeFileName(string fileName) {
         var invalid = Path.GetInvalidFileNameChars();
         var sanitized = new string(fileName.Select(c => invalid.Contains(c) ? '_' : c).ToArray());
         return sanitized.Length > 50 ? sanitized[..50] : sanitized;
     }
 }
-

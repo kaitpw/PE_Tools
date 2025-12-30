@@ -313,9 +313,10 @@ public static class OpenDocumentExtensions {
             // Always dispose the timer
             timeoutTimer?.Dispose();
 
-            if (timerFired)
+            if (timerFired) {
                 Debug.WriteLine(
                     $"[TryOpenCloudDocument] Operation completed after timeout warning (total: {sw.ElapsedMilliseconds}ms)");
+            }
         }
     }
 }

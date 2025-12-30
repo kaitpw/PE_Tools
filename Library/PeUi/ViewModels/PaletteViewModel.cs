@@ -22,9 +22,9 @@ public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewMod
     where TItem : class, IPaletteListItem {
     private readonly List<TItem> _allItems;
     private readonly DispatcherTimer _debounceTimer;
-    private readonly DispatcherTimer _selectionDebounceTimer;
     private readonly Func<TItem, string> _filterKeySelector;
     private readonly SearchFilterService<TItem> _searchService;
+    private readonly DispatcherTimer _selectionDebounceTimer;
 
     /// <summary> Current search text </summary>
     [ObservableProperty] private string _searchText = string.Empty;
@@ -52,7 +52,8 @@ public partial class PaletteViewModel<TItem> : ObservableObject, IPaletteViewMod
         };
 
         // Initialize debounce timer for selection changes (configurable, default 300ms)
-        this._selectionDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(selectionDebounceMs) };
+        this._selectionDebounceTimer =
+            new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(selectionDebounceMs) };
         this._selectionDebounceTimer.Tick += (_, _) => {
             this._selectionDebounceTimer.Stop();
             this.SelectionChangedDebounced?.Invoke(this, EventArgs.Empty);

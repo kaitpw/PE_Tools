@@ -85,12 +85,11 @@ public static class JsonArrayComposer {
                 var newVisited = new HashSet<string>(visitedFragments) { normalizedPath };
 
                 // Recursively expand includes within the fragment
-                var expandedFragment = ExpandArrayIncludes(fragmentArray, Path.GetDirectoryName(fragmentPath)!, newVisited);
+                var expandedFragment =
+                    ExpandArrayIncludes(fragmentArray, Path.GetDirectoryName(fragmentPath)!, newVisited);
 
                 // Add all fragment items to result
-                foreach (var fragmentItem in expandedFragment) {
-                    result.Add(fragmentItem.DeepClone());
-                }
+                foreach (var fragmentItem in expandedFragment) result.Add(fragmentItem.DeepClone());
             } else {
                 // Regular item - just add it
                 // If it's an object, recursively process it for nested arrays
@@ -98,9 +97,8 @@ public static class JsonArrayComposer {
                     var cloned = (JObject)itemObj.DeepClone();
                     ExpandIncludes(cloned, baseDirectory, visitedFragments);
                     result.Add(cloned);
-                } else {
+                } else
                     result.Add(item.DeepClone());
-                }
             }
         }
 
@@ -124,9 +122,7 @@ public static class JsonArrayComposer {
     ///     Loads a fragment file and returns it as a JArray.
     /// </summary>
     private static JArray LoadFragment(string fragmentPath) {
-        if (!File.Exists(fragmentPath)) {
-            throw JsonExtendsException.FragmentNotFound(fragmentPath);
-        }
+        if (!File.Exists(fragmentPath)) throw JsonExtendsException.FragmentNotFound(fragmentPath);
 
         try {
             var content = File.ReadAllText(fragmentPath);

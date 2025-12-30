@@ -42,9 +42,7 @@ public static class JsonDiff {
 
         // Add $extends as the first property
         var result = new JObject { ["$extends"] = extendsName };
-        foreach (var prop in patch.Properties()) {
-            result[prop.Name] = prop.Value;
-        }
+        foreach (var prop in patch.Properties()) result[prop.Name] = prop.Value;
 
         return result;
     }
@@ -79,16 +77,12 @@ public static class JsonDiff {
                     CreatePatchRecursive(baseChildObj, editedChildObj, childPatch);
 
                     // Only include if there are actual differences
-                    if (childPatch.HasValues) {
-                        patch[propName] = childPatch;
-                    }
+                    if (childPatch.HasValues) patch[propName] = childPatch;
                     continue;
                 }
 
                 // Arrays or primitives - compare by deep equality
-                if (!JToken.DeepEquals(baseValue, editedValue)) {
-                    patch[propName] = editedValue!.DeepClone();
-                }
+                if (!JToken.DeepEquals(baseValue, editedValue)) patch[propName] = editedValue!.DeepClone();
             }
         }
     }

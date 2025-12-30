@@ -78,8 +78,10 @@ public class OperationQueue {
                 if (genericDef.Name.StartsWith("DocOperation")) return "Doc";
                 if (genericDef.Name.StartsWith("TypeOperation")) return "Type";
             }
+
             opType = opType.BaseType;
         }
+
         throw new InvalidOperationException(
             $"Operation {op.GetType().Name} does not inherit from DocOperation<T> or TypeOperation<T>");
     }
@@ -120,9 +122,9 @@ public class OperationQueue {
         foreach (var op in this._operations) {
             var isTypeOp = IsTypeOperation(op);
 
-            if (isTypeOp) {
+            if (isTypeOp)
                 currentBatch.Add(op);
-            } else {
+            else {
                 if (currentBatch.Count > 0) {
                     finalOps.Add(new MergedTypeOperation(currentBatch));
                     currentBatch = [];
@@ -146,8 +148,10 @@ public class OperationQueue {
                 var genericDef = opType.GetGenericTypeDefinition();
                 if (genericDef.Name.StartsWith("TypeOperation")) return true;
             }
+
             opType = opType.BaseType;
         }
+
         return false;
     }
 

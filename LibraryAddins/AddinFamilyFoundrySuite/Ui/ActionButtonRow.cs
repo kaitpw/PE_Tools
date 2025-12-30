@@ -52,9 +52,7 @@ public class ActionButtonRow : RevitHostedUserControl {
             Focusable = true
         };
 
-        if (icon.HasValue) {
-            button.Icon = new SymbolIcon { Symbol = icon.Value };
-        }
+        if (icon.HasValue) button.Icon = new SymbolIcon { Symbol = icon.Value };
 
         button.Click += (_, _) => this.OnButtonClick(action);
         button.GotFocus += (_, _) => this.UpdateFocusedIndex(button);
@@ -112,6 +110,7 @@ public class ActionButtonRow : RevitHostedUserControl {
                 var action = (ButtonAction)this._buttons[this._focusedIndex].Tag;
                 this.OnButtonClick(action);
             }
+
             e.Handled = true;
             break;
         }
@@ -129,9 +128,8 @@ public class ActionButtonRow : RevitHostedUserControl {
         if (index >= 0) this._focusedIndex = index;
     }
 
-    private void OnButtonClick(ButtonAction action) {
+    private void OnButtonClick(ButtonAction action) =>
         this.ActionClicked?.Invoke(this, new ActionButtonClickedEventArgs(action));
-    }
 }
 
 /// <summary>
@@ -150,4 +148,3 @@ public class ActionButtonClickedEventArgs : EventArgs {
     public ActionButtonClickedEventArgs(ButtonAction action) => this.Action = action;
     public ButtonAction Action { get; }
 }
-

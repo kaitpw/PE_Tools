@@ -4,7 +4,7 @@ namespace PeExtensions.FamParameter.Formula;
 
 /// <summary>
 ///     Low-level formula tokenization utilities.
-///     Internal implementation - consumers should use higher-level methods in <see cref="FormulaReferences"/>.
+///     Internal implementation - consumers should use higher-level methods in <see cref="FormulaReferences" />.
 /// </summary>
 internal static class Tokenizer {
     /// <summary>
@@ -46,7 +46,8 @@ internal static class Tokenizer {
 
     /// <summary>
     ///     Extract potential parameter name tokens from a formula string.
-    ///     Returns unvalidated string tokens - prefer <see cref="FormulaReferences.GetReferencedIn"/> for validated parameter references.
+    ///     Returns unvalidated string tokens - prefer <see cref="FormulaReferences.GetReferencedIn" /> for validated parameter
+    ///     references.
     /// </summary>
     internal static IEnumerable<string> ExtractTokens(string formula) {
         // Strip string literals (content between quotes) before tokenizing

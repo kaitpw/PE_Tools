@@ -42,15 +42,15 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     private readonly bool _isSearchBoxHidden;
     private ActionBinding _actionBinding;
     private ActionMenu _actionMenu;
+    private PaletteSidebar _currentSidebar;
     private CustomKeyBindings _customKeyBindings;
     private Func<Task<bool>> _executeItemFunc;
     private FilterBox _filterBox;
     private Func<object> _getSelectedItemFunc;
     private bool _isCtrlPressed;
     private Action _onCtrlReleased;
-    private SelectableTextBox _tooltipPanel;
-    private PaletteSidebar _currentSidebar;
     private EphemeralWindow _parentWindow;
+    private SelectableTextBox _tooltipPanel;
 
     public Palette(bool isSearchBoxHidden = false) {
         this.InitializeComponent();
@@ -287,13 +287,15 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     ///     Closes the window and defers action execution to Revit API context via Window.Closed event.
     /// </summary>
     private void ExecuteDeferred(Func<Task> action) {
-        if (this._parentWindow == null)
+        if (this._parentWindow == null) {
             throw new InvalidOperationException(
                 "Palette parent window not set. Use PaletteFactory.Create or call SetParentWindow.");
+        }
 
-        if (!RevitTaskAccessor.IsConfigured)
+        if (!RevitTaskAccessor.IsConfigured) {
             throw new InvalidOperationException(
                 "RevitTaskAccessor not configured. Wire up in App.OnStartup.");
+        }
 
         void ClosedHandler(object sender, EventArgs args) {
             this._parentWindow.Closed -= ClosedHandler;
@@ -301,7 +303,7 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         }
 
         this._parentWindow.Closed += ClosedHandler;
-        this.RequestClose(restoreFocus: true);
+        this.RequestClose(true);
     }
 
     private void RequestClose(bool restoreFocus = true) =>

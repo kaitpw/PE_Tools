@@ -20,9 +20,10 @@ public static class UIDocumentCloseExtension {
     /// <param name="uiapp">The UIApplication instance.</param>
     /// <param name="saveModified">Indicates whether to save modified documents.</param>
     public static void CloseAllUIDocument(this UIApplication uiapp, bool saveModified = false) {
-        using (new DialogBoxShowingForceResultYesNo(uiapp, saveModified))
+        using (new DialogBoxShowingForceResultYesNo(uiapp, saveModified)) {
             foreach (var frameControl in MainWindow.getMainWnd().getAllViews())
                 frameControl.closeWindow();
+        }
     }
 
     /// <summary>

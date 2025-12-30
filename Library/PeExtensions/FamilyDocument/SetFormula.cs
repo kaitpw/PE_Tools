@@ -4,7 +4,8 @@ using PeExtensions.FamParameter.Formula;
 namespace PeExtensions.FamDocument;
 
 public static class Formula {
-    private static HashSet<ForgeTypeId> _forbiddenDataTypes = null;
+    private static HashSet<ForgeTypeId> _forbiddenDataTypes;
+
     /// <summary>
     ///     Datatypes for which formulas cannot be assigned
     /// </summary>
@@ -12,14 +13,17 @@ public static class Formula {
     public static HashSet<ForgeTypeId> ForbiddenDataTypes =>
         _forbiddenDataTypes ??= [
             SpecTypeId.String.Url,
-        SpecTypeId.Reference.LoadClassification
+            SpecTypeId.Reference.LoadClassification
         ];
 
     /// <summary>
     ///     Unset a formula on a family parameter. The same as calling
     ///     <see cref="TrySetFormula(FamilyDocument, FamilyParameter, string, out string)" /> with null or empty formula.
     /// </summary>
-    /// <returns>True if the formula was set successfully. On error, no message is returned nor any exception thrown, only false is returned.</returns>
+    /// <returns>
+    ///     True if the formula was set successfully. On error, no message is returned nor any exception thrown, only
+    ///     false is returned.
+    /// </returns>
     /// <exception cref="Autodesk.Revit.Exceptions.InvalidOperationException">
     ///     Thrown when a type parameter formula references
     ///     instance parameters

@@ -118,7 +118,7 @@ public class PaletteSidebar {
     /// <summary>
     ///     Width of the sidebar when expanded.
     /// </summary>
-    public GridLength Width { get; init; } = new GridLength(400);
+    public GridLength Width { get; init; } = new(400);
 
     /// <summary>
     ///     Keys that will collapse the sidebar and return focus to the main palette.

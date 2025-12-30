@@ -49,6 +49,7 @@ public static class FamilyDocumentProcessFamily {
             results.AddRange(callback(famDoc, context));
             _ = trans.Commit();
         }
+
         return famDoc;
     }
 

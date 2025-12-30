@@ -15,9 +15,7 @@ public static class SchemaMetadataProcessor {
     public static void AllowSchemaProperty(JsonSchema schema) {
         if (!schema.Properties.ContainsKey("$schema")) {
             schema.Properties["$schema"] = new JsonSchemaProperty {
-                Type = JsonObjectType.String,
-                Description = "URI of the JSON Schema reference",
-                IsRequired = false
+                Type = JsonObjectType.String, Description = "URI of the JSON Schema reference", IsRequired = false
             };
         }
     }
@@ -29,9 +27,7 @@ public static class SchemaMetadataProcessor {
     public static void AllowExtendsProperty(JsonSchema schema) {
         if (!schema.Properties.ContainsKey("$extends")) {
             schema.Properties["$extends"] = new JsonSchemaProperty {
-                Type = JsonObjectType.String,
-                Description = "URI of the json that this file extends",
-                IsRequired = false
+                Type = JsonObjectType.String, Description = "URI of the json that this file extends", IsRequired = false
             };
         }
     }

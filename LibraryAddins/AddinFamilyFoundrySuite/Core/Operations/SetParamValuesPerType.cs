@@ -20,7 +20,9 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
     public override string Description =>
         "Set parameter values per family type (explicit per-type values or fallback for failed global values).";
 
-    public override OperationLog Execute(FamilyDocument famDoc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument famDoc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var fm = famDoc.FamilyManager;
         var currentTypeName = fm.CurrentType?.Name;
 
@@ -29,7 +31,7 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
             // Skip if this type isn't in the dictionary
             if (currentTypeName is null
                 || !p.ValuesPertype.TryGetValue(currentTypeName, out var value)
-            ) continue;
+               ) continue;
 
             if (string.IsNullOrWhiteSpace(value)) continue;
 
@@ -56,7 +58,7 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
         // 2. Handle fallback for failed global values (check GroupContext for deferred entries)
         foreach (var p in this.Settings.Parameters) {
             var log = groupContext.Get(p.Name);
-            if (log?.IsComplete == true) continue;  // Already handled
+            if (log?.IsComplete == true) continue; // Already handled
             if (string.IsNullOrWhiteSpace(p.ValueOrFormula)) continue;
             var parameter = fm.FindParameter(p.Name);
             if (parameter is null) continue; // Already logged in SetParamValues

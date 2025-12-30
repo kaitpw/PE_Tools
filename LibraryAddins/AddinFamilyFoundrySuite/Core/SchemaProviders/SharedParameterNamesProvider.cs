@@ -1,6 +1,6 @@
-using Newtonsoft.Json;
 using PeServices.Aps.Models;
 using PeServices.Storage;
+using PeServices.Storage.Core;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 
 namespace AddinFamilyFoundrySuite.Core.SchemaProviders;
@@ -15,7 +15,7 @@ public class SharedParameterNamesProvider : ISchemaExamplesProvider {
     public IEnumerable<string> GetExamples() {
         try {
             var cache = Storage.GlobalDir().StateJson<ParametersApi.Parameters>(CacheFilename)
-                as PeServices.Storage.Core.JsonReader<ParametersApi.Parameters>;
+                as JsonReader<ParametersApi.Parameters>;
             if (!File.Exists(cache.FilePath)) return [];
             return cache.Read().Results?.Where(p => !p.IsArchived).Select(p => p.Name) ?? [];
         } catch {
@@ -24,4 +24,3 @@ public class SharedParameterNamesProvider : ISchemaExamplesProvider {
         }
     }
 }
-

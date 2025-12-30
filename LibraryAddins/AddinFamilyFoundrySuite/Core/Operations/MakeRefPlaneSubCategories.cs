@@ -1,4 +1,3 @@
-using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeExtensions.FamDocument;
 
@@ -55,11 +54,14 @@ public record RefPlaneSubcategorySpec {
     }
 }
 
-public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs) : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
+public class MakeRefPlaneSubcategories(List<RefPlaneSubcategorySpec> specs)
+    : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
     private readonly List<RefPlaneSubcategorySpec> _specs = specs;
     public override string Description => "Make reference planes subcategories with custom colors and line patterns";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var logs = new List<LogEntry>();
 
         try {

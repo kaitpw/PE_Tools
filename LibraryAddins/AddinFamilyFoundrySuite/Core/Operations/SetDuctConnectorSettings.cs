@@ -5,11 +5,14 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
-public class SetDuctConnectorSettings(DuctConnectorConfigurator settings) : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
+public class SetDuctConnectorSettings(DuctConnectorConfigurator settings)
+    : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
     private readonly DuctConnectorConfigurator settings = settings;
     public override string Description => "Make Duct Connector Variants";
 
-    public override OperationLog Execute(FamilyDocument famDoc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument famDoc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var logs = new List<LogEntry>();
         try {
             var connectorElements = new FilteredElementCollector(famDoc)
@@ -89,8 +92,7 @@ public class DuctConnectorConfigurator {
     public override string ToString() =>
         JsonConvert.SerializeObject(this,
             new JsonSerializerSettings {
-                Formatting = Formatting.Indented,
-                Converters = new List<JsonConverter> { new StringEnumConverter() }
+                Formatting = Formatting.Indented, Converters = new List<JsonConverter> { new StringEnumConverter() }
             });
 
     public string ToStringUnConverted() =>

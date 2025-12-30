@@ -59,13 +59,9 @@ public static class JsonMerge {
             if (targetValue is JArray targetArray && childValue is JArray childArray) {
                 var mergedArray = new JArray();
                 // Add all base elements
-                foreach (var item in targetArray) {
-                    mergedArray.Add(item.DeepClone());
-                }
+                foreach (var item in targetArray) mergedArray.Add(item.DeepClone());
                 // Add all child elements
-                foreach (var item in childArray) {
-                    mergedArray.Add(item.DeepClone());
-                }
+                foreach (var item in childArray) mergedArray.Add(item.DeepClone());
                 target[propName] = mergedArray;
                 continue;
             }

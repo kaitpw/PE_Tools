@@ -30,4 +30,3 @@ public class CategoryNamesProvider : ISchemaExamplesProvider {
         }
     }
 }
-

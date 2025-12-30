@@ -17,11 +17,14 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     </code>
 ///     </para>
 /// </summary>
-public class LogRefPlaneAndDims(string outputDir) : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
+public class LogRefPlaneAndDims(string outputDir)
+    : DocOperation<DefaultOperationSettings>(new DefaultOperationSettings()) {
     public string OutputPath { get; } = outputDir;
     public override string Description => "Log existing reference planes and dimensions in profile JSON format";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var specs = new List<RefPlaneSpec>();
         var processedMirrorPlanes = new HashSet<(ReferencePlane, ReferencePlane)>();
 

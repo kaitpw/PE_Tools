@@ -19,14 +19,16 @@ public interface ISchemaExamplesProvider {
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
 public class SchemaExamplesAttribute : Attribute {
-    public Type ProviderType { get; }
-
     public SchemaExamplesAttribute(Type providerType) {
-        if (!typeof(ISchemaExamplesProvider).IsAssignableFrom(providerType))
+        if (!typeof(ISchemaExamplesProvider).IsAssignableFrom(providerType)) {
             throw new ArgumentException(
                 $"Provider type must implement {nameof(ISchemaExamplesProvider)}", nameof(providerType));
+        }
+
         this.ProviderType = providerType;
     }
+
+    public Type ProviderType { get; }
 }
 
 /// <summary>
@@ -96,9 +98,7 @@ public class SchemaExamplesProcessor : ISchemaProcessor {
 
             // Add examples-only schema to Definitions
             var examplesSchema = new JsonSchema {
-                ExtensionData = new Dictionary<string, object> {
-                    ["examples"] = examples
-                }
+                ExtensionData = new Dictionary<string, object> { ["examples"] = examples }
             };
             rootSchema.Definitions[defName] = examplesSchema;
         }
@@ -121,4 +121,3 @@ public class SchemaExamplesProcessor : ISchemaProcessor {
         return jsonPropertyAttr?.PropertyName ?? property.Name;
     }
 }
-

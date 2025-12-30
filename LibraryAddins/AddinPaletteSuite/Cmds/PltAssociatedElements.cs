@@ -32,7 +32,7 @@ public static class PltAssociatedElements {
 
         // Create palette for sidebar (no search box for association list)
         var viewModel = new PaletteViewModel<AssociatedElementItem>(items, null);
-        var palette = new Palette(isSearchBoxHidden: true);
+        var palette = new Palette(true);
         palette.Initialize(viewModel, actions);
         return palette;
     }
@@ -50,8 +50,7 @@ public static class PltAssociatedElements {
 
         var window = PaletteFactory.Create($"{param.Definition.Name} Associations", items, actions,
             new PaletteOptions<AssociatedElementItem> {
-                SearchConfig = SearchConfig.PrimaryAndSecondary(),
-                FilterKeySelector = item => item.TextPill
+                SearchConfig = SearchConfig.PrimaryAndSecondary(), FilterKeySelector = item => item.TextPill
             });
         window.Show();
     }
@@ -81,8 +80,7 @@ public static class PltAssociatedElements {
     private static List<PaletteAction<AssociatedElementItem>> CreateActions(
         UIDocument uidoc,
         FamilyDocument familyDoc
-    ) =>
-    [
+    ) => [
         new() {
             Name = "Show/Select",
             Execute = async item => {

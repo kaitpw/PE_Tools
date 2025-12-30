@@ -26,5 +26,3 @@ public class SnapshotSection<T> {
     /// </summary>
     public bool IsPartial { get; init; }
 }
-
-

@@ -1,5 +1,4 @@
 using AddinFamilyFoundrySuite.Core;
-using AddinFamilyFoundrySuite.Core.Aggregators;
 using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
@@ -63,7 +62,6 @@ public class CmdFFMigrator : IExternalCommand {
 
             // Define actions for the palette
             var actions = new List<PaletteAction<ProfileListItem>> {
-
                 new() {
                     Name = "Process Families",
                     Execute = async _ => this.HandleProcessFamilies(context),
@@ -74,7 +72,7 @@ public class CmdFFMigrator : IExternalCommand {
                     Execute = async _ => this.HandleRegenerateSchema(context),
                     CanExecute = _ => context.SelectedProfile != null
                 }
-            }; 
+            };
 
             // Create the palette with sidebar
             window = PaletteFactory.Create("FF Migrator - Select Profile", profiles, actions,
@@ -172,10 +170,7 @@ public class CmdFFMigrator : IExternalCommand {
         var allAddAndSetParams = profile.AddAndSetParams.Parameters
             .Concat(internalParams)
             .Concat(profile.AddAndSetParams.ParametersPerType.Select(p => new SetParamModel {
-                Name = p.Name,
-                DataType = p.DataType,
-                IsInstance = p.IsInstance,
-                PropertiesGroup = p.PropertiesGroup
+                Name = p.Name, DataType = p.DataType, IsInstance = p.IsInstance, PropertiesGroup = p.PropertiesGroup
             }));
 
         var addAndSetParameters = allAddAndSetParams
@@ -196,8 +191,7 @@ public class CmdFFMigrator : IExternalCommand {
         var profileJson = JsonSerializer.Serialize(
             profile,
             new JsonSerializerOptions {
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
 
         // Check operation enabled status from queue
@@ -248,7 +242,8 @@ public class CmdFFMigrator : IExternalCommand {
             AppliedFixes = new List<string>()
         };
 
-    private static PreviewData CreateSanitizationErrorPreview(ProfileListItem profileItem, JsonSanitizationException ex) {
+    private static PreviewData
+        CreateSanitizationErrorPreview(ProfileListItem profileItem, JsonSanitizationException ex) {
         var preview = new PreviewData {
             ProfileName = profileItem.TextPrimary,
             IsValid = false,

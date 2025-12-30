@@ -10,6 +10,9 @@ public class OperationContext {
     private readonly Dictionary<string, LogEntry> _entries = new();
     private readonly HashSet<string> _touchedThisOperation = new();
 
+    public IEnumerable<LogEntry> All => this._entries.Values;
+    public IEnumerable<LogEntry> Pending => this.All.Where(e => !e.IsComplete);
+
     public LogEntry GetOrCreate(string name) {
         if (this._entries.TryGetValue(name, out var entry)) {
             // Only mark as touched if not already complete (operation is modifying it)
@@ -25,9 +28,6 @@ public class OperationContext {
 
     public LogEntry Get(string name) =>
         this._entries.GetValueOrDefault(name);
-
-    public IEnumerable<LogEntry> All => this._entries.Values;
-    public IEnumerable<LogEntry> Pending => this.All.Where(e => !e.IsComplete);
 
     /// <summary>
     ///     Gets a snapshot of logs touched by the current operation, then clears the touched set.
@@ -105,9 +105,8 @@ public class FamilyProcessingContext {
     public List<string> GetTypesWithValue(ParamSnapshot p) {
         if (p is null
             || this.PreProcessSnapshot?.Parameters?.Data == null
-            || this.PreProcessSnapshot.Parameters.Data.Count == 0) {
+            || this.PreProcessSnapshot.Parameters.Data.Count == 0)
             return [];
-        }
 
         return string.IsNullOrWhiteSpace(p.Formula)
             ? p.ValuesPerType

@@ -1,9 +1,5 @@
-using AddinFamilyFoundrySuite.Cmds;
-using AddinFamilyFoundrySuite.Core;
 using Newtonsoft.Json.Linq;
-using PeServices.Storage.Core;
 using PeUi.Core;
-using System.IO;
 using System.Windows.Media.Imaging;
 using WpfColor = System.Windows.Media.Color;
 
@@ -29,6 +25,12 @@ public class ProfileListItem : IPaletteListItem {
     /// <summary> Number of lines in the profile file </summary>
     public int LineCount { get; }
 
+    /// <summary> The value of $extends property, or null if not present </summary>
+    public string ExtendsValue { get; }
+
+    /// <summary> Last modified date for sorting </summary>
+    public DateTime LastModified => this._fileInfo.LastWriteTime;
+
     /// <summary> Profile filename without extension </summary>
     public string TextPrimary => Path.GetFileNameWithoutExtension(this.FilePath);
 
@@ -44,12 +46,6 @@ public class ProfileListItem : IPaletteListItem {
 
     public BitmapImage Icon => null;
     public WpfColor? ItemColor => null;
-
-    /// <summary> The value of $extends property, or null if not present </summary>
-    public string ExtendsValue { get; }
-
-    /// <summary> Last modified date for sorting </summary>
-    public DateTime LastModified => this._fileInfo.LastWriteTime;
 
     /// <summary>
     ///     Extracts the $extends value from a JSON file without fully parsing.
@@ -80,4 +76,3 @@ public class ProfileListItem : IPaletteListItem {
             .ToList();
     }
 }
-

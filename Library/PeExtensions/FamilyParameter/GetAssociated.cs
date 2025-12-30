@@ -68,7 +68,7 @@ public static class FamilyParameterGetAssociated {
     /// <summary>
     ///     Checks if the family parameter has any DIRECT physical associations
     ///     (element parameters, dimensions, arrays, connectors).
-    ///     Does NOT include formula dependencies - use <see cref="FormulaDependencies.GetDependents"/> for that.
+    ///     Does NOT include formula dependencies - use <see cref="FormulaDependencies.GetDependents" /> for that.
     /// </summary>
     /// <param name="param">The family parameter</param>
     /// <param name="doc">The family document</param>

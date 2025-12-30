@@ -71,14 +71,10 @@ public class ProcessingResultBuilder {
             _ = Directory.CreateDirectory(familyDir);
 
             // Serialize each section separately (pre-processing)
-            if (ctx.PreProcessSnapshot != null) {
-                SerializeSnapshotSections(ctx.PreProcessSnapshot, familyDir, "pre");
-            }
+            if (ctx.PreProcessSnapshot != null) SerializeSnapshotSections(ctx.PreProcessSnapshot, familyDir, "pre");
 
             // Serialize each section separately (post-processing)
-            if (ctx.PostProcessSnapshot != null) {
-                SerializeSnapshotSections(ctx.PostProcessSnapshot, familyDir, "post");
-            }
+            if (ctx.PostProcessSnapshot != null) SerializeSnapshotSections(ctx.PostProcessSnapshot, familyDir, "post");
 
             var abridgedPath = Path.Combine(familyDir, "abridged.json");
             var detailedPath = Path.Combine(familyDir, "detailed.json");
@@ -101,9 +97,7 @@ public class ProcessingResultBuilder {
         var (logs, err) = ctx.OperationLogs;
         if (err is not null) {
             return new {
-                Family = ctx.FamilyName,
-                TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
-                Error = err.Message
+                Family = ctx.FamilyName, TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3), Error = err.Message
             };
         }
 
@@ -114,7 +108,7 @@ public class ProcessingResultBuilder {
             Operations = operationLogs.Select(log => new {
                 log.OperationName,
                 SuccessTotal = $"{log.SuccessCount}/{log.SuccessCount + log.ErrorCount}",
-                Errors = BuildMessages(log.Entries, LogStatus.Error),
+                Errors = BuildMessages(log.Entries, LogStatus.Error)
             }).ToList()
         };
     }
@@ -137,7 +131,7 @@ public class ProcessingResultBuilder {
                 SecondsElapsed = Math.Round(log.MsElapsed / 1000.0, 3),
                 Successes = BuildMessages(log.Entries, LogStatus.Success),
                 Skipped = BuildMessages(log.Entries, LogStatus.Skipped),
-                Errors = BuildMessages(log.Entries, LogStatus.Error),
+                Errors = BuildMessages(log.Entries, LogStatus.Error)
             }).ToList()
         };
     }
@@ -169,8 +163,10 @@ public class ProcessingResultBuilder {
         // RefPlanesAndDims section
         if (snapshot.RefPlanesAndDims?.Data != null && snapshot.RefPlanesAndDims.Data.Count > 0) {
             var refPlanesData = snapshot.RefPlanesAndDims.Data;
-            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-refplanesanddims.json"), refPlanesData.ToJson());
-            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-refplanesanddims.csv"), refPlanesData.ToCsv());
+            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-refplanesanddims.json"),
+                refPlanesData.ToJson());
+            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-refplanesanddims.csv"),
+                refPlanesData.ToCsv());
         }
     }
 
@@ -256,14 +252,15 @@ public class DryRunResultBuilder {
             ProfileSettings = this._profileSettings,
             Operations = this._operationMetadata.Select(op =>
                 new { Operation = $"[Batch {op.IsMerged}] ({op.Type}) {op.Name}", op.Description }).ToList(),
-            ApsParameters = this._apsParams.Select(p => new {
-                p.ExternalDefinition.Name,
-                GUID = p.ExternalDefinition.GUID.ToString(),
-                GroupTypeId = p.GroupTypeId.TypeId,
-                DataType = p.ExternalDefinition.GetDataType().TypeId,
-                IsInstance = p.IsInstance,
-                p.ExternalDefinition.Description
-            }).ToList(),
+            ApsParameters =
+                this._apsParams.Select(p => new {
+                    p.ExternalDefinition.Name,
+                    GUID = p.ExternalDefinition.GUID.ToString(),
+                    GroupTypeId = p.GroupTypeId.TypeId,
+                    DataType = p.ExternalDefinition.GetDataType().TypeId,
+                    p.IsInstance,
+                    p.ExternalDefinition.Description
+                }).ToList(),
             Families = this._families.Select(f => new {
                 f.Name,
                 Id = f.Id.ToString(),

@@ -11,7 +11,8 @@ public class AddAndMapSharedParams : OperationGroup<MapParamsSettings> {
     ) : base(
         "Map and add shared parameters (replace, add unmapped, and remap)",
         InitializeOperations(settings, sharedParams)
-    ) { }
+    ) {
+    }
 
     private static List<IOperation> InitializeOperations(
         MapParamsSettings settings,
@@ -35,7 +36,9 @@ public class AddUnmappedSharedParams : DocOperation<MapParamsSettings> {
     public override string Description =>
         "Add shared parameters that are not already processed by a previous operation";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         // Get already-processed params from GroupContext (completed by MapReplaceParams)
         var processedParams = groupContext.All
             .Where(e => e.IsComplete)

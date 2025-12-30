@@ -31,6 +31,8 @@ public abstract class DocOperation<TSettings> : IOperation, IGroupContextAware
     protected DocOperation(TSettings settings) => this.Settings = settings;
 
     public TSettings Settings { get; set; }
+    protected OperationContext GroupContext => ((IGroupContextAware)this).GroupContext;
+    OperationContext IGroupContextAware.GroupContext { get; set; }
     public abstract string Description { get; }
 
     /// <summary>
@@ -43,25 +45,24 @@ public abstract class DocOperation<TSettings> : IOperation, IGroupContextAware
     }
 
     IOperationSettings IOperation.Settings => this.Settings;
-    OperationContext IGroupContextAware.GroupContext { get; set; }
-    protected OperationContext GroupContext => ((IGroupContextAware)this).GroupContext;
 
-    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() => (famDoc, processingContext) => {
-        try {
-            var sw = Stopwatch.StartNew();
-            var log = this.Execute(famDoc, processingContext, this.GroupContext);
-            log ??= new OperationLog("IGNORE", []);
-            sw.Stop();
-            log.MsElapsed = sw.Elapsed.TotalMilliseconds;
-            return [log];
-        } catch (Exception ex) {
-            return [
-                new OperationLog(
-                    $"{this.Name}: (FATAL ERROR)",
-                    [new LogEntry(ex.GetType().Name).Error(ex)])
-            ];
-        }
-    };
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() =>
+        (famDoc, processingContext) => {
+            try {
+                var sw = Stopwatch.StartNew();
+                var log = this.Execute(famDoc, processingContext, this.GroupContext);
+                log ??= new OperationLog("IGNORE", []);
+                sw.Stop();
+                log.MsElapsed = sw.Elapsed.TotalMilliseconds;
+                return [log];
+            } catch (Exception ex) {
+                return [
+                    new OperationLog(
+                        $"{this.Name}: (FATAL ERROR)",
+                        [new LogEntry(ex.GetType().Name).Error(ex)])
+                ];
+            }
+        };
 
     /// <summary>
     ///     Execute the operation. Use the contexts you need, ignore the rest.
@@ -87,6 +88,8 @@ public abstract class TypeOperation<TSettings> : IOperation, IGroupContextAware
     protected TypeOperation(TSettings settings) => this.Settings = settings;
 
     public TSettings Settings { get; set; }
+    protected OperationContext GroupContext => ((IGroupContextAware)this).GroupContext;
+    OperationContext IGroupContextAware.GroupContext { get; set; }
     public abstract string Description { get; }
 
     /// <summary>
@@ -99,36 +102,35 @@ public abstract class TypeOperation<TSettings> : IOperation, IGroupContextAware
     }
 
     IOperationSettings IOperation.Settings => this.Settings;
-    OperationContext IGroupContextAware.GroupContext { get; set; }
-    protected OperationContext GroupContext => ((IGroupContextAware)this).GroupContext;
 
-    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() => (famDoc, processingContext) => {
-        try {
-            var fm = famDoc.FamilyManager;
-            var typeLogs = new List<OperationLog>();
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() =>
+        (famDoc, processingContext) => {
+            try {
+                var fm = famDoc.FamilyManager;
+                var typeLogs = new List<OperationLog>();
 
-            // Loop over types and execute the operation for each type
-            foreach (FamilyType famType in fm.Types) {
-                var swType = Stopwatch.StartNew();
-                fm.CurrentType = famType;
-                var typeLog = this.Execute(famDoc, processingContext, this.GroupContext);
-                swType.Stop();
+                // Loop over types and execute the operation for each type
+                foreach (FamilyType famType in fm.Types) {
+                    var swType = Stopwatch.StartNew();
+                    fm.CurrentType = famType;
+                    var typeLog = this.Execute(famDoc, processingContext, this.GroupContext);
+                    swType.Stop();
 
-                typeLog.MsElapsed = swType.Elapsed.TotalMilliseconds;
-                foreach (var entry in typeLog.Entries) entry.Context = famType.Name;
-                typeLogs.Add(typeLog);
+                    typeLog.MsElapsed = swType.Elapsed.TotalMilliseconds;
+                    foreach (var entry in typeLog.Entries) entry.Context = famType.Name;
+                    typeLogs.Add(typeLog);
+                }
+
+                return [
+                    new OperationLog(
+                        this.Name,
+                        typeLogs.SelectMany(log => log.Entries).ToList()
+                    ) { MsElapsed = typeLogs.Sum(log => log.MsElapsed) }
+                ];
+            } catch (Exception ex) {
+                return [new OperationLog(this.Name, [new LogEntry(ex.GetType().Name).Error(ex)])];
             }
-
-            return [
-                new OperationLog(
-                    this.Name,
-                    typeLogs.SelectMany(log => log.Entries).ToList()
-                ) { MsElapsed = typeLogs.Sum(log => log.MsElapsed) }
-            ];
-        } catch (Exception ex) {
-            return [new OperationLog(this.Name, [new LogEntry(ex.GetType().Name).Error(ex)])];
-        }
-    };
+        };
 
     /// <summary>
     ///     Execute the operation for the current family type. Use the contexts you need, ignore the rest.
@@ -145,58 +147,59 @@ public abstract class TypeOperation<TSettings> : IOperation, IGroupContextAware
 public class MergedTypeOperation(List<IOperation> operations) : IExecutable {
     public List<IOperation> Operations { get; set; } = operations;
 
-    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() => (famDoc, processingContext) => {
-        string currFamTypeName = null;
-        string currOpName = null;
-        try {
-            var fm = famDoc.FamilyManager;
-            var operationLogs = new List<OperationLog>();
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() =>
+        (famDoc, processingContext) => {
+            string currFamTypeName = null;
+            string currOpName = null;
+            try {
+                var fm = famDoc.FamilyManager;
+                var operationLogs = new List<OperationLog>();
 
-            // Switch types once, executing all operations per type
-            foreach (FamilyType famType in fm.Types) {
-                currFamTypeName = famType.Name;
-                var typeSwitchSw = Stopwatch.StartNew();
-                fm.CurrentType = famType;
-                typeSwitchSw.Stop();
-                var amortizedSwitchMs = typeSwitchSw.Elapsed.TotalMilliseconds / this.Operations.Count;
+                // Switch types once, executing all operations per type
+                foreach (FamilyType famType in fm.Types) {
+                    currFamTypeName = famType.Name;
+                    var typeSwitchSw = Stopwatch.StartNew();
+                    fm.CurrentType = famType;
+                    typeSwitchSw.Stop();
+                    var amortizedSwitchMs = typeSwitchSw.Elapsed.TotalMilliseconds / this.Operations.Count;
 
-                // Execute all operations for this type
-                foreach (var op in this.Operations) {
-                    currOpName = op.Name;
-                    var opSw = Stopwatch.StartNew();
+                    // Execute all operations for this type
+                    foreach (var op in this.Operations) {
+                        currOpName = op.Name;
+                        var opSw = Stopwatch.StartNew();
 
-                    // Get GroupContext if operation has one
-                    var groupContext = op is IGroupContextAware aware ? aware.GroupContext : null;
+                        // Get GroupContext if operation has one
+                        var groupContext = op is IGroupContextAware aware ? aware.GroupContext : null;
 
-                    // Call Execute via reflection to get the correct signature
-                    var executeMethod = op.GetType().GetMethod("Execute",
-                        [typeof(FamilyDocument), typeof(FamilyProcessingContext), typeof(OperationContext)]);
-                    var log = (OperationLog)executeMethod.Invoke(op, [famDoc, processingContext, groupContext]);
+                        // Call Execute via reflection to get the correct signature
+                        var executeMethod = op.GetType().GetMethod("Execute",
+                            [typeof(FamilyDocument), typeof(FamilyProcessingContext), typeof(OperationContext)]);
+                        var log = (OperationLog)executeMethod.Invoke(op, [famDoc, processingContext, groupContext]);
 
-                    opSw.Stop();
+                        opSw.Stop();
 
-                    log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
-                    foreach (var entry in log.Entries) entry.Context = currFamTypeName;
-                    operationLogs.Add(log);
+                        log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
+                        foreach (var entry in log.Entries) entry.Context = currFamTypeName;
+                        operationLogs.Add(log);
+                    }
                 }
-            }
 
-            // Combine logs by operation name
-            return operationLogs
-                .GroupBy(log => log.OperationName)
-                .Select(group => new OperationLog(group.Key, group.SelectMany(log => log.Entries).ToList()) {
-                    MsElapsed = group.Sum(log => log.MsElapsed)
-                })
-                .ToList();
-        } catch (Exception ex) {
-            var errorLog = new LogEntry(currFamTypeName ?? "Unknown Family Type").Error(ex);
-            return [
-                new OperationLog(
-                    $"Operation {currOpName ?? "Unknown Operation"} (FATAL ERROR)",
-                    [errorLog])
-            ];
-        }
-    };
+                // Combine logs by operation name
+                return operationLogs
+                    .GroupBy(log => log.OperationName)
+                    .Select(group => new OperationLog(group.Key, group.SelectMany(log => log.Entries).ToList()) {
+                        MsElapsed = group.Sum(log => log.MsElapsed)
+                    })
+                    .ToList();
+            } catch (Exception ex) {
+                var errorLog = new LogEntry(currFamTypeName ?? "Unknown Family Type").Error(ex);
+                return [
+                    new OperationLog(
+                        $"Operation {currOpName ?? "Unknown Operation"} (FATAL ERROR)",
+                        [errorLog])
+                ];
+            }
+        };
 }
 
 public interface IOperationSettings {
@@ -236,6 +239,7 @@ public class OperationGroup<TSettings> where TSettings : IOperationSettings {
     ///     Reset per-family by the OperationProcessor to ensure clean state for each family.
     /// </summary>
     public OperationContext GroupContext { get; } = new();
+
     public string Description { get; init; }
     public List<IOperation> Operations { get; init; }
 }
@@ -263,7 +267,7 @@ public class LogEntry {
 
     // Identity (immutable)
     public string Name { get; }
-    public string Context { get; set; }  // Preserved for type-level context
+    public string Context { get; set; } // Preserved for type-level context
 
     // Accumulated messages
     private List<string> MessageList { get; } = [];
@@ -271,6 +275,7 @@ public class LogEntry {
 
     // Final state
     public LogStatus Status { get; private set; } = LogStatus.Pending;
+
     // public string Message { get; private set; }
     public Exception Exception { get; private set; }
 
@@ -328,9 +333,7 @@ public class LogEntry {
     /// </summary>
     public LogEntry Clone() {
         var clone = new LogEntry(this.Name) {
-            Context = this.Context,
-            Status = this.Status,
-            Exception = this.Exception
+            Context = this.Context, Status = this.Status, Exception = this.Exception
         };
         foreach (var msg in this.MessageList)
             clone.MessageList.Add(msg);
@@ -338,8 +341,9 @@ public class LogEntry {
     }
 
     private void EnsurePending() {
-        if (this.IsComplete)
+        if (this.IsComplete) {
             throw new InvalidOperationException(
                 $"LogEntry '{this.Name}' is already complete with status {this.Status}");
+        }
     }
 }

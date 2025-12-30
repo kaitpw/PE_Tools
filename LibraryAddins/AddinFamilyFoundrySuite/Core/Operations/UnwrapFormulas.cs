@@ -9,8 +9,7 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     sets value from ultimate source, backlinks built-ins, and cleans up intermediates.
 ///     This operation should run AFTER all mapping and connector operations are complete.
 /// </summary>
-public class UnwrapFormulas : DocOperation<DefaultOperationSettings>
-{
+public class UnwrapFormulas : DocOperation<DefaultOperationSettings> {
     private readonly HashSet<string> _targetParamNames;
 
     public UnwrapFormulas(IEnumerable<string> targetParamNames)
@@ -20,8 +19,9 @@ public class UnwrapFormulas : DocOperation<DefaultOperationSettings>
     public override string Description =>
         "Unwrap constant formulas and resolve single-parameter reference chains";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext)
-    {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var logs = new List<LogEntry>();
 
         var paramsWithFormulas = doc.FamilyManager.Parameters
@@ -29,11 +29,9 @@ public class UnwrapFormulas : DocOperation<DefaultOperationSettings>
             .Where(p => this._targetParamNames.Contains(p.Definition.Name))
             .Where(p => !string.IsNullOrWhiteSpace(p.Formula));
 
-        foreach (var param in paramsWithFormulas)
-        {
+        foreach (var param in paramsWithFormulas) {
             var paramName = param.Definition.Name;
-            try
-            {
+            try {
                 var result = doc.TryUnwrapFormula(param);
                 if (!result.WasUnwrapped) continue;
 
@@ -43,9 +41,7 @@ public class UnwrapFormulas : DocOperation<DefaultOperationSettings>
                     : $"Resolved from {sourceName}";
 
                 logs.Add(new LogEntry(paramName).Success(logMsg));
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 logs.Add(new LogEntry(paramName).Error(ex));
             }
         }

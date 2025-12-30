@@ -14,7 +14,8 @@ namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
     public AddAndSetParams(AddAndSetParamsSettings settings) : base(
         InitializeDescription(settings), InitializeOperations(settings)
-    ) { }
+    ) {
+    }
 
 #pragma warning disable IDE0060 // Remove unused parameter
     public static string InitializeDescription(AddAndSetParamsSettings settings) =>

@@ -9,6 +9,7 @@ using PeServices.Storage.Core.Json.ContractResolvers;
 using PeServices.Storage.Core.Json.Converters;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeUtils.Files;
+using System.Text.RegularExpressions;
 
 namespace PeServices.Storage.Core;
 
@@ -39,8 +40,7 @@ public class Json<T> where T : class, new() {
         _ = this.EnsureDirectoryExists();
 
         var settings = new NewtonsoftJsonSchemaGeneratorSettings {
-            FlattenInheritanceHierarchy = true,
-            AlwaysAllowAdditionalObjectProperties = false
+            FlattenInheritanceHierarchy = true, AlwaysAllowAdditionalObjectProperties = false
         };
 
         var examplesProcessor = new SchemaExamplesProcessor();
@@ -90,21 +90,19 @@ public class Json<T> where T : class, new() {
                 var migratedText = JsonConvert.SerializeObject(migratedJson, Formatting.Indented);
                 File.WriteAllText(this.FilePath, migratedText);
                 content = this.Deserialize();
-            } else {
+            } else
                 throw; // No migrations applied, re-throw original exception
-            }
         }
 
         // Re-serialize to normalize the JSON (applies current schema structure)
-        this.WriteRaw(content, injectSchemaRef: true);
+        this.WriteRaw(content, true);
         var updatedJson = this.ReadJObject();
 
         // Detect schema drift
         var addedProps = JsonRecovery.GetAddedProperties(originalJson, updatedJson);
         var removedProps = JsonRecovery.GetRemovedProperties(originalJson, updatedJson);
-        if (addedProps.Any() || removedProps.Any()) {
+        if (addedProps.Any() || removedProps.Any())
             throw new JsonSanitizationException(this.FilePath, addedProps, removedProps, appliedMigrations);
-        }
 
         this.Validate(updatedJson);
         return content;
@@ -117,7 +115,7 @@ public class Json<T> where T : class, new() {
     public T ReadOrCreate() {
         if (!this.FileExists) {
             var defaultContent = new T();
-            this.WriteRaw(defaultContent, injectSchemaRef: true);
+            this.WriteRaw(defaultContent, true);
             return defaultContent;
         }
 
@@ -131,7 +129,7 @@ public class Json<T> where T : class, new() {
     /// <summary>
     ///     Write with validation. Throws if content doesn't match schema.
     /// </summary>
-    public void Write(T content) => this.Write(content, injectSchemaRef: false);
+    public void Write(T content) => this.Write(content, false);
 
     /// <summary>
     ///     Write with validation, optionally injecting schema reference.
@@ -145,7 +143,7 @@ public class Json<T> where T : class, new() {
     /// <summary>
     ///     Write without validation. Use for writing defaults or known-good content.
     /// </summary>
-    public void WriteUnvalidated(T content) => this.WriteUnvalidated(content, injectSchemaRef: false);
+    public void WriteUnvalidated(T content) => this.WriteUnvalidated(content, false);
 
     /// <summary>
     ///     Write without validation, optionally injecting schema reference.
@@ -315,7 +313,7 @@ file static class JsonTypeMigrations {
         var innerMsg = exception.InnerException?.Message ?? "";
 
         // Try to extract path using regex pattern
-        var pathMatch = System.Text.RegularExpressions.Regex.Match(exceptionMsg, @"Path '([^']+)'");
+        var pathMatch = Regex.Match(exceptionMsg, @"Path '([^']+)'");
         if (!pathMatch.Success) return null;
 
         var propertyPath = pathMatch.Groups[1].Value;
@@ -326,13 +324,11 @@ file static class JsonTypeMigrations {
 
         // Migration 1: string → List<string>
         if (innerMsg.Contains("could not cast or convert from System.String to System.Collections.Generic.List") ||
-            exceptionMsg.Contains("to type 'System.Collections.Generic.List`1[System.String]'")) {
+            exceptionMsg.Contains("to type 'System.Collections.Generic.List`1[System.String]'"))
             migrationApplied = ApplyStringToListMigration(migratedJson, propertyPath, appliedMigrations);
-        }
         // Migration 2: number → string (future use)
-        else if (innerMsg.Contains("could not convert from") && innerMsg.Contains("to System.String")) {
+        else if (innerMsg.Contains("could not convert from") && innerMsg.Contains("to System.String"))
             migrationApplied = ApplyNumberToStringMigration(migratedJson, propertyPath, appliedMigrations);
-        }
 
         return migrationApplied ? migratedJson : null;
     }
@@ -353,7 +349,8 @@ file static class JsonTypeMigrations {
             // Replace the token in its parent
             if (token.Parent is JProperty property) {
                 property.Value = arrayValue;
-                appliedMigrations.Add($"Migrated '{path}' from string to array: \"{stringValue}\" → [\"{stringValue}\"]");
+                appliedMigrations.Add(
+                    $"Migrated '{path}' from string to array: \"{stringValue}\" → [\"{stringValue}\"]");
                 return true;
             }
 

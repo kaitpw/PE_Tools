@@ -18,10 +18,11 @@ public class CollectorQueue {
     ///     Add a collector to the queue (IFamilyDocCollector or IProjectCollector).
     /// </summary>
     public CollectorQueue Add(object collector) {
-        if (collector is not IFamilyDocCollector and not IProjectCollector)
+        if (collector is not IFamilyDocCollector and not IProjectCollector) {
             throw new ArgumentException(
                 "Collector must implement IFamilyDocCollector or IProjectCollector",
                 nameof(collector));
+        }
 
         this._collectors.Add(collector);
         return this;

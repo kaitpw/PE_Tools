@@ -18,7 +18,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition x:Name="SidebarColumn" Width="0" />
                 </Grid.ColumnDefinitions>
-                
+
                 <!-- Main palette content -->
                 <Grid Grid.Column="0"
                       HorizontalAlignment="Stretch"
@@ -91,7 +91,7 @@
                         </Grid>
                     </Border>
                 </Grid>
-                
+
                 <!-- Sidebar container (initially collapsed) -->
                 <Border x:Name="SidebarBorder"
                         Grid.Column="1"

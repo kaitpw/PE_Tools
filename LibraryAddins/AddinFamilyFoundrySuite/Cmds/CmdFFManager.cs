@@ -1,5 +1,4 @@
 using AddinFamilyFoundrySuite.Core;
-using AddinFamilyFoundrySuite.Core.Aggregators;
 using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
@@ -88,8 +87,7 @@ public class CmdFFManager : IExternalCommand {
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
-                SingleTransaction = false,
-                OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
+                SingleTransaction = false, OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
             };
 
             // Request both parameter and refplane snapshots

@@ -20,11 +20,13 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
         };
     }
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var logs = new List<LogEntry>();
         var parameters = doc.FamilyManager.GetParameters();
 
-        IOrderedEnumerable<FamilyParameter> sortedParams = parameters.OrderBy(_ => 0);
+        var sortedParams = parameters.OrderBy(_ => 0);
 
         if (this.Settings.ParamTypeSortOrder != ParamTypeSortOrder.None) {
             sortedParams = sortedParams
@@ -41,9 +43,7 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
         }
 
         var nameComparer = this.GetNameComparer();
-        if (nameComparer != null) {
-            sortedParams = sortedParams.ThenBy(p => p.Definition.Name, nameComparer);
-        }
+        if (nameComparer != null) sortedParams = sortedParams.ThenBy(p => p.Definition.Name, nameComparer);
 
         var sortedParamsList = sortedParams.ToList();
 

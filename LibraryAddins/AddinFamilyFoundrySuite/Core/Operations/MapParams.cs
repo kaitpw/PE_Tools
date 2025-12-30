@@ -12,12 +12,14 @@ public class MapParams(MapParamsSettings settings)
     : TypeOperation<MapParamsSettings>(settings) {
     public override string Description => "Map an old parameter's value to a new parameter for each family type";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
         foreach (var mapping in this.Settings.MappingData) {
             var log = groupContext.GetOrCreate(mapping.NewName);
-            if (log.IsComplete) continue;  // Previous op fully handled it
+            if (log.IsComplete) continue; // Previous op fully handled it
 
             var tgtParam = fm.FindParameter(mapping.NewName);
             if (tgtParam == null) continue;

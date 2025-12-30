@@ -35,7 +35,9 @@ public class MakeRefPlanes : DocOperation<MakeRefPlaneAndDimsSettings> {
 
     public override string Description => "Make reference planes for the family";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         this._shared.Logs = new List<LogEntry>();
         this._shared.Query = new PlaneQuery(doc);
         this._shared.Helper = new RefPlaneAndDimHelper(doc, this._shared.Query, this._shared.Logs);
@@ -54,7 +56,9 @@ public class MakeDimensions : DocOperation<MakeRefPlaneAndDimsSettings> {
 
     public override string Description => "Make dimensions for the family";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         foreach (var spec in this.Settings.Specs) this._shared.Helper.CreateDimension(spec);
 
         return new OperationLog(this.Name, this._shared.Logs);

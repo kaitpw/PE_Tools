@@ -72,7 +72,7 @@ public class SettingsManager : BaseLocalManager {
     ///     Use for diagnostics/tooltips where you want to see raw validation errors.
     /// </summary>
     public DangerousJsonReader<T> JsonDangerous<T>(string filename) where T : class, new() =>
-        new DangerousJsonReader<T>(this.GetJsonPath(filename));
+        new(this.GetJsonPath(filename));
 
     /// <summary>
     ///     Navigate to a subdirectory for accessing files within nested folders.

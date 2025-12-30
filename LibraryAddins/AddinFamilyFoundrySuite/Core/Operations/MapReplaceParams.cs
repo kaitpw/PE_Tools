@@ -1,4 +1,3 @@
-using AddinFamilyFoundrySuite.Core;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
@@ -20,7 +19,9 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
 
     public override string Description => "Replace a family's existing parameters with APS shared parameters";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
         foreach (var mapping in this.Settings.MappingData) {

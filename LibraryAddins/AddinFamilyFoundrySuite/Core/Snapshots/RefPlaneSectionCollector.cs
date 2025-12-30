@@ -64,10 +64,7 @@ public class RefPlaneSectionCollector : IFamilyDocCollector {
             }
         }
 
-        return new SnapshotSection<RefPlaneSpec> {
-            Source = SnapshotSource.FamilyDoc,
-            Data = specs
-        };
+        return new SnapshotSection<RefPlaneSpec> { Source = SnapshotSource.FamilyDoc, Data = specs };
     }
 
     private static List<ReferencePlane> GetReferencePlanes(Dimension dim, Document doc) {
@@ -82,4 +79,3 @@ public class RefPlaneSectionCollector : IFamilyDocCollector {
         return refPlanes;
     }
 }
-

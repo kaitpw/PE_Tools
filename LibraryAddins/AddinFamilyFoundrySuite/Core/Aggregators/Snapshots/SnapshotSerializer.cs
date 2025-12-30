@@ -35,15 +35,16 @@ public static class SnapshotSerializer {
             .ToList();
 
         var lines = new List<string>();
-        lines.Add(string.Join(",", new[] { "Name", "IsInstance", "IsProjectParameter", "PropertiesGroup", "DataType", "Formula" }
-            .Concat(typeNames)
-            .Select(EscapeCsvField)));
+        lines.Add(string.Join(",",
+            new[] { "Name", "IsInstance", "IsProjectParameter", "PropertiesGroup", "DataType", "Formula" }
+                .Concat(typeNames)
+                .Select(EscapeCsvField)));
 
         foreach (var s in snapshots.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)) {
             var fixedCols = new[] {
                 s.Name, s.IsInstance.ToString(), s.IsProjectParameter.ToString(),
-                SerializeForgeTypeIdLabel(s.PropertiesGroup),
-                SerializeForgeTypeIdLabel(s.DataType), s.Formula ?? string.Empty
+                SerializeForgeTypeIdLabel(s.PropertiesGroup), SerializeForgeTypeIdLabel(s.DataType),
+                s.Formula ?? string.Empty
             };
 
             var valueCols = typeNames
@@ -74,9 +75,10 @@ public static class SnapshotSerializer {
         var hasProjectParamColumn = header.Count >= 6 && header[2] == "IsProjectParameter";
         var minColumns = hasProjectParamColumn ? 6 : 5;
 
-        if (header.Count < minColumns)
+        if (header.Count < minColumns) {
             throw new InvalidOperationException(
                 "CSV header must include Name,IsInstance,[IsProjectParameter,]PropertiesGroup,DataType,Formula");
+        }
 
         var typeColumns = header.Skip(minColumns).ToList();
         var snapshots = new List<ParamSnapshot>();
@@ -220,11 +222,8 @@ public static class SnapshotSerializer {
 
         foreach (var s in specs.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)) {
             var cols = new[] {
-                s.Name ?? string.Empty,
-                s.AnchorName ?? string.Empty,
-                s.Placement.ToString(),
-                s.Parameter ?? string.Empty,
-                s.Strength.ToString()
+                s.Name ?? string.Empty, s.AnchorName ?? string.Empty, s.Placement.ToString(),
+                s.Parameter ?? string.Empty, s.Strength.ToString()
             };
             lines.Add(string.Join(",", cols.Select(EscapeCsvField)));
         }

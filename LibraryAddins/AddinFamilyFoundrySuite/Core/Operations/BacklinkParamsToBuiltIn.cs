@@ -12,7 +12,9 @@ public class BacklinkParamsToBuiltIn(MapParamsSettings settings)
     : DocOperation<MapParamsSettings>(settings) {
     public override string Description => "Create backlinks from built-in params to their mapped targets";
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var fm = doc.FamilyManager;
 
         foreach (var mapping in this.Settings.MappingData) {

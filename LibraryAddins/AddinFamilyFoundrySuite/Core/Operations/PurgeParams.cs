@@ -8,11 +8,11 @@ using System.ComponentModel.DataAnnotations;
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
 public class PurgeParams : DocOperation<PurgeParamsSettings> {
-    public override string Description => "Recursively delete unused parameters from the family";
-
     public PurgeParams(PurgeParamsSettings settings, IEnumerable<string> ExcludeNamesEqualing) :
         base(settings) =>
         this.ExternalExcludeNamesEqualing = ExcludeNamesEqualing;
+
+    public override string Description => "Recursively delete unused parameters from the family";
 
     public IEnumerable<string> ExternalExcludeNamesEqualing { get; set; } = [];
 
@@ -31,7 +31,9 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
         return false;
     }
 
-    public override OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext) {
+    public override OperationLog Execute(FamilyDocument doc,
+        FamilyProcessingContext processingContext,
+        OperationContext groupContext) {
         var logs = new List<LogEntry>();
         this.RecursiveDelete(doc, logs, processingContext);
         return new OperationLog(this.Name, logs);
@@ -66,6 +68,7 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
             } catch (Exception ex) {
                 _ = log.Error(ex);
             }
+
             logs.Add(log);
         }
 
@@ -74,18 +77,22 @@ public class PurgeParams : DocOperation<PurgeParamsSettings> {
 }
 
 public class PurgeParamsSettings : IOperationSettings {
-    public bool Enabled { get; init; } = true;
-
-    [Description("Whether to delete parameters that have no value for every family type, regardless of whether they are used in the family. This is rare but possible. This setting is useful for properties like url variations where there are often multiple url parameters with no value.")]
+    [Description(
+        "Whether to delete parameters that have no value for every family type, regardless of whether they are used in the family. This is rare but possible. This setting is useful for properties like url variations where there are often multiple url parameters with no value.")]
     public bool DirectDeleteEmptyParameters { get; init; } = true;
+
     [Description("Whether to consider zero value as \"empty\" when deleting empty parameters.")]
     public bool ConsiderZeroValueAsEmpty { get; init; } = true;
 
     [Description("Whether to consider empty string as \"empty\" when deleting empty parameters.")]
     public bool ConsiderEmptyStringAsEmpty { get; init; } = true;
 
-    [Description("Exclude parameters from the deletion list. Parameters matching any exclude filter (Equaling, Containing, or StartingWith) will be protected from deletion.")]
-    [Required] public ExcludeSharedParameter ExcludeNames { get; init; } = new();
+    [Description(
+        "Exclude parameters from the deletion list. Parameters matching any exclude filter (Equaling, Containing, or StartingWith) will be protected from deletion.")]
+    [Required]
+    public ExcludeSharedParameter ExcludeNames { get; init; } = new();
+
+    public bool Enabled { get; init; } = true;
 
     public bool Filter(FamilyParameter p) => !this.IsExcluded(p);
 
