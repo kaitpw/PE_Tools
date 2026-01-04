@@ -170,7 +170,10 @@ public class CmdFFMigrator : IExternalCommand {
         var allAddAndSetParams = profile.AddAndSetParams.Parameters
             .Concat(internalParams)
             .Concat(profile.AddAndSetParams.ParametersPerType.Select(p => new SetParamModel {
-                Name = p.Name, DataType = p.DataType, IsInstance = p.IsInstance, PropertiesGroup = p.PropertiesGroup
+                Name = p.Name,
+                DataType = p.DataType,
+                IsInstance = p.IsInstance,
+                PropertiesGroup = p.PropertiesGroup
             }));
 
         var addAndSetParameters = allAddAndSetParams
@@ -191,7 +194,8 @@ public class CmdFFMigrator : IExternalCommand {
         var profileJson = JsonSerializer.Serialize(
             profile,
             new JsonSerializerOptions {
-                WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
 
         // Check operation enabled status from queue
@@ -317,7 +321,7 @@ public class CmdFFMigrator : IExternalCommand {
             .SelectFamilies(() => {
                 var picked = Pickers.GetSelectedFamilies(ctx.UiDoc);
                 return picked.Any() ? picked : profile.GetFamilies(ctx.Doc);
-            })
+            }) 
             .ProcessQueue(queue, collectorQueue, outputFolderPath, ctx.OnFinishSettings);
 
         _ = new ProcessingResultBuilder(ctx.Storage)
@@ -368,6 +372,11 @@ public class CmdFFMigrator : IExternalCommand {
             .SelectMany(m => m.CurrNames)
             .Concat(apsParamNames);
 
+        var apsAndAddedParamNames = apsParamNames
+            .Concat(profile.AddAndSetParams.Parameters.Select(p => p.Name))
+            .Concat(profile.AddAndSetParams.ParametersPerType.Select(p => p.Name))
+            .ToList();
+
         var internalParams = BuildInternalParams();
         var addAndSet = new AddAndSetParamsSettings {
             OverrideExistingValues = profile.AddAndSetParams.OverrideExistingValues,
@@ -383,7 +392,7 @@ public class CmdFFMigrator : IExternalCommand {
             .Add(new AddAndMapSharedParams(profile.AddAndMapSharedParams, apsParamData))
             .Add(new AddAndSetParams(addAndSet))
             .Add(new MakeElecConnector(profile.MakeElectricalConnector))
-            .Add(new PurgeParams(profile.PurgeParams, apsParamNames))
+            .Add(new PurgeParams(profile.PurgeParams, apsAndAddedParamNames))
             .Add(new SortParams(profile.SortParams));
     }
 }

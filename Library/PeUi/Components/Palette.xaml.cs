@@ -246,7 +246,13 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     /// <summary>
     ///     Sets the parent window reference for coordinating window size with sidebar expansion.
     /// </summary>
-    public void SetParentWindow(EphemeralWindow window) => this._parentWindow = window;
+    public void SetParentWindow(EphemeralWindow window) {
+        this._parentWindow = window;
+
+        // Propagate to nested palette in sidebar if present
+        if (this.SidebarContent.Content is Palette nestedPalette)
+            nestedPalette.SetParentWindow(window);
+    }
 
     /// <summary>
     ///     Shows the next palette content in the sidebar.
@@ -254,6 +260,11 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     private void ShowNextPaletteInSidebar<TItem>(PaletteAction<TItem> action, TItem item)
         where TItem : class, IPaletteListItem {
         var nextContent = action.NextPalette(item);
+
+        // Propagate parent window to nested palettes so they can defer execution
+        if (nextContent is Palette nestedPalette && this._parentWindow != null)
+            nestedPalette.SetParentWindow(this._parentWindow);
+
         this.SidebarContent.Content = nextContent;
 
         var width = this._currentSidebar?.Width ?? new GridLength(DefaultSidebarWidth);

@@ -1,50 +1,59 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using NJsonSchema.Annotations;
+using PeServices.Storage.Core.Json.SchemaProcessors;
+using PeServices.Storage.Core.Json.SchemaProviders;
+using System.ComponentModel;
 
 namespace PeRevit.Lib;
 
 public class ScheduleSpec {
+    [Description("The name of the schedule as it will appear in the project browser.")]
     public string Name { get; set; }
+
+    [Description("The Revit category to schedule (e.g., 'Mechanical Equipment', 'Plumbing Fixtures', 'Doors').")]
+    [SchemaExamples(typeof(CategoryNamesProvider))]
     public string CategoryName { get; set; }
+
+    [Description("Whether the schedule displays each element on a separate row (true) or combines multiple grouped elements onto the same row (false).")]
     public bool IsItemized { get; set; } = true;
+
+    [Description("List of fields (columns) to include in the schedule.")]
     public List<ScheduleFieldSpec> Fields { get; set; } = [];
+
+    [Description("List of sort and grouping criteria for organizing schedule rows.")]
     public List<ScheduleSortGroupSpec> SortGroup { get; set; } = [];
+
+    [Description("List of filters to restrict which elements appear in the schedule. Maximum of 8 filters.")]
+    public List<ScheduleFilterSpec> Filters { get; set; } = [];
 }
 
 public class ScheduleFieldSpec {
+    [Description("The parameter name to display in this column (e.g., 'Family and Type', 'Mark', 'PE_M_Fan_FlowRate').")]
     public required string ParameterName { get; set; }
-    public string ColumnHeaderOverride { get; set; }
-    public string HeaderGroup { get; set; }
-    public bool IsHidden { get; set; }
-    public FieldDisplayType DisplayType { get; set; } = FieldDisplayType.Standard;
 
-    /// <summary>
-    ///     Column width on sheet in feet. Null uses default width.
-    /// </summary>
+    [Description("Custom header text to display instead of the parameter name. Leave empty to use parameter name.")]
+    public string ColumnHeaderOverride { get; set; }
+
+    [Description("Header group name for visually grouping multiple column headers together (e.g., 'Performance', 'Electrical'). Consecutive fields with the same HeaderGroup value will be grouped.")]
+    public string HeaderGroup { get; set; }
+
+    [Description("Whether to hide this column in the schedule while still using it for filtering or sorting.")]
+    public bool IsHidden { get; set; }
+
+    [Description("How to calculate aggregate values for this field (Standard, Totals, MinAndMax, Maximum, Minimum).")]
+    [JsonConverter(typeof(StringEnumConverter))]
+    public ScheduleFieldDisplayType DisplayType { get; set; } = ScheduleFieldDisplayType.Standard;
+
+    [Description("Column width on sheet in feet. Leave empty to use default width.")]
     public double? ColumnWidth { get; set; }
 
-    /// <summary>
-    ///     For calculated fields only. Indicates this is a formula or percentage field.
-    ///     Note: Formula strings cannot be read/written via Revit API - only the field type is preserved.
-    /// </summary>
+    [Description("For calculated fields only. Indicates this is a formula or percentage field. Note: Formula strings cannot be read/written via Revit API - calculated fields must be created manually in Revit.")]
+    [JsonConverter(typeof(StringEnumConverter))]
     public CalculatedFieldType? CalculatedType { get; set; }
 
-    /// <summary>
-    ///     For Percentage calculated fields only. The name of the field to calculate percentages of.
-    /// </summary>
+    [Description("For Percentage calculated fields only. The name of the field to calculate percentages of.")]
     public string PercentageOfField { get; set; }
-}
-
-/// <summary>
-///     Maps to Revit's ScheduleFieldDisplayType enum (Formatting tab calculation options)
-/// </summary>
-[JsonConverter(typeof(StringEnumConverter))]
-public enum FieldDisplayType {
-    Standard = 0,
-    Totals = 1,
-    MinAndMax = 2,
-    Maximum = 3,
-    Minimum = 4
 }
 
 /// <summary>
@@ -52,22 +61,92 @@ public enum FieldDisplayType {
 /// </summary>
 [JsonConverter(typeof(StringEnumConverter))]
 public enum CalculatedFieldType {
+    [Description("A calculated field using a formula expression.")]
     Formula,
+    [Description("A calculated field showing percentage of another field.")]
     Percentage
 }
 
-[JsonConverter(typeof(StringEnumConverter))]
-public enum ScheduleSortOrder {
-    Ascending,
-    Descending
+public class ScheduleSortGroupSpec {
+    [Description("The field name to sort/group by.")]
+    public required string FieldName { get; set; }
+
+    [Description("Sort direction (Ascending or Descending).")]
+    [JsonConverter(typeof(StringEnumConverter))]
+    public ScheduleSortOrder SortOrder { get; set; } = ScheduleSortOrder.Ascending;
+
+    [Description("Whether to display a header row when this grouping changes.")]
+    public bool ShowHeader { get; set; }
+
+    [Description("Whether to display a footer row with totals when this grouping changes.")]
+    public bool ShowFooter { get; set; }
+
+    [Description("Whether to insert a blank line when this grouping changes.")]
+    public bool ShowBlankLine { get; set; }
 }
 
-public class ScheduleSortGroupSpec {
+public class ScheduleFilterSpec {
+    [Description("The field name to filter on.")]
     public required string FieldName { get; set; }
-    public ScheduleSortOrder SortOrder { get; set; } = ScheduleSortOrder.Ascending;
+
+    [Description("The type of comparison to perform (Equal, Contains, GreaterThan, etc.).")]
+    [JsonConverter(typeof(StringEnumConverter))]
+    public ScheduleFilterType FilterType { get; set; } = ScheduleFilterType.Equal;
+
+    [Description("The filter value as a string. Leave empty for HasParameter, HasValue, and HasNoValue filter types. The value will be automatically coerced to the correct type based on the field's parameter type (string, integer, double, or ElementId).")]
+    public string Value { get; set; }
+}
+
+public class ScheduleCreationResult {
+    public ViewSchedule Schedule { get; set; }
+    public string ScheduleName { get; set; }
+    public string CategoryName { get; set; }
+    public bool IsItemized { get; set; }
+
+    public List<AppliedFieldInfo> AppliedFields { get; set; } = [];
+    public List<string> SkippedFields { get; set; } = [];
+
+    public List<AppliedSortGroupInfo> AppliedSortGroups { get; set; } = [];
+    public List<string> SkippedSortGroups { get; set; } = [];
+
+    public List<AppliedFilterInfo> AppliedFilters { get; set; } = [];
+    public List<string> SkippedFilters { get; set; } = [];
+
+    public List<string> AppliedHeaderGroups { get; set; } = [];
+    public List<string> SkippedHeaderGroups { get; set; } = [];
+
+    public List<CalculatedFieldGuidance> SkippedCalculatedFields { get; set; } = [];
+    public List<string> Warnings { get; set; } = [];
+}
+
+public class AppliedFieldInfo {
+    public string ParameterName { get; set; }
+    public string ColumnHeaderOverride { get; set; }
+    public bool IsHidden { get; set; }
+    public double? ColumnWidth { get; set; }
+    public ScheduleFieldDisplayType DisplayType { get; set; }
+}
+
+public class AppliedSortGroupInfo {
+    public string FieldName { get; set; }
+    public ScheduleSortOrder SortOrder { get; set; }
     public bool ShowHeader { get; set; }
     public bool ShowFooter { get; set; }
     public bool ShowBlankLine { get; set; }
+}
+
+public class AppliedFilterInfo {
+    public string FieldName { get; set; }
+    public ScheduleFilterType FilterType { get; set; }
+    public string Value { get; set; }
+    public string StorageType { get; set; }
+}
+
+public class CalculatedFieldGuidance {
+    public string FieldName { get; set; }
+    public string CalculatedType { get; set; }  // "Formula" or "Percentage"
+    public string Guidance { get; set; }
+    public string PercentageOfField { get; set; }  // Only for percentage fields
 }
 
 public static class ScheduleHelper {
@@ -81,7 +160,8 @@ public static class ScheduleHelper {
             CategoryName = categoryName,
             IsItemized = def.IsItemized,
             Fields = [],
-            SortGroup = []
+            SortGroup = [],
+            Filters = []
         };
 
         // Serialize fields
@@ -93,7 +173,7 @@ public static class ScheduleHelper {
                 ParameterName = fieldName,
                 ColumnHeaderOverride = field.ColumnHeading != fieldName ? field.ColumnHeading : null,
                 IsHidden = field.IsHidden,
-                DisplayType = (FieldDisplayType)(int)field.DisplayType,
+                DisplayType = (ScheduleFieldDisplayType)(int)field.DisplayType,
                 ColumnWidth = field.SheetColumnWidth
             };
 
@@ -135,13 +215,80 @@ public static class ScheduleHelper {
             spec.SortGroup.Add(sortGroupSpec);
         }
 
-        // TODO: Header grouping - need to investigate API for grouping headers
-        // For MVP, we'll skip header grouping serialization
+        // Serialize filters
+        for (var i = 0; i < def.GetFilterCount(); i++) {
+            var filter = def.GetFilter(i);
+            var field = def.GetField(filter.FieldId);
+            var fieldName = field.GetName();
+
+            var filterSpec = new ScheduleFilterSpec {
+                FieldName = fieldName,
+                FilterType = filter.FilterType
+            };
+
+            // Extract value as string based on type
+            if (filter.IsStringValue) {
+                filterSpec.Value = filter.GetStringValue();
+            } else if (filter.IsIntegerValue) {
+                filterSpec.Value = filter.GetIntegerValue().ToString();
+            } else if (filter.IsDoubleValue) {
+                filterSpec.Value = filter.GetDoubleValue().ToString();
+            } else if (filter.IsElementIdValue) {
+                filterSpec.Value = filter.GetElementIdValue().Value.ToString();
+            }
+            // Leave Value null for HasParameter, HasValue, HasNoValue filters
+
+            spec.Filters.Add(filterSpec);
+        }
+
+        // Serialize header groups using TableData
+        SerializeHeaderGroups(schedule, spec);
 
         return spec;
     }
 
-    public static ViewSchedule CreateSchedule(Document doc, ScheduleSpec spec) {
+    private static void SerializeHeaderGroups(ViewSchedule schedule, ScheduleSpec spec) {
+        var tableData = schedule.GetTableData();
+        var headerSection = tableData.GetSectionData(SectionType.Header);
+
+        if (headerSection == null) return;
+
+        // Check if there are multiple rows (grouped headers would be in row 0)
+        if (headerSection.NumberOfRows < 2) return;
+
+        // Examine the header row (row 0) for merged cells, which indicate header groups
+        var groupRow = headerSection.FirstRowNumber;
+        var processedColumns = new HashSet<int>();
+
+        for (var col = headerSection.FirstColumnNumber; col <= headerSection.LastColumnNumber; col++) {
+            if (processedColumns.Contains(col)) continue;
+
+            // Check if this cell is part of a merged group
+            var mergedCell = headerSection.GetMergedCell(groupRow, col);
+
+            // If the merged cell spans multiple columns, it's a header group
+            if (mergedCell.Right > mergedCell.Left) {
+                var groupName = headerSection.GetCellText(groupRow, col);
+
+                // Mark all fields in this range with the header group
+                for (var fieldIdx = mergedCell.Left; fieldIdx <= mergedCell.Right; fieldIdx++) {
+                    if (fieldIdx < spec.Fields.Count) {
+                        spec.Fields[fieldIdx].HeaderGroup = groupName;
+                    }
+                    _ = processedColumns.Add(fieldIdx);
+                }
+            } else {
+                _ = processedColumns.Add(col);
+            }
+        }
+    }
+
+    public static ScheduleCreationResult CreateSchedule(Document doc, ScheduleSpec spec) {
+        var result = new ScheduleCreationResult {
+            CategoryName = spec.CategoryName,
+            IsItemized = spec.IsItemized
+        };
+
         // Find category by name
         var categoryId = FindCategoryByName(doc, spec.CategoryName);
         if (categoryId == ElementId.InvalidElementId)
@@ -150,17 +297,25 @@ public static class ScheduleHelper {
         // Create schedule
         var schedule = ViewSchedule.CreateSchedule(doc, categoryId);
         schedule.Name = GetUniqueScheduleName(doc, spec.Name);
+        result.Schedule = schedule;
+        result.ScheduleName = schedule.Name;
 
         // Apply schedule-level settings
         schedule.Definition.IsItemized = spec.IsItemized;
 
-        // Apply fields
-        ApplyFieldsToSchedule(schedule, spec);
+        // Apply fields and collect calculated field info
+        ApplyFieldsToSchedule(schedule, spec, result);
 
         // Apply sort/group
-        ApplySortGroupToSchedule(schedule, spec);
+        ApplySortGroupToSchedule(schedule, spec, result);
 
-        return schedule;
+        // Apply filters
+        ApplyFiltersToSchedule(schedule, spec, result);
+
+        // Apply header groups
+        ApplyHeaderGroups(schedule, spec, result);
+
+        return result;
     }
 
     private static string GetUniqueScheduleName(Document doc, string baseName) {
@@ -181,7 +336,7 @@ public static class ScheduleHelper {
         return $"{baseName} ({DateTime.Now:yyyyMMdd-HHmmss})";
     }
 
-    private static void ApplyFieldsToSchedule(ViewSchedule schedule, ScheduleSpec spec) {
+    private static void ApplyFieldsToSchedule(ViewSchedule schedule, ScheduleSpec spec, ScheduleCreationResult result) {
         var def = schedule.Definition;
         def.ClearFields();
 
@@ -190,25 +345,47 @@ public static class ScheduleHelper {
         foreach (var fieldSpec in spec.Fields.Where(f => f.CalculatedType is null)) {
             var schedulableField = FindSchedulableField(def, schedule.Document, fieldSpec.ParameterName);
             if (schedulableField is null) {
-                Debug.WriteLine($"Warning: Parameter '{fieldSpec.ParameterName}' not found for schedule '{spec.Name}'");
+                result.SkippedFields.Add($"Parameter '{fieldSpec.ParameterName}' not found");
                 continue;
             }
 
             var field = def.AddField(schedulableField);
-            ApplyFieldProperties(field, fieldSpec);
+            ApplyFieldProperties(field, fieldSpec, result);
+
+            result.AppliedFields.Add(new AppliedFieldInfo {
+                ParameterName = fieldSpec.ParameterName,
+                ColumnHeaderOverride = fieldSpec.ColumnHeaderOverride,
+                IsHidden = fieldSpec.IsHidden,
+                ColumnWidth = fieldSpec.ColumnWidth,
+                DisplayType = fieldSpec.DisplayType
+            });
         }
 
-        // Log skipped calculated fields
+        // Collect calculated field guidance
         var calculatedFields = spec.Fields.Where(f => f.CalculatedType is not null).ToList();
-        if (calculatedFields.Count > 0) {
-            Debug.WriteLine(
-                $"Note: {calculatedFields.Count} calculated field(s) skipped (must be recreated manually): " +
-                string.Join(", ", calculatedFields.Select(f => f.ParameterName)));
+
+        foreach (var fieldSpec in calculatedFields) {
+            var guidance = new CalculatedFieldGuidance {
+                FieldName = fieldSpec.ParameterName,
+                CalculatedType = fieldSpec.CalculatedType.ToString()
+            };
+
+            if (fieldSpec.CalculatedType == CalculatedFieldType.Formula) {
+                guidance.Guidance = "Add a calculated field of type 'Formula' in the schedule. " +
+                                  "The formula must be entered manually in Revit (API limitation).";
+            } else if (fieldSpec.CalculatedType == CalculatedFieldType.Percentage) {
+                guidance.Guidance = $"Add a calculated field of type 'Percentage' based on field '{fieldSpec.PercentageOfField ?? "(unknown)"}'.";
+                guidance.PercentageOfField = fieldSpec.PercentageOfField;
+            }
+
+            result.SkippedCalculatedFields.Add(guidance);
         }
     }
 
-    private static void ApplyFieldProperties(ScheduleField field, ScheduleFieldSpec fieldSpec) {
-        if (!string.IsNullOrEmpty(fieldSpec.ColumnHeaderOverride)) field.ColumnHeading = fieldSpec.ColumnHeaderOverride;
+    private static void ApplyFieldProperties(ScheduleField field, ScheduleFieldSpec fieldSpec, ScheduleCreationResult result) {
+        if (!string.IsNullOrEmpty(fieldSpec.ColumnHeaderOverride)) {
+            field.ColumnHeading = fieldSpec.ColumnHeaderOverride;
+        }
 
         field.IsHidden = fieldSpec.IsHidden;
 
@@ -218,26 +395,29 @@ public static class ScheduleHelper {
 
         // Apply display type if field supports it (cast to int for comparison since enum member names vary)
         var targetDisplayType = (ScheduleFieldDisplayType)(int)fieldSpec.DisplayType;
-        if (fieldSpec.DisplayType != FieldDisplayType.Standard) {
+        if (fieldSpec.DisplayType != ScheduleFieldDisplayType.Standard) {
             var canApply = fieldSpec.DisplayType switch {
-                FieldDisplayType.Totals => field.CanTotal(),
-                FieldDisplayType.Maximum or FieldDisplayType.Minimum or FieldDisplayType.MinAndMax =>
+                ScheduleFieldDisplayType.Totals => field.CanTotal(),
+                ScheduleFieldDisplayType.Max or ScheduleFieldDisplayType.Min or ScheduleFieldDisplayType.MinMax =>
                     field.CanDisplayMinMax(),
                 _ => false
             };
 
-            if (canApply)
+            if (canApply) {
                 field.DisplayType = targetDisplayType;
-            else {
-                Debug.WriteLine(
-                    $"Warning: DisplayType '{fieldSpec.DisplayType}' not supported for field '{fieldSpec.ParameterName}'");
+            } else {
+                result.Warnings.Add($"DisplayType '{fieldSpec.DisplayType}' not supported for field '{fieldSpec.ParameterName}'");
             }
         }
     }
 
-    private static void ApplySortGroupToSchedule(ViewSchedule schedule, ScheduleSpec spec) {
+    private static void ApplySortGroupToSchedule(ViewSchedule schedule, ScheduleSpec spec, ScheduleCreationResult result) {
         var def = schedule.Definition;
         def.ClearSortGroupFields();
+
+        if (spec.SortGroup == null || spec.SortGroup.Count == 0) {
+            return;
+        }
 
         foreach (var sortGroupSpec in spec.SortGroup) {
             // Find the field by name
@@ -251,22 +431,102 @@ public static class ScheduleHelper {
             }
 
             if (fieldId == null) {
-                Debug.WriteLine(
-                    $"Warning: Field '{sortGroupSpec.FieldName}' not found for sort/group in schedule '{spec.Name}'");
+                result.SkippedSortGroups.Add($"Field '{sortGroupSpec.FieldName}' not found");
                 continue;
             }
 
-            var sortOrder = sortGroupSpec.SortOrder == ScheduleSortOrder.Ascending
-                ? Autodesk.Revit.DB.ScheduleSortOrder.Ascending
-                : Autodesk.Revit.DB.ScheduleSortOrder.Descending;
-
-            var sortGroupField = new ScheduleSortGroupField(fieldId, sortOrder) {
+            var sortGroupField = new ScheduleSortGroupField(fieldId, sortGroupSpec.SortOrder) {
                 ShowHeader = sortGroupSpec.ShowHeader,
                 ShowFooter = sortGroupSpec.ShowFooter,
                 ShowBlankLine = sortGroupSpec.ShowBlankLine
             };
 
             def.AddSortGroupField(sortGroupField);
+
+            result.AppliedSortGroups.Add(new AppliedSortGroupInfo {
+                FieldName = sortGroupSpec.FieldName,
+                SortOrder = sortGroupSpec.SortOrder,
+                ShowHeader = sortGroupSpec.ShowHeader,
+                ShowFooter = sortGroupSpec.ShowFooter,
+                ShowBlankLine = sortGroupSpec.ShowBlankLine
+            });
+        }
+    }
+
+    private static void ApplyFiltersToSchedule(ViewSchedule schedule, ScheduleSpec spec, ScheduleCreationResult result) {
+        var def = schedule.Definition;
+        def.ClearFilters();
+
+        if (spec.Filters == null || spec.Filters.Count == 0) {
+            return;
+        }
+
+        // Maximum of 8 filters per schedule
+        if (spec.Filters.Count > 8) {
+            result.Warnings.Add($"Schedule supports maximum 8 filters, found {spec.Filters.Count}. Only first 8 will be applied.");
+        }
+
+        var filtersToApply = spec.Filters.Take(8);
+
+        foreach (var filterSpec in filtersToApply) {
+            // Find the field by name
+            ScheduleField field = null;
+            for (var i = 0; i < def.GetFieldCount(); i++) {
+                var f = def.GetField(i);
+                if (f.GetName() == filterSpec.FieldName) {
+                    field = f;
+                    break;
+                }
+            }
+
+            if (field == null) {
+                result.SkippedFilters.Add($"Field '{filterSpec.FieldName}' not found");
+                continue;
+            }
+
+            try {
+                ScheduleFilter filter;
+                string storageTypeStr;
+
+                // Filters that don't require a value
+                if (string.IsNullOrEmpty(filterSpec.Value)) {
+                    filter = new ScheduleFilter(field.FieldId, filterSpec.FilterType);
+                    storageTypeStr = "None";
+                } else {
+                    // Use SpecStorageTypeResolver to determine the correct type and constructor
+                    var specTypeId = field.GetSpecTypeId();
+                    var storageType = SpecStorageTypeResolver.GetStorageType(specTypeId);
+
+                    if (storageType == StorageType.Integer && int.TryParse(filterSpec.Value, out var intValue)) {
+                        filter = new ScheduleFilter(field.FieldId, filterSpec.FilterType, intValue);
+                        storageTypeStr = "Integer";
+
+                    } else if (storageType == StorageType.Double && double.TryParse(filterSpec.Value, out var doubleValue)) {
+                        filter = new ScheduleFilter(field.FieldId, filterSpec.FilterType, doubleValue);
+                        storageTypeStr = "Double";
+
+                    } else if (storageType == StorageType.ElementId && long.TryParse(filterSpec.Value, out var longValue)) {
+                        var elementId = new ElementId(longValue);
+                        filter = new ScheduleFilter(field.FieldId, filterSpec.FilterType, elementId);
+                        storageTypeStr = "ElementId";
+                    } else {
+                        // Default to string for text parameters or StorageType.String/unhandled types
+                        filter = new ScheduleFilter(field.FieldId, filterSpec.FilterType, filterSpec.Value);
+                        storageTypeStr = "String";
+                    }
+                }
+
+                def.AddFilter(filter);
+
+                result.AppliedFilters.Add(new AppliedFilterInfo {
+                    FieldName = filterSpec.FieldName,
+                    FilterType = filterSpec.FilterType,
+                    Value = filterSpec.Value,
+                    StorageType = storageTypeStr
+                });
+            } catch (Exception ex) {
+                result.Warnings.Add($"Failed to apply filter on field '{filterSpec.FieldName}': {ex.Message}");
+            }
         }
     }
 
@@ -288,5 +548,82 @@ public static class ScheduleHelper {
         }
 
         return null;
+    }
+
+    private static void ApplyHeaderGroups(ViewSchedule schedule, ScheduleSpec spec, ScheduleCreationResult result) {
+        var def = schedule.Definition;
+
+        // Build a mapping from field spec to actual column index
+        var fieldIndexMap = new Dictionary<string, int>();
+        for (var i = 0; i < def.GetFieldCount(); i++) {
+            var field = def.GetField(i);
+            fieldIndexMap[field.GetName()] = i;
+        }
+
+        // Group consecutive fields by HeaderGroup
+        var groupRanges = new List<(string GroupName, int StartIdx, int EndIdx)>();
+        string currentGroup = null;
+        int? groupStart = null;
+
+        for (var i = 0; i < spec.Fields.Count; i++) {
+            var fieldSpec = spec.Fields[i];
+
+            // Skip calculated fields (they weren't added)
+            if (fieldSpec.CalculatedType.HasValue) continue;
+
+            // Skip if field wasn't actually added to schedule
+            if (!fieldIndexMap.TryGetValue(fieldSpec.ParameterName, out var columnIdx)) continue;
+
+            var headerGroup = fieldSpec.HeaderGroup;
+
+            if (!string.IsNullOrEmpty(headerGroup)) {
+                if (headerGroup == currentGroup) {
+                    // Continue current group
+                    continue;
+                }
+
+                // Start new group or finish previous
+                if (currentGroup != null && groupStart.HasValue) {
+                    // Find the last column index of the previous group
+                    var prevEndIdx = columnIdx - 1;
+                    if (prevEndIdx >= groupStart.Value)
+                        groupRanges.Add((currentGroup, groupStart.Value, prevEndIdx));
+                }
+
+                currentGroup = headerGroup;
+                groupStart = columnIdx;
+            } else {
+                // No header group - finish previous group if any
+                if (currentGroup != null && groupStart.HasValue) {
+                    var prevEndIdx = columnIdx - 1;
+                    if (prevEndIdx >= groupStart.Value)
+                        groupRanges.Add((currentGroup, groupStart.Value, prevEndIdx));
+                }
+                currentGroup = null;
+                groupStart = null;
+            }
+        }
+
+        // Handle final group if it extends to the end
+        if (currentGroup != null && groupStart.HasValue) {
+            var lastIdx = def.GetFieldCount() - 1;
+            if (lastIdx >= groupStart.Value)
+                groupRanges.Add((currentGroup, groupStart.Value, lastIdx));
+        }
+
+        // Apply header groups
+        foreach (var (groupName, startIdx, endIdx) in groupRanges) {
+            if (startIdx < endIdx) {  // Only group if there are at least 2 columns
+                try {
+                    schedule.GroupHeaders(0, startIdx, 0, endIdx, groupName);
+                    var groupInfo = $"{groupName} (columns {startIdx + 1}-{endIdx + 1})";
+                    result.AppliedHeaderGroups.Add(groupInfo);
+                } catch (Exception ex) {
+                    result.Warnings.Add($"Failed to apply header group '{groupName}': {ex.Message}");
+                }
+            } else {
+                result.SkippedHeaderGroups.Add($"{groupName} (only 1 column)");
+            }
+        }
     }
 }

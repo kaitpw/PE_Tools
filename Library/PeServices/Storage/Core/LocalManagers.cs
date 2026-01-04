@@ -67,14 +67,6 @@ public class SettingsManager : BaseLocalManager {
         new JsonWithExtends<T>(this.DirectoryPath, filename);
 
     /// <summary>
-    ///     Creates a dangerous JSON reader that reads without recovery or default creation.
-    ///     Throws exceptions immediately if the file is invalid or missing.
-    ///     Use for diagnostics/tooltips where you want to see raw validation errors.
-    /// </summary>
-    public DangerousJsonReader<T> JsonDangerous<T>(string filename) where T : class, new() =>
-        new(this.GetJsonPath(filename));
-
-    /// <summary>
     ///     Navigate to a subdirectory for accessing files within nested folders.
     ///     Supports multi-level nesting via chaining or path strings (e.g., "profiles/production").
     /// </summary>

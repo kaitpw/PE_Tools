@@ -1,6 +1,5 @@
 #nullable enable
 using PeExtensions.FamDocument.SetValue;
-using PeExtensions.FamDocument.SetValue.CoercionStrategies;
 using System.Globalization;
 
 namespace PeExtensions.FamDocument;
@@ -8,22 +7,49 @@ namespace PeExtensions.FamDocument;
 public static class FamilyDocumentSetValue {
     /// <summary>
     ///     Sets a value on a parameter for ALL family types at once.
+    ///     Supports strings (with optional units like "10'", "120V"), numbers, and already-parsed values.
     ///     Uses a formula workaround to avoid looping through each type.
-    ///     Automatically converts the value to the appropriate formula format based on the parameter's StorageType.
     /// </summary>
     /// <param name="famDoc">The family document</param>
     /// <param name="param">The target parameter</param>
-    /// <param name="value">The value to set (will be coerced based on parameter's StorageType)</param>
-    /// <returns>The parameter if the value was set successfully, otherwise null</returns>
-    /// <exception cref="System.InvalidOperationException">Thrown if the StorageType is not supported</exception>
+    /// <param name="value">Value to set - can be string (parsed based on parameter type), number, or typed value</param>
+    /// <returns>True if the value was set successfully</returns>
+    /// <exception cref="InvalidOperationException">Thrown if the StorageType is not supported or formula setting fails</exception>
+    public static bool SetGlobalValue(this FamilyDocument famDoc, FamilyParameter param, object value) {
+        // Parse string inputs into appropriate types
+        if (value is string stringValue) {
+            value = ParseStringValue(famDoc, param, stringValue);
+        }
+
+        var formula = ValueToFormulaString(famDoc, param, value);
+        var success = famDoc.TrySetFormulaFast(param, formula, out var errorMessage);
+        if (!success) throw new InvalidOperationException(errorMessage);
+        return famDoc.UnsetFormula(param);
+    }
+
+    /// <summary>
+    ///     Parses a string into the appropriate type based on parameter's StorageType.
+    ///     For measurable specs, tries unit-formatted strings first (e.g., "10'", "120V"), then plain numbers.
+    /// </summary>
+    private static object ParseStringValue(FamilyDocument famDoc, FamilyParameter param, string input) {
+        var dataType = param.Definition.GetDataType();
+
+        return param.StorageType switch {
+            StorageType.String => input,
+            StorageType.Integer => int.Parse(input, CultureInfo.InvariantCulture),
+            StorageType.Double when UnitUtils.IsMeasurableSpec(dataType) =>
+                UnitFormatUtils.TryParse(famDoc.GetUnits(), dataType, input, out double parsed)
+                    ? parsed
+                    : double.Parse(input, CultureInfo.InvariantCulture),
+            StorageType.Double => double.Parse(input, CultureInfo.InvariantCulture),
+            _ => throw new InvalidOperationException(
+                $"ParseStringValue not supported for parameter '{param.Definition.Name}' with StorageType.{param.StorageType}")
+        };
+    }
+
     /// <summary>
     ///     Converts a value to a formula string appropriate for the parameter's StorageType and DataType.
-    ///     Handles unit formatting for measurable specs (Length, Voltage, etc.).
     /// </summary>
-    /// <remarks>
-    ///     The value should be in Revit's internal units (feet, radians, etc.) for Double parameters.
-    ///     This method will format it with the document's display units for Revit to parse.
-    /// </remarks>
     private static string ValueToFormulaString(FamilyDocument famDoc, FamilyParameter param, object value) {
         var dataType = param.Definition.GetDataType();
 
@@ -32,19 +58,10 @@ public static class FamilyDocumentSetValue {
             StorageType.Integer => Convert.ToInt32(value).ToString(),
             StorageType.Double when UnitUtils.IsMeasurableSpec(dataType) =>
                 UnitFormatUtils.Format(famDoc.GetUnits(), dataType, Convert.ToDouble(value), true),
-            StorageType.Double =>
-                Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture),
+            StorageType.Double => Convert.ToDouble(value).ToString(CultureInfo.InvariantCulture),
             _ => throw new InvalidOperationException(
-                $"SetGlobalValue not supported for parameter '{param.Definition.Name}' with StorageType.{param.StorageType}")
+                $"ValueToFormulaString not supported for parameter '{param.Definition.Name}' with StorageType.{param.StorageType}")
         };
-    }
-
-    public static bool SetGlobalValue(this FamilyDocument famDoc, FamilyParameter param, object value) {
-        var formula = ValueToFormulaString(famDoc, param, value);
-
-        var success = famDoc.TrySetFormulaFast(param, formula, out var errorMessage);
-        if (!success) throw new InvalidOperationException(errorMessage);
-        return famDoc.UnsetFormula(param);
     }
 
     /// <summary>
@@ -68,13 +85,7 @@ public static class FamilyDocumentSetValue {
         var context = CoercionContext.FromParam(famDoc, sourceParam, targetParam);
         if (context.SourceValue == null) return null;
 
-        ICoercionStrategy strategyInstance = strategy switch {
-            ParamCoercionStrategy.Strict => new Strict(),
-            ParamCoercionStrategy.CoerceByStorageType => new CoerceByStorageType(),
-            ParamCoercionStrategy.CoerceElectrical => new CoerceElectrical(),
-            _ => throw new ArgumentOutOfRangeException(nameof(strategy), strategy,
-                $"Unknown strategy. Options are: {string.Join(", ", Enum.GetNames(typeof(ParamCoercionStrategy)))}")
-        };
+        var strategyInstance = ParamCoercionStrategyRegistry.Get(strategy.ToString());
 
         if (!strategyInstance.CanMap(context)) {
             var targetDataType = targetParam?.Definition.GetDataType();
@@ -109,13 +120,7 @@ public static class FamilyDocumentSetValue {
         var context = CoercionContext.FromValue(famDoc, sourceValue, targetParam);
         if (context.SourceValue == null) return null;
 
-        ICoercionStrategy strategyInstance = strategy switch {
-            ValueCoercionStrategy.Strict => new Strict(),
-            ValueCoercionStrategy.CoerceSimple => new CoerceSimple(),
-            _ => throw new ArgumentOutOfRangeException(nameof(strategy), strategy,
-                $"Unknown strategy. Options are: {string.Join(", ", Enum.GetNames(typeof(ValueCoercionStrategy)))}"
-            )
-        };
+        var strategyInstance = ValueCoercionStrategyRegistry.Get(strategy.ToString());
 
         if (!strategyInstance.CanMap(context)) {
             var targetDataType = targetParam?.Definition.GetDataType();
