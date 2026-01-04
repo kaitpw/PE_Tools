@@ -49,7 +49,6 @@ public class SettingsJsonReader<T> : JsonReader<T> where T : class, new() {
 
         if (!this._json.FileExists) {
             this._json.WriteUnvalidated(new T(), true);
-            this._json.WriteSchema();
             throw new CrashProgramException(
                 $"File {filePath} did not exist. A default file was created, please review it and try again.");
         }
@@ -59,7 +58,6 @@ public class SettingsJsonReader<T> : JsonReader<T> where T : class, new() {
 
     public T Read() {
         var result = this._json.ReadAndSanitize();
-        this._json.WriteSchema();
         return result;
     }
 }
@@ -101,13 +99,11 @@ public class StateJsonReaderWriter<T> : JsonReadWriter<T> where T : class, new()
 
     public T Read() {
         var result = this._json.ReadOrCreate();
-        this._json.WriteSchema();
         return result;
     }
 
     public string Write(T data) {
         this._json.Write(data, true);
-        this._json.WriteSchema();
         return this._json.FilePath;
     }
 
@@ -127,7 +123,7 @@ public class OutputJsonWriter<T> : JsonWriter<T> where T : class, new() {
     public string FilePath => this._json.FilePath;
 
     public string Write(T data) {
-        this._json.WriteUnvalidated(data);
+        this._json.WriteUnvalidated(data, false);
         return this._json.FilePath;
     }
 }

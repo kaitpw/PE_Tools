@@ -1,14 +1,14 @@
 using PeServices.Documents;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 
-namespace AddinFamilyFoundrySuite.Core.SchemaProviders;
+namespace PeServices.Storage.Core.Json.SchemaProviders;
 
 /// <summary>
 ///     Provides family names from the active Revit document for JSON schema examples.
 ///     Used to enable LSP autocomplete for family name properties.
 ///     Returns empty list if no document is available (schema generation context).
 /// </summary>
-public class FamilyNamesProvider : ISchemaExamplesProvider {
+public class FamilyNamesProvider : IOptionsProvider {
     public IEnumerable<string> GetExamples() {
         try {
             var doc = DocumentManager.GetActiveDocument();

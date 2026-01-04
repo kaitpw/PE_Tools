@@ -1,5 +1,6 @@
-using AddinFamilyFoundrySuite.Core.SchemaProviders;
 using PeServices.Storage.Core.Json.SchemaProcessors;
+using PeServices.Storage.Core.Json.SchemaProviders;
+using PeServices.Storage.Core.Json.RevitTypes;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -17,8 +18,9 @@ public class SetParamModel : AddAndSetData {
     ///     to prevent them from being interpreted as formulas that might reference parameters.
     /// </summary>
     [Description(
-        $"{ByDefaultString} Unitted strings (eg. \"10 A\", \"10\"\", \"10in\", etc.) are acceptable but may be unreliable. " +
-        "Prefer simply writing a number (ie. \"10\") without units")]
+        $"{ByDefaultString} Unit-formatted strings (e.g., \"10'\", \"10in\", \"120V\", \"45°\") are fully supported. " +
+        "Plain numbers (e.g., \"10\") are also acceptable and will be interpreted as Revit's internal units " +
+        "(feet for length, radians for angles, etc.).")]
     public string ValueOrFormula { get; init; } = null;
 
     [Description(
@@ -60,14 +62,20 @@ public class AddAndSetParamsSettings : IOperationSettings {
 
 public class AddAndSetData {
     [SchemaExamples(typeof(SharedParameterNamesProvider))]
+    [Description("The name of the parameter")]
     public string Name { get; init; }
 
     /// <summary> Defaults to "Other" Properties Palette group</summary>
+    [Description("The properties group of the parameter. Defaults to \"Other\" Properties Palette group.")]
+    [ForgeKind(ForgeKind.Group)]
     public ForgeTypeId PropertiesGroup { get; init; } = new("");
 
     /// <summary> Defaults to "Text" data type</summary>
+    [Description("The data type of the parameter")]
+    [ForgeKind(ForgeKind.Spec)]
     public ForgeTypeId DataType { get; init; } = SpecTypeId.String.Text;
 
     /// <summary> Defaults to true (Instance parameter)</summary>
+    [Description("Whether the parameter is an instance parameter (true) or a type parameter (false). Defaults to true.")]
     public bool IsInstance { get; init; } = true;
 }

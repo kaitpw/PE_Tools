@@ -1,5 +1,4 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
-using AddinFamilyFoundrySuite.Core.SchemaProviders;
 using PeServices.Storage;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeUtils.Files;
@@ -7,6 +6,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
+using PeServices.Storage.Core.Json.SchemaProviders;
 
 
 namespace AddinFamilyFoundrySuite.Core;
@@ -59,8 +59,7 @@ public class BaseProfileSettings {
 
     public class FilterFamiliesSettings {
         [Required]
-        [SchemaExamples(typeof(CategoryNamesProvider))]
-        public List<string> IncludeCategoriesEqualing { get; init; } = [];
+        public List<Category> IncludeCategoriesEqualing { get; init; } = [];
 
         [Required]
         [Description(
@@ -74,11 +73,11 @@ public class BaseProfileSettings {
 
         public bool Filter(Family f) {
             var familyName = f.Name;
-            var categoryName = f.FamilyCategory?.Name;
+            var familyCategory = f.FamilyCategory;
 
             // Step 1: Filter by category if specified
             if (this.IncludeCategoriesEqualing.Any()) {
-                if (categoryName == null || !this.IncludeCategoriesEqualing.Any(categoryName.Equals))
+                if (familyCategory == null || !this.IncludeCategoriesEqualing.Any(familyCategory.Equals))
                     return false;
             }
 

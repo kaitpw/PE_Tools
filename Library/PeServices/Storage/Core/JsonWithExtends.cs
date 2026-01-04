@@ -33,7 +33,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
 
     private readonly JsonSerializerSettings _deserialSettings = new() {
         Formatting = Formatting.Indented,
-        Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter() },
+        Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter(), new CategoryConverter() },
         ContractResolver = new OrderedContractResolver(),
         NullValueHandling = NullValueHandling.Ignore
     };
@@ -50,10 +50,13 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
 
         FileUtils.ValidateFileNameAndExtension(this.FilePath, "json");
 
+        // Initialize Revit type registry
+        RevitTypeRegistry.Initialize();
+
         var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true };
         var examplesProcessor = new SchemaExamplesProcessor();
-        schemaSettings.SchemaProcessors.Add(new EnumConstraintSchemaProcessor());
-        schemaSettings.SchemaProcessors.Add(new ForgeTypeIdSchemaProcessor());
+
+        schemaSettings.SchemaProcessors.Add(new RevitTypeSchemaProcessor());
         schemaSettings.SchemaProcessors.Add(examplesProcessor);
 
         this._schema = new JsonSchemaGenerator(schemaSettings).Generate(typeof(T));

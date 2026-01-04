@@ -3,13 +3,13 @@ using PeServices.Storage;
 using PeServices.Storage.Core;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 
-namespace AddinFamilyFoundrySuite.Core.SchemaProviders;
+namespace PeServices.Storage.Core.Json.SchemaProviders;
 
 /// <summary>
 ///     Provides shared parameter names from the APS cache for JSON schema examples.
 ///     Used to enable LSP autocomplete for parameter name properties.
 /// </summary>
-public class SharedParameterNamesProvider : ISchemaExamplesProvider {
+public class SharedParameterNamesProvider : IOptionsProvider {
     private const string CacheFilename = "parameters-service-cache";
 
     public IEnumerable<string> GetExamples() {

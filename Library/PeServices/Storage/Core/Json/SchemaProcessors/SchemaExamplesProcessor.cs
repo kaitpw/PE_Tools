@@ -8,7 +8,7 @@ namespace PeServices.Storage.Core.Json.SchemaProcessors;
 ///     Provider interface for runtime schema examples.
 ///     Implement this to supply autocomplete suggestions for a property.
 /// </summary>
-public interface ISchemaExamplesProvider {
+public interface IOptionsProvider {
     IEnumerable<string> GetExamples();
 }
 
@@ -20,9 +20,9 @@ public interface ISchemaExamplesProvider {
 [AttributeUsage(AttributeTargets.Property)]
 public class SchemaExamplesAttribute : Attribute {
     public SchemaExamplesAttribute(Type providerType) {
-        if (!typeof(ISchemaExamplesProvider).IsAssignableFrom(providerType)) {
+        if (!typeof(IOptionsProvider).IsAssignableFrom(providerType)) {
             throw new ArgumentException(
-                $"Provider type must implement {nameof(ISchemaExamplesProvider)}", nameof(providerType));
+                $"Provider type must implement {nameof(IOptionsProvider)}", nameof(providerType));
         }
 
         this.ProviderType = providerType;
@@ -61,7 +61,7 @@ public class SchemaExamplesProcessor : ISchemaProcessor {
             try {
                 // Get or create examples for this provider type (cached to avoid duplicate instantiation)
                 if (!this._providerCache.TryGetValue(attr.ProviderType, out var examples)) {
-                    var provider = (ISchemaExamplesProvider)Activator.CreateInstance(attr.ProviderType);
+                    var provider = (IOptionsProvider)Activator.CreateInstance(attr.ProviderType);
                     examples = provider.GetExamples().ToList();
                     this._providerCache[attr.ProviderType] = examples;
                 }
