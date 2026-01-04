@@ -14,8 +14,8 @@ namespace AddinFamilyFoundrySuite.Core;
 public class ProcessingResultBuilder {
     private static readonly JsonSerializerSettings JsonSettings = new() {
         Formatting = Formatting.Indented,
-        ContractResolver = new RequiredAwareContractResolver(),
-        Converters = [new ForgeTypeIdConverter(), new StringEnumConverter()]
+        ContractResolver = new RevitTypeContractResolver(),
+        Converters = [new StringEnumConverter()]
     };
 
     private readonly Storage _storage;

@@ -1,4 +1,5 @@
 using NJsonSchema;
+using PeServices.Storage.Core.Json.Converters;
 using PeServices.Storage.Core.Json.RevitTypes;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeServices.Storage.Core.Json.SchemaProviders;
@@ -18,8 +19,14 @@ public class TypeRegistration {
     /// <summary> Optional: Function to select provider based on discriminator attribute </summary>
     public Func<Attribute, Type> ProviderSelector { get; init; }
 
+    /// <summary> Optional: Function to select converter type based on discriminator attribute </summary>
+    public Func<Attribute, Type> ConverterSelector { get; init; }
+
     /// <summary> Optional: Default provider when no discriminator is present </summary>
     public Type DefaultProvider { get; init; }
+
+    /// <summary> Optional: Default converter when no discriminator is present </summary>
+    public Type DefaultConverter { get; init; }
 }
 
 /// <summary>
@@ -45,13 +52,19 @@ public static class RevitTypeRegistry {
                 ForgeKindAttribute { Kind: ForgeKind.Spec } => typeof(SpecNamesProvider),
                 ForgeKindAttribute { Kind: ForgeKind.Group } => typeof(PropertyGroupNamesProvider),
                 _ => null
+            },
+            ConverterSelector = attr => attr switch {
+                ForgeKindAttribute { Kind: ForgeKind.Spec } => typeof(SpecTypeConverter),
+                ForgeKindAttribute { Kind: ForgeKind.Group } => typeof(GroupTypeConverter),
+                _ => null
             }
         });
 
         // Category without discriminator - always uses CategoryNamesProvider
         Register<Category>(new TypeRegistration {
             SchemaType = JsonObjectType.String,
-            DefaultProvider = typeof(CategoryNamesProvider)
+            DefaultProvider = typeof(CategoryNamesProvider),
+            DefaultConverter = typeof(CategoryConverter)
         });
 
         _initialized = true;

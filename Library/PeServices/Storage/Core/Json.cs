@@ -21,8 +21,8 @@ namespace PeServices.Storage.Core;
 public class Json<T> where T : class, new() {
     private readonly JsonSerializerSettings _deserialSettings = new() {
         Formatting = Formatting.Indented,
-        Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter(), new CategoryConverter() },
-        ContractResolver = new OrderedContractResolver(),
+        Converters = new List<JsonConverter> { new StringEnumConverter() },
+        ContractResolver = new RevitTypeContractResolver(),
         NullValueHandling = NullValueHandling.Ignore
     };
 
@@ -30,7 +30,7 @@ public class Json<T> where T : class, new() {
 
     private readonly JsonSerializerSettings _serialSettings = new() {
         Formatting = Formatting.Indented,
-        Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter(), new CategoryConverter() },
+        Converters = new List<JsonConverter> { new StringEnumConverter() },
         ContractResolver = new RequiredAwareContractResolver(),
         NullValueHandling = NullValueHandling.Ignore
     };

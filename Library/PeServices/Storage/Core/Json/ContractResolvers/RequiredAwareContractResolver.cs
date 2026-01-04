@@ -4,15 +4,14 @@ using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 
-namespace PeServices.Storage.Core.Json.ContractResolvers;
-
-/// <summary>
+namespace PeServices.Storage.Core.Json.ContractResolvers;/// <summary>
 ///     Contract resolver that:
-///     1. Orders properties by declaration order (respecting inheritance) - inherited from OrderedContractResolver
-///     2. Always serializes properties marked with [Required] attribute or 'required' keyword
-///     3. Skips serializing non-required properties when they equal their class-defined default values
+///     1. Applies discriminator-based converters to properties - inherited from RevitTypeContractResolver
+///     2. Orders properties by declaration order (respecting inheritance) - inherited from OrderedContractResolver
+///     3. Always serializes properties marked with [Required] attribute or 'required' keyword
+///     4. Skips serializing non-required properties when they equal their class-defined default values
 /// </summary>
-internal class RequiredAwareContractResolver : OrderedContractResolver {
+internal class RequiredAwareContractResolver : RevitTypeContractResolver {
     private readonly Dictionary<Type, object> _defaultInstanceCache = new();
 
     protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization) {

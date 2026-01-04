@@ -10,7 +10,7 @@ public static class SnapshotSerializer {
     private static readonly JsonSerializerSettings _settings = new() {
         Formatting = Formatting.Indented,
         ContractResolver = new RequiredAwareContractResolver(),
-        Converters = [new ForgeTypeIdConverter(), new StringEnumConverter()]
+        Converters = [new StringEnumConverter()]
     };
 
     // JSON

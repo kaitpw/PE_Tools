@@ -10,13 +10,20 @@ public class PropertyGroupNamesProvider : IOptionsProvider {
 
     public IEnumerable<(string label, ForgeTypeId value)> GetLabelMap() {
         var properties = typeof(GroupTypeId).GetProperties(BindingFlags.Public | BindingFlags.Static);
-        var labels = new List<(string, ForgeTypeId)>();
+        var labelMap = new Dictionary<string, ForgeTypeId>();
+
         foreach (var property in properties) {
             if (property.PropertyType != typeof(ForgeTypeId)) continue;
             var value = property.GetValue(null) as ForgeTypeId;
             if (value == null) continue;
-            labels.Add((value.ToLabel(), value));
+
+            var label = value.ToLabel();
+            // Skip duplicates - keep first occurrence
+            if (!labelMap.ContainsKey(label)) {
+                labelMap[label] = value;
+            }
         }
-        return labels.Distinct();
+
+        return labelMap.Select(kvp => (kvp.Key, kvp.Value));
     }
 }

@@ -33,8 +33,8 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
 
     private readonly JsonSerializerSettings _deserialSettings = new() {
         Formatting = Formatting.Indented,
-        Converters = new List<JsonConverter> { new StringEnumConverter(), new ForgeTypeIdConverter(), new CategoryConverter() },
-        ContractResolver = new OrderedContractResolver(),
+        Converters = new List<JsonConverter> { new StringEnumConverter() },
+        ContractResolver = new RevitTypeContractResolver(),
         NullValueHandling = NullValueHandling.Ignore
     };
 

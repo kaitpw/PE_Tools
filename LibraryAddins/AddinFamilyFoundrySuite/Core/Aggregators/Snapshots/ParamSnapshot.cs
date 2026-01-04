@@ -1,3 +1,4 @@
+using PeServices.Storage.Core.Json.RevitTypes;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
@@ -14,7 +15,10 @@ public record ParamSnapshot {
     [Required] public required bool IsInstance { get; init; }
 
     // Definition (enough to create the parameter)
+    [ForgeKind(ForgeKind.Group)]
     public ForgeTypeId PropertiesGroup { get; init; } = new("");
+
+    [ForgeKind(ForgeKind.Spec)]
     public ForgeTypeId DataType { get; init; } = SpecTypeId.String.Text;
 
     // Assignment mode - if Formula != null, it is the authoritative assignment
