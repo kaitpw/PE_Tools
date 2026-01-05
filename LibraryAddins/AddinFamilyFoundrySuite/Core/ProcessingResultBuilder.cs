@@ -131,7 +131,8 @@ public class ProcessingResultBuilder {
                 SecondsElapsed = Math.Round(log.MsElapsed / 1000.0, 3),
                 Successes = BuildMessages(log.Entries, LogStatus.Success),
                 Skipped = BuildMessages(log.Entries, LogStatus.Skipped),
-                Errors = BuildMessages(log.Entries, LogStatus.Error)
+                Errors = BuildMessages(log.Entries, LogStatus.Error),
+                Deferred = BuildMessages(log.Entries, LogStatus.Pending)
             }).ToList()
         };
     }
