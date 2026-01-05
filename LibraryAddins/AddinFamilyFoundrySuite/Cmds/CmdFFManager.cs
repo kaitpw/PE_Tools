@@ -49,22 +49,6 @@ public class CmdFFManager : IExternalCommand {
                 new() { Strength = RpStrength.CenterFB, Name = "Center", Color = new Color(115, 0, 253) }
             };
 
-            // Convert legacy AddFamilyParamsSettings to AddAndSetParamsSettings
-            var addAndSetParamsSettings = new AddAndSetParamsSettings {
-                OverrideExistingValues = profile.AddFamilyParams.OverrideExistingValues,
-                CreateFamParamIfMissing = true,
-                Parameters = profile.AddFamilyParams.FamilyParamData
-                    .Select(p => new SetParamModel {
-                        Name = p.Name,
-                        ValueOrFormula = p.GlobalValue?.ToString() ?? p.Formula,
-                        PropertiesGroup = p.PropertiesGroup,
-                        DataType = p.DataType,
-                        IsInstance = p.IsInstance,
-                        SetAsFormula = p.GlobalValue == null && !string.IsNullOrWhiteSpace(p.Formula)
-                    })
-                    .ToList()
-            };
-
             var timestampSettings = new AddAndSetParamsSettings {
                 CreateFamParamIfMissing = true,
                 Parameters = [
@@ -78,7 +62,7 @@ public class CmdFFManager : IExternalCommand {
             var queue = new OperationQueue()
                 .Add(new AddSharedParams(apsParamData))
                 .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
-                .Add(new AddAndSetParams(addAndSetParamsSettings)) // must come after AddAllFamilyParams and RP/dims
+                .Add(new AddAndSetParams(profile.AddAndSetParams)) // must come after AddAllFamilyParams and RP/dims
                 .Add(new MakeRefPlaneSubcategories(specs))
                 .Add(new AddAndSetParams(timestampSettings))
                 .Add(new SortParams(new SortParamsSettings()));
@@ -87,7 +71,8 @@ public class CmdFFManager : IExternalCommand {
 
             // force this to never be single transaction
             var executionOptions = new ExecutionOptions {
-                SingleTransaction = false, OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
+                SingleTransaction = false,
+                OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
             };
 
             // Request both parameter and refplane snapshots
@@ -120,11 +105,12 @@ public class CmdFFManager : IExternalCommand {
 }
 
 public class ProfileFamilyManager : BaseProfileSettings {
-    [Description("Settings for adding family parameters")]
-    [Required]
-    public AddFamilyParamsSettings AddFamilyParams { get; init; } = new();
 
     [Description("Settings for making reference planes and dimensions")]
     [Required]
     public MakeRefPlaneAndDimsSettings MakeRefPlaneAndDims { get; init; } = new();
+
+    [Description("Settings for setting parameter values and adding family parameters.")]
+    [Required]
+    public AddAndSetParamsSettings AddAndSetParams { get; init; } = new();
 }
