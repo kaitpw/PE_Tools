@@ -5,7 +5,7 @@ namespace PeServices.Storage.Core.Json.SchemaProviders;
 
 public class SpecNamesProvider : IOptionsProvider {
     public IEnumerable<string> GetExamples() =>
-        this.GetLabelMap().Select(s => s.label);
+        this.GetLabelMap().Keys;
 
     private static string FormatSpecWithDiscipline(ForgeTypeId spec) {
         var label = spec.ToLabel();
@@ -20,7 +20,7 @@ public class SpecNamesProvider : IOptionsProvider {
         return !string.IsNullOrEmpty(disciplineLabel) ? $" ({disciplineLabel})" : string.Empty;
     }
 
-    public IEnumerable<(string label, ForgeTypeId value)> GetLabelMap() {
+    public Dictionary<string, ForgeTypeId> GetLabelMap() {
         var labelMap = new Dictionary<string, ForgeTypeId>();
 
         foreach (var spec in SpecUtils.GetAllSpecs()) {
@@ -31,6 +31,6 @@ public class SpecNamesProvider : IOptionsProvider {
             }
         }
 
-        return labelMap.Select(kvp => (kvp.Key, kvp.Value));
+        return labelMap;
     }
 }

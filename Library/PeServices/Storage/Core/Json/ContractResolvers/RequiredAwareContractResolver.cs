@@ -4,7 +4,9 @@ using System.Collections;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.CompilerServices;
 
-namespace PeServices.Storage.Core.Json.ContractResolvers;/// <summary>
+namespace PeServices.Storage.Core.Json.ContractResolvers;
+
+/// <summary>
 ///     Contract resolver that:
 ///     1. Applies discriminator-based converters to properties - inherited from RevitTypeContractResolver
 ///     2. Orders properties by declaration order (respecting inheritance) - inherited from OrderedContractResolver

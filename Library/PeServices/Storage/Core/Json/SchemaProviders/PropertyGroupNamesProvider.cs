@@ -5,10 +5,10 @@ namespace PeServices.Storage.Core.Json.SchemaProviders;
 public class PropertyGroupNamesProvider : IOptionsProvider {
     public IEnumerable<string> GetExamples() {
         var labelMap = this.GetLabelMap();
-        return labelMap.Select(s => s.label);
+        return labelMap.Keys;
     }
 
-    public IEnumerable<(string label, ForgeTypeId value)> GetLabelMap() {
+    public Dictionary<string, ForgeTypeId> GetLabelMap() {
         var properties = typeof(GroupTypeId).GetProperties(BindingFlags.Public | BindingFlags.Static);
         var labelMap = new Dictionary<string, ForgeTypeId>();
 
@@ -24,6 +24,6 @@ public class PropertyGroupNamesProvider : IOptionsProvider {
             }
         }
 
-        return labelMap.Select(kvp => (kvp.Key, kvp.Value));
+        return labelMap;
     }
 }

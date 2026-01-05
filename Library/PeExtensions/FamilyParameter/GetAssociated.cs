@@ -69,12 +69,14 @@ public static class FamilyParameterGetAssociated {
     ///     Checks if the family parameter has any DIRECT physical associations
     ///     (element parameters, dimensions, arrays, connectors).
     ///     Does NOT include formula dependencies - use <see cref="FormulaDependencies.GetDependents" /> for that.
+    ///     Filters out phantom parameters (negative IDs or elements that don't exist in the document).
     /// </summary>
     /// <param name="param">The family parameter</param>
     /// <param name="doc">The family document</param>
     /// <returns>True if the parameter has any direct physical associations</returns>
     public static bool HasDirectAssociation(this FamilyParameter param, FamilyDocument doc) =>
-        param.AssociatedParameters.Cast<Parameter>().Any() ||
+        param.AssociatedParameters
+            .Cast<Parameter>().Any(p => p.Id.Value >= 0 && doc.Document.GetElement(p.Id) != null) ||
         param.AssociatedArrays(doc).Any() ||
         param.AssociatedDimensions(doc).Any() ||
         param.AssociatedConnectors(doc).Any();
