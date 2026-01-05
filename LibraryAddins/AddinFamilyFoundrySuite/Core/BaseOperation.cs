@@ -333,12 +333,20 @@ public class LogEntry {
     /// </summary>
     public LogEntry Clone() {
         var clone = new LogEntry(this.Name) {
-            Context = this.Context, Status = this.Status, Exception = this.Exception
+            Context = this.Context,
+            Status = this.Status,
+            Exception = this.Exception
         };
         foreach (var msg in this.MessageList)
             clone.MessageList.Add(msg);
         return clone;
     }
+
+    /// <summary>
+    ///     Clears all accumulated messages from this entry.
+    ///     Used after TakeSnapshot() to prevent message accumulation across type iterations.
+    /// </summary>
+    internal void ClearMessages() => this.MessageList.Clear();
 
     private void EnsurePending() {
         if (this.IsComplete) {

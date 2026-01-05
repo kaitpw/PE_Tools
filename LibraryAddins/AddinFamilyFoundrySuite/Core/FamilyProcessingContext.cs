@@ -32,10 +32,17 @@ public class OperationContext {
     /// <summary>
     ///     Gets a snapshot of logs touched by the current operation, then clears the touched set.
     ///     Clones LogEntry objects to prevent Context pollution from TypeOperations.
+    ///     Clears messages from the original entries after cloning to prevent accumulation across types.
     /// </summary>
     public List<LogEntry> TakeSnapshot() {
         var snapshot = this._touchedThisOperation
-            .Select(name => this._entries[name].Clone())
+            .Select(name => {
+                var entry = this._entries[name];
+                var clone = entry.Clone();
+                // Clear messages from original entry to prevent accumulation across types
+                entry.ClearMessages();
+                return clone;
+            })
             .ToList();
         this._touchedThisOperation.Clear();
         return snapshot;
