@@ -1,6 +1,7 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
+using PeExtensions.FamParameter;
 using PeExtensions.FamParameter.Formula;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
@@ -40,7 +41,7 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                     // Validate current parameter exists and is not built-in param. 
                     var currentParam = fm.FindParameter(currName);
                     if (currentParam == null) continue;
-                    if (ParameterUtils.IsBuiltInParameter(currentParam.Id)) continue;
+                    if (currentParam.IsBuiltInParameter()) continue;
 
                     // Verify that new parameter does not already exist, replacement errors if it does
                     if (fm.FindParameter(mapping.NewName) != null) continue;
@@ -64,7 +65,7 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                     var singleReference = parameters.TryGetSingleReference(replaced.Formula);
                     if (singleReference != null) {
                         var refName = singleReference.Definition.Name;
-                        var refIsBuiltIn = ParameterUtils.IsBuiltInParameter(singleReference.Id);
+                        var refIsBuiltIn = singleReference.IsBuiltInParameter();
                         var refIsInCurrNames = mapping.CurrNames.Contains(refName);
 
                         if (refIsBuiltIn && refIsInCurrNames) {

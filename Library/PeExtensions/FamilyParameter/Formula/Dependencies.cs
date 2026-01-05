@@ -24,6 +24,6 @@ public static class FormulaDependencies {
         FamilyParameterSet parameters
     ) => parameters
         .OfType<FamilyParameter>()
-        .Where(p => !ParameterUtils.IsBuiltInParameter(p.Id))
+        .Where(p => !p.IsBuiltInParameter())
         .Where(p => param.IsReferencedIn(p.Formula));
 }

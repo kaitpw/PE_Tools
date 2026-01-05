@@ -22,9 +22,10 @@ public class SetParamValues(AddAndSetParamsSettings settings)
         var fm = doc.FamilyManager;
 
         foreach (var p in this.Settings.Parameters) {
-            var log = groupContext.GetOrCreate(p.Name);
-
+            // Skip if using ValuesPerType (handled by SetParamValuesPerType)
             if (string.IsNullOrWhiteSpace(p.ValueOrFormula)) continue;
+
+            var log = groupContext.GetOrCreate(p.Name);
 
             var parameter = fm.FindParameter(p.Name);
             if (parameter is null) {

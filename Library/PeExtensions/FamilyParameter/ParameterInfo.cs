@@ -1,4 +1,4 @@
-namespace PeExtensions;
+namespace PeExtensions.FamParameter;
 
 public static class FamilyParameterParameterInfo {
     /// <summary>

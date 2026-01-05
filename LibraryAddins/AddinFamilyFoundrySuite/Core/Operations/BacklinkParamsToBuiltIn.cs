@@ -1,6 +1,7 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamManager;
+using PeExtensions.FamParameter;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -29,7 +30,7 @@ public class BacklinkParamsToBuiltIn(MapParamsSettings settings)
             foreach (var currName in mapping.CurrNames) {
                 var srcParam = fm.FindParameter(currName);
                 if (srcParam == null) continue;
-                if (!ParameterUtils.IsBuiltInParameter(srcParam.Id)) continue;
+                if (!srcParam.IsBuiltInParameter()) continue;
 
                 // Set formula: BuiltIn = NewParam
                 var success = doc.TrySetFormulaFast(srcParam, mapping.NewName, out var err);

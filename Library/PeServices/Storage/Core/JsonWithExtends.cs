@@ -57,6 +57,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         var examplesProcessor = new SchemaExamplesProcessor();
 
         schemaSettings.SchemaProcessors.Add(new RevitTypeSchemaProcessor());
+        schemaSettings.SchemaProcessors.Add(new MutuallyExclusiveSchemaProcessor());
         schemaSettings.SchemaProcessors.Add(examplesProcessor);
 
         this._schema = new JsonSchemaGenerator(schemaSettings).Generate(typeof(T));

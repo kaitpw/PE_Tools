@@ -51,6 +51,7 @@ public class Json<T> where T : class, new() {
         var examplesProcessor = new SchemaExamplesProcessor();
 
         settings.SchemaProcessors.Add(new RevitTypeSchemaProcessor());
+        settings.SchemaProcessors.Add(new MutuallyExclusiveSchemaProcessor());
         settings.SchemaProcessors.Add(examplesProcessor);
         this._schema = new JsonSchemaGenerator(settings).Generate(typeof(T));
 
