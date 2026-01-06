@@ -1,4 +1,8 @@
+
+
 using NJsonSchema;
+using NJsonSchema.Generation;
+using NJsonSchema.Generation.TypeMappers;
 using PeServices.Storage.Core.Json.Converters;
 using PeServices.Storage.Core.Json.RevitTypes;
 using PeServices.Storage.Core.Json.SchemaProcessors;
@@ -92,5 +96,39 @@ public static class RevitTypeRegistry {
     public static void Clear() {
         _registrations.Clear();
         _initialized = false;
+    }
+
+    /// <summary>
+    ///     Creates TypeMappers for all registered types.
+    ///     Each mapper has the correct MappedType set, which tells NJsonSchema
+    ///     to use our schema instead of traversing the type's properties.
+    /// </summary>
+    public static IEnumerable<ITypeMapper> CreateTypeMappers() {
+        Initialize();
+        return _registrations.Select(kvp => new RevitTypeMapper(kvp.Key, kvp.Value));
+    }
+}
+
+/// <summary>
+///     Type mapper that prevents Revit types from generating complex schemas.
+///     Maps registered Revit types (Category, ForgeTypeId, etc.) directly to string schemas,
+///     preventing the schema generator from traversing their properties and nested types.
+/// </summary>
+public class RevitTypeMapper : ITypeMapper {
+    private readonly JsonObjectType _schemaType;
+
+    public RevitTypeMapper(Type mappedType, TypeRegistration registration) {
+        this.MappedType = mappedType;
+        this._schemaType = registration.SchemaType;
+    }
+
+    public Type MappedType { get; }
+    public bool UseReference => false;
+
+    public void GenerateSchema(JsonSchema schema, TypeMapperContext context) {
+        schema.Type = _schemaType;
+        schema.Properties.Clear();
+        schema.AdditionalPropertiesSchema = null;
+        schema.AllowAdditionalProperties = false;
     }
 }

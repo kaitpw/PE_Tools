@@ -10,7 +10,7 @@ namespace PeServices.Storage.Core.Json.Converters;
 ///     For reading: attempts to find matching ForgeTypeId from known SpecTypeId constants.
 /// </summary>
 public class SpecTypeConverter : JsonConverter<ForgeTypeId> {
-    private static readonly Lazy<Dictionary<string, ForgeTypeId>> _labelMap = new(new SpecNamesProvider().GetLabelMap());
+    private static readonly Lazy<Dictionary<string, ForgeTypeId>> _labelMap = new(SpecNamesProvider.GetLabelMap());
 
     public override void WriteJson(JsonWriter writer, ForgeTypeId value, JsonSerializer serializer) {
         if (value == null) {

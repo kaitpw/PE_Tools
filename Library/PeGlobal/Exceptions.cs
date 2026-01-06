@@ -1,4 +1,5 @@
 using NJsonSchema.Validation;
+using PeServices.Storage.Core.Json;
 
 /// <summary>
 ///     Exception thrown when an element has intersections with other elements
@@ -39,10 +40,7 @@ public class JsonValidationException : Exception {
     }
 
     public JsonValidationException(string path, IEnumerable<ValidationError> validationErrors)
-        : base(FormatValidationErrors(path, validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}"))) {
-        this.FilePath = path;
-        this.ValidationErrors = validationErrors.Select(e => $"At '{e.Path}': {e.Kind} - {e}").ToList();
-    }
+        : this(path, ValidationErrorFormatter.Format(validationErrors)) { }
 
     /// <summary>Path to the JSON file that failed validation</summary>
     public string FilePath { get; }

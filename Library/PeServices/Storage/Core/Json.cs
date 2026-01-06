@@ -7,7 +7,6 @@ using NJsonSchema.NewtonsoftJson.Generation;
 using NJsonSchema.Validation;
 using PeServices.Storage.Core.Json;
 using PeServices.Storage.Core.Json.ContractResolvers;
-using PeServices.Storage.Core.Json.Converters;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeUtils.Files;
 using System.Text.RegularExpressions;
@@ -40,20 +39,8 @@ public class Json<T> where T : class, new() {
         this.FilePath = filePath;
         _ = this.EnsureDirectoryExists();
 
-        // Initialize Revit type registry
-        RevitTypeRegistry.Initialize();
-
-        var settings = new NewtonsoftJsonSchemaGeneratorSettings {
-            FlattenInheritanceHierarchy = true,
-            AlwaysAllowAdditionalObjectProperties = false
-        };
-
-        var examplesProcessor = new SchemaExamplesProcessor();
-
-        settings.SchemaProcessors.Add(new RevitTypeSchemaProcessor());
-        settings.SchemaProcessors.Add(new MutuallyExclusiveSchemaProcessor());
-        settings.SchemaProcessors.Add(examplesProcessor);
-        this._schema = new JsonSchemaGenerator(settings).Generate(typeof(T));
+        // Use factory for schema generation
+        this._schema = JsonSchemaFactory.CreateSchema<T>(out var examplesProcessor);
 
         // Let the examples processor finalize (add $defs if consolidating)
         examplesProcessor.Finalize(this._schema);
@@ -151,17 +138,6 @@ public class Json<T> where T : class, new() {
     /// </summary>
     public void WriteUnvalidated(T content, bool injectSchemaRef = true) => this.WriteRaw(content, injectSchemaRef);
 
-    /// <summary>
-    ///     Writes the JSON schema file (.schema.json) for IDE IntelliSense support.
-    /// </summary>
-    private string WriteSchema() {
-        var directory = this.EnsureDirectoryExists();
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(this.FilePath);
-        var schemaPath = Path.Combine(directory, $"{fileNameWithoutExtension}.schema.json");
-        var schemaJson = this._schema.ToJson();
-        File.WriteAllText(schemaPath, schemaJson);
-        return schemaPath;
-    }
 
     // ============================================================
     // UTILITY METHODS
@@ -212,7 +188,7 @@ public class Json<T> where T : class, new() {
         var jsonContent = this.Serialize(content);
 
         if (injectSchemaRef)
-            jsonContent = this.WriteAndInjectSchema(jsonContent);
+            jsonContent = JsonSchemaFactory.WriteAndInjectSchema(this._schema, jsonContent, this.FilePath);
 
         File.WriteAllText(this.FilePath, jsonContent);
     }
@@ -228,15 +204,6 @@ public class Json<T> where T : class, new() {
         return directory;
     }
 
-    /// <summary>
-    ///     Injects the $schema property for IDE IntelliSense support. Also writes the schema file to disk.
-    /// </summary>
-    public string WriteAndInjectSchema(string jsonContent) {
-        var jObject = JObject.Parse(jsonContent);
-        var schemaFileName = this.WriteSchema();
-        jObject["$schema"] = schemaFileName;
-        return JsonConvert.SerializeObject(jObject, Formatting.Indented);
-    }
 }
 
 public static class ValidationErrorCollectionExtensions {

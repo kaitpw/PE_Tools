@@ -6,7 +6,6 @@ using NJsonSchema.Generation;
 using NJsonSchema.NewtonsoftJson.Generation;
 using PeServices.Storage.Core.Json;
 using PeServices.Storage.Core.Json.ContractResolvers;
-using PeServices.Storage.Core.Json.Converters;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeUtils.Files;
 
@@ -50,22 +49,13 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
 
         FileUtils.ValidateFileNameAndExtension(this.FilePath, "json");
 
-        // Initialize Revit type registry
-        RevitTypeRegistry.Initialize();
-
-        var schemaSettings = new NewtonsoftJsonSchemaGeneratorSettings { FlattenInheritanceHierarchy = true };
-        var examplesProcessor = new SchemaExamplesProcessor();
-
-        schemaSettings.SchemaProcessors.Add(new RevitTypeSchemaProcessor());
-        schemaSettings.SchemaProcessors.Add(new MutuallyExclusiveSchemaProcessor());
-        schemaSettings.SchemaProcessors.Add(examplesProcessor);
-
-        this._schema = new JsonSchemaGenerator(schemaSettings).Generate(typeof(T));
+        // Use factory for schema generation
+        this._schema = JsonSchemaFactory.CreateSchema<T>(out var examplesProcessor);
 
         // Let the examples processor finalize (add $defs if consolidating)
         examplesProcessor.Finalize(this._schema);
 
-        // Allow $schema property in the generated schema
+        // Allow $schema and $extends properties in the generated schema
         SchemaMetadataProcessor.AllowSchemaProperty(this._schema);
         SchemaMetadataProcessor.AllowExtendsProperty(this._schema);
     }
@@ -76,25 +66,34 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
     ///     Reads the profile, resolving <c>$extends</c> inheritance and <c>$include</c> array composition.
     /// </summary>
     public T Read() {
-        if (!File.Exists(this.FilePath)) {
-            // No file - delegate to standard Json<T> which handles default creation
+        // File doesn't exist? Delegate to SettingsJsonReader (creates default)
+        if (!File.Exists(this.FilePath))
             return new SettingsJsonReader<T>(this.FilePath).Read();
-        }
 
-        var fileContent = File.ReadAllText(this.FilePath);
-        var profileJObject = JObject.Parse(fileContent);
+        var originalFileContent = File.ReadAllText(this.FilePath);
+        var profileJObject = JObject.Parse(originalFileContent);
 
-        // Check for $extends and $include usage to determine processing path
+        // Check for special directives
         var hasExtends = profileJObject.TryGetValue(ExtendsProperty, out var extendsToken);
         var hasIncludes = this.ContainsIncludeDirectives(profileJObject);
 
-        // No special directives? Use standard Json<T> with full recovery
-        if (!hasExtends && !hasIncludes) return new SettingsJsonReader<T>(this.FilePath).Read();
+        // ALWAYS write schema immediately so IDE autocomplete works even if validation fails later
+        var jsonWithSchema = JsonSchemaFactory.WriteAndInjectSchema(
+            this._schema,
+            originalFileContent,
+            this.FilePath
+        );
+        File.WriteAllText(this.FilePath, jsonWithSchema);
 
+        // No special directives? Use standard SettingsJsonReader with full recovery
+        if (!hasExtends && !hasIncludes)
+            return new SettingsJsonReader<T>(this.FilePath).Read();
+
+        // Has special directives - process them
         JObject resolved;
         string extendsName = null;
 
-        // Step 1: Resolve $extends inheritance
+        // Step 1: Resolve $extends inheritance (if present)
         if (hasExtends) {
             // Validate $extends value
             if (extendsToken!.Type != JTokenType.String || string.IsNullOrWhiteSpace(extendsToken.Value<string>()))
@@ -102,7 +101,7 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
 
             extendsName = extendsToken.Value<string>()!;
 
-            // Resolve inheritance chain and merge
+            // Resolve inheritance chain and merge (base validated via SettingsJsonReader)
             var inheritanceChain = new List<string> { Path.GetFileNameWithoutExtension(this.FilePath) };
             resolved = this.ResolveInheritance(this.FilePath, profileJObject, extendsName, inheritanceChain);
         } else {
@@ -113,25 +112,22 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         // Step 2: Expand $include directives in arrays
         JsonArrayComposer.ExpandIncludes(resolved, this._directoryPath);
 
-        // Step 3: Validate the fully-resolved result
+        // Step 3: Validate the MERGED result against schema
         var validationErrors = this._schema.Validate(resolved).ToList();
         if (validationErrors.Any()) {
-            var errorMessages = string.Join("\n  - ", validationErrors.Select(e => $"{e.Path}: {e.Kind}"));
             if (extendsName != null) {
+                // Merged result validation failed - provide context about both files
+                var formattedErrors = ValidationErrorFormatter.Format(validationErrors);
                 throw JsonExtendsException.MergedValidationFailed(
                     this.FilePath,
                     this.GetBasePath(extendsName),
-                    errorMessages
+                    string.Join("\n  - ", formattedErrors)
                 );
             }
 
             // No extends - throw a simpler validation error
-            throw new JsonValidationException(this.FilePath, validationErrors.Select(e => $"{e.Path}: {e.Kind}"));
+            throw new JsonValidationException(this.FilePath, validationErrors);
         }
-
-        // Write schema for the profile (helps with IDE autocomplete)
-        this.WriteSchema();
-
 
         // Step 4: Deserialize fully-resolved result
         return JsonConvert.DeserializeObject<T>(resolved.ToString(), this._deserialSettings)!;
@@ -171,9 +167,10 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
         inheritanceChain.Add(extendsName);
 
         // Load base profile
+        string baseContent;
         JObject baseJObject;
         try {
-            var baseContent = File.ReadAllText(basePath);
+            baseContent = File.ReadAllText(basePath);
             baseJObject = JObject.Parse(baseContent);
         } catch (Exception ex) {
             throw JsonExtendsException.BaseValidationFailed(childPath, basePath, ex);
@@ -189,6 +186,15 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
 
             // Recursively resolve base's inheritance first
             baseJObject = this.ResolveInheritance(basePath, baseJObject, baseExtendsName, inheritanceChain);
+
+            // Write schema for this base file (which extends another file)
+            // Use the original baseContent to keep the file sparse
+            var baseJsonWithSchema = JsonSchemaFactory.WriteAndInjectSchema(
+                this._schema,
+                baseContent,
+                basePath
+            );
+            File.WriteAllText(basePath, baseJsonWithSchema);
         } else {
             // Base has no extends - run it through standard Json<T> for recovery/validation
             try {
@@ -213,15 +219,5 @@ public class JsonWithExtends<T> : JsonReader<T> where T : class, new() {
     private string GetBasePath(string extendsName) {
         var baseName = extendsName.EndsWith(".json") ? extendsName : $"{extendsName}.json";
         return Path.Combine(this._directoryPath, baseName);
-    }
-
-    private void WriteSchema() {
-        var directory = Path.GetDirectoryName(this.FilePath);
-        if (directory == null) return;
-
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(this.FilePath);
-        var schemaPath = Path.Combine(directory, $"{fileNameWithoutExtension}.schema.json");
-        var schemaJson = this._schema.ToJson();
-        File.WriteAllText(schemaPath, schemaJson);
     }
 }

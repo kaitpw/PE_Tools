@@ -4,11 +4,11 @@ namespace PeServices.Storage.Core.Json.SchemaProviders;
 
 public class PropertyGroupNamesProvider : IOptionsProvider {
     public IEnumerable<string> GetExamples() {
-        var labelMap = this.GetLabelMap();
+        var labelMap = GetLabelMap();
         return labelMap.Keys;
     }
 
-    public Dictionary<string, ForgeTypeId> GetLabelMap() {
+    public static Dictionary<string, ForgeTypeId> GetLabelMap() {
         var properties = typeof(GroupTypeId).GetProperties(BindingFlags.Public | BindingFlags.Static);
         var labelMap = new Dictionary<string, ForgeTypeId>();
 

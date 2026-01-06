@@ -14,27 +14,40 @@ internal class RevitTypeContractResolver : OrderedContractResolver {
     protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization) {
         var property = base.CreateProperty(member, memberSerialization);
 
-        if (member is PropertyInfo propInfo) {
-            // Check if property type is registered in RevitTypeRegistry
-            if (RevitTypeRegistry.TryGet(propInfo.PropertyType, out var registration) && registration != null) {
-                Type converterType = null;
+        if (member is not PropertyInfo propInfo) return property;
 
-                // If type has discriminator, check for attribute and select converter
-                if (registration.DiscriminatorType != null && registration.ConverterSelector != null) {
-                    var discriminatorAttr = propInfo.GetCustomAttribute(registration.DiscriminatorType);
-                    if (discriminatorAttr != null) {
-                        converterType = registration.ConverterSelector(discriminatorAttr);
-                    }
-                }
+        // Get the target type - for collections, get the element type
+        var targetType = propInfo.PropertyType;
+        if (targetType.IsGenericType) {
+            var genericTypeDef = targetType.GetGenericTypeDefinition();
+            if (genericTypeDef == typeof(List<>) ||
+                genericTypeDef == typeof(IList<>) ||
+                genericTypeDef == typeof(ICollection<>) ||
+                genericTypeDef == typeof(IEnumerable<>))
+                targetType = targetType.GetGenericArguments()[0];
+        }
 
-                // Fall back to default converter if no discriminator or no match
-                converterType ??= registration.DefaultConverter;
+        // Check if property type is registered in RevitTypeRegistry
+        if (RevitTypeRegistry.TryGet(targetType, out var registration) && registration != null) {
+            Type converterType = null;
 
-                // Apply converter to property
-                if (converterType != null) {
-                    property.Converter = (JsonConverter)Activator.CreateInstance(converterType);
-                }
+            // If type has discriminator, check for attribute and select converter
+            if (registration.DiscriminatorType != null && registration.ConverterSelector != null) {
+                var discriminatorAttr = propInfo.GetCustomAttribute(registration.DiscriminatorType);
+                if (discriminatorAttr != null)
+                    converterType = registration.ConverterSelector(discriminatorAttr);
             }
+
+            // Fall back to default converter if no discriminator or no match
+            converterType ??= registration.DefaultConverter;
+
+            // Apply converter to property - use ItemConverter for collections
+            if (converterType == null) return property;
+            var converter = (JsonConverter)Activator.CreateInstance(converterType);
+            if (propInfo.PropertyType != targetType)
+                property.ItemConverter = converter;
+            else
+                property.Converter = converter;
         }
 
         return property;
