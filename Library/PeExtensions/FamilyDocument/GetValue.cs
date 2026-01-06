@@ -58,64 +58,54 @@ public static class FamilyManagerGetValue {
     }
 
     /// <summary>
-    ///     Get a double parameter value using the current family type.
-    ///     Returns null if the parameter doesn't exist, has no value, or isn't a Double StorageType.
+    ///     Get the string value with a unit (ie. what you see in the family editor) of a parameter using the current family type.
+    ///     Handles all storage types correctly:
+    ///     - Double: Returns unit-formatted string (e.g., "10'", "120 V")
+    ///     - String: Returns the raw string value
+    ///     - Integer (Yes/No): Returns "Yes" or "No"
+    ///     - Integer (other): Returns the integer as string
+    ///     - ElementId: Returns the element name if available, otherwise the ID
     /// </summary>
-    /// <remarks>
-    ///     <para>
-    ///         Values are returned in Revit's internal units:
-    ///         <list type="bullet">
-    ///             <item>Length: feet</item>
-    ///             <item>Angle: radians</item>
-    ///             <item>Voltage, Current, Power: base SI (Volts, Amps, Watts)</item>
-    ///         </list>
-    ///     </para>
-    ///     <para>
-    ///         For most electrical parameters (Voltage, Current, Power), internal units match
-    ///         common display units, so 120V is stored as 120.0.
-    ///     </para>
-    /// </remarks>
-    public static double? GetDouble(this FamilyDocument famDoc, string familyParameterName) {
-        var fm = famDoc.FamilyManager;
-        var familyParameter = fm.FindParameter(familyParameterName);
-        return famDoc.GetDouble(familyParameter);
-    }
-
-    /// <summary>
-    ///     Get a double parameter value using the current family type.
-    ///     Returns null if the parameter is null, has no value, or isn't a Double StorageType.
-    /// </summary>
-    public static double? GetDouble(this FamilyDocument famDoc, FamilyParameter familyParameter) {
-        if (familyParameter == null) return null;
-        if (familyParameter.StorageType != StorageType.Double) return null;
-
+    /// <param name="famDoc">The family document</param>
+    /// <param name="param">The parameter to get the value from</param>
+    /// <returns>The string value of the parameter, or null if the parameter is null or has no value</returns>
+    public static string GetValueString(this FamilyDocument famDoc, FamilyParameter param) {
         var famType = famDoc.FamilyManager.CurrentType;
-        if (!famType.HasValue(familyParameter)) return null;
+        if (!famType.HasValue(param)) return null;
 
-        return famType.AsDouble(familyParameter);
+        return param.StorageType switch {
+            StorageType.String => famType.AsString(param),
+            StorageType.Integer => GetIntegerValueString(famType, param),
+            StorageType.Double => famType.AsValueString(param),
+            StorageType.ElementId => GetElementIdValueString(famDoc, famType, param),
+            _ => null
+        };
     }
 
-    /// <summary>
-    ///     Get an integer parameter value using the current family type.
-    ///     Returns null if the parameter doesn't exist, has no value, or isn't an Integer StorageType.
-    /// </summary>
-    public static int? GetInt(this FamilyDocument famDoc, string familyParameterName) {
-        var fm = famDoc.FamilyManager;
-        var familyParameter = fm.FindParameter(familyParameterName);
-        return famDoc.GetInt(familyParameter);
+    private static string GetIntegerValueString(FamilyType famType, FamilyParameter param) {
+        var intValue = famType.AsInteger(param);
+        var dataType = param.Definition.GetDataType();
+
+        // Yes/No parameters should return "Yes" or "No" for human readability
+        if (dataType == SpecTypeId.Boolean.YesNo)
+            return intValue == 1 ? "Yes" : "No";
+
+        return intValue.ToString();
     }
 
-    /// <summary>
-    ///     Get an integer parameter value using the current family type.
-    ///     Returns null if the parameter is null, has no value, or isn't an Integer StorageType.
-    /// </summary>
-    public static int? GetInt(this FamilyDocument famDoc, FamilyParameter familyParameter) {
-        if (familyParameter == null) return null;
-        if (familyParameter.StorageType != StorageType.Integer) return null;
+    private static string GetElementIdValueString(FamilyDocument famDoc, FamilyType famType, FamilyParameter param) {
+        var elementId = famType.AsElementId(param);
+        if (elementId == null || elementId == ElementId.InvalidElementId)
+            return null;
 
-        var famType = famDoc.FamilyManager.CurrentType;
-        if (!famType.HasValue(familyParameter)) return null;
+        // Try to get the element name from the document
+        var element = famDoc.Document.GetElement(elementId);
+        if (element != null) {
+            // Format: "ElementName [ID:12345]" - human-readable and parseable
+            return $"{element.Name} [ID:{elementId.IntegerValue}]";
+        }
 
-        return famType.AsInteger(familyParameter);
+        // Fallback to ID-only format if element not found
+        return $"[ID:{elementId.IntegerValue}]";
     }
 }

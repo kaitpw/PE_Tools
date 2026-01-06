@@ -1,27 +1,32 @@
 using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using Autodesk.Revit.DB.Structure;
+using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.GetValue;
-using PeExtensions.PolyFill;
-using System.Globalization;
+using PeExtensions.FamParameter;
 
 namespace AddinFamilyFoundrySuite.Core.Snapshots;
 
 /// <summary>
 ///     Collects parameter snapshots with strategy-based source selection.
-///     Prefers project document (faster - no type cycling), falls back to family document.
-///     Family doc collection runs if: no data exists, data is empty, or data is partial.
+///     Prefers project document (faster - no type cycling), uses family document to supplement with formulas.
+///     Family doc collection runs if: no data exists, data is empty, or data is partial (missing formulas).
 /// </summary>
 public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
-    // IFamilyDocCollector implementation (fallback - runs if project collection was partial or skipped)
+    // IFamilyDocCollector implementation (supplements or provides full collection)
     bool IFamilyDocCollector.ShouldCollect(FamilySnapshot snapshot) =>
         snapshot.Parameters == null ||
         snapshot.Parameters.Data?.Count == 0 ||
         snapshot.Parameters.IsPartial;
 
-    // IFamilyDocCollector implementation (fallback)
-    void IFamilyDocCollector.Collect(FamilySnapshot snapshot, FamilyDocument famDoc) =>
-        snapshot.Parameters = this.CollectFromFamilyDoc(famDoc);
+    // IFamilyDocCollector implementation (supplements project data with formulas, or collects everything)
+    void IFamilyDocCollector.Collect(FamilySnapshot snapshot, FamilyDocument famDoc) {
+        var hasProjectData = snapshot.Parameters?.Data?.Count > 0;
+        if (hasProjectData)
+            this.SupplementWithFormulas(snapshot, famDoc);
+        else
+            snapshot.Parameters = this.CollectFromFamilyDoc(famDoc);
+    }
 
     // IProjectCollector implementation (preferred - runs first)
     bool IProjectCollector.ShouldCollect(FamilySnapshot snapshot) =>
@@ -29,6 +34,40 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
 
     public void Collect(FamilySnapshot snapshot, Document projectDoc, Family family) =>
         snapshot.Parameters = this.CollectFromProject(projectDoc, family);
+
+    /// <summary>
+    ///     Supplements existing project-collected data with formulas from family document.
+    ///     ValuesPerType already exist from project collection, we just add Formula field.
+    /// </summary>
+    private void SupplementWithFormulas(FamilySnapshot snapshot, FamilyDocument famDoc) {
+        if (snapshot.Parameters?.Data == null || snapshot.Parameters.Data.Count == 0)
+            return;
+
+        var fm = famDoc.FamilyManager;
+
+        // Create lookup for family parameters by key for O(1) access
+        var familyParamLookup = fm.GetParameters()
+            .ToDictionary(p => GetKey(p.Definition.Name, p.IsInstance), StringComparer.Ordinal);
+
+        var updatedData = new List<ParamSnapshot>();
+
+        foreach (var existingSnap in snapshot.Parameters.Data) {
+            var key = GetKey(existingSnap.Name, existingSnap.IsInstance);
+
+            // O(1) lookup instead of O(n) FirstOrDefault
+            if (familyParamLookup.TryGetValue(key, out var matchingParam)
+                && !string.IsNullOrWhiteSpace(matchingParam.Formula)) {
+                // Create updated snapshot with formula
+                updatedData.Add(existingSnap with { Formula = matchingParam.Formula });
+            } else {
+                // Keep existing snapshot unchanged
+                updatedData.Add(existingSnap);
+            }
+        }
+
+        // Replace the data list with updated snapshots
+        snapshot.Parameters.Data = updatedData;
+    }
 
     private SnapshotSection<ParamSnapshot> CollectFromProject(Document doc, Family family) {
         var symbols = GetAllSymbols(family);
@@ -75,13 +114,12 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
                 _ = tx.RollBack();
         }
 
-        // Mark as partial if we couldn't create temp instances for all symbols
-        // This allows family doc collection to run as fallback for complete data
-        var isPartial = instanceCollectionCount < symbols.Count;
-
+        // Always mark as partial - project collection cannot get formulas
+        // Family doc collector will supplement with formulas
+        // Also partial if we couldn't create temp instances for all symbols
         return new SnapshotSection<ParamSnapshot> {
             Source = SnapshotSource.Project,
-            IsPartial = isPartial,
+            IsPartial = true,
             Data = [
                 .. snapshots.Values
                     .OrderBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
@@ -102,7 +140,7 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
         foreach (var p in familyParameters) {
             var key = GetKey(p.Definition.Name, p.IsInstance);
 
-            var isBuiltIn = ParameterUtils.IsBuiltInParameter(p.Id);
+            var isBuiltIn = p.IsBuiltInParameter();
             Guid? sharedGuid = null;
             if (p.IsShared) {
                 try { sharedGuid = p.GUID; } catch {
@@ -110,7 +148,6 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
                 }
             }
 
-            var values = typeNames.ToDictionary(t => t, _ => (string)null, StringComparer.Ordinal);
 
             snapshots[key] = new ParamSnapshot {
                 Name = p.Definition.Name,
@@ -118,7 +155,8 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
                 PropertiesGroup = p.Definition.GetGroupTypeId(),
                 DataType = p.Definition.GetDataType(),
                 Formula = string.IsNullOrWhiteSpace(p.Formula) ? null : p.Formula,
-                ValuesPerType = values,
+                // temp create dict so we can assign to it below
+                ValuesPerType = typeNames.ToDictionary(t => t, _ => (string)null, StringComparer.Ordinal),
                 IsBuiltIn = isBuiltIn,
                 SharedGuid = sharedGuid,
                 StorageType = p.StorageType
@@ -138,13 +176,7 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
                     if (!snapshots.TryGetValue(key, out var snap))
                         continue;
 
-                    if (!string.IsNullOrWhiteSpace(snap.Formula)) {
-                        snap.ValuesPerType[t.Name] = null;
-                        continue;
-                    }
-
-                    var value = famDoc.GetValue(p);
-                    snap.ValuesPerType[t.Name] = CoerceValueToString(value);
+                    snap.ValuesPerType[t.Name] = famDoc.GetValueString(p); // must support this in SetValue.
                 }
             }
         } finally {
@@ -174,7 +206,7 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
         foreach (var p in symbol.Parameters.OfType<Parameter>().Where(p => p.Definition != null)) {
             var key = GetKey(p.Definition.Name, false);
             var snap = GetOrCreateSnapshot(p, false, allTypeNames, snapshots, key, projectParamNames);
-            snap.ValuesPerType[typeName] = GetValueString(p);
+            snap.ValuesPerType[typeName] = GetParameterValueString(p, symbol.Document);
         }
     }
 
@@ -188,8 +220,55 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
         foreach (var p in instance.Parameters.OfType<Parameter>().Where(p => p.Definition != null)) {
             var key = GetKey(p.Definition.Name, true);
             var snap = GetOrCreateSnapshot(p, true, allTypeNames, snapshots, key, projectParamNames);
-            snap.ValuesPerType[typeName] = GetValueString(p);
+            snap.ValuesPerType[typeName] = GetParameterValueString(p, instance.Document);
         }
+    }
+
+    /// <summary>
+    ///     Gets the string value of a Parameter, handling all storage types correctly.
+    ///     - Double: Returns unit-formatted string (e.g., "10'", "120 V")
+    ///     - String: Returns the raw string value
+    ///     - Integer (Yes/No): Returns "Yes" or "No"
+    ///     - Integer (other): Returns the integer as string
+    ///     - ElementId: Returns the element name if available, otherwise null
+    /// </summary>
+    private static string GetParameterValueString(Parameter param, Document doc) {
+        if (!param.HasValue) return null;
+
+        return param.StorageType switch {
+            StorageType.String => param.AsString(),
+            StorageType.Integer => GetIntegerValueString(param),
+            StorageType.Double => param.AsValueString(),
+            StorageType.ElementId => GetElementIdValueString(param, doc),
+            _ => null
+        };
+    }
+
+    private static string GetIntegerValueString(Parameter param) {
+        var intValue = param.AsInteger();
+        var dataType = param.Definition.GetDataType();
+
+        // Yes/No parameters should return "Yes" or "No" for human readability
+        if (dataType == SpecTypeId.Boolean.YesNo)
+            return intValue == 1 ? "Yes" : "No";
+
+        return intValue.ToString();
+    }
+
+    private static string GetElementIdValueString(Parameter param, Document doc) {
+        var elementId = param.AsElementId();
+        if (elementId == null || elementId == ElementId.InvalidElementId)
+            return null;
+
+        // Try to get the element name from the document
+        var element = doc.GetElement(elementId);
+        if (element != null) {
+            // Format: "ElementName [ID:12345]" - human-readable and parseable
+            return $"{element.Name} [ID:{elementId.IntegerValue}]";
+        }
+
+        // Fallback to ID-only format if element not found
+        return $"[ID:{elementId.IntegerValue}]";
     }
 
     private static ParamSnapshot GetOrCreateSnapshot(
@@ -205,7 +284,7 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
 
         var def = param.Definition ?? throw new InvalidOperationException("Parameter.Definition is null.");
 
-        var isBuiltIn = ParameterUtils.IsBuiltInParameter(param.Id);
+        var isBuiltIn = param.IsBuiltInParameter();
         Guid? sharedGuid = null;
         if (param.IsShared) {
             try { sharedGuid = param.GUID; } catch {
@@ -232,41 +311,7 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
         return created;
     }
 
-    private static string GetValueString(Parameter param) {
-        if (!param.HasValue)
-            return null;
-
-        return param.StorageType switch {
-            StorageType.String => string.IsNullOrWhiteSpace(param.AsString()) ? null : param.AsString(),
-            StorageType.Double => param.AsDouble().ToString(CultureInfo.InvariantCulture),
-            StorageType.Integer => param.AsInteger().ToString(CultureInfo.InvariantCulture),
-            StorageType.ElementId => param.AsElementId() == ElementId.InvalidElementId
-                ? null
-                : param.AsElementId().Value().ToString(CultureInfo.InvariantCulture),
-            _ => null
-        };
-    }
-
     private static string GetKey(string name, bool isInstance) => $"{name}|{isInstance}";
-
-    private static string CoerceValueToString(object value) {
-        if (value is null)
-            return null;
-
-        if (value is string s)
-            return string.IsNullOrWhiteSpace(s) ? null : s;
-
-        if (value is double d)
-            return d.ToString(CultureInfo.InvariantCulture);
-
-        if (value is int i)
-            return i.ToString(CultureInfo.InvariantCulture);
-
-        if (value is ElementId id)
-            return id == ElementId.InvalidElementId ? null : id.Value().ToString(CultureInfo.InvariantCulture);
-
-        return Convert.ToString(value, CultureInfo.InvariantCulture);
-    }
 
     private static List<FamilySymbol> GetAllSymbols(Family family) {
         var symbolIds = family.GetFamilySymbolIds();

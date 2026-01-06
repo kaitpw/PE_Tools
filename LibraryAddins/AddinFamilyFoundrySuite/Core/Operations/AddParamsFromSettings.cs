@@ -6,10 +6,10 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 
 /// <summary>
 ///     Creates missing family parameters from AddAndSetParamsSettings.
-///     Uses the optional PropertiesGroup/DataType/IsInstance from SetParamModel and SetParamPerTypeModel.
+///     Uses the PropertiesGroup/DataType/IsInstance from ParamSettingModel.
 ///     Only used when CreateIfMissing=true in the settings.
 /// </summary>
-public class AddParamsFromSettings(AddAndSetParamsSettings settings)
+public class AddFamilyParams(AddAndSetParamsSettings settings)
     : DocOperation<AddAndSetParamsSettings>(settings) {
     public override string Description =>
         "Create missing family parameters from AddAndSetParams settings.";
@@ -23,17 +23,8 @@ public class AddParamsFromSettings(AddAndSetParamsSettings settings)
         // Get all unique parameter names that need to be created
         var paramsToCreate = new Dictionary<string, (ForgeTypeId group, ForgeTypeId dataType, bool isInstance)>();
 
-        // From Parameters list
         foreach (var p in this.Settings.Parameters) {
             if (fm.FindParameter(p.Name) is not null) continue; // Already exists
-            paramsToCreate[p.Name] = (p.PropertiesGroup, p.DataType, p.IsInstance);
-        }
-
-        // From PerTypeParameters list
-        foreach (var p in this.Settings.ParametersPerType) {
-            if (fm.FindParameter(p.Name) is not null) continue; // Already exists
-            if (paramsToCreate.ContainsKey(p.Name)) continue; // Already in list
-
             paramsToCreate[p.Name] = (p.PropertiesGroup, p.DataType, p.IsInstance);
         }
 

@@ -66,11 +66,6 @@ public class CmdFFMigrator : IExternalCommand {
                     Name = "Process Families",
                     Execute = async _ => this.HandleProcessFamilies(context),
                     CanExecute = _ => context.PreviewData?.IsValid == true
-                },
-                new() {
-                    Name = "Regenerate Schema",
-                    Execute = async _ => this.HandleRegenerateSchema(context),
-                    CanExecute = _ => context.SelectedProfile != null
                 }
             };
 
@@ -168,13 +163,7 @@ public class CmdFFMigrator : IExternalCommand {
         // Extract AddAndSet parameter info (including internal params)
         var internalParams = BuildInternalParams();
         var allAddAndSetParams = profile.AddAndSetParams.Parameters
-            .Concat(internalParams)
-            .Concat(profile.AddAndSetParams.ParametersPerType.Select(p => new SetParamModel {
-                Name = p.Name,
-                DataType = p.DataType,
-                IsInstance = p.IsInstance,
-                PropertiesGroup = p.PropertiesGroup
-            }));
+            .Concat(internalParams);
 
         var addAndSetParameters = allAddAndSetParams
             .Select(p => new ParameterInfo(
@@ -194,8 +183,7 @@ public class CmdFFMigrator : IExternalCommand {
         var profileJson = JsonSerializer.Serialize(
             profile,
             new JsonSerializerOptions {
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
 
         // Check operation enabled status from queue
@@ -275,10 +263,12 @@ public class CmdFFMigrator : IExternalCommand {
     private void HandleRegenerateSchema(MigratorContext context) {
         if (context.SelectedProfile == null) return;
 
-        // Force schema regeneration by reading the profile (triggers WriteSchema)
-        _ = context.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json")
-            .Read();
+        var jsonReader = context.SettingsManager.SubDir("profiles")
+            .JsonWithExtends<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json");
+
+        // Trigger schema regeneration by reading the profile
+        _ = jsonReader.Read();
+
         new Ballogger()
             .Add(Log.INFO, new StackFrame(), $"Schema regenerated for {context.SelectedProfile.TextPrimary}")
             .Show();
@@ -321,7 +311,7 @@ public class CmdFFMigrator : IExternalCommand {
             .SelectFamilies(() => {
                 var picked = Pickers.GetSelectedFamilies(ctx.UiDoc);
                 return picked.Any() ? picked : profile.GetFamilies(ctx.Doc);
-            }) 
+            })
             .ProcessQueue(queue, collectorQueue, outputFolderPath, ctx.OnFinishSettings);
 
         _ = new ProcessingResultBuilder(ctx.Storage)
@@ -339,7 +329,7 @@ public class CmdFFMigrator : IExternalCommand {
         // TempSharedParamFile is disposed here AFTER ProcessFamilies completes
     }
 
-    private static List<SetParamModel> BuildInternalParams() => [
+    private static List<ParamSettingModel> BuildInternalParams() => [
         new() {
             Name = "PE_E___NumberOfPoles",
             ValueOrFormula =
@@ -374,15 +364,13 @@ public class CmdFFMigrator : IExternalCommand {
 
         var apsAndAddedParamNames = apsParamNames
             .Concat(profile.AddAndSetParams.Parameters.Select(p => p.Name))
-            .Concat(profile.AddAndSetParams.ParametersPerType.Select(p => p.Name))
             .ToList();
 
         var internalParams = BuildInternalParams();
         var addAndSet = new AddAndSetParamsSettings {
             OverrideExistingValues = profile.AddAndSetParams.OverrideExistingValues,
             CreateFamParamIfMissing = profile.AddAndSetParams.CreateFamParamIfMissing,
-            Parameters = profile.AddAndSetParams.Parameters.Concat(internalParams).ToList(),
-            ParametersPerType = profile.AddAndSetParams.ParametersPerType
+            Parameters = profile.AddAndSetParams.Parameters.Concat(internalParams).ToList()
         };
 
         return new OperationQueue()

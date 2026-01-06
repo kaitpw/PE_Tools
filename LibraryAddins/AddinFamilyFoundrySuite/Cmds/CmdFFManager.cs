@@ -52,7 +52,7 @@ public class CmdFFManager : IExternalCommand {
             var timestampSettings = new AddAndSetParamsSettings {
                 CreateFamParamIfMissing = true,
                 Parameters = [
-                    new SetParamModel {
+                    new ParamSettingModel {
                         Name = "_FOUNDRY LAST PROCESSED AT",
                         DataType = SpecTypeId.String.Text,
                         ValueOrFormula = $"\"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\""

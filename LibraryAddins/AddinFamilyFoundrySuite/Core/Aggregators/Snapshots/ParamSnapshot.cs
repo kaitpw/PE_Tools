@@ -1,7 +1,35 @@
 using PeServices.Storage.Core.Json.RevitTypes;
+using PeServices.Storage.Core.Json.SchemaProcessors;
+using PeServices.Storage.Core.Json.SchemaProviders;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
+
+
+/// <summary>
+///     Base definition for parameter identity and creation metadata.
+///     Shared between ParamSnapshot (audit/replay) and ParamSettingModel (settings).
+///     Contains the minimum information needed to identify or create a parameter.
+/// </summary>
+public record ParamDefinitionBase {
+    [SchemaExamples(typeof(SharedParameterNamesProvider))]
+    [Description("The name of the parameter")]
+    [Required]
+    public required string Name { get; init; }
+
+    [Description("Whether the parameter is an instance parameter (true) or a type parameter (false). Defaults to true.")]
+    public bool IsInstance { get; init; } = true;
+
+    [Description("The properties group of the parameter. Defaults to \"Other\" Properties Palette group.")]
+    [ForgeKind(ForgeKind.Group)]
+    public ForgeTypeId PropertiesGroup { get; init; } = new("");
+
+    [Description("The data type of the parameter")]
+    [ForgeKind(ForgeKind.Spec)]
+    public ForgeTypeId DataType { get; init; } = SpecTypeId.String.Text;
+}
+
 
 /// <summary>
 ///     Canonical parameter snapshot - single source of truth for:
@@ -9,29 +37,20 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 ///     - Assignment mode (formula vs values)
 ///     - Per-type values (audit + replay)
 /// </summary>
-public record ParamSnapshot {
-    // Identity
-    [Required] public required string Name { get; init; }
-    [Required] public required bool IsInstance { get; init; }
-
-    // Definition (enough to create the parameter)
-    [ForgeKind(ForgeKind.Group)]
-    public ForgeTypeId PropertiesGroup { get; init; } = new("");
-
-    [ForgeKind(ForgeKind.Spec)]
-    public ForgeTypeId DataType { get; init; } = SpecTypeId.String.Text;
+public record ParamSnapshot : ParamDefinitionBase {
 
     // Assignment mode - if Formula != null, it is the authoritative assignment
     public string Formula { get; init; } = null;
 
     // Per-type values: TypeName -> setter-acceptable string value
-    // Null/empty means no value for that type. TODO: verify that this doesn't serialize null as empty string
+    // Null means no value for that type. Empty string "" is a valid value for String parameters.
+    // Note: JSON serialization preserves null vs "" distinction when using proper serializer settings.
     public Dictionary<string, string> ValuesPerType { get; init; } = new(StringComparer.Ordinal);
 
     // Audit metadata (not required for replay, but useful)
     public bool IsBuiltIn { get; init; } = false;
     public Guid? SharedGuid { get; init; } = null;
-    public StorageType? StorageType { get; init; } = null;
+    public StorageType StorageType { get; init; }
 
     /// <summary>
     ///     Indicates if this is a project parameter (exists in Document.ParameterBindings).

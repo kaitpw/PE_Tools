@@ -3,7 +3,11 @@ using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
+using PeServices.Storage.Core.Json.SchemaProcessors;
+using PeServices.Storage.Core.Json.SchemaProviders;
 using PeUtils.Files;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Cmds;
 
@@ -21,41 +25,56 @@ public class CmdFFParamAggregator : IExternalCommand {
             var storage = new Storage("FF Param Aggregator");
             var settingsManager = storage.SettingsDir();
 
-            // Get families based on profile filter (or selected families)
+            // Load settings (creates default file if missing)
+            var settings = settingsManager.JsonWithExtends<ParamAggregatorSettings>("settings.json").Read();
+
+            // Get families - either selected or ALL families (or filtered by category)
             var selectedFamilies = Pickers.GetSelectedFamilies(uiDoc);
-            var families = selectedFamilies.Any()
+            var familiesQuery = selectedFamilies.Any()
                 ? selectedFamilies
                 : new FilteredElementCollector(doc)
                     .OfClass(typeof(Family))
-                    .OfType<Family>()
-                    .ToList();
+                    .OfType<Family>();
+
+            // Apply category filter if specified
+            var families = settings.CategoryFilter.Any()
+                ? familiesQuery.Where(f =>
+                    f.FamilyCategory != null && settings.CategoryFilter.Any(cat => cat.BuiltInCategory == f.FamilyCategory.BuiltInCategory)).ToList()
+                : familiesQuery.ToList();
 
             if (!families.Any()) {
+                var filterMsg = settings.CategoryFilter.Any()
+                    ? $"No families found for categories: {string.Join(", ", settings.CategoryFilter.Select(c => c.Name))}"
+                    : "No families found in the document.";
                 new Ballogger()
-                    .Add(Log.WARN, new StackFrame(), "No families found matching the filter criteria.")
+                    .Add(Log.WARN, new StackFrame(), filterMsg)
                     .Show();
                 return Result.Cancelled;
             }
 
-            // Create collectors - uses separated IProjectCollector/IFamilyDocCollector system
             var collectorQueue = new CollectorQueue()
                 .Add(new ParamSectionCollector());
 
-            var aggregator = new FamilyParamAggregator(collectorQueue);
 
             // Aggregate parameters
             var balloon = new Ballogger();
-            _ = balloon.Add(Log.INFO, new StackFrame(), $"Analyzing {families.Count} families...");
+            var filterInfo = settings.CategoryFilter.Any()
+                ? $" (filtered to {string.Join(", ", settings.CategoryFilter.Select(c => c.Name))})"
+                : " (all categories)";
+            _ = balloon.Add(Log.INFO, new StackFrame(), $"Analyzing {families.Count} families{filterInfo}...");
 
-            var aggregatedData = aggregator.Aggregate(doc, families);
+            var aggregatedData = FamilyParamAggregator.Aggregate(doc, collectorQueue, families);
+            var aggregatedParamDatas = aggregatedData as AggregatedParamData[] ?? aggregatedData.ToArray();
 
-            // Write to CSV
-            var csvPath = aggregator.WriteToCsv(aggregatedData, storage);
+            // Enrich with schedule data (with same category filter)
+            FamilyParamAggregator.EnrichWithScheduleData(doc, aggregatedParamDatas, settings.CategoryFilter);
+
+            var csvPath = FamilyParamAggregator.WriteToCsv(aggregatedParamDatas, storage);
 
             _ = balloon.Add(Log.INFO, new StackFrame(),
-                $"Aggregated {aggregatedData.Count} unique parameters from {families.Count} families.");
+                $"Aggregated {aggregatedParamDatas.Count()} unique parameters from {families.Count} families.");
 
-            FileUtils.OpenInDefaultApp(csvPath);
+            if (settings.OpenOutputFileOnFinish) FileUtils.OpenInDefaultApp(csvPath);
 
             balloon.Show();
             return Result.Succeeded;
@@ -64,4 +83,19 @@ public class CmdFFParamAggregator : IExternalCommand {
             return Result.Cancelled;
         }
     }
+}
+
+/// <summary>
+///     Settings for parameter aggregation across families and schedules.
+/// </summary>
+public class ParamAggregatorSettings {
+    [Description(
+        "Optional list of categories to filter families and schedules. " +
+        "When empty, ALL families and schedules in the document will be analyzed.")]
+    [SchemaExamples(typeof(CategoryNamesProvider))]
+    [Required]
+    public List<Category> CategoryFilter { get; init; } = [];
+
+    [Description("Automatically open the generated CSV file when the command completes")]
+    public bool OpenOutputFileOnFinish { get; init; } = true;
 }

@@ -1,44 +1,57 @@
+using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeServices.Storage.Core.Json.SchemaProviders;
-using PeServices.Storage.Core.Json.RevitTypes;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.OperationSettings;
 
 /// <summary>
-///     For global values or formulas (with per-type fallback on failure)
+///     Unified parameter setting model supporting both global values/formulas and per-type values.
+///     Use either ValueOrFormula (applies to all types) OR ValuesPerType (different value per type), not both.
+///     Inherits parameter definition properties from ParamDefinitionBase.
 /// </summary>
-public class SetParamModel : AddAndSetData {
-    public const string ByDefaultString = $"The default behavior is to set <{nameof(ValueOrFormula)}> as a formula, " +
-                                          "not a value (even if it contains no parameter references).";
+[OneOfProperties(nameof(ValueOrFormula), nameof(ValuesPerType), AllowNone = true)]
+public record ParamSettingModel : ParamDefinitionBase {
+    // Note: Name, IsInstance, PropertiesGroup, DataType inherited from ParamDefinitionBase
+
+    // ===== Mutually Exclusive: Use ValueOrFormula OR ValuesPerType, not both =====
 
     /// <summary>
-    ///     The value or formula to set. When setting this in code, wrap plain strings in double quotes
-    ///     to prevent them from being interpreted as formulas that might reference parameters.
+    ///     Global value or formula to apply to all family types.
+    ///     Mutually exclusive with ValuesPerType - use one or the other.
     /// </summary>
     [Description(
-        $"{ByDefaultString} Unit-formatted strings (e.g., \"10'\", \"10in\", \"120V\", \"45°\") are fully supported. " +
-        "Plain numbers (e.g., \"10\") are also acceptable and will be interpreted as Revit's internal units " +
-        "(feet for length, radians for angles, etc.).")]
+        "Global value or formula to apply to all family types. " +
+        "Unit-formatted strings (e.g., \"10'\", \"120V\", \"35 SF\") are fully supported. " +
+        "By default, this is set as a formula (even if it contains no parameter references). " +
+        "Set SetAsFormula=false to set as a value instead. " +
+        "Mutually exclusive with ValuesPerType.")]
     public string ValueOrFormula { get; init; } = null;
 
+    /// <summary>
+    ///     Whether ValueOrFormula should be set as a formula (true) or a value (false).
+    ///     Only applicable when ValueOrFormula is set. Ignored when using ValuesPerType.
+    /// </summary>
     [Description(
-        $"Use 'false' to set <{nameof(ValueOrFormula)}> as a value. {ByDefaultString}. " +
-        $"A caveat of the default behavior is that when intending to set a parameter to simple number/text values, " +
-        "the default behavior will \"lock\" that parameter from easy editting. " +
-        "Setting this to 'false' allows either: 1) caclulating values per family type without setting a formula. " +
-        "2) setting a simple number/text value without setting a formula.")]
+        "Whether ValueOrFormula should be set as a formula (true) or a value (false). " +
+        "Defaults to true. Setting as a formula 'locks' the parameter from manual editing. " +
+        "Set to false to: 1) calculate values per family type without setting a formula, or " +
+        "2) set a simple number/text value without locking the parameter. " +
+        "Only applicable when ValueOrFormula is set.")]
     [Required]
     public bool SetAsFormula { get; init; } = true;
-}
 
-/// <summary>
-///     For explicit per-type values (different value per named type)
-/// </summary>
-public class SetParamPerTypeModel : AddAndSetData {
-    [Description("Dictionary of family type names to values. TODO: incomplete")]
-    public Dictionary<string, string> ValuesPertype { get; init; } = new(); // TypeName → Value
+    /// <summary>
+    ///     Dictionary of family type names to values. Allows setting different values per type.
+    ///     Mutually exclusive with ValueOrFormula - use one or the other.
+    /// </summary>
+    [Description(
+        "Dictionary of family type names to values. Allows setting different values per type. " +
+        "Unit-formatted strings (e.g., \"10'\", \"120V\", \"Yes\", \"No\") are fully supported. " +
+        "Values are always set as values (not formulas). " +
+        "Mutually exclusive with ValueOrFormula.")]
+    public Dictionary<string, string> ValuesPerType { get; init; } = null;
 }
 
 public class AddAndSetParamsSettings : IOperationSettings {
@@ -49,33 +62,9 @@ public class AddAndSetParamsSettings : IOperationSettings {
     public bool CreateFamParamIfMissing { get; init; } = true;
 
     [Description(
-        "List of parameters and values to set for all family types. Allows setting a uniform value for all family types, " +
-        "calculating a value per family type, and setting a formula (applying to all family types).")]
-    public List<SetParamModel> Parameters { get; init; } = [];
-
-    [Description(
-        "List of parameters and values to set for each family type. Allows setting an arbitrary value for each family type.")]
-    public List<SetParamPerTypeModel> ParametersPerType { get; init; } = [];
+        "List of parameters to set. Each parameter can use either ValueOrFormula (global value/formula for all types) " +
+        "or ValuesPerType (different value per type), but not both.")]
+    public List<ParamSettingModel> Parameters { get; init; } = [];
 
     public bool Enabled { get; init; } = true;
-}
-
-public class AddAndSetData {
-    [SchemaExamples(typeof(SharedParameterNamesProvider))]
-    [Description("The name of the parameter")]
-    public string Name { get; init; }
-
-    /// <summary> Defaults to "Other" Properties Palette group</summary>
-    [Description("The properties group of the parameter. Defaults to \"Other\" Properties Palette group.")]
-    [ForgeKind(ForgeKind.Group)]
-    public ForgeTypeId PropertiesGroup { get; init; } = new("");
-
-    /// <summary> Defaults to "Text" data type</summary>
-    [Description("The data type of the parameter")]
-    [ForgeKind(ForgeKind.Spec)]
-    public ForgeTypeId DataType { get; init; } = SpecTypeId.String.Text;
-
-    /// <summary> Defaults to true (Instance parameter)</summary>
-    [Description("Whether the parameter is an instance parameter (true) or a type parameter (false). Defaults to true.")]
-    public bool IsInstance { get; init; } = true;
 }
