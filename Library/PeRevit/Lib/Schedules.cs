@@ -626,4 +626,103 @@ public static class ScheduleHelper {
             }
         }
     }
+
+    /// <summary>
+    ///     Gets family names that would appear in a schedule with the given filters.
+    ///     Uses Revit's native schedule filtering by creating a temporary schedule,
+    ///     placing temp instances, and using FilteredElementCollector to identify matches.
+    ///     All changes are rolled back - no permanent modifications to the document.
+    /// </summary>
+    /// <param name="doc">The Revit document</param>
+    /// <param name="spec">The schedule specification with filters</param>
+    /// <param name="families">Optional list of families to test. If null, uses all families of the category.</param>
+    /// <returns>List of family names that pass all schedule filters</returns>
+    public static List<string> GetFamiliesMatchingFilters(Document doc, ScheduleSpec spec, IEnumerable<Family> families = null) {
+        // Get category
+        var categoryId = FindCategoryByName(doc, spec.CategoryName);
+        if (categoryId == ElementId.InvalidElementId)
+            throw new ArgumentException($"Category '{spec.CategoryName}' not found in document");
+
+        // Get families to test
+        var familiesToTest = families?.ToList() ?? new FilteredElementCollector(doc)
+            .OfClass(typeof(Family))
+            .Cast<Family>()
+            .Where(f => f.FamilyCategory?.Id == categoryId)
+            .ToList();
+
+        if (familiesToTest.Count == 0)
+            return [];
+
+        // If no filters, return all family names
+        if (spec.Filters == null || spec.Filters.Count == 0)
+            return familiesToTest.Select(f => f.Name).ToList();
+
+        using var tx = new Transaction(doc, "Temp Filter Evaluation");
+        _ = tx.Start();
+
+        try {
+            // Create temporary schedule with filters
+            var tempSpec = new ScheduleSpec {
+                Name = $"_TempFilterEval_{Guid.NewGuid():N}",
+                CategoryName = spec.CategoryName,
+                IsItemized = true,
+                Fields = spec.Fields,
+                Filters = spec.Filters,
+                SortGroup = [] // No sorting needed for filter evaluation
+            };
+
+            var scheduleResult = CreateSchedule(doc, tempSpec);
+            var schedule = scheduleResult.Schedule;
+
+            // Place one temp instance of each family type
+            var placedFamilyNames = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var family in familiesToTest) {
+                var symbolIds = family.GetFamilySymbolIds();
+                if (symbolIds == null || symbolIds.Count == 0)
+                    continue;
+
+                foreach (var symbolId in symbolIds) {
+                    if (doc.GetElement(symbolId) is not FamilySymbol symbol)
+                        continue;
+
+                    if (!symbol.IsActive)
+                        symbol.Activate();
+
+                    try {
+                        _ = doc.Create.NewFamilyInstance(
+                            XYZ.Zero,
+                            symbol,
+                            Autodesk.Revit.DB.Structure.StructuralType.NonStructural);
+
+                        _ = placedFamilyNames.Add(family.Name);
+                    } catch {
+                        // Some families may not be placeable (e.g., face-based without host)
+                        // Skip and continue with other families
+                    }
+
+                    // Only need one type per family to test if family passes filters
+                    break;
+                }
+            }
+
+            // Use FilteredElementCollector with schedule to get filtered elements
+            var filteredInstances = new FilteredElementCollector(doc, schedule.Id)
+                .OfClass(typeof(FamilyInstance))
+                .Cast<FamilyInstance>()
+                .ToList();
+
+            // Extract unique family names from instances that passed filters
+            var matchingFamilyNames = filteredInstances
+                .Select(i => i.Symbol.Family.Name)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            return matchingFamilyNames;
+        } finally {
+            // Always rollback - we only wanted to query, not make permanent changes
+            if (tx.HasStarted())
+                _ = tx.RollBack();
+        }
+    }
 }

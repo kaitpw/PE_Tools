@@ -155,6 +155,8 @@ public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenP
                 : null
         };
 
+        var sortedResponse = deserializedResponse.Results.OrderBy(p => p.Name).ToList();
+
         _ = cache?.Write(deserializedResponse);
         return deserializedResponse;
     }

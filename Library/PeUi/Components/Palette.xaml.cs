@@ -48,6 +48,7 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
     private FilterBox _filterBox;
     private Func<object> _getSelectedItemFunc;
     private bool _isCtrlPressed;
+    private bool _keepOpenAfterAction;
     private Action _onCtrlReleased;
     private EphemeralWindow _parentWindow;
     private SelectableTextBox _tooltipPanel;
@@ -73,10 +74,12 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         IEnumerable<PaletteAction<TItem>> actions,
         CustomKeyBindings customKeyBindings = null,
         Action onCtrlReleased = null,
-        PaletteSidebar paletteSidebar = null
+        PaletteSidebar paletteSidebar = null,
+        bool keepOpenAfterAction = false
     ) where TItem : class, IPaletteListItem {
         this.DataContext = viewModel;
         this._customKeyBindings = customKeyBindings;
+        this._keepOpenAfterAction = keepOpenAfterAction;
 
         // Load resources for SearchTextBox
         ThemeManager.LoadWpfUiResources(this.SearchTextBox);
@@ -186,7 +189,7 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
 
         // Set up action menu handlers
         actionMenu.ExitRequested += (_, _) => this.Focus();
-        actionMenu.ActionClicked += (_, action) => {
+        actionMenu.ActionClicked += async (_, action) => {
             var selectedItem = viewModel.SelectedItem;
             if (selectedItem == null) return;
 
@@ -198,7 +201,13 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
                 return;
             }
 
-            // Regular actions: close window first, then defer execution
+            // If KeepOpenAfterAction is true, execute immediately and keep palette open
+            if (this._keepOpenAfterAction) {
+                await actionBinding.ExecuteAsync(action, selectedItem);
+                return;
+            }
+
+            // Default behavior: close window first, then defer execution
             this.ExecuteDeferred(async () => await actionBinding.ExecuteAsync(action, selectedItem));
         };
 
@@ -271,7 +280,7 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         this.ExpandSidebar(width);
     }
 
-    private Task<bool> ExecuteItemTyped<TItem>(
+    private async Task<bool> ExecuteItemTyped<TItem>(
         TItem selectedItem,
         ActionBinding<TItem> actionBinding,
         PaletteViewModel<TItem> viewModel,
@@ -279,19 +288,25 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         Key key = Key.Enter
     ) where TItem : class, IPaletteListItem {
         var action = actionBinding.TryFindAction(selectedItem, key, modifiers);
-        if (action == null) return Task.FromResult(false);
+        if (action == null) return false;
 
         viewModel.RecordUsage();
 
         // NextPalette actions show content in sidebar
         if (ActionBinding<TItem>.IsNextPaletteAction(action)) {
             this.ShowNextPaletteInSidebar(action, selectedItem);
-            return Task.FromResult(true);
+            return true;
         }
 
-        // Regular actions: close window first, then defer execution to Revit API context
+        // If KeepOpenAfterAction is true, execute immediately and keep palette open
+        if (this._keepOpenAfterAction) {
+            await actionBinding.ExecuteAsync(action, selectedItem);
+            return true;
+        }
+
+        // Default behavior: close window first, then defer execution to Revit API context
         this.ExecuteDeferred(async () => await actionBinding.ExecuteAsync(action, selectedItem));
-        return Task.FromResult(true);
+        return true;
     }
 
     /// <summary>

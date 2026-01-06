@@ -64,3 +64,13 @@ alwaysApply: true
 - Implement comprehensive testing (unit, integration, e2e)
 - Validate all inputs, use HTTPS, implement proper auth
 - Optimize for Core Web Vitals and efficient queries
+
+## TESTING & EXPLORATION
+
+The easiest way to test is by writing test scripts into C:\Users\kaitp\OneDrive\Documents\ArchSmarter\Launchpad VS Code\LaunchpadScripts. This is a sandbox env that allows us to run arbitrary code, see C:\Users\kaitp\OneDrive\Documents\ArchSmarter\Launchpad VS Code\.cursor\rules\launchpad-development.mdc for reference on usage.
+
+Usually when you want to test something in this project, you have to make a whole new IExternalCommand, this sucks. The sandbox env allows us to not pollute our main project codebase with test code if for example you want to
+
+- see how a Revit API method behaves
+- you want to test a method/class in PE_Tools, or you want to POC/MVP a new one to add to PE_Tools
+- or anything adjacent to this

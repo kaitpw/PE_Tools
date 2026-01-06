@@ -26,10 +26,10 @@ public class CmdPltFamilies : IExternalCommand {
                 .Select(f => new FamilyPaletteItem(f, doc));
 
             var actions = new List<PaletteAction<FamilyPaletteItem>> {
-                // Default action: Open family types palette in sidebar (Enter or Click)
+                // Default action: Open family types palette as new window (Enter or Click)
                 new() {
                     Name = "Types",
-                    NextPalette = item => PltFamilyTypes.CreatePalette(uiapp, item.Family),
+                    Execute = async item => PltFamilyTypes.CreatePalette(uiapp, item.Family).Show(),
                     CanExecute = item => item != null
                 },
                 new() {

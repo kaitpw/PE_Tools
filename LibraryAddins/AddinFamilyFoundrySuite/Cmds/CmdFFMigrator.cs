@@ -66,6 +66,11 @@ public class CmdFFMigrator : IExternalCommand {
                     Name = "Process Families",
                     Execute = async _ => this.HandleProcessFamilies(context),
                     CanExecute = _ => context.PreviewData?.IsValid == true
+                },
+                new() {
+                    Name = "Place Families",
+                    Execute = async _ => this.HandlePlaceFamilies(context),
+                    CanExecute = _ => context.SelectedProfile != null
                 }
             };
 
@@ -92,10 +97,6 @@ public class CmdFFMigrator : IExternalCommand {
                         ExitKeys = [Key.Escape]
                     }
                 });
-
-            // Disable ephemeral behavior so window doesn't close when clicking on sidebar
-            window.EphemeralEnabled = false;
-
             window.Show();
 
             return Result.Succeeded;
@@ -260,14 +261,13 @@ public class CmdFFMigrator : IExternalCommand {
             AppliedFixes = new List<string>()
         };
 
-    private void HandleRegenerateSchema(MigratorContext context) {
-        if (context.SelectedProfile == null) return;
-
-        var jsonReader = context.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json");
-
-        // Trigger schema regeneration by reading the profile
-        _ = jsonReader.Read();
+    private void HandlePlaceFamilies(MigratorContext context) {
+        var profile = context.SettingsManager.SubDir("profiles")
+            .JsonWithExtends<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json")
+            .Read();
+        var families = profile.GetFamilies(context.Doc);
+        FamilyPlacementHelper.PromptAndPlaceFamilies(context.UiDoc.Application, families.Select(f => f.Name).ToList(),
+            "FF Migrator");
 
         new Ballogger()
             .Add(Log.INFO, new StackFrame(), $"Schema regenerated for {context.SelectedProfile.TextPrimary}")
@@ -325,6 +325,13 @@ public class CmdFFMigrator : IExternalCommand {
         foreach (var logCtx in logs.contexts)
             _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {logCtx.FamilyName} in {logCtx.TotalMs}ms");
         balloon.Show();
+
+        // Prompt user to place families in a view for testing
+        var processedFamilyNames = logs.contexts
+            .Select(c => c.FamilyName)
+            .Where(name => !string.IsNullOrEmpty(name) && name != "ERROR")
+            .ToList();
+        FamilyPlacementHelper.PromptAndPlaceFamilies(ctx.UiDoc.Application, processedFamilyNames, "FF Migrator");
 
         // TempSharedParamFile is disposed here AFTER ProcessFamilies completes
     }

@@ -151,19 +151,48 @@ Other important notes related to compilation troubleshooting are:
 ### Assembly Loading and BAML Resource Lookup (CRITICAL)
 
 WPF's `InitializeComponent()` uses `Application.LoadComponent(this, uri)` which
-resolves pack URIs like `/PE_Tools;component/path/to/file.xaml`. This has two
+resolves pack URIs like `/PE_Tools;component/path/to/file.xaml`. This has three
 failure modes in Revit add-ins:
 
-#### Failure Mode 1: Pack URI Resolution After Long Sessions
+#### Failure Mode 1: Pack URI Case Sensitivity (THE ROOT CAUSE)
+
+The .NET SDK XAML compiler generates **lowercase** pack URIs in
+`InitializeComponent()`, but MSBuild embeds BAML resources with their **original
+file path casing**. This mismatch causes "does not have a resource identified by
+URI" errors.
+
+**Why it happens:**
+- XAML compiler generates: `/PE_Tools;component/peui/components/palette.xaml`
+- MSBuild embeds resource as: `PeUi/Components/Palette.xaml`
+- WPF's resource lookup in Revit's environment is case-sensitive in certain
+  conditions
+
+**Symptom**: Error appears intermittently, sometimes after minutes, sometimes
+hours. The timing depends on WPF's internal caching state.
+
+**Solution - Use the `Link` metadata to force lowercase resource paths:**
+
+```xml
+<!-- In Shared.props -->
+<Target Name="ForceLowercaseXamlLinks" BeforeTargets="MarkupCompilePass1">
+  <ItemGroup>
+    <Page Update="@(Page)">
+      <Link>$([System.String]::new('%(RecursiveDir)%(Filename)%(Extension)').ToLowerInvariant())</Link>
+    </Page>
+  </ItemGroup>
+</Target>
+```
+
+This ensures BAML resources are embedded with lowercase paths that match the
+pack URIs the XAML compiler generates.
+
+#### Failure Mode 2: Assembly Resolution Cache Staleness
 
 WPF maintains internal caches for pack URI → assembly resolution. After long
 Revit sessions, these caches can become stale. When WPF needs to re-resolve your
 main assembly for a pack URI, it may trigger `AssemblyResolve`. If your handler
 doesn't return the exact same instance Revit originally loaded, BAML lookup
 fails.
-
-**Symptom**: Error like "component does not have a resource identified by URI"
-that appears intermittently after Revit has been open for hours.
 
 **Solution - Two parts required:**
 
@@ -206,24 +235,10 @@ private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args) 
 }
 ```
 
-<details>
-<summary>Why caching alone wasn't enough (previous incomplete understanding)</summary>
-
-We previously believed caching in `AssemblyResolve` was sufficient. However,
-Revit loads the main assembly directly (not through `AssemblyResolve`), so the
-cache was empty for `PE_Tools` until WPF happened to trigger a resolution hours
-into a session. By then, WPF's internal state could be inconsistent.
-
-The fix has two parts: (1) pre-cache the main assembly so it's in the cache from
-the start, and (2) warm up WPF's pack URI resolution immediately at startup
-while all state is clean.
-
-</details>
-
 **Never use `Assembly.Load(bytes)`** - it creates an anonymous context where
 types never unify, breaking WPF style TargetType matching.
 
-#### Failure Mode 2: Generic Classes Inheriting XAML Partials
+#### Failure Mode 3: Generic Classes Inheriting XAML Partials
 
 **Generic classes CANNOT inherit from XAML-backed partial classes.** When
 `InitializeComponent()` runs, WPF uses `this.GetType()` to locate BAML

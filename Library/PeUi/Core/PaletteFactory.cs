@@ -85,12 +85,11 @@ public static class PaletteFactory {
 
         // Wire up debounced selection changed callback if provided (delayed, for expensive operations)
         if (options.OnSelectionChangedDebounced != null) {
-            viewModel.SelectionChangedDebounced += (_, _) => {
+            viewModel.SelectionChangedDebounced += (_, _) =>
                 options.OnSelectionChangedDebounced(viewModel.SelectedItem);
-            };
         }
 
-        palette.Initialize(viewModel, actions, options.CustomKeyBindings, onCtrlReleased, options.Sidebar);
+        palette.Initialize(viewModel, actions, options.CustomKeyBindings, onCtrlReleased, options.Sidebar, options.KeepOpenAfterAction);
 
         var window = new EphemeralWindow(palette, title);
 
@@ -287,4 +286,18 @@ public class PaletteOptions<TItem> where TItem : class, IPaletteListItem {
     ///     </code>
     /// </example>
     public PaletteSidebar Sidebar { get; init; }
+
+    /// <summary>
+    ///     When true, prevents the palette from closing after action execution.
+    ///     Action executes immediately (not deferred) and the palette stays open.
+    ///     Useful for multi-item workflows like placing multiple families.
+    ///     Default: false (palette closes after action, execution is deferred)
+    /// </summary>
+    /// <example>
+    ///     <code>
+    ///     // For multi-placement workflows:
+    ///     KeepOpenAfterAction = true
+    ///     </code>
+    /// </example>
+    public bool KeepOpenAfterAction { get; init; } = false;
 }

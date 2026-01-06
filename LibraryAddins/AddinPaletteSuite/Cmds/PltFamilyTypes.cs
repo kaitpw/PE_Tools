@@ -1,8 +1,6 @@
 using PeRevit.Ui;
-using PeUi.Components;
 using PeUi.Core;
 using PeUi.Core.Services;
-using PeUi.ViewModels;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using Color = System.Windows.Media.Color;
@@ -16,9 +14,9 @@ namespace AddinPaletteSuite.Cmds;
 /// </summary>
 public static class PltFamilyTypes {
     /// <summary>
-    ///     Creates a palette for displaying family types, suitable for embedding in a sidebar.
+    ///     Creates a palette window for displaying family types.
     /// </summary>
-    public static UIElement CreatePalette(UIApplication uiapp, Family family) {
+    public static Window CreatePalette(UIApplication uiapp, Family family) {
         var doc = uiapp.ActiveUIDocument.Document;
         var activeView = uiapp.ActiveUIDocument.ActiveView;
 
@@ -47,7 +45,7 @@ public static class PltFamilyTypes {
                 },
                 CanExecute = item => {
                     if (item == null) return false;
-
+ 
                     // Check if active view is valid for placing families
                     return !activeView.IsTemplate
                            && activeView.ViewType != ViewType.Legend
@@ -59,12 +57,12 @@ public static class PltFamilyTypes {
             }
         };
 
-        // Create palette for sidebar (no search box for type selection)
-        var searchService = new SearchFilterService<FamilyTypePaletteItem>();
-        var viewModel = new PaletteViewModel<FamilyTypePaletteItem>(items, searchService);
-        var palette = new Palette(true);
-        palette.Initialize(viewModel, actions);
-        return palette;
+        var window = PaletteFactory.Create($"{family.Name} Types", items, actions,
+            new PaletteOptions<FamilyTypePaletteItem> {
+                SearchConfig = SearchConfig.Default()
+            });
+
+        return window;
     }
 }
 

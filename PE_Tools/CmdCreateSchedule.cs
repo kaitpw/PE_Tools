@@ -40,10 +40,7 @@ public class CmdCreateSchedule : IExternalCommand {
 
             // State for tracking current selection
             var context = new ScheduleManagerContext {
-                Doc = doc,
-                UiDoc = uiDoc,
-                Storage = storage,
-                SettingsManager = settingsManager
+                Doc = doc, UiDoc = uiDoc, Storage = storage, SettingsManager = settingsManager
             };
 
             // Create preview panel
@@ -58,6 +55,11 @@ public class CmdCreateSchedule : IExternalCommand {
                     Name = "Create Schedule",
                     Execute = async _ => this.HandleCreateSchedule(context),
                     CanExecute = _ => context.PreviewData?.IsValid == true
+                },
+                new() {
+                    Name = "Place Sample Families",
+                    Execute = async _ => this.HandlePlaceSampleFamilies(context),
+                    CanExecute = _ => context.SelectedProfile != null
                 }
             };
 
@@ -84,9 +86,6 @@ public class CmdCreateSchedule : IExternalCommand {
                         ExitKeys = [Key.Escape]
                     }
                 });
-
-            // Disable ephemeral behavior so window doesn't close when clicking on sidebar
-            window.EphemeralEnabled = false;
 
             window.Show();
 
@@ -137,8 +136,7 @@ public class CmdCreateSchedule : IExternalCommand {
         var profileJson = JsonSerializer.Serialize(
             profile,
             new JsonSerializerOptions {
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
 
         return new SchedulePreviewData {
@@ -157,18 +155,12 @@ public class CmdCreateSchedule : IExternalCommand {
 
     private static SchedulePreviewData CreateValidationErrorPreview(ScheduleListItem profileItem,
         JsonValidationException ex) =>
-        new() {
-            ProfileName = profileItem.TextPrimary,
-            IsValid = false,
-            RemainingErrors = ex.ValidationErrors
-        };
+        new() { ProfileName = profileItem.TextPrimary, IsValid = false, RemainingErrors = ex.ValidationErrors };
 
     private static SchedulePreviewData
         CreateSanitizationErrorPreview(ScheduleListItem profileItem, JsonSanitizationException ex) {
         var preview = new SchedulePreviewData {
-            ProfileName = profileItem.TextPrimary,
-            IsValid = false,
-            RemainingErrors = new List<string>()
+            ProfileName = profileItem.TextPrimary, IsValid = false, RemainingErrors = []
         };
 
         if (ex.AddedProperties.Any())
@@ -184,7 +176,7 @@ public class CmdCreateSchedule : IExternalCommand {
         new() {
             ProfileName = profileItem.TextPrimary,
             IsValid = false,
-            RemainingErrors = new List<string> { $"{ex.GetType().Name}: {ex.Message}" }
+            RemainingErrors = [$"{ex.GetType().Name}: {ex.Message}"]
         };
 
     private void HandleCreateSchedule(ScheduleManagerContext ctx) {
@@ -216,13 +208,15 @@ public class CmdCreateSchedule : IExternalCommand {
         _ = balloon.Add(Log.INFO, new StackFrame(),
             $"Created schedule '{result.ScheduleName}' from profile '{ctx.SelectedProfile.TextPrimary}'");
 
-        if (result.AppliedHeaderGroups.Count > 0)
+        if (result.AppliedHeaderGroups.Count > 0) {
             _ = balloon.Add(Log.INFO, new StackFrame(),
                 $"Applied {result.AppliedHeaderGroups.Count} header group(s)");
+        }
 
-        if (result.SkippedCalculatedFields.Count > 0)
+        if (result.SkippedCalculatedFields.Count > 0) {
             _ = balloon.Add(Log.WARN, new StackFrame(),
                 $"{result.SkippedCalculatedFields.Count} calculated field(s) require manual creation - see output file");
+        }
 
         balloon.Show();
 
@@ -234,20 +228,64 @@ public class CmdCreateSchedule : IExternalCommand {
             FileUtils.OpenInDefaultApp(outputPath);
     }
 
+    private void HandlePlaceSampleFamilies(ScheduleManagerContext context) {
+        var profile = context.SettingsManager.SubDir("schedules")
+            .JsonWithExtends<ScheduleSpec>($"{context.SelectedProfile.TextPrimary}.json")
+            .Read();
+
+        // Get families of the schedule's category
+        var category = context.Doc.Settings.Categories.get_Item(profile.CategoryName);
+
+        if (category == null) {
+            new Ballogger()
+                .Add(Log.WARN, new StackFrame(), $"Category '{profile.CategoryName}' not found")
+                .Show();
+            return;
+        }
+
+        var allFamilies = new FilteredElementCollector(context.Doc)
+            .OfClass(typeof(Family))
+            .Cast<Family>()
+            .Where(f => f.FamilyCategory?.Id == category.Id)
+            .ToList();
+
+        if (allFamilies.Count == 0) {
+            new Ballogger()
+                .Add(Log.WARN, new StackFrame(), $"No {profile.CategoryName} families found in the project")
+                .Show();
+            return;
+        }
+
+        // Use Revit's native schedule filtering to find families that match the profile's filters
+        var matchingFamilyNames = ScheduleHelper.GetFamiliesMatchingFilters(
+            context.Doc,
+            profile,
+            allFamilies);
+
+        if (matchingFamilyNames.Count == 0) {
+            new Ballogger()
+                .Add(Log.WARN, new StackFrame(), "No families match the schedule filters")
+                .Show();
+            return;
+        }
+
+        FamilyPlacementHelper.PromptAndPlaceFamilies(
+            context.UiDoc.Application,
+            matchingFamilyNames,
+            "Schedule Manager");
+    }
+
     private string WriteCreationOutput(ScheduleManagerContext ctx, ScheduleCreationResult result) {
         try {
             var outputData = new {
-                ScheduleName = result.ScheduleName,
+                result.ScheduleName,
                 ProfileName = ctx.SelectedProfile.TextPrimary,
                 CreatedAt = DateTime.Now,
-                AppliedHeaderGroups = result.AppliedHeaderGroups,
+                result.AppliedHeaderGroups,
                 SkippedCalculatedFields = result.SkippedCalculatedFields.Select(f => new {
-                    f.FieldName,
-                    f.CalculatedType,
-                    f.Guidance,
-                    f.PercentageOfField
+                    f.FieldName, f.CalculatedType, f.Guidance, f.PercentageOfField
                 }).ToList(),
-                Warnings = result.Warnings
+                result.Warnings
             };
 
             var outputPath = ctx.Storage.OutputDir().Json<object>("schedule-creation").Write(outputData);

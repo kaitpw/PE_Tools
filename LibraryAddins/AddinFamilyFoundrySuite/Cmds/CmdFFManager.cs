@@ -96,6 +96,14 @@ public class CmdFFManager : IExternalCommand {
             foreach (var ctx in logs.contexts)
                 _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {ctx.FamilyName} in {ctx.TotalMs}ms");
             balloon.Show();
+
+            // Prompt user to place families in a view for testing
+            var processedFamilyNames = logs.contexts
+                .Select(c => c.FamilyName)
+                .Where(name => !string.IsNullOrEmpty(name) && name != "ERROR")
+                .ToList();
+            FamilyPlacementHelper.PromptAndPlaceFamilies(uiDoc.Application, processedFamilyNames, "FF Manager");
+
             return Result.Succeeded;
         } catch (Exception ex) {
             new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
