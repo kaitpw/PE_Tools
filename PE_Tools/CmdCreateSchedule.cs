@@ -3,6 +3,7 @@ using PeRevit.Lib;
 using PeRevit.Ui;
 using PeServices.Storage;
 using PeServices.Storage.Core;
+using PeServices.Storage.Core.Json.SchemaProviders;
 using PeUi.Components;
 using PeUi.Core;
 using PeUi.Core.Services;
@@ -38,9 +39,28 @@ public class CmdCreateSchedule : IExternalCommand {
                     $"No schedule profiles found in {schedulesSubDir.DirectoryPath}. Create a profile JSON file to continue.");
             }
 
+            // Update the schedulable parameters cache for LSP autocomplete
+            // Extract unique categories from all profiles
+            try {
+                var categories = profiles
+                    .Select(p => p.CategoryName)
+                    .Where(c => !string.IsNullOrEmpty(c))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                Debug.WriteLine($"[CmdCreateSchedule] Updating parameter cache for {categories.Count} categories: {string.Join(", ", categories)}");
+                SchedulableParameterNamesProvider.UpdateCache(doc, categories);
+            } catch (Exception ex) {
+                Debug.WriteLine($"[CmdCreateSchedule] Failed to update parameter cache: {ex.Message}");
+                // Non-critical - continue even if cache update fails
+            }
+
             // State for tracking current selection
             var context = new ScheduleManagerContext {
-                Doc = doc, UiDoc = uiDoc, Storage = storage, SettingsManager = settingsManager
+                Doc = doc,
+                UiDoc = uiDoc,
+                Storage = storage,
+                SettingsManager = settingsManager
             };
 
             // Create preview panel
@@ -59,6 +79,11 @@ public class CmdCreateSchedule : IExternalCommand {
                 new() {
                     Name = "Place Sample Families",
                     Execute = async _ => this.HandlePlaceSampleFamilies(context),
+                    CanExecute = _ => context.SelectedProfile != null
+                },
+                new() {
+                    Name = "Open File",
+                    Execute = async _ => this.HandleOpenFile(context),
                     CanExecute = _ => context.SelectedProfile != null
                 }
             };
@@ -136,7 +161,8 @@ public class CmdCreateSchedule : IExternalCommand {
         var profileJson = JsonSerializer.Serialize(
             profile,
             new JsonSerializerOptions {
-                WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                WriteIndented = true,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
 
         return new SchedulePreviewData {
@@ -160,7 +186,9 @@ public class CmdCreateSchedule : IExternalCommand {
     private static SchedulePreviewData
         CreateSanitizationErrorPreview(ScheduleListItem profileItem, JsonSanitizationException ex) {
         var preview = new SchedulePreviewData {
-            ProfileName = profileItem.TextPrimary, IsValid = false, RemainingErrors = []
+            ProfileName = profileItem.TextPrimary,
+            IsValid = false,
+            RemainingErrors = []
         };
 
         if (ex.AddedProperties.Any())
@@ -275,6 +303,20 @@ public class CmdCreateSchedule : IExternalCommand {
             "Schedule Manager");
     }
 
+    private void HandleOpenFile(ScheduleManagerContext context) {
+        if (context.SelectedProfile == null) return;
+
+        var filePath = context.SelectedProfile.FilePath;
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) {
+            new Ballogger()
+                .Add(Log.WARN, new StackFrame(), $"Profile file not found: {filePath}")
+                .Show();
+            return;
+        }
+
+        FileUtils.OpenInDefaultApp(filePath);
+    }
+
     private string WriteCreationOutput(ScheduleManagerContext ctx, ScheduleCreationResult result) {
         try {
             var outputData = new {
@@ -283,7 +325,10 @@ public class CmdCreateSchedule : IExternalCommand {
                 CreatedAt = DateTime.Now,
                 result.AppliedHeaderGroups,
                 SkippedCalculatedFields = result.SkippedCalculatedFields.Select(f => new {
-                    f.FieldName, f.CalculatedType, f.Guidance, f.PercentageOfField
+                    f.FieldName,
+                    f.CalculatedType,
+                    f.Guidance,
+                    f.PercentageOfField
                 }).ToList(),
                 result.Warnings
             };

@@ -27,6 +27,8 @@ public class CmdFFMigrator : IExternalCommand {
                     ctx => ctx.PreviewData?.IsValid == true)
                 .WithAction("Place Families", this.HandlePlaceFamilies,
                     ctx => ctx.SelectedProfile != null)
+                .WithAction("Open File", this.HandleOpenFile,
+                    ctx => ctx.SelectedProfile != null)
                 .WithQueueBuilder(BuildQueue)
                 .WithPostProcess((ctx, familyNames) =>
                     FamilyPlacementHelper.PromptAndPlaceFamilies(ctx.UiDoc.Application, familyNames, "FF Migrator"))
@@ -51,6 +53,20 @@ public class CmdFFMigrator : IExternalCommand {
         new Ballogger()
             .Add(Log.INFO, new StackFrame(), $"Schema regenerated for {context.SelectedProfile.TextPrimary}")
             .Show();
+    }
+
+    private void HandleOpenFile(FoundryContext<ProfileRemap> context) {
+        if (context.SelectedProfile == null) return;
+
+        var filePath = context.SelectedProfile.FilePath;
+        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) {
+            new Ballogger()
+                .Add(Log.WARN, new StackFrame(), $"Profile file not found: {filePath}")
+                .Show();
+            return;
+        }
+
+        FileUtils.OpenInDefaultApp(filePath);
     }
 
     private void HandleProcessFamilies(FoundryContext<ProfileRemap> ctx) {
