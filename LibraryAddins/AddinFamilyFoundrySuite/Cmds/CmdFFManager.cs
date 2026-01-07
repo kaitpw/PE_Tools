@@ -25,9 +25,9 @@ public class CmdFFManager : IExternalCommand {
 
         try {
             var window = new FoundryPaletteBuilder<ProfileFamilyManager>("FF Manager", doc, uiDoc)
-                .WithAction("Apply Profile", ctx => this.HandleApplyProfile(ctx),
+                .WithAction("Apply Profile", this.HandleApplyProfile,
                     ctx => ctx.PreviewData?.IsValid == true)
-                .WithQueueBuilder((profile, aps) => BuildQueue(profile, aps))
+                .WithQueueBuilder(BuildQueue)
                 .Build();
 
             window.Show();
@@ -48,8 +48,8 @@ public class CmdFFManager : IExternalCommand {
         }
 
         // Load profile fresh for execution
-        var profile = ctx.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<ProfileFamilyManager>($"{ctx.SelectedProfile.TextPrimary}.json")
+        var profile = ctx.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+            .Json<ProfileFamilyManager>($"{ctx.SelectedProfile.TextPrimary}.json")
             .Read();
 
         // Get raw APS parameter models and convert with fresh TempSharedParamFile
@@ -112,23 +112,25 @@ public class CmdFFManager : IExternalCommand {
         };
 
         // Timestamp parameter
-        var timestampSettings = new AddAndSetParamsSettings {
-            CreateFamParamIfMissing = true,
-            Parameters = [
-                new ParamSettingModel {
-                    Name = "_FOUNDRY LAST PROCESSED AT",
-                    DataType = SpecTypeId.String.Text,
-                    ValueOrFormula = $"\"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\""
-                }
-            ]
+        var moddedSettings = new AddAndSetParamsSettings {
+            Enabled = profile.AddAndSetParams.Enabled,
+            CreateFamParamIfMissing = profile.AddAndSetParams.CreateFamParamIfMissing,
+            OverrideExistingValues = profile.AddAndSetParams.OverrideExistingValues,
+            DisablePerTypeFallback = profile.AddAndSetParams.DisablePerTypeFallback,
+            Parameters = profile.AddAndSetParams.Parameters.Concat(
+                [
+                    new ParamSettingModel {
+                        Name = "_FOUNDRY LAST PROCESSED AT",
+                        DataType = SpecTypeId.String.Text,
+                        ValueOrFormula = $"\"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\""
+        }]).ToList()
         };
 
         return new OperationQueue()
             .Add(new AddSharedParams(apsParamData))
             .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
-            .Add(new AddAndSetParams(profile.AddAndSetParams)) // must come after AddAllFamilyParams and RP/dims
+            .Add(new AddAndSetParams(moddedSettings)) // must come after AddAllFamilyParams and RP/dims
             .Add(new MakeRefPlaneSubcategories(specs))
-            .Add(new AddAndSetParams(timestampSettings))
             .Add(new SortParams(new SortParamsSettings()));
     }
 }

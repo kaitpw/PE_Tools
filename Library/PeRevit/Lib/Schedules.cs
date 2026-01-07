@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using NJsonSchema.Annotations;
+using PeServices.Storage.Core.Json;
 using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeServices.Storage.Core.Json.SchemaProviders;
 using System.ComponentModel;
@@ -19,6 +20,7 @@ public class ScheduleSpec {
     public bool IsItemized { get; set; } = true;
 
     [Description("List of fields (columns) to include in the schedule.")]
+    [Includable("fields")]
     public List<ScheduleFieldSpec> Fields { get; set; } = [];
 
     [Description("List of sort and grouping criteria for organizing schedule rows.")]

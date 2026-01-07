@@ -29,13 +29,13 @@ public class CmdCreateSchedule : IExternalCommand {
         try {
             var storage = new Storage("Schedule Manager");
             var settingsManager = storage.SettingsDir();
-            var profilesDir = settingsManager.SubDir("schedules").DirectoryPath;
+            var schedulesSubDir = settingsManager.SubDir("schedules", recursiveDiscovery: true);
 
             // Discover all schedule profile JSON files
-            var profiles = ScheduleListItem.DiscoverProfiles(profilesDir);
+            var profiles = ScheduleListItem.DiscoverProfiles(schedulesSubDir);
             if (profiles.Count == 0) {
                 throw new InvalidOperationException(
-                    $"No schedule profiles found in {profilesDir}. Create a profile JSON file to continue.");
+                    $"No schedule profiles found in {schedulesSubDir.DirectoryPath}. Create a profile JSON file to continue.");
             }
 
             // State for tracking current selection
@@ -128,8 +128,8 @@ public class CmdCreateSchedule : IExternalCommand {
 
     private SchedulePreviewData LoadValidPreviewData(ScheduleListItem profileItem, ScheduleManagerContext context) {
         // Load the profile
-        var profile = context.SettingsManager.SubDir("schedules")
-            .JsonWithExtends<ScheduleSpec>($"{profileItem.TextPrimary}.json")
+        var profile = context.SettingsManager.SubDir("schedules", recursiveDiscovery: true)
+            .Json<ScheduleSpec>($"{profileItem.TextPrimary}.json")
             .Read();
 
         // Serialize profile to JSON
@@ -189,8 +189,8 @@ public class CmdCreateSchedule : IExternalCommand {
         }
 
         // Load profile fresh for execution
-        var profile = ctx.SettingsManager.SubDir("schedules")
-            .JsonWithExtends<ScheduleSpec>($"{ctx.SelectedProfile.TextPrimary}.json")
+        var profile = ctx.SettingsManager.SubDir("schedules", recursiveDiscovery: true)
+            .Json<ScheduleSpec>($"{ctx.SelectedProfile.TextPrimary}.json")
             .Read();
 
         ScheduleCreationResult result;
@@ -229,8 +229,8 @@ public class CmdCreateSchedule : IExternalCommand {
     }
 
     private void HandlePlaceSampleFamilies(ScheduleManagerContext context) {
-        var profile = context.SettingsManager.SubDir("schedules")
-            .JsonWithExtends<ScheduleSpec>($"{context.SelectedProfile.TextPrimary}.json")
+        var profile = context.SettingsManager.SubDir("schedules", recursiveDiscovery: true)
+            .Json<ScheduleSpec>($"{context.SelectedProfile.TextPrimary}.json")
             .Read();
 
         // Get families of the schedule's category

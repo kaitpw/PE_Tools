@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 namespace PeServices.Storage.Core.Json;
 
 /// <summary>
-///     Utility for deep merging JSON objects. Used by JsonWithExtends to merge base and child profiles.
+///     Utility for deep merging JSON objects. Used by ComposableJson to merge base and child profiles.
 /// </summary>
 /// <remarks>
 ///     Merge rules:

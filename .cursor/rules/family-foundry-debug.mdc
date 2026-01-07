@@ -41,6 +41,7 @@ output/
 ```
 
 **Key fields:**
+
 - `SuccessTotal`: `"5/6"` means 5 succeeded out of 6 items attempted (1 error)
 - `Errors`: Array of error messages with format `[Context] ItemName : Message`
 
@@ -71,6 +72,7 @@ output/
 ```
 
 **Key fields:**
+
 - `OperationMetadata`: Shows execution order, type (Doc/Type), and batching
 - `IsMerged`: "Merged" = batched TypeOperations, "Single" = standalone
 - `Successes/Skipped/Errors`: Full breakdown by status
@@ -78,6 +80,7 @@ output/
 ### Log Entry Format
 
 Log messages follow this pattern:
+
 ```
 [TypeName, TypeName2] ItemName : Message
 ```
@@ -87,6 +90,7 @@ Log messages follow this pattern:
 - **Message**: What happened
 
 Examples:
+
 ```
 PE_E___Voltage : Set global value                    # DocOperation success
 [Type A, Type B] PE_Power : Set per-type            # TypeOperation success (2 types)
@@ -96,12 +100,12 @@ PE_Existing : Already has value                      # Skipped
 
 ## Log Statuses Explained
 
-| Status | Meaning | When Used |
-|--------|---------|-----------|
-| **Success** | Operation completed as intended | Value set, param added, etc. |
-| **Skipped** | Intentionally not processed | Already exists, empty value, disabled |
-| **Error** | Operation failed | Exception, not found, validation failed |
-| **Pending** | Deferred to next operation | DocOp deferred to TypeOp via GroupContext |
+| Status      | Meaning                         | When Used                                 |
+| ----------- | ------------------------------- | ----------------------------------------- |
+| **Success** | Operation completed as intended | Value set, param added, etc.              |
+| **Skipped** | Intentionally not processed     | Already exists, empty value, disabled     |
+| **Error**   | Operation failed                | Exception, not found, validation failed   |
+| **Pending** | Deferred to next operation      | DocOp deferred to TypeOp via GroupContext |
 
 **Note:** Pending entries should NOT appear in final output. If you see them, the follow-up operation didn't complete the work.
 
@@ -128,6 +132,7 @@ PE_Existing : Already has value                      # Skipped
 ```
 
 **Use for:**
+
 - Verifying parameter exists before/after
 - Checking values per family type
 - Confirming formula was set/unset
@@ -141,34 +146,40 @@ diff pre-snapshot-parameters.json post-snapshot-parameters.json
 ```
 
 **Common checks:**
+
 - Parameter added? → In post but not pre
-- Value changed? → Compare `ValuesPerType` 
+- Value changed? → Compare `ValuesPerType`
 - Formula set? → `Formula` field populated in post
 - Parameter removed? → In pre but not post
 
 ## Common Error Patterns
 
 ### "Parameter 'X' not found"
+
 **Cause:** Parameter doesn't exist in family  
 **Check:** `pre-snapshot-parameters.json` - is the param listed?  
 **Fix:** Enable `CreateFamParamIfMissing` in settings, or add param first
 
 ### "Already has value" (Skipped)
+
 **Cause:** `OverrideExistingValues = false` and param has value  
 **Check:** `pre-snapshot-parameters.json` → `ValuesPerType` for that param  
 **Fix:** Set `OverrideExistingValues = true` if override intended
 
 ### "Needs per-type fallback" then Error
+
 **Cause:** DocOperation deferred to TypeOperation, but TypeOp also failed  
 **Check:** Look for the TypeOperation logs after the DocOperation  
 **Common:** Formula syntax error, type mismatch
 
 ### Empty Operations array
+
 **Cause:** All operations disabled or settings filtered everything out  
 **Check:** `settings.json` → verify `Enabled: true` on operations  
 **Check:** Profile settings → verify parameter lists aren't empty
 
 ### "FATAL ERROR" in operation name
+
 **Cause:** Unhandled exception crashed the operation  
 **Check:** `detailed.json` for stack trace in error message  
 **Fix:** Bug in operation code - check Execute() method
@@ -222,29 +233,54 @@ output/
 ```
 
 **Use dry run to verify:**
+
 - Correct families selected
 - Expected operations in queue
 - APS parameters will be available
 - Profile settings look correct
 
+## Profile Organization
+
+Profiles can be organized in nested subdirectories:
+
+```
+settings/
+└── profiles/
+    ├── MechEquip.json              # Base profile
+    ├── ASHP.json                   # Child profile (extends MechEquip)
+    └── WIP/
+        └── Experimental.json       # Nested profile
+```
+
+**Profile inheritance:**
+
+- Child profiles use `"$extends": "MechEquip"` to inherit from base
+- Relative paths supported: `"$extends": "../MechEquip"` from WIP/
+- Fragments in `_fragments/` directory are excluded from profile discovery
+
+**Output uses profile path:**
+
+- Profile `WIP/Experimental.json` → output in `{timestamp}/WIP-Experimental/`
+
 ## Key Files for Debugging Code
 
-| Issue | Check These Files |
-|-------|-------------------|
-| Operation logic | `Core/Operations/{OperationName}.cs` |
-| Group coordination | `Core/OperationGroups/{GroupName}.cs` |
-| Snapshot collection | `Core/Snapshots/{Collector}.cs` |
-| Queue building | Command file (e.g., `CmdFFMigrator.cs`) → `BuildQueue()` |
-| Output formatting | `Core/ProcessingResultBuilder.cs` |
-| Log entry creation | `Core/BaseOperation.cs` → `LogEntry` class |
+| Issue               | Check These Files                                        |
+| ------------------- | -------------------------------------------------------- |
+| Operation logic     | `Core/Operations/{OperationName}.cs`                     |
+| Group coordination  | `Core/OperationGroups/{GroupName}.cs`                    |
+| Snapshot collection | `Core/Snapshots/{Collector}.cs`                          |
+| Queue building      | Command file (e.g., `CmdFFMigrator.cs`) → `BuildQueue()` |
+| Output formatting   | `Core/ProcessingResultBuilder.cs`                        |
+| Log entry creation  | `Core/BaseOperation.cs` → `LogEntry` class               |
+| Profile loading     | `Library/PeServices/Storage/Core/ComposableJson.cs`      |
 
 ## Quick Reference: Output File Purpose
 
-| File | When to Use |
-|------|-------------|
-| `abridged.json` | First look - what failed? |
-| `detailed.json` | Deep dive - timing, all statuses, metadata |
-| `settings.json` | What profile/settings were used? |
-| `pre-snapshot-*.json` | What was the state BEFORE processing? |
-| `post-snapshot-*.json` | What is the state AFTER processing? |
-| `*.csv` versions | Import to Excel for bulk analysis |
+| File                   | When to Use                                |
+| ---------------------- | ------------------------------------------ |
+| `abridged.json`        | First look - what failed?                  |
+| `detailed.json`        | Deep dive - timing, all statuses, metadata |
+| `settings.json`        | What profile/settings were used?           |
+| `pre-snapshot-*.json`  | What was the state BEFORE processing?      |
+| `post-snapshot-*.json` | What is the state AFTER processing?        |
+| `*.csv` versions       | Import to Excel for bulk analysis          |

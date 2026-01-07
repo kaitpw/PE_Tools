@@ -149,13 +149,11 @@ public class Parameters(HttpClient httpClient, TokenProviders.IParameters tokenP
         }
 
         var deserializedResponse = new ParametersApi.Parameters {
-            Results = allResults,
+            Results = allResults.OrderBy(p => p.Name).ToList(),
             Pagination = allResults.Count > 0
                 ? new ParametersApi.Pagination { Offset = 0, Limit = allResults.Count, TotalResults = allResults.Count }
                 : null
         };
-
-        var sortedResponse = deserializedResponse.Results.OrderBy(p => p.Name).ToList();
 
         _ = cache?.Write(deserializedResponse);
         return deserializedResponse;

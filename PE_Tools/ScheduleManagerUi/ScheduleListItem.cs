@@ -12,10 +12,12 @@ namespace PE_Tools.ScheduleManagerUi;
 /// </summary>
 public class ScheduleListItem : IPaletteListItem {
     public readonly FileInfo _fileInfo;
+    private readonly string _relativePath;
 
-    public ScheduleListItem(string filePath) {
+    public ScheduleListItem(string filePath, string relativePath = null) {
         this.FilePath = filePath;
         this._fileInfo = new FileInfo(filePath);
+        this._relativePath = relativePath;
         this.CategoryName = ExtractCategoryName(filePath);
         this.FieldCount = ExtractFieldCount(filePath);
     }
@@ -32,8 +34,10 @@ public class ScheduleListItem : IPaletteListItem {
     /// <summary> Last modified date for sorting </summary>
     public DateTime LastModified => this._fileInfo.LastWriteTime;
 
-    /// <summary> Profile filename without extension </summary>
-    public string TextPrimary => Path.GetFileNameWithoutExtension(this.FilePath);
+    /// <summary> Profile filename without extension (or relative path if nested) </summary>
+    public string TextPrimary => this._relativePath != null 
+        ? Path.ChangeExtension(this._relativePath, null) 
+        : Path.GetFileNameWithoutExtension(this.FilePath);
 
     /// <summary> Shows category name </summary>
     public string TextSecondary => string.IsNullOrEmpty(this.CategoryName)
@@ -80,14 +84,17 @@ public class ScheduleListItem : IPaletteListItem {
 
     /// <summary>
     ///     Discovers all schedule profile JSON files in a directory, excluding schema files.
+    ///     If using a SettingsSubDir with recursive discovery, will find files in nested subdirectories.
     /// </summary>
-    public static List<ScheduleListItem> DiscoverProfiles(string profilesDirectory) {
-        if (!Directory.Exists(profilesDirectory))
+    public static List<ScheduleListItem> DiscoverProfiles(PeServices.Storage.Core.SettingsSubDir subDir) {
+        if (!Directory.Exists(subDir.DirectoryPath))
             return [];
 
-        return Directory.GetFiles(profilesDirectory, "*.json")
-            .Where(f => !f.EndsWith(".schema.json", StringComparison.OrdinalIgnoreCase))
-            .Select(f => new ScheduleListItem(f))
+        var jsonFiles = subDir.ListJsonFiles();
+        return jsonFiles
+            .Select(relativePath => new ScheduleListItem(
+                Path.Combine(subDir.DirectoryPath, relativePath),
+                relativePath))
             .OrderByDescending(p => p.LastModified)
             .ToList();
     }

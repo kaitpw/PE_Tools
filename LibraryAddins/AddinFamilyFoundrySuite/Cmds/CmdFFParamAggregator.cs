@@ -26,7 +26,7 @@ public class CmdFFParamAggregator : IExternalCommand {
             var settingsManager = storage.SettingsDir();
 
             // Load settings (creates default file if missing)
-            var settings = settingsManager.JsonWithExtends<ParamAggregatorSettings>("settings.json").Read();
+            var settings = settingsManager.Json<ParamAggregatorSettings>("settings.json").Read();
 
             // Get families - either selected or ALL families (or filtered by category)
             var selectedFamilies = Pickers.GetSelectedFamilies(uiDoc);

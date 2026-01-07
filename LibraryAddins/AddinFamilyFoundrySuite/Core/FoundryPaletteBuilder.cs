@@ -87,13 +87,13 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
         var storage = new Storage(this._commandName);
         var settingsManager = storage.SettingsDir();
         var settings = settingsManager.Json<BaseSettings<TProfile>>().Read();
-        var profilesDir = settingsManager.SubDir("profiles").DirectoryPath;
+        var profilesSubDir = settingsManager.SubDir("profiles", recursiveDiscovery: true);
 
         // Discover profiles
-        var profiles = ProfileListItem.DiscoverProfiles(profilesDir);
+        var profiles = ProfileListItem.DiscoverProfiles(profilesSubDir);
         if (profiles.Count == 0) {
             throw new InvalidOperationException(
-                $"No profiles found in {profilesDir}. Create a profile JSON file to continue.");
+                $"No profiles found in {profilesSubDir.DirectoryPath}. Create a profile JSON file to continue.");
         }
 
         // Create context
@@ -180,8 +180,8 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
 
     private PreviewData LoadValidPreviewData(ProfileListItem profileItem, FoundryContext<TProfile> context) {
         // Load the profile
-        var profile = context.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<TProfile>($"{profileItem.TextPrimary}.json")
+        var profile = context.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+            .Json<TProfile>($"{profileItem.TextPrimary}.json")
             .Read();
 
         // Get raw APS parameter models (no Revit API dependencies, safe to store)
@@ -309,8 +309,8 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
         }
 
         // Load profile fresh for execution
-        var profile = ctx.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<TProfile>($"{ctx.SelectedProfile.TextPrimary}.json")
+        var profile = ctx.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+            .Json<TProfile>($"{ctx.SelectedProfile.TextPrimary}.json")
             .Read();
 
         // Get raw APS parameter models and convert with fresh TempSharedParamFile

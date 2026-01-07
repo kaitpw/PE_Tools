@@ -11,10 +11,12 @@ namespace AddinFamilyFoundrySuite.Ui;
 /// </summary>
 public class ProfileListItem : IPaletteListItem {
     public readonly FileInfo _fileInfo;
+    private readonly string _relativePath;
 
-    public ProfileListItem(string filePath) {
+    public ProfileListItem(string filePath, string relativePath = null) {
         this.FilePath = filePath;
         this._fileInfo = new FileInfo(filePath);
+        this._relativePath = relativePath;
         this.ExtendsValue = ExtractExtendsValue(filePath);
         this.LineCount = File.ReadAllLines(filePath).Length;
     }
@@ -31,8 +33,10 @@ public class ProfileListItem : IPaletteListItem {
     /// <summary> Last modified date for sorting </summary>
     public DateTime LastModified => this._fileInfo.LastWriteTime;
 
-    /// <summary> Profile filename without extension </summary>
-    public string TextPrimary => Path.GetFileNameWithoutExtension(this.FilePath);
+    /// <summary> Profile filename without extension (or relative path if nested) </summary>
+    public string TextPrimary => this._relativePath != null 
+        ? Path.ChangeExtension(this._relativePath, null) 
+        : Path.GetFileNameWithoutExtension(this.FilePath);
 
     /// <summary> Shows $extends value or "Base Profile" </summary>
     public string TextSecondary => string.IsNullOrEmpty(this.ExtendsValue)
@@ -50,7 +54,7 @@ public class ProfileListItem : IPaletteListItem {
     /// <summary>
     ///     Extracts the $extends value from a JSON file without fully parsing.
     /// </summary>
-    private static string ExtractExtendsValue(string filePath) {
+    private static string ExtractExtendsValue(string filePath) { 
         try {
             var content = File.ReadAllText(filePath);
             var jObject = JObject.Parse(content);
@@ -64,14 +68,17 @@ public class ProfileListItem : IPaletteListItem {
 
     /// <summary>
     ///     Discovers all profile JSON files in a directory, excluding schema files.
+    ///     If using a SettingsSubDir with recursive discovery, will find files in nested subdirectories.
     /// </summary>
-    public static List<ProfileListItem> DiscoverProfiles(string profilesDirectory) {
-        if (!Directory.Exists(profilesDirectory))
+    public static List<ProfileListItem> DiscoverProfiles(PeServices.Storage.Core.SettingsSubDir subDir) {
+        if (!Directory.Exists(subDir.DirectoryPath))
             return [];
 
-        return Directory.GetFiles(profilesDirectory, "*.json")
-            .Where(f => !f.EndsWith(".schema.json", StringComparison.OrdinalIgnoreCase))
-            .Select(f => new ProfileListItem(f))
+        var jsonFiles = subDir.ListJsonFiles();
+        return jsonFiles
+            .Select(relativePath => new ProfileListItem(
+                Path.Combine(subDir.DirectoryPath, relativePath),
+                relativePath))
             .OrderByDescending(p => p.LastModified)
             .ToList();
     }

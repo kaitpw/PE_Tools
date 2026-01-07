@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace PeServices.Storage.Core.Json;
@@ -13,7 +14,7 @@ namespace PeServices.Storage.Core.Json;
 ///       "Fields": [
 ///         { "$include": "_fragments/header-fields" },
 ///         { "ParameterName": "CustomField" },
-///         { "$include": "_fragments/footer-fields" }
+///         { "$include": "_fragments/footer-fields" } 
 ///       ]
 ///     }
 ///     </code>
@@ -30,21 +31,27 @@ public static class JsonArrayComposer {
     /// </summary>
     /// <param name="obj">The JObject to process (modified in place)</param>
     /// <param name="baseDirectory">Base directory for resolving relative fragment paths</param>
-    public static void ExpandIncludes(JObject obj, string baseDirectory) =>
-        ExpandIncludes(obj, baseDirectory, []);
+    /// <param name="fragmentSchemaDirectory">Optional directory where fragment schemas are stored (for schema injection)</param>
+    public static void ExpandIncludes(JObject obj, string baseDirectory, string fragmentSchemaDirectory = null) =>
+        ExpandIncludes(obj, baseDirectory, [], fragmentSchemaDirectory);
 
     /// <summary>
     ///     Recursively processes a JObject, expanding <c>$include</c> directives in all arrays.
     ///     Tracks visited fragments to detect circular includes.
     /// </summary>
-    private static void ExpandIncludes(JObject obj, string baseDirectory, HashSet<string> visitedFragments) {
+    private static void ExpandIncludes(
+        JObject obj,
+        string baseDirectory,
+        HashSet<string> visitedFragments,
+        string fragmentSchemaDirectory
+    ) {
         foreach (var prop in obj.Properties().ToList()) {
             switch (prop.Value) {
             case JArray array:
-                obj[prop.Name] = ExpandArrayIncludes(array, baseDirectory, visitedFragments);
+                obj[prop.Name] = ExpandArrayIncludes(array, baseDirectory, visitedFragments, fragmentSchemaDirectory);
                 break;
             case JObject childObj:
-                ExpandIncludes(childObj, baseDirectory, visitedFragments);
+                ExpandIncludes(childObj, baseDirectory, visitedFragments, fragmentSchemaDirectory);
                 break;
             }
         }
@@ -53,12 +60,20 @@ public static class JsonArrayComposer {
     /// <summary>
     ///     Expands <c>$include</c> directives within an array, preserving order.
     /// </summary>
-    private static JArray ExpandArrayIncludes(JArray array, string baseDirectory, HashSet<string> visitedFragments) {
+    private static JArray ExpandArrayIncludes(
+        JArray array,
+        string baseDirectory,
+        HashSet<string> visitedFragments,
+        string fragmentSchemaDirectory
+    ) {
         var result = new JArray();
 
         foreach (var item in array) {
+            switch (item)
+            {
             // Check if this item is an $include directive
-            if (item is JObject obj && obj.TryGetValue(IncludeProperty, out var includeToken)) {
+            case JObject obj when obj.TryGetValue(IncludeProperty, out var includeToken):
+            {
                 // Validate include value
                 if (includeToken.Type != JTokenType.String || string.IsNullOrWhiteSpace(includeToken.Value<string>())) {
                     throw JsonExtendsException.InvalidIncludeValue(
@@ -78,27 +93,32 @@ public static class JsonArrayComposer {
                     );
                 }
 
-                // Load and expand the fragment
-                var fragmentArray = LoadFragment(fragmentPath);
+                // Load and expand the fragment (with schema injection if directory provided)
+                var fragmentArray = LoadFragment(fragmentPath, fragmentSchemaDirectory);
 
                 // Track this fragment for circular detection
                 var newVisited = new HashSet<string>(visitedFragments) { normalizedPath };
 
                 // Recursively expand includes within the fragment
                 var expandedFragment =
-                    ExpandArrayIncludes(fragmentArray, Path.GetDirectoryName(fragmentPath)!, newVisited);
+                    ExpandArrayIncludes(fragmentArray, Path.GetDirectoryName(fragmentPath)!, newVisited, fragmentSchemaDirectory);
 
                 // Add all fragment items to result
                 foreach (var fragmentItem in expandedFragment) result.Add(fragmentItem.DeepClone());
-            } else {
-                // Regular item - just add it
-                // If it's an object, recursively process it for nested arrays
-                if (item is JObject itemObj) {
-                    var cloned = (JObject)itemObj.DeepClone();
-                    ExpandIncludes(cloned, baseDirectory, visitedFragments);
-                    result.Add(cloned);
-                } else
-                    result.Add(item.DeepClone());
+                break;
+            }
+            // Regular item - just add it
+            // If it's an object, recursively process it for nested arrays
+            case JObject itemObj:
+            {
+                var cloned = (JObject)itemObj.DeepClone();
+                ExpandIncludes(cloned, baseDirectory, visitedFragments, fragmentSchemaDirectory);
+                result.Add(cloned);
+                break;
+            }
+            default:
+                result.Add(item.DeepClone());
+                break;
             }
         }
 
@@ -119,20 +139,36 @@ public static class JsonArrayComposer {
     }
 
     /// <summary>
-    ///     Loads a fragment file and returns it as a JArray.
+    ///     Loads a fragment file and returns the Items array from it.
+    ///     Fragment files are expected to be JSON objects with an "Items" property containing the array.
+    ///     Optionally injects $schema reference if schema directory is provided.
     /// </summary>
-    private static JArray LoadFragment(string fragmentPath) {
+    private static JArray LoadFragment(string fragmentPath, string fragmentSchemaDirectory) {
         if (!File.Exists(fragmentPath)) throw JsonExtendsException.FragmentNotFound(fragmentPath);
 
         try {
             var content = File.ReadAllText(fragmentPath);
             var token = JToken.Parse(content);
 
-            if (token is not JArray array) {
+            // Expect fragment to be an object with "Items" property
+            if (token is not JObject fragmentObj) {
                 throw JsonExtendsException.InvalidFragmentFormat(
                     fragmentPath,
-                    token.Type.ToString()
+                    $"Expected object with 'Items' property, got {token.Type}"
                 );
+            }
+
+            // Extract the Items array
+            if (!fragmentObj.TryGetValue("Items", out var itemsToken) || itemsToken is not JArray array) {
+                throw JsonExtendsException.InvalidFragmentFormat(
+                    fragmentPath,
+                    "Missing or invalid 'Items' property"
+                );
+            }
+
+            // Inject schema reference if schema directory provided and not already present
+            if (fragmentSchemaDirectory != null && !fragmentObj.ContainsKey("$schema")) {
+                InjectFragmentSchema(fragmentPath, fragmentObj, fragmentSchemaDirectory);
             }
 
             return array;
@@ -141,5 +177,22 @@ public static class JsonArrayComposer {
         } catch (Exception ex) {
             throw JsonExtendsException.FragmentLoadFailed(fragmentPath, ex);
         }
+    }
+
+    /// <summary>
+    ///     Injects $schema reference into a fragment file.
+    ///     This enables LSP validation for fragment files.
+    /// </summary>
+    private static void InjectFragmentSchema(string fragmentPath, JObject fragmentObj, string schemaDirectory) {
+        // Calculate relative path to fragment schema
+        var fragmentDir = Path.GetDirectoryName(fragmentPath);
+        var schemaPath = Path.Combine(schemaDirectory, "schema-fragment.json");
+        var relativeSchemaPath = Path.GetRelativePath(fragmentDir!, schemaPath).Replace("\\", "/");
+
+        // Add $schema property
+        fragmentObj["$schema"] = relativeSchemaPath;
+
+        // Write back to file
+        File.WriteAllText(fragmentPath, JsonConvert.SerializeObject(fragmentObj, Formatting.Indented));
     }
 }

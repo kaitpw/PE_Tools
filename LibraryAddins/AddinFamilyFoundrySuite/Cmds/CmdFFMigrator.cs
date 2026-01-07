@@ -16,7 +16,7 @@ public class CmdFFMigrator : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
-        ElementSet elementSet
+        ElementSet elementSet 
     ) {
         var uiDoc = commandData.Application.ActiveUIDocument;
         var doc = uiDoc.Document;
@@ -41,8 +41,8 @@ public class CmdFFMigrator : IExternalCommand {
     }
 
     private void HandlePlaceFamilies(FoundryContext<ProfileRemap> context) {
-        var profile = context.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json")
+        var profile = context.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+            .Json<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json")
             .Read();
         var families = profile.GetFamilies(context.Doc);
         FamilyPlacementHelper.PromptAndPlaceFamilies(context.UiDoc.Application, families.Select(f => f.Name).ToList(),
@@ -63,8 +63,8 @@ public class CmdFFMigrator : IExternalCommand {
         }
 
         // Load profile fresh for execution
-        var profile = ctx.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<ProfileRemap>($"{ctx.SelectedProfile.TextPrimary}.json")
+        var profile = ctx.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+            .Json<ProfileRemap>($"{ctx.SelectedProfile.TextPrimary}.json")
             .Read();
 
         // Get raw APS parameter models and convert with fresh TempSharedParamFile
