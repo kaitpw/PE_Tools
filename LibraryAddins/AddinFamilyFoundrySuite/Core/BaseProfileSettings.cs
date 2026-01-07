@@ -1,12 +1,10 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeServices.Storage;
-using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using ParamModelRes = PeServices.Aps.Models.ParametersApi.Parameters.ParametersResult;
 using ParamModel = PeServices.Aps.Models.ParametersApi.Parameters;
-using PeServices.Storage.Core.Json.SchemaProviders;
 
 
 namespace AddinFamilyFoundrySuite.Core;
@@ -58,8 +56,7 @@ public class BaseProfileSettings {
         }).ToList();
 
     public class FilterFamiliesSettings {
-        [Required]
-        public List<Category> IncludeCategoriesEqualing { get; init; } = [];
+        [Required] public List<Category> IncludeCategoriesEqualing { get; init; } = [];
 
         [Required]
         [Description(

@@ -31,7 +31,8 @@ public static class PltAssociatedElements {
         var actions = CreateActions(uidoc, familyDoc);
 
         // Create palette for sidebar (no search box for association list)
-        var viewModel = new PaletteViewModel<AssociatedElementItem>(items, null);
+        var searchService = new SearchFilterService<AssociatedElementItem>();
+        var viewModel = new PaletteViewModel<AssociatedElementItem>(items, searchService);
         var palette = new Palette(true);
         palette.Initialize(viewModel, actions);
         return palette;

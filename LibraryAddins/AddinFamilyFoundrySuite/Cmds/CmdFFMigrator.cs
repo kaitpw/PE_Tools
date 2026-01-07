@@ -3,22 +3,11 @@ using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinFamilyFoundrySuite.Core.Snapshots;
-using AddinFamilyFoundrySuite.Ui;
 using PeRevit.Lib;
 using PeRevit.Ui;
-using PeServices.Storage;
-using PeServices.Storage.Core;
-using PeUi.Components;
-using PeUi.Core;
-using PeUi.Core.Services;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Windows;
-using System.Windows.Input;
-using ParameterInfo = AddinFamilyFoundrySuite.Ui.ParameterInfo;
 
 namespace AddinFamilyFoundrySuite.Cmds;
 
@@ -33,72 +22,17 @@ public class CmdFFMigrator : IExternalCommand {
         var doc = uiDoc.Document;
 
         try {
-            var storage = new Storage("FF Migrator");
-            var settingsManager = storage.SettingsDir();
-            var settings = settingsManager.Json<BaseSettings<ProfileRemap>>().Read();
-            var profilesDir = settingsManager.SubDir("profiles").DirectoryPath;
+            var window = new FoundryPaletteBuilder<ProfileRemap>("FF Migrator", doc, uiDoc)
+                .WithAction("Process Families", this.HandleProcessFamilies,
+                    ctx => ctx.PreviewData?.IsValid == true)
+                .WithAction("Place Families", this.HandlePlaceFamilies,
+                    ctx => ctx.SelectedProfile != null)
+                .WithQueueBuilder(BuildQueue)
+                .WithPostProcess((ctx, familyNames) =>
+                    FamilyPlacementHelper.PromptAndPlaceFamilies(ctx.UiDoc.Application, familyNames, "FF Migrator"))
+                .Build();
 
-            // Discover all profile JSON files
-            var profiles = ProfileListItem.DiscoverProfiles(profilesDir);
-            if (profiles.Count == 0) {
-                throw new InvalidOperationException(
-                    $"No profiles found in {profilesDir}. Create a profile JSON file to continue.");
-            }
-
-            // State for tracking current selection
-            var context = new MigratorContext {
-                Doc = doc,
-                UiDoc = uiDoc,
-                Storage = storage,
-                SettingsManager = settingsManager,
-                OnFinishSettings = settings.OnProcessingFinish
-            };
-
-            // Create preview panel
-            var previewPanel = new ProfilePreviewPanel();
-
-            // Store window reference to be captured in actions
-            EphemeralWindow window = null;
-
-            // Define actions for the palette
-            var actions = new List<PaletteAction<ProfileListItem>> {
-                new() {
-                    Name = "Process Families",
-                    Execute = async _ => this.HandleProcessFamilies(context),
-                    CanExecute = _ => context.PreviewData?.IsValid == true
-                },
-                new() {
-                    Name = "Place Families",
-                    Execute = async _ => this.HandlePlaceFamilies(context),
-                    CanExecute = _ => context.SelectedProfile != null
-                }
-            };
-
-            // Create the palette with sidebar
-            window = PaletteFactory.Create("FF Migrator - Select Profile", profiles, actions,
-                new PaletteOptions<ProfileListItem> {
-                    Storage = storage,
-                    PersistenceKey = item => item.TextPrimary,
-                    SearchConfig = SearchConfig.PrimaryAndSecondary(),
-                    FilterKeySelector = item => string.IsNullOrEmpty(item.ExtendsValue) ? "Base" : "Extended",
-                    OnSelectionChangedDebounced = item => {
-                        this.BuildPreviewData(item, context);
-                        if (context.PreviewData != null) {
-                            previewPanel.UpdatePreview(context.PreviewData);
-                            // Auto-expand sidebar when preview data is available
-                            if (window?.ContentControl is Palette palette)
-                                palette.ExpandSidebar(new GridLength(450));
-                        }
-                    },
-                    Sidebar = new PaletteSidebar {
-                        Content = previewPanel,
-                        InitialState = SidebarState.Collapsed,
-                        Width = new GridLength(450),
-                        ExitKeys = [Key.Escape]
-                    }
-                });
             window.Show();
-
             return Result.Succeeded;
         } catch (Exception ex) {
             new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
@@ -106,162 +40,7 @@ public class CmdFFMigrator : IExternalCommand {
         }
     }
 
-    private void BuildPreviewData(ProfileListItem profileItem, MigratorContext context) {
-        if (profileItem == null) {
-            context.PreviewData = null;
-            return;
-        }
-
-        // Check cache first
-        if (context.PreviewCache.TryGetValue(profileItem.TextPrimary, out var cachedPreview)) {
-            context.PreviewData = cachedPreview;
-            context.SelectedProfile = profileItem;
-            return;
-        }
-
-        context.SelectedProfile = profileItem;
-        context.PreviewData = this.TryLoadPreviewData(profileItem, context);
-        context.PreviewCache[profileItem.TextPrimary] = context.PreviewData;
-    }
-
-    private PreviewData TryLoadPreviewData(ProfileListItem profileItem, MigratorContext context) {
-        try {
-            return this.LoadValidPreviewData(profileItem, context);
-        } catch (JsonValidationException ex) {
-            return CreateValidationErrorPreview(profileItem, ex);
-        } catch (JsonSanitizationException ex) {
-            return CreateSanitizationErrorPreview(profileItem, ex);
-        } catch (Exception ex) {
-            return CreateGenericErrorPreview(profileItem, ex);
-        }
-    }
-
-    private PreviewData LoadValidPreviewData(ProfileListItem profileItem, MigratorContext context) {
-        // Load the profile
-        var profile = context.SettingsManager.SubDir("profiles")
-            .JsonWithExtends<ProfileRemap>($"{profileItem.TextPrimary}.json")
-            .Read();
-
-        // Get raw APS parameter models (no Revit API dependencies, safe to store)
-        var apsParamModels = profile.GetFilteredApsParamModels();
-
-        // Build queue structure for preview (using temp file just for structure, not storing definitions)
-        using var previewTempFile = new TempSharedParamFile(context.Doc);
-        var previewApsParamData = BaseProfileSettings.ConvertToSharedParameterDefinitions(
-            apsParamModels, previewTempFile);
-
-        var queue = BuildQueue(profile, previewApsParamData);
-        var operationMetadata = queue.GetExecutableMetadata();
-        var families = profile.GetFamilies(context.Doc);
-
-        // Extract APS parameter info
-        var apsParameters = apsParamModels.Select(p => new ParameterInfo(
-            p.Name,
-            p.DownloadOptions.IsInstance,
-            GetDataTypeName(p.DownloadOptions.GetSpecTypeId())
-        )).ToList();
-
-        // Extract AddAndSet parameter info (including internal params)
-        var internalParams = BuildInternalParams();
-        var allAddAndSetParams = profile.AddAndSetParams.Parameters
-            .Concat(internalParams);
-
-        var addAndSetParameters = allAddAndSetParams
-            .Select(p => new ParameterInfo(
-                p.Name,
-                p.IsInstance,
-                GetDataTypeName(p.DataType)
-            ))
-            .ToList();
-
-        // Extract family info with categories
-        var familyInfos = families.Select(f => new FamilyInfo(
-            f.Name,
-            f.FamilyCategory?.Name ?? "Unknown"
-        )).ToList();
-
-        // Serialize profile to JSON
-        var profileJson = JsonSerializer.Serialize(
-            profile,
-            new JsonSerializerOptions {
-                WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-            });
-
-        // Check operation enabled status from queue
-        var operationInfos = new List<OperationInfo>();
-        foreach (var op in queue.Operations) {
-            var metadata = operationMetadata.FirstOrDefault(m => m.Name == op.Name);
-            if (metadata != default) {
-                var isEnabled = op.Settings?.Enabled ?? true;
-                operationInfos.Add(new OperationInfo(
-                    metadata.Name,
-                    metadata.Description,
-                    metadata.Type,
-                    metadata.IsMerged,
-                    isEnabled
-                ));
-            }
-        }
-
-        return new PreviewData {
-            ProfileName = profileItem.TextPrimary,
-            FilePath = profileItem.FilePath,
-            CreatedDate = profileItem._fileInfo.CreationTime,
-            ModifiedDate = profileItem._fileInfo.LastWriteTime,
-            LineCount = profileItem.LineCount,
-            Operations = operationInfos,
-            ApsParameters = apsParameters,
-            AddAndSetParameters = addAndSetParameters,
-            Families = familyInfos,
-            ProfileJson = profileJson,
-            IsValid = true
-        };
-    }
-
-    private static string GetDataTypeName(ForgeTypeId dataType) {
-        if (dataType == null || string.IsNullOrEmpty(dataType.TypeId))
-            return "Text";
-
-        var typeId = dataType.TypeId;
-        var lastDash = typeId.LastIndexOf('-');
-        return lastDash >= 0 ? typeId[(lastDash + 1)..] : typeId;
-    }
-
-    private static PreviewData CreateValidationErrorPreview(ProfileListItem profileItem, JsonValidationException ex) =>
-        new() {
-            ProfileName = profileItem.TextPrimary,
-            IsValid = false,
-            RemainingErrors = ex.ValidationErrors,
-            AppliedFixes = new List<string>()
-        };
-
-    private static PreviewData
-        CreateSanitizationErrorPreview(ProfileListItem profileItem, JsonSanitizationException ex) {
-        var preview = new PreviewData {
-            ProfileName = profileItem.TextPrimary,
-            IsValid = false,
-            AppliedFixes = ex.AppliedMigrations,
-            RemainingErrors = new List<string>()
-        };
-
-        if (ex.AddedProperties.Any())
-            preview.RemainingErrors.Add($"Added properties: {string.Join(", ", ex.AddedProperties)}");
-
-        if (ex.RemovedProperties.Any())
-            preview.RemainingErrors.Add($"Removed properties: {string.Join(", ", ex.RemovedProperties)}");
-
-        return preview;
-    }
-
-    private static PreviewData CreateGenericErrorPreview(ProfileListItem profileItem, Exception ex) =>
-        new() {
-            ProfileName = profileItem.TextPrimary,
-            IsValid = false,
-            RemainingErrors = new List<string> { $"{ex.GetType().Name}: {ex.Message}" },
-            AppliedFixes = new List<string>()
-        };
-
-    private void HandlePlaceFamilies(MigratorContext context) {
+    private void HandlePlaceFamilies(FoundryContext<ProfileRemap> context) {
         var profile = context.SettingsManager.SubDir("profiles")
             .JsonWithExtends<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json")
             .Read();
@@ -274,7 +53,7 @@ public class CmdFFMigrator : IExternalCommand {
             .Show();
     }
 
-    private void HandleProcessFamilies(MigratorContext ctx) {
+    private void HandleProcessFamilies(FoundryContext<ProfileRemap> ctx) {
         if (ctx.SelectedProfile == null) return;
         if (!ctx.PreviewData.IsValid) {
             new Ballogger()
@@ -377,6 +156,7 @@ public class CmdFFMigrator : IExternalCommand {
         var addAndSet = new AddAndSetParamsSettings {
             OverrideExistingValues = profile.AddAndSetParams.OverrideExistingValues,
             CreateFamParamIfMissing = profile.AddAndSetParams.CreateFamParamIfMissing,
+            DisablePerTypeFallback = profile.AddAndSetParams.DisablePerTypeFallback,
             Parameters = profile.AddAndSetParams.Parameters.Concat(internalParams).ToList()
         };
 
@@ -420,17 +200,4 @@ public class ProfileRemap : BaseProfileSettings {
     [Description("Settings for sorting parameters within each property group.")]
     [Required]
     public SortParamsSettings SortParams { get; init; } = new();
-}
-
-public class MigratorContext {
-    public Document Doc { get; init; }
-    public UIDocument UiDoc { get; init; }
-    public Storage Storage { get; init; }
-    public SettingsManager SettingsManager { get; init; }
-    public OnProcessingFinishSettings OnFinishSettings { get; init; }
-
-    // UI state: what's currently selected and displayed
-    public ProfileListItem SelectedProfile { get; set; }
-    public PreviewData PreviewData { get; set; }
-    public Dictionary<string, PreviewData> PreviewCache { get; } = new();
 }

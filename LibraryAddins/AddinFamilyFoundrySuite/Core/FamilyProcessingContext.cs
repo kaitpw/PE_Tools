@@ -8,7 +8,7 @@ namespace AddinFamilyFoundrySuite.Core;
 /// </summary>
 public class OperationContext {
     private readonly Dictionary<string, LogEntry> _entries = new();
-    private readonly HashSet<string> _touchedThisOperation = new();
+    private readonly HashSet<string> _touchedThisOperation = [];
 
     public IEnumerable<LogEntry> All => this._entries.Values;
     public IEnumerable<LogEntry> Pending => this.All.Where(e => !e.IsComplete);
@@ -71,6 +71,15 @@ public class FamilyProcessingContext {
 
     /// <summary>Total processing time in milliseconds.</summary>
     public double TotalMs { get; internal set; }
+
+    /// <summary>Time spent collecting pre-snapshot in milliseconds.</summary>
+    public double PreCollectionMs { get; internal set; }
+
+    /// <summary>Time spent collecting post-snapshot in milliseconds.</summary>
+    public double PostCollectionMs { get; internal set; }
+
+    /// <summary>Time spent on operations (excluding collection) in milliseconds.</summary>
+    public double OperationsMs { get; internal set; }
 
 
     /// <summary>Finds a parameter in the pre-process snapshot by name.</summary>

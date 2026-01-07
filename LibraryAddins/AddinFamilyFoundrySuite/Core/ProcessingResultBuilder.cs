@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using PeServices.Storage;
 using PeServices.Storage.Core.Json.ContractResolvers;
-using PeServices.Storage.Core.Json.Converters;
 using PeUtils.Files;
 
 namespace AddinFamilyFoundrySuite.Core;
@@ -97,7 +96,12 @@ public class ProcessingResultBuilder {
         var (logs, err) = ctx.OperationLogs;
         if (err is not null) {
             return new {
-                Family = ctx.FamilyName, TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3), Error = err.Message
+                Family = ctx.FamilyName,
+                TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
+                PreCollectionSecondsElapsed = Math.Round(ctx.PreCollectionMs / 1000.0, 3),
+                OperationsSecondsElapsed = Math.Round(ctx.OperationsMs / 1000.0, 3),
+                PostCollectionSecondsElapsed = Math.Round(ctx.PostCollectionMs / 1000.0, 3),
+                Error = err.Message
             };
         }
 
@@ -105,6 +109,9 @@ public class ProcessingResultBuilder {
         return new {
             Family = ctx.FamilyName,
             TotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
+            PreCollectionSecondsElapsed = Math.Round(ctx.PreCollectionMs / 1000.0, 3),
+            OperationsSecondsElapsed = Math.Round(ctx.OperationsMs / 1000.0, 3),
+            PostCollectionSecondsElapsed = Math.Round(ctx.PostCollectionMs / 1000.0, 3),
             Operations = operationLogs.Select(log => new {
                 log.OperationName,
                 SuccessTotal = $"{log.SuccessCount}/{log.SuccessCount + log.ErrorCount}",
@@ -122,6 +129,9 @@ public class ProcessingResultBuilder {
             RunTotalSecondsElapsed = Math.Round(this._totalMs / 1000.0, 3),
             Family = ctx.FamilyName,
             FamilyTotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
+            FamilyPreCollectionSecondsElapsed = Math.Round(ctx.PreCollectionMs / 1000.0, 3),
+            FamilyOperationsSecondsElapsed = Math.Round(ctx.OperationsMs / 1000.0, 3),
+            FamilyPostCollectionSecondsElapsed = Math.Round(ctx.PostCollectionMs / 1000.0, 3),
             Error = err?.Message,
             Profile = this._profileName,
             OperationMetadata =

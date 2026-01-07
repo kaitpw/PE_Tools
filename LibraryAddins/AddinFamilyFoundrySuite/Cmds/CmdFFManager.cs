@@ -24,91 +24,112 @@ public class CmdFFManager : IExternalCommand {
         var doc = uiDoc.Document;
 
         try {
-            var storage = new Storage("FF Manager");
-            var settingsManager = storage.SettingsDir();
-            var settings = settingsManager.Json<BaseSettings<ProfileFamilyManager>>().Read();
-            // TODO: Add palette UI for profile selection like CmdFFMigrator
-            var profile = settingsManager.SubDir("profiles")
-                .Json<ProfileFamilyManager>("Default.json").Read();
-            var outputFolderPath = storage.OutputDir().DirectoryPath;
+            var window = new FoundryPaletteBuilder<ProfileFamilyManager>("FF Manager", doc, uiDoc)
+                .WithAction("Apply Profile", ctx => this.HandleApplyProfile(ctx),
+                    ctx => ctx.PreviewData?.IsValid == true)
+                .WithQueueBuilder((profile, aps) => BuildQueue(profile, aps))
+                .Build();
 
-            using var tempFile = new TempSharedParamFile(doc);
-            var apsParamModels = profile.GetFilteredApsParamModels();
-
-            // Build queue structure for preview (using temp file just for structure, not storing definitions)
-            using var previewTempFile = new TempSharedParamFile(doc);
-            var apsParamData = BaseProfileSettings.ConvertToSharedParameterDefinitions(
-                apsParamModels, previewTempFile);
-
-
-            var specs = new List<RefPlaneSubcategorySpec> {
-                new() { Strength = RpStrength.NotARef, Name = "NotARef", Color = new Color(211, 211, 211) },
-                new() { Strength = RpStrength.WeakRef, Name = "WeakRef", Color = new Color(217, 124, 0) },
-                new() { Strength = RpStrength.StrongRef, Name = "StrongRef", Color = new Color(255, 0, 0) },
-                new() { Strength = RpStrength.CenterLR, Name = "Center", Color = new Color(115, 0, 253) },
-                new() { Strength = RpStrength.CenterFB, Name = "Center", Color = new Color(115, 0, 253) }
-            };
-
-            var timestampSettings = new AddAndSetParamsSettings {
-                CreateFamParamIfMissing = true,
-                Parameters = [
-                    new ParamSettingModel {
-                        Name = "_FOUNDRY LAST PROCESSED AT",
-                        DataType = SpecTypeId.String.Text,
-                        ValueOrFormula = $"\"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\""
-                    }
-                ]
-            };
-            var queue = new OperationQueue()
-                .Add(new AddSharedParams(apsParamData))
-                .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
-                .Add(new AddAndSetParams(profile.AddAndSetParams)) // must come after AddAllFamilyParams and RP/dims
-                .Add(new MakeRefPlaneSubcategories(specs))
-                .Add(new AddAndSetParams(timestampSettings))
-                .Add(new SortParams(new SortParamsSettings()));
-            var metadataString = queue.GetExecutableMetadataString();
-            Debug.WriteLine(metadataString);
-
-            // force this to never be single transaction
-            var executionOptions = new ExecutionOptions {
-                SingleTransaction = false,
-                OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
-            };
-
-            // Request both parameter and refplane snapshots
-            var collectorQueue = new CollectorQueue()
-                .Add(new ParamSectionCollector())
-                .Add(new RefPlaneSectionCollector());
-
-            using var processor = new OperationProcessor(doc, executionOptions);
-            var logs = processor
-                .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc))
-                .ProcessQueue(queue, collectorQueue, outputFolderPath, settings.OnProcessingFinish);
-
-            _ = new ProcessingResultBuilder(storage)
-                .WithProfile(profile, "Default")
-                .WithOperationMetadata(queue)
-                .WithFamilyResults(logs.contexts)
-                .WithTotalTime(logs.totalMs)
-                .WriteOutput(settings.OnProcessingFinish.OpenOutputFilesOnCommandFinish);
-
-            var balloon = new Ballogger();
-            foreach (var ctx in logs.contexts)
-                _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {ctx.FamilyName} in {ctx.TotalMs}ms");
-            balloon.Show();
-
-            // Prompt user to place families in a view for testing
-            var processedFamilyNames = logs.contexts
-                .Select(c => c.FamilyName)
-                .Where(name => !string.IsNullOrEmpty(name) && name != "ERROR")
-                .ToList();
-            FamilyPlacementHelper.PromptAndPlaceFamilies(uiDoc.Application, processedFamilyNames, "FF Manager");
-
+            window.Show();
             return Result.Succeeded;
         } catch (Exception ex) {
             new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
             return Result.Cancelled;
         }
+    }
+
+    private void HandleApplyProfile(FoundryContext<ProfileFamilyManager> ctx) {
+        if (ctx.SelectedProfile == null) return;
+        if (!ctx.PreviewData.IsValid) {
+            new Ballogger()
+                .Add(Log.ERR, new StackFrame(), "Cannot apply profile - profile has validation errors")
+                .Show();
+            return;
+        }
+
+        // Load profile fresh for execution
+        var profile = ctx.SettingsManager.SubDir("profiles")
+            .JsonWithExtends<ProfileFamilyManager>($"{ctx.SelectedProfile.TextPrimary}.json")
+            .Read();
+
+        // Get raw APS parameter models and convert with fresh TempSharedParamFile
+        var apsParamModels = profile.GetFilteredApsParamModels();
+
+        using var tempFile = new TempSharedParamFile(ctx.Doc);
+        var apsParamData = BaseProfileSettings.ConvertToSharedParameterDefinitions(
+            apsParamModels, tempFile);
+
+        var queue = BuildQueue(profile, apsParamData);
+
+        var outputFolderPath = ctx.Storage.OutputDir().DirectoryPath;
+
+        // Force this to never be single transaction
+        var executionOptions = new ExecutionOptions {
+            SingleTransaction = false,
+            OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
+        };
+
+        // Request both parameter and refplane snapshots
+        var collectorQueue = new CollectorQueue()
+            .Add(new ParamSectionCollector())
+            .Add(new RefPlaneSectionCollector());
+
+        using var processor = new OperationProcessor(ctx.Doc, executionOptions);
+        var logs = processor
+            .SelectFamilies(() => ctx.Doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(ctx.UiDoc))
+            .ProcessQueue(queue, collectorQueue, outputFolderPath, ctx.OnFinishSettings);
+
+        _ = new ProcessingResultBuilder(ctx.Storage)
+            .WithProfile(profile, ctx.SelectedProfile.TextPrimary)
+            .WithOperationMetadata(queue)
+            .WithFamilyResults(logs.contexts)
+            .WithTotalTime(logs.totalMs)
+            .WriteOutput(ctx.OnFinishSettings.OpenOutputFilesOnCommandFinish);
+
+        var balloon = new Ballogger();
+        foreach (var logCtx in logs.contexts)
+            _ = balloon.Add(Log.INFO, new StackFrame(), $"Processed {logCtx.FamilyName} in {logCtx.TotalMs}ms");
+        balloon.Show();
+
+        // No post-processing for Manager - it's for family documents only
+    }
+
+    /// <summary>
+    ///     Builds the operation queue from profile settings and APS parameter data.
+    ///     Manager-specific: includes RefPlane operations and subcategories.
+    /// </summary>
+    private static OperationQueue BuildQueue(
+        ProfileFamilyManager profile,
+        List<SharedParameterDefinition> apsParamData
+    ) {
+        // Hardcoded reference plane subcategory specs
+        var specs = new List<RefPlaneSubcategorySpec> {
+            new() { Strength = RpStrength.NotARef, Name = "NotARef", Color = new Color(211, 211, 211) },
+            new() { Strength = RpStrength.WeakRef, Name = "WeakRef", Color = new Color(217, 124, 0) },
+            new() { Strength = RpStrength.StrongRef, Name = "StrongRef", Color = new Color(255, 0, 0) },
+            new() { Strength = RpStrength.CenterLR, Name = "Center", Color = new Color(115, 0, 253) },
+            new() { Strength = RpStrength.CenterFB, Name = "Center", Color = new Color(115, 0, 253) }
+        };
+
+        // Timestamp parameter
+        var timestampSettings = new AddAndSetParamsSettings {
+            CreateFamParamIfMissing = true,
+            Parameters = [
+                new ParamSettingModel {
+                    Name = "_FOUNDRY LAST PROCESSED AT",
+                    DataType = SpecTypeId.String.Text,
+                    ValueOrFormula = $"\"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\""
+                }
+            ]
+        };
+
+        return new OperationQueue()
+            .Add(new AddSharedParams(apsParamData))
+            .Add(new MakeRefPlaneAndDims(profile.MakeRefPlaneAndDims))
+            .Add(new AddAndSetParams(profile.AddAndSetParams)) // must come after AddAllFamilyParams and RP/dims
+            .Add(new MakeRefPlaneSubcategories(specs))
+            .Add(new AddAndSetParams(timestampSettings))
+            .Add(new SortParams(new SortParamsSettings()));
     }
 }
 

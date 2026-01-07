@@ -11,13 +11,15 @@ public class MapParamsSettings : IOperationSettings {
     [Required]
     public IEnumerable<MappingData> MappingData { get; init; } = [];
 
+    [Description("Disable per-type fallback to speed up processing. Do not use outside of testing")]
+    public bool DisablePerTypeFallback { get; init; } = false;
+
     public bool Enabled { get; init; } = true;
 }
 
 public class MappingData {
     [Description("Current parameter names to map from (ordered by priority)")]
     [Required]
-    [SchemaExamples(typeof(SharedParameterNamesProvider))]
     public List<string> CurrNames { get; set; } = [];
 
     [Description("New parameter name to map to")]

@@ -163,8 +163,12 @@ public static class FamilyProcessingPipelineExtensions {
         if (pipeline.Context == null)
             throw new InvalidOperationException("Context must be set before calling Process()");
 
+        var sw = Stopwatch.StartNew();
         _ = pipeline.FamDoc.Process((TContext)(object)pipeline.Context, callbacks, out var results);
+        sw.Stop();
+
         pipeline.Context.OperationLogs = results;
+        pipeline.Context.OperationsMs = sw.Elapsed.TotalMilliseconds;
 
         return pipeline;
     }
@@ -221,7 +225,12 @@ public static class FamilyProcessingPipelineExtensions {
         if (pipeline.Context.PreProcessSnapshot != null)
             throw new InvalidOperationException("Pre-snapshot has already been collected for this context");
 
-        return pipeline.CollectSnapshot(collectorQueue, (ctx, s) => ctx.PreProcessSnapshot = s);
+        var sw = Stopwatch.StartNew();
+        var result = pipeline.CollectSnapshot(collectorQueue, (ctx, s) => ctx.PreProcessSnapshot = s);
+        sw.Stop();
+        pipeline.Context.PreCollectionMs = sw.Elapsed.TotalMilliseconds;
+
+        return result;
     }
 
     /// <summary>
@@ -241,7 +250,12 @@ public static class FamilyProcessingPipelineExtensions {
         if (pipeline.Context.PostProcessSnapshot != null)
             throw new InvalidOperationException("Post-snapshot has already been collected for this context");
 
-        return pipeline.CollectSnapshot(collectorQueue, (ctx, s) => ctx.PostProcessSnapshot = s);
+        var sw = Stopwatch.StartNew();
+        var result = pipeline.CollectSnapshot(collectorQueue, (ctx, s) => ctx.PostProcessSnapshot = s);
+        sw.Stop();
+        pipeline.Context.PostCollectionMs = sw.Elapsed.TotalMilliseconds;
+
+        return result;
     }
 
     /// <summary>

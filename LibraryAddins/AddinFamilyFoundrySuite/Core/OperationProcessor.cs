@@ -43,6 +43,9 @@ public class OperationProcessor(
         LoadAndSaveOptions loadAndSaveOptions = null) {
         var totalSw = Stopwatch.StartNew();
 
+        // Disable collectors if requested in execution options
+        if (this._exOpts.DisableCollectors) collectorQueue = null;
+
         var contexts = this.OpenDoc.IsFamilyDocument
             ? this.ProcessFamilyDocument(queue, collectorQueue)
             : this.ProcessNormalDocument(queue, collectorQueue, loadAndSaveOptions, outputFolderPath);
@@ -58,6 +61,9 @@ public class OperationProcessor(
         LoadAndSaveOptions loadAndSaveOptions = null
     ) {
         var totalSw = Stopwatch.StartNew();
+
+        // Disable collectors if requested in execution options
+        if (this._exOpts.DisableCollectors) collectorQueue = null;
 
         var contexts = this.OpenDoc.IsFamilyDocument
             ? this.ProcessFamilyDocument(queue, collectorQueue)
@@ -212,6 +218,10 @@ public class ExecutionOptions {
 
     [Description("When enabled, consecutive type operations will be batched together for better performance.")]
     public bool OptimizeTypeOperations { get; init; } = true;
+
+    [Description(
+        "Disable collectors to speed up processing. Do not use outside of testing, it may effect what parameters are purged")]
+    public bool DisableCollectors { get; init; } = false;
 }
 
 public class LoadAndSaveOptions {
