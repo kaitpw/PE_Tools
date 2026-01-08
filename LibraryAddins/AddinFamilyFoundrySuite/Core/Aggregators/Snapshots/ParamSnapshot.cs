@@ -57,4 +57,23 @@ public record ParamSnapshot : ParamDefinitionBase {
     ///     Only populated when collecting from project document. Always false for family doc collection.
     /// </summary>
     public bool IsProjectParameter { get; init; } = false;
+
+    /// <summary>Checks if a parameter has a (non-empty) value for all family types.</summary>
+    public bool HasValueForAllTypes() {
+        if (this is null) return false;
+        var familyTypes = this.ValuesPerType.Count;
+        if (familyTypes == 0) return false;
+        return familyTypes == this.GetTypesWithValue().Count;
+    }
+
+    /// <summary>Gets the list of family types that have a value for the specified parameter.</summary>
+    public List<string> GetTypesWithValue() {
+        if (this is null) return [];
+
+        return string.IsNullOrWhiteSpace(this.Formula)
+            ? [.. this.ValuesPerType
+                .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+                .Select(kv => kv.Key)]
+            : [.. this.ValuesPerType.Keys];
+    }
 }

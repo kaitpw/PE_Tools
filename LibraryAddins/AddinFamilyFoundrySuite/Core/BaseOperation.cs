@@ -300,7 +300,7 @@ public class LogEntry {
     public LogEntry Error(Exception ex) {
         this.EnsurePending();
         this.Status = LogStatus.Error;
-        this.MessageList.Add(ex.Message);
+        this.MessageList.Add(ex.ToStringDemystified());
         this.Exception = ex;
         return this;
     }

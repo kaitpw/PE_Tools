@@ -4,13 +4,9 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 
-public class MakeRefPlaneAndDims : OperationGroup<MakeRefPlaneAndDimsSettings> {
-    public MakeRefPlaneAndDims(MakeRefPlaneAndDimsSettings settings) : base(
-        "Make reference planes and dimensions for the family",
-        InitializeOperations(settings)
-    ) {
-    }
-
+public class MakeRefPlaneAndDims(MakeRefPlaneAndDimsSettings settings) : OperationGroup<MakeRefPlaneAndDimsSettings>(
+    "Make reference planes and dimensions for the family",
+    InitializeOperations(settings)) {
     private static List<IOperation> InitializeOperations(
         MakeRefPlaneAndDimsSettings settings) {
         var sharedHelper = new SharedHelper();

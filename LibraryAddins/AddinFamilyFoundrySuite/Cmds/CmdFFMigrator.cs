@@ -3,6 +3,7 @@ using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinFamilyFoundrySuite.Core.Snapshots;
+using PeExtensions.FamDocument;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeUtils.Files;
@@ -16,7 +17,7 @@ public class CmdFFMigrator : IExternalCommand {
     public Result Execute(
         ExternalCommandData commandData,
         ref string message,
-        ElementSet elementSet 
+        ElementSet elementSet
     ) {
         var uiDoc = commandData.Application.ActiveUIDocument;
         var doc = uiDoc.Document;
@@ -177,9 +178,10 @@ public class CmdFFMigrator : IExternalCommand {
         };
 
         return new OperationQueue()
-            .Add(new PurgeParams(profile.PurgeParams, mappingDataAllNames))
             .Add(new PurgeNestedFamilies(profile.PurgeNestedFamilies))
             .Add(new PurgeReferencePlanes(profile.PurgeReferencePlanes))
+            .Add(new PurgeModelLines(profile.PurgeModelLines))
+            .Add(new PurgeParams(profile.PurgeParams, mappingDataAllNames))
             .Add(new AddAndMapSharedParams(profile.AddAndMapSharedParams, apsParamData))
             .Add(new AddAndSetParams(addAndSet))
             .Add(new MakeElecConnector(profile.MakeElectricalConnector))
@@ -189,10 +191,6 @@ public class CmdFFMigrator : IExternalCommand {
 }
 
 public class ProfileRemap : BaseProfileSettings {
-    [Description("Settings for deleting unused parameters")]
-    [Required]
-    public PurgeParamsSettings PurgeParams { get; init; } = new();
-
     [Description("Settings for deleting unused nested families")]
     [Required]
     public DefaultOperationSettings PurgeNestedFamilies { get; init; } = new();
@@ -200,6 +198,14 @@ public class ProfileRemap : BaseProfileSettings {
     [Description("Settings for deleting unused reference planes")]
     [Required]
     public PurgeReferencePlanesSettings PurgeReferencePlanes { get; init; } = new();
+
+    [Description("Settings for deleting model lines. Model lines are typically superfluous. most cannot be seen, and the ones that can be are just visual sugar")]
+    [Required]
+    public DefaultOperationSettings PurgeModelLines { get; init; } = new();
+
+    [Description("Settings for deleting unused parameters")]
+    [Required]
+    public PurgeParamsSettings PurgeParams { get; init; } = new();
 
     [Description("Settings for parameter mapping (add/replace and remap)")]
     [Required]

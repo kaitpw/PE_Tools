@@ -200,7 +200,7 @@ public class ComposableJson<T> : JsonReader<T>, JsonWriter<T>, JsonReadWriter<T>
 
     /// <summary>
     ///     Reads a file with composition directives ($extends and/or $include).
-    ///     Resolves inheritance, expands includes, validates merged result.
+    ///     Resolves inheritance, expands includes, and applies sanitization for Settings behavior.
     /// </summary>
     private T ReadWithComposition(JObject jObj, bool hasExtends, bool hasIncludes) {
         // Resolve inheritance if present
@@ -230,7 +230,12 @@ public class ComposableJson<T> : JsonReader<T>, JsonWriter<T>, JsonReadWriter<T>
             JsonArrayComposer.ExpandIncludes(resolved, this._schemaDirectory, this._schemaDirectory);
         }
 
-        // Validate merged result against FULL schema
+        // For Settings behavior, apply sanitization to fix schema drift
+        if (this._behavior == JsonBehavior.Settings) {
+            return this.SanitizeComposedJson(resolved, extendsName);
+        }
+
+        // For other behaviors, validate and throw on errors
         var validationErrors = this._fullSchema.Validate(resolved).ToList();
         if (validationErrors.Any()) {
             if (extendsName != null) {
@@ -250,12 +255,11 @@ public class ComposableJson<T> : JsonReader<T>, JsonWriter<T>, JsonReadWriter<T>
     private T ReadAndSanitize(JObject originalJson) {
         // Attempt deserialization with type migrations if needed
         T content;
-        var appliedMigrations = new List<string>();
         try {
             content = this.Deserialize(originalJson);
         } catch (JsonSerializationException ex) {
-            var migratedJson = JsonTypeMigrations.TryApplyMigrations(originalJson, ex, out appliedMigrations);
-            if (migratedJson != null && appliedMigrations.Any()) {
+            var migratedJson = JsonTypeMigrations.TryApplyMigrations(originalJson, ex, out _);
+            if (migratedJson != null) {
                 File.WriteAllText(this.FilePath, JsonConvert.SerializeObject(migratedJson, Formatting.Indented));
                 content = this.Deserialize(migratedJson);
             } else {
@@ -264,17 +268,75 @@ public class ComposableJson<T> : JsonReader<T>, JsonWriter<T>, JsonReadWriter<T>
         }
 
         // Re-serialize to normalize (applies current schema structure)
+        // This automatically adds missing properties and removes additional properties
         this.WriteRaw(content, injectSchema: true);
         var updatedJson = JObject.Parse(File.ReadAllText(this.FilePath));
 
-        // Detect schema drift
-        var addedProps = JsonRecovery.GetAddedProperties(originalJson, updatedJson);
-        var removedProps = JsonRecovery.GetRemovedProperties(originalJson, updatedJson);
-        if (addedProps.Any() || removedProps.Any())
-            throw new JsonSanitizationException(this.FilePath, addedProps, removedProps, appliedMigrations);
-
         this.Validate(updatedJson);
         return content;
+    }
+
+    private T SanitizeComposedJson(JObject resolvedJson, string extendsName) {
+        // Attempt deserialization with type migrations if needed
+        T content;
+        try {
+            content = this.Deserialize(resolvedJson);
+        } catch (JsonSerializationException ex) {
+            var migratedJson = JsonTypeMigrations.TryApplyMigrations(resolvedJson, ex, out _);
+            if (migratedJson != null) {
+                content = this.Deserialize(migratedJson);
+            } else {
+                throw;
+            }
+        }
+
+        // For composed JSON, we don't write back to the file since the composition
+        // is the source of truth. We just validate that the resolved result is valid.
+        var jsonContent = this.Serialize(content);
+        var updatedJson = JObject.Parse(jsonContent);
+
+        var validationErrors = this._fullSchema.Validate(updatedJson).ToList();
+        if (validationErrors.Any()) {
+            if (extendsName != null) {
+                var formattedErrors = ValidationErrorFormatter.Format(validationErrors);
+                throw JsonExtendsException.MergedValidationFailed(
+                    this.FilePath,
+                    this.GetBasePath(this.FilePath, extendsName),
+                    string.Join("\n  - ", formattedErrors));
+            }
+
+            throw new JsonValidationException(this.FilePath, validationErrors);
+        }
+
+        return content;
+    }
+
+    private JObject SanitizeBaseProfile(string basePath, JObject baseJObject) {
+        // Attempt deserialization with type migrations if needed
+        T content;
+        try {
+            content = this.Deserialize(baseJObject);
+        } catch (JsonSerializationException ex) {
+            var migratedJson = JsonTypeMigrations.TryApplyMigrations(baseJObject, ex, out _);
+            if (migratedJson != null) {
+                File.WriteAllText(basePath, JsonConvert.SerializeObject(migratedJson, Formatting.Indented));
+                content = this.Deserialize(migratedJson);
+            } else {
+                throw;
+            }
+        }
+
+        // Serialize with current schema to add missing properties and remove additional ones
+        var jsonContent = this.Serialize(content);
+
+        // Inject schema and write to file
+        var contentWithSchema = JsonSchemaFactory.WriteAndInjectSchema(
+            this._fullSchema, this._extendsSchema, jsonContent,
+            basePath, this._schemaDirectory, hasExtends: false);
+        File.WriteAllText(basePath, contentWithSchema);
+
+        // Return the sanitized JObject
+        return JObject.Parse(File.ReadAllText(basePath));
     }
 
     // ============================================================
@@ -332,19 +394,25 @@ public class ComposableJson<T> : JsonReader<T>, JsonWriter<T>, JsonReadWriter<T>
                 this._fullSchema, this._extendsSchema, baseContent, basePath, this._schemaDirectory, hasExtends: true);
             File.WriteAllText(basePath, baseWithSchema);
         } else {
-            // Base has no extends - validate it directly
+            // Base has no extends - validate and sanitize if needed
             try {
                 var baseErrors = this._fullSchema.Validate(baseJObject).ToList();
-                if (baseErrors.Any())
-                    throw new JsonValidationException(basePath, baseErrors);
+                if (baseErrors.Any()) {
+                    // For Settings behavior, sanitize the base profile
+                    if (this._behavior == JsonBehavior.Settings) {
+                        baseJObject = this.SanitizeBaseProfile(basePath, baseJObject);
+                    } else {
+                        throw new JsonValidationException(basePath, baseErrors);
+                    }
+                } else {
+                    // Write schema for base file
+                    var baseWithSchema = JsonSchemaFactory.WriteAndInjectSchema(
+                        this._fullSchema, this._extendsSchema, baseContent, basePath, this._schemaDirectory,
+                        hasExtends: false);
+                    File.WriteAllText(basePath, baseWithSchema);
 
-                // Write schema for base file
-                var baseWithSchema = JsonSchemaFactory.WriteAndInjectSchema(
-                    this._fullSchema, this._extendsSchema, baseContent, basePath, this._schemaDirectory,
-                    hasExtends: false);
-                File.WriteAllText(basePath, baseWithSchema);
-
-                baseJObject = JObject.Parse(File.ReadAllText(basePath));
+                    baseJObject = JObject.Parse(File.ReadAllText(basePath));
+                }
             } catch (JsonValidationException) {
                 throw;
             } catch (Exception ex) {

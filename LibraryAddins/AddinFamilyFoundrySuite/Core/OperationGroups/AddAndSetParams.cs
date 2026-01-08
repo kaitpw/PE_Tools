@@ -12,12 +12,8 @@ namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 ///     2. SetParamValues - sets formulas (default) or global values based on SetAsFormula property
 ///     3. SetParamValuesPerType - handles explicit per-type values and failed global value fallbacks
 /// </summary>
-public class AddAndSetParams : OperationGroup<AddAndSetParamsSettings> {
-    public AddAndSetParams(AddAndSetParamsSettings settings) : base(
-        InitializeDescription(settings), InitializeOperations(settings)
-    ) {
-    }
-
+public class AddAndSetParams(AddAndSetParamsSettings settings)
+    : OperationGroup<AddAndSetParamsSettings>(InitializeDescription(settings), InitializeOperations(settings)) {
 #pragma warning disable IDE0060 // Remove unused parameter
     public static string InitializeDescription(AddAndSetParamsSettings settings) =>
         $"Set a parameter within the family to a value or formula. " +
