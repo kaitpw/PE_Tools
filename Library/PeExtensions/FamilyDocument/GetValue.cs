@@ -1,5 +1,5 @@
 using PeExtensions.FamManager;
-
+using PeExtensions.PolyFill;
 namespace PeExtensions.FamDocument.GetValue;
 
 public static class FamilyManagerGetValue {
@@ -102,10 +102,10 @@ public static class FamilyManagerGetValue {
         var element = famDoc.Document.GetElement(elementId);
         if (element != null) {
             // Format: "ElementName [ID:12345]" - human-readable and parseable
-            return $"{element.Name} [ID:{elementId.IntegerValue}]";
+            return $"{element.Name} [ID:{elementId.Value()}]";
         }
 
         // Fallback to ID-only format if element not found
-        return $"[ID:{elementId.IntegerValue}]";
+        return $"[ID:{elementId.Value()}]";
     }
 }
