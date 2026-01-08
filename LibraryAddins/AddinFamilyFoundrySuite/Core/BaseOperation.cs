@@ -2,37 +2,46 @@ using PeExtensions.FamDocument;
 
 namespace AddinFamilyFoundrySuite.Core;
 
+public class AbortOperationException : Exception {
+    private static readonly string DefaultMessage = "Aborted: no more work to do.";
+
+    /// <summary>
+    ///     Creates an abort operation exception with a message explaining why the operation was aborted.
+    /// </summary>
+    public AbortOperationException(string message) : base(Clean(message)) { }
+
+    private static string Clean(string message) =>
+        string.IsNullOrWhiteSpace(message) ? DefaultMessage : message;
+
+    /// <summary>
+    ///     Creates an OperationLog for this abort with the operation name and abort reason as a skipped entry.
+    /// </summary>
+    internal OperationLog ToOperationLog(string operationName) =>
+        new(operationName, [new LogEntry("Aborted").Skip(this.Message)]);
+}
+
 public interface IExecutable {
-    Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc();
+    Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc(OperationContext groupContext);
 }
 
 public interface IOperation : IExecutable {
     string Name { get; set; }
     string Description { get; }
     IOperationSettings Settings { get; }
-}
-
-/// <summary>
-///     Marker interface for operations that support group context injection.
-///     Implemented by DocOperation and TypeOperation base classes.
-/// </summary>
-public interface IGroupContextAware {
-    OperationContext GroupContext { get; set; }
+    OperationLog Execute(FamilyDocument doc, FamilyProcessingContext processingContext, OperationContext groupContext);
 }
 
 /// <summary>
 ///     Base abstract class for document-level operations.
 ///     Document-level operations are executed on the entire family document all at once.
 /// </summary>
-public abstract class DocOperation<TSettings> : IOperation, IGroupContextAware
+public abstract class DocOperation<TSettings> : IOperation
     where TSettings : IOperationSettings {
     private string _nameOverride;
 
     protected DocOperation(TSettings settings) => this.Settings = settings;
 
     public TSettings Settings { get; set; }
-    protected OperationContext GroupContext => ((IGroupContextAware)this).GroupContext;
-    OperationContext IGroupContextAware.GroupContext { get; set; }
     public abstract string Description { get; }
 
     /// <summary>
@@ -46,12 +55,12 @@ public abstract class DocOperation<TSettings> : IOperation, IGroupContextAware
 
     IOperationSettings IOperation.Settings => this.Settings;
 
-    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() =>
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc(OperationContext groupContext) =>
         (famDoc, processingContext) => {
             try {
                 var sw = Stopwatch.StartNew();
-                var log = this.Execute(famDoc, processingContext, this.GroupContext);
-                log ??= new OperationLog("IGNORE", []);
+                var log = this.Execute(famDoc, processingContext, groupContext);
+                log ??= new OperationLog("No Logs", []);
                 sw.Stop();
                 log.MsElapsed = sw.Elapsed.TotalMilliseconds;
                 return [log];
@@ -81,15 +90,13 @@ public abstract class DocOperation<TSettings> : IOperation, IGroupContextAware
 ///     Type-level operations are executed for each type in the family document.
 ///     The OperationEnqueuer batches consecutive type-operations for better performance.
 /// </summary>
-public abstract class TypeOperation<TSettings> : IOperation, IGroupContextAware
+public abstract class TypeOperation<TSettings> : IOperation
     where TSettings : IOperationSettings {
     private string _nameOverride;
 
     protected TypeOperation(TSettings settings) => this.Settings = settings;
 
     public TSettings Settings { get; set; }
-    protected OperationContext GroupContext => ((IGroupContextAware)this).GroupContext;
-    OperationContext IGroupContextAware.GroupContext { get; set; }
     public abstract string Description { get; }
 
     /// <summary>
@@ -103,30 +110,38 @@ public abstract class TypeOperation<TSettings> : IOperation, IGroupContextAware
 
     IOperationSettings IOperation.Settings => this.Settings;
 
-    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() =>
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc(OperationContext groupContext) =>
         (famDoc, processingContext) => {
             try {
                 var fm = famDoc.FamilyManager;
                 var typeLogs = new List<OperationLog>();
+                var famTypes = fm.Types.Cast<FamilyType>()
+                    .OrderBy(t => t == fm.CurrentType ? 0 : 1)
+                    .ThenBy(t => t.Name)
+                    .ToList();
 
                 // Loop over types and execute the operation for each type
-                foreach (FamilyType famType in fm.Types) {
-                    var swType = Stopwatch.StartNew();
-                    fm.CurrentType = famType;
-                    var typeLog = this.Execute(famDoc, processingContext, this.GroupContext);
-                    swType.Stop();
+                try {
+                    foreach (var famType in famTypes) {
+                        var swType = Stopwatch.StartNew();
+                        fm.CurrentType = famType;
+                        var typeLog = this.Execute(famDoc, processingContext, groupContext);
+                        swType.Stop();
 
-                    typeLog.MsElapsed = swType.Elapsed.TotalMilliseconds;
-                    foreach (var entry in typeLog.Entries) entry.Context = famType.Name;
-                    typeLogs.Add(typeLog);
+                        typeLog.MsElapsed = swType.Elapsed.TotalMilliseconds;
+                        foreach (var entry in typeLog.Entries) entry.SetFamilyType(famType.Name);
+                        typeLogs.Add(typeLog);
+                    }
+
+                    return [
+                        new OperationLog(
+                            this.Name,
+                            typeLogs.SelectMany(log => log.Entries).ToList()
+                        ) { MsElapsed = typeLogs.Sum(log => log.MsElapsed) }
+                    ];
+                } catch (AbortOperationException abort) {
+                    return [abort.ToOperationLog(this.Name)];
                 }
-
-                return [
-                    new OperationLog(
-                        this.Name,
-                        typeLogs.SelectMany(log => log.Entries).ToList()
-                    ) { MsElapsed = typeLogs.Sum(log => log.MsElapsed) }
-                ];
             } catch (Exception ex) {
                 return [new OperationLog(this.Name, [new LogEntry(ex.GetType().Name).Error(ex)])];
             }
@@ -137,17 +152,28 @@ public abstract class TypeOperation<TSettings> : IOperation, IGroupContextAware
     ///     - processingContext: Read-only snapshot data (parameters, types, etc.)
     ///     - groupContext: Shared state for coordinating with other operations in a group (null if not in a group)
     /// </summary>
+    /// <exception cref="AbortOperationException">
+    ///     Throw this to abort an operation (and avoid further type switches) if there
+    ///     is no more work to do.
+    /// </exception>
     public abstract OperationLog Execute(
         FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext
     );
+
+    public void AbortOperation(string message) => throw new AbortOperationException(message);
 }
 
-public class MergedTypeOperation(List<IOperation> operations) : IExecutable {
-    public List<IOperation> Operations { get; set; } = operations;
+public class MergedTypeOperation : IExecutable {
+    private readonly HashSet<IOperation> _abortedOps = [];
 
-    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc() =>
+    public MergedTypeOperation(List<(IOperation Op, OperationContext Ctx)> operations) =>
+        this.Operations = operations;
+
+    public List<(IOperation Op, OperationContext Ctx)> Operations { get; }
+
+    public Func<FamilyDocument, FamilyProcessingContext, List<OperationLog>> ToFunc(OperationContext ignoredContext) =>
         (famDoc, processingContext) => {
             string currFamTypeName = null;
             string currOpName = null;
@@ -155,32 +181,46 @@ public class MergedTypeOperation(List<IOperation> operations) : IExecutable {
                 var fm = famDoc.FamilyManager;
                 var operationLogs = new List<OperationLog>();
 
+                // Order types: current type first, then alphabetically (minimize type switches)
+                var famTypes = fm.Types.Cast<FamilyType>()
+                    .OrderBy(t => t == fm.CurrentType ? 0 : 1)
+                    .ThenBy(t => t.Name)
+                    .ToList();
+
                 // Switch types once, executing all operations per type
-                foreach (FamilyType famType in fm.Types) {
+                foreach (var famType in famTypes) {
+                    // All operations aborted - exit early
+                    if (this._abortedOps.Count == this.Operations.Count)
+                        break;
+
                     currFamTypeName = famType.Name;
                     var typeSwitchSw = Stopwatch.StartNew();
                     fm.CurrentType = famType;
                     typeSwitchSw.Stop();
-                    var amortizedSwitchMs = typeSwitchSw.Elapsed.TotalMilliseconds / this.Operations.Count;
+                    var activeOpsCount = this.Operations.Count - this._abortedOps.Count;
+                    var amortizedSwitchMs = activeOpsCount > 0
+                        ? typeSwitchSw.Elapsed.TotalMilliseconds / activeOpsCount
+                        : 0;
 
-                    // Execute all operations for this type
-                    foreach (var op in this.Operations) {
-                        currOpName = op.Name;
-                        var opSw = Stopwatch.StartNew();
+                    // Execute all non-aborted operations for this type
+                    foreach (var (op, ctx) in this.Operations) {
+                        if (this._abortedOps.Contains(op)) continue;
 
-                        // Get GroupContext if operation has one
-                        var groupContext = op is IGroupContextAware aware ? aware.GroupContext : null;
+                        try {
+                            currOpName = op.Name;
+                            var opSw = Stopwatch.StartNew();
+                            var log = op.Execute(famDoc, processingContext, ctx);
 
-                        // Call Execute via reflection to get the correct signature
-                        var executeMethod = op.GetType().GetMethod("Execute",
-                            [typeof(FamilyDocument), typeof(FamilyProcessingContext), typeof(OperationContext)]);
-                        var log = (OperationLog)executeMethod.Invoke(op, [famDoc, processingContext, groupContext]);
+                            opSw.Stop();
 
-                        opSw.Stop();
-
-                        log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
-                        foreach (var entry in log.Entries) entry.Context = currFamTypeName;
-                        operationLogs.Add(log);
+                            log.MsElapsed = opSw.Elapsed.TotalMilliseconds + amortizedSwitchMs;
+                            foreach (var entry in log.Entries) entry.SetFamilyType(currFamTypeName);
+                            operationLogs.Add(log);
+                        } catch (AbortOperationException abort) {
+                            _ = this._abortedOps.Add(op);
+                            // Record the abort as a skipped log entry
+                            operationLogs.Add(abort.ToOperationLog(op.Name));
+                        }
                     }
                 }
 
@@ -218,140 +258,23 @@ public class DefaultOperationSettings : IOperationSettings {
 /// </summary>
 public class OperationGroup<TSettings> where TSettings : IOperationSettings {
     /// <summary>
-    ///     Creates an operation group with the name automatically derived from the type name.
-    ///     Injects group context into all operations in the group.
+    ///     Creates an operation group with a key selector for inter-operation coordination.
+    ///     The key selector extracts a string key from work items for tracking handled state.
     /// </summary>
-    protected OperationGroup(string description, List<IOperation> operations) {
+    protected OperationGroup(string description, List<IOperation> operations, Func<object, string> keySelector) {
         this.Description = description;
         this.Operations = operations;
-
-        // Inject group context into all operations
-        foreach (var op in operations) {
-            if (op is IGroupContextAware aware)
-                aware.GroupContext = this.GroupContext;
-        }
+        this.GroupContext = new OperationContext { KeySelector = keySelector };
     }
 
     public string Name => this.GetType().Name;
 
     /// <summary>
     ///     Shared context for inter-operation coordination within this group.
-    ///     Reset per-family by the OperationProcessor to ensure clean state for each family.
+    ///     Reset per-family by the OperationQueue to ensure clean state for each family.
     /// </summary>
-    public OperationContext GroupContext { get; } = new();
+    public OperationContext GroupContext { get; }
 
     public string Description { get; init; }
     public List<IOperation> Operations { get; init; }
-}
-
-/// <summary>
-///     Log result from an operation execution
-/// </summary>
-public class OperationLog(string operationName, List<LogEntry> entries) {
-    public string OperationName { get; init; } = operationName;
-    public List<LogEntry> Entries { get; init; } = entries;
-    public double MsElapsed { get; set; }
-    public int SuccessCount => this.Entries.Count(e => e.Status == LogStatus.Success);
-    public int SkippedCount => this.Entries.Count(e => e.Status == LogStatus.Skipped);
-    public int ErrorCount => this.Entries.Count(e => e.Status == LogStatus.Error);
-    public int PendingCount => this.Entries.Count(e => e.Status == LogStatus.Pending);
-}
-
-public enum LogStatus { Pending, Success, Skipped, Error }
-
-/// <summary>
-///     Individual log entry for an operation with semantic state tracking.
-/// </summary>
-public class LogEntry {
-    public LogEntry(string name) => this.Name = name;
-
-    // Identity (immutable)
-    public string Name { get; }
-    public string Context { get; set; } // Preserved for type-level context
-
-    // Accumulated messages
-    private List<string> MessageList { get; } = [];
-    public string Message => this.MessageList.Count != 0 ? string.Join("; ", this.MessageList) : null;
-
-    // Final state
-    public LogStatus Status { get; private set; } = LogStatus.Pending;
-
-    // public string Message { get; private set; }
-    public Exception Exception { get; private set; }
-
-    // Computed
-    public bool IsComplete => this.Status != LogStatus.Pending;
-
-    // Terminal methods (mark complete)
-    public LogEntry Success(string message = null) {
-        this.EnsurePending();
-        this.Status = LogStatus.Success;
-        if (message != null) this.MessageList.Add(message);
-        return this;
-    }
-
-    public LogEntry Skip(string message = null) {
-        this.EnsurePending();
-        this.Status = LogStatus.Skipped;
-        if (message != null) this.MessageList.Add(message);
-        return this;
-    }
-
-    public LogEntry Error(Exception ex) {
-        this.EnsurePending();
-        this.Status = LogStatus.Error;
-        this.MessageList.Add(ex.ToStringDemystified());
-        this.Exception = ex;
-        return this;
-    }
-
-    public LogEntry Error(string message) {
-        this.EnsurePending();
-        this.Status = LogStatus.Error;
-        this.MessageList.Add(message);
-        return this;
-    }
-
-    public LogEntry Error(string message, Exception ex) {
-        this.EnsurePending();
-        this.Status = LogStatus.Error;
-        this.MessageList.Add(message);
-        this.Exception = ex;
-        return this;
-    }
-
-    // Non-terminal (stays Pending)
-    public LogEntry Defer(string action) {
-        this.EnsurePending();
-        this.MessageList.Add(action);
-        return this;
-    }
-
-    /// <summary>
-    ///     Creates a deep clone of this LogEntry, preserving all state except Exception.
-    ///     Used to snapshot logs at operation completion to prevent Context pollution.
-    /// </summary>
-    public LogEntry Clone() {
-        var clone = new LogEntry(this.Name) {
-            Context = this.Context,
-            Status = this.Status,
-            Exception = this.Exception
-        };
-        foreach (var msg in this.MessageList)
-            clone.MessageList.Add(msg);
-        return clone;
-    }
-
-    /// <summary>
-    ///     Clears all accumulated messages from this entry.
-    ///     Used after TakeSnapshot() to prevent message accumulation across type iterations.
-    /// </summary>
-    internal void ClearMessages() => this.MessageList.Clear();
-
-    private void EnsurePending() {
-        if (this.IsComplete) {
-            throw new InvalidOperationException(
-                $"LogEntry '{this.Name}' is already complete with status {this.Status}");
-        }
-    }
 }

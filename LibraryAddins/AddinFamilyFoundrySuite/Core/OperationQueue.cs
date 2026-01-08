@@ -3,23 +3,22 @@ using PeExtensions.FamDocument;
 namespace AddinFamilyFoundrySuite.Core;
 
 /// <summary>
-///     Fluent processor that batches document and type operations for optimal execution
+///     Fluent processor that batches document and type operations for optimal execution.
+///     Tracks (operation, context) pairs for group context lifecycle management.
 /// </summary>
 public class OperationQueue {
-    private readonly List<IOperation> _operations = new();
+    private readonly List<(IOperation Op, OperationContext Ctx)> _operations = new();
 
     /// <summary>
-    ///     Gets all operations in the queue for inspection/injection.
+    ///     Gets all operations in the queue for inspection.
     /// </summary>
-    public IReadOnlyList<IOperation> Operations => this._operations;
+    public IReadOnlyList<IOperation> Operations => this._operations.Select(o => o.Op).ToList();
 
     public OperationQueue Add(
-        IOperation operation,
-        bool internalOperation = false
+        IOperation operation
     ) {
         if (operation.Settings?.Enabled == false) return this;
-        if (internalOperation) operation.Name = $"INTERNAL OPERATION: {operation.Name}";
-        this._operations.Add(operation);
+        this._operations.Add((operation, null)); // Standalone - no context
         return this;
     }
 
@@ -33,11 +32,22 @@ public class OperationQueue {
         foreach (var operation in group.Operations) {
             operation.Name = $"{group.Name}: {operation.Name}";
             if (operation.Settings?.Enabled == false) continue;
-            this._operations.Add(operation);
+            this._operations.Add((operation, group.GroupContext)); // Group op - has context
         }
 
         return this;
     }
+
+    /// <summary>
+    ///     Resets all group contexts for a new family processing cycle.
+    /// </summary>
+    public void ResetAllGroupContexts() =>
+        this._operations
+            .Select(o => o.Ctx)
+            .Where(c => c != null)
+            .Distinct()
+            .ToList()
+            .ForEach(c => c.Reset());
 
     /// <summary>
     ///     Get metadata about all queued operations for frontend display
@@ -45,17 +55,17 @@ public class OperationQueue {
     public List<(string Name, string Description, string Type, string IsMerged)> GetExecutableMetadata() {
         var ops = this.ToTypeOptimizedExecutableList();
         var result = new List<(string Name, string Description, string Type, string IsMerged)>();
-        foreach (var op in ops) {
-            switch (op) {
+        foreach (var (executable, _) in ops) {
+            switch (executable) {
             case MergedTypeOperation mergedOp:
                 result.AddRange(mergedOp.Operations.Select(o =>
-                    (o.Name, o.Description, GetOperationType(o), "Merged")));
+                    (o.Op.Name, o.Op.Description, GetOperationType(o.Op), "Merged")));
                 break;
             case IOperation operation:
                 result.Add((operation.Name, operation.Description, GetOperationType(operation), "Single"));
                 break;
             default:
-                throw new InvalidOperationException($"Unknown operation type: {op.GetType().Name}");
+                throw new InvalidOperationException($"Unknown operation type: {executable.GetType().Name}");
             }
         }
 
@@ -106,37 +116,40 @@ public class OperationQueue {
         var executableOps = optimizeTypeOperations
             ? this.ToTypeOptimizedExecutableList()
             : this.ToExecutableList();
-        var funcs = executableOps.Select(op => op.ToFunc()).ToArray();
+        // Pass context when creating funcs
+        var funcs = executableOps.Select(pair => pair.Executable.ToFunc(pair.Ctx)).ToArray();
 
         return singleTransaction
             ? this.BundleFuncs(funcs)
             : funcs.ToArray();
     }
 
-    private List<IExecutable> ToExecutableList() => [.. this._operations];
+    private List<(IExecutable Executable, OperationContext Ctx)> ToExecutableList() =>
+        this._operations.Select(o => ((IExecutable)o.Op, o.Ctx)).ToList();
 
-    public List<IExecutable> ToTypeOptimizedExecutableList() {
-        var finalOps = new List<IExecutable>();
-        var currentBatch = new List<IOperation>();
+    public List<(IExecutable Executable, OperationContext Ctx)> ToTypeOptimizedExecutableList() {
+        var finalOps = new List<(IExecutable, OperationContext)>();
+        var currentBatch = new List<(IOperation Op, OperationContext Ctx)>();
 
-        foreach (var op in this._operations) {
+        foreach (var (op, ctx) in this._operations) {
             var isTypeOp = IsTypeOperation(op);
 
             if (isTypeOp)
-                currentBatch.Add(op);
+                currentBatch.Add((op, ctx));
             else {
                 if (currentBatch.Count > 0) {
-                    finalOps.Add(new MergedTypeOperation(currentBatch));
+                    // MergedTypeOperation stores its own contexts, pass null at execution
+                    finalOps.Add((new MergedTypeOperation(currentBatch), null));
                     currentBatch = [];
                 }
 
-                finalOps.Add(op);
+                finalOps.Add((op, ctx));
             }
         }
 
         // Flush remaining
         if (currentBatch.Count > 0)
-            finalOps.Add(new MergedTypeOperation(currentBatch));
+            finalOps.Add((new MergedTypeOperation(currentBatch), null));
 
         return finalOps;
     }

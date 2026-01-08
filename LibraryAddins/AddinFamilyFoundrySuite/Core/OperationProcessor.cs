@@ -102,12 +102,7 @@ public class OperationProcessor(
 
         foreach (var family in families) {
             // Reset GroupContexts for each family processing cycle
-            queue.Operations
-                .OfType<IGroupContextAware>()
-                .Select(op => op.GroupContext)
-                .Where(ctx => ctx != null) // Filter out null contexts from standalone operations
-                .Distinct()
-                .ToList().ForEach(ctx => ctx.Reset());
+            queue.ResetAllGroupContexts();
 
             var familyFuncs = queue.ToFuncs(
                 this._exOpts.OptimizeTypeOperations,
@@ -134,6 +129,7 @@ public class OperationProcessor(
     }
 
     private List<FamilyProcessingContext> ProcessFamilyDocument(OperationQueue queue, CollectorQueue collectorQueue) {
+        queue.ResetAllGroupContexts();
         var familyFuncs = queue.ToFuncs(
             this._exOpts.OptimizeTypeOperations,
             this._exOpts.SingleTransaction);
