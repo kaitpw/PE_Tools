@@ -33,8 +33,36 @@ public class CmdSerializeSchedule : IExternalCommand {
                             var spec = ScheduleHelper.SerializeSchedule(item.Schedule);
                             var filename = outputDir.Json<ScheduleSpec>(spec.Name).Write(spec);
 
-                            new Ballogger().Add(Log.INFO, new StackFrame(),
-                                $"Serialized schedule '{item.Schedule.Name}' to {filename}").Show();
+                            var balloon = new Ballogger();
+                            _ = balloon.Add(Log.INFO, new StackFrame(),
+                                $"Serialized schedule '{item.Schedule.Name}' to {filename}");
+
+                            // Report what was serialized
+                            _ = balloon.Add(Log.INFO, new StackFrame(),
+                                $"Fields: {spec.Fields.Count} ({spec.Fields.Count(f => f.CalculatedType != null)} calculated)");
+
+                            if (spec.SortGroup.Count > 0) {
+                                _ = balloon.Add(Log.INFO, new StackFrame(),
+                                    $"Sort/Group: {spec.SortGroup.Count}");
+                            }
+
+                            if (spec.Filters.Count > 0) {
+                                _ = balloon.Add(Log.INFO, new StackFrame(),
+                                    $"Filters: {spec.Filters.Count}");
+                            }
+
+                            var headerGroupCount = spec.Fields.Count(f => !string.IsNullOrEmpty(f.HeaderGroup));
+                            if (headerGroupCount > 0) {
+                                var uniqueGroups = spec.Fields
+                                    .Where(f => !string.IsNullOrEmpty(f.HeaderGroup))
+                                    .Select(f => f.HeaderGroup)
+                                    .Distinct()
+                                    .Count();
+                                _ = balloon.Add(Log.INFO, new StackFrame(),
+                                    $"Header Groups: {uniqueGroups} group(s) across {headerGroupCount} field(s)");
+                            }
+
+                            balloon.Show();
                         } catch (Exception ex) {
                             new Ballogger().Add(Log.ERR, new StackFrame(), ex, true).Show();
                         }

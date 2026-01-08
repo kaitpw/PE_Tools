@@ -151,7 +151,7 @@ public class ProcessingResultBuilder {
         entries.Where(e => e.Status == status)
             .GroupBy(e => new { e.Name, e.Message })
             .Select(g => {
-                var contexts = g.Select(e => e.Context).Where(c => c != null).ToList();
+                var contexts = g.Select(e => e.FamilyTypeName).Where(c => c != null).ToList();
                 var contextsStr = contexts.Any() ? $"[{string.Join(", ", contexts)}] " : string.Empty;
                 var messageStr = !string.IsNullOrEmpty(g.Key.Message) ? $" : {g.Key.Message}" : "";
                 return $"{contextsStr}{g.Key.Name}{messageStr}";

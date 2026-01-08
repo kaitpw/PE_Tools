@@ -1,5 +1,7 @@
 using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using AddinFamilyFoundrySuite.Core.Snapshots;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PeServices.Storage;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators;
@@ -19,12 +21,13 @@ public static class FamilyParamAggregator {
         foreach (var family in families) {
             var familyName = family.Name;
             var categoryName = family.FamilyCategory?.Name ?? "Unknown";
+            var snapshot = new FamilySnapshot { FamilyName = familyName };
 
             try {
-                var snapshot = new FamilySnapshot { FamilyName = familyName };
                 collectorQueue.ToProjectCollectorFunc()(snapshot, doc, family);
 
                 foreach (var param in snapshot.Parameters?.Data ?? []) {
+                    // Only count this family if the parameter has a value for every type
                     var key = GenerateKey(param);
 
                     if (!aggregated.TryGetValue(key, out var existing)) {
@@ -106,34 +109,59 @@ public static class FamilyParamAggregator {
         var filename = $"param-aggregation_{timestamp}.csv";
         var filePath = Path.Combine(storage.OutputDir().DirectoryPath, filename);
 
-        var lines = new List<string> {
-            // Header
-            "ParamName,FamilyCount,ScheduleCount,IsInstance,IsBuiltIn,IsProjectParameter,IsFamilyParameter,SharedGuid,StorageType,DataType,DataTypeId,FamilyCategories,ScheduleCategories,FamilyNames,ScheduleNames"
-        };
-        lines.AddRange(from item in data
-                       let familyNamesEscaped = EscapeCsvField(string.Join("; ", item.FamilyNames))
-                       let scheduleNamesEscaped = EscapeCsvField(string.Join("; ", item.ScheduleNames))
-                       let familyCategoriesEscaped = EscapeCsvField(string.Join("; ", item.FamilyCategories.OrderBy(c => c)))
-                       let scheduleCategoriesEscaped = EscapeCsvField(string.Join("; ", item.ScheduleCategories.OrderBy(c => c)))
-                       select string.Join(",",
-                           EscapeCsvField(item.ParamName),
-                           item.FamilyCount,
-                           item.ScheduleCount,
-                           item.IsInstance,
-                           item.IsBuiltIn,
-                           item.IsProjectParameter,
-                           item.IsFamilyParameter,
-                           item.SharedGuid,
-                           item.StorageType,
-                           EscapeCsvField(item.DataType),
-                           EscapeCsvField(item.DataTypeId),
-                           familyCategoriesEscaped,
-                           scheduleCategoriesEscaped,
-                           familyNamesEscaped,
-                           scheduleNamesEscaped));
-
-        File.WriteAllLines(filePath, lines);
+        var csvContent = ConvertJsonToCsv(data);
+        File.WriteAllText(filePath, csvContent);
         return filePath;
+    }
+
+    /// <summary>
+    ///     Converts a collection of objects to CSV by serializing to JSON first.
+    ///     Lists and collections are joined with semicolons instead of commas.
+    /// </summary>
+    private static string ConvertJsonToCsv(IEnumerable<AggregatedParamData> data) {
+        var dataList = data.ToList();
+        if (!dataList.Any()) return string.Empty;
+
+        // Serialize to JSON
+        var json = JsonConvert.SerializeObject(dataList);
+        var jsonArray = JArray.Parse(json);
+
+        // Get all unique property names from all objects
+        var properties = jsonArray
+            .SelectMany(obj => ((JObject)obj).Properties())
+            .Select(p => p.Name)
+            .Distinct()
+            .ToList();
+
+        // Header row
+        var lines = new List<string> { string.Join(",", properties.Select(EscapeCsvField)) };
+
+        // Data rows
+        foreach (var item in jsonArray) {
+            var values = properties.Select(prop => {
+                var token = item[prop];
+                return ConvertJsonValueToCsvField(token);
+            });
+            lines.Add(string.Join(",", values));
+        }
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    /// <summary>
+    ///     Converts a JSON token to a CSV field value.
+    ///     Arrays/lists are joined with semicolons and sorted for consistency.
+    /// </summary>
+    private static string ConvertJsonValueToCsvField(JToken token) {
+        if (token == null || token.Type == JTokenType.Null)
+            return string.Empty;
+
+        if (token.Type == JTokenType.Array) {
+            var items = token.Select(t => t.ToString()).OrderBy(s => s);
+            return EscapeCsvField(string.Join("; ", items));
+        }
+
+        return EscapeCsvField(token.ToString());
     }
 
     /// <summary>

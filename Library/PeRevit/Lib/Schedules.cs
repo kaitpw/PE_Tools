@@ -180,9 +180,16 @@ public static class ScheduleHelper {
             var field = def.GetField(i);
             var fieldName = field.GetName();
 
+            // Get the original parameter name from the SchedulableField to properly detect header overrides.
+            // ScheduleField.GetName() returns the field name which may match ColumnHeading even when customized.
+            // We need the original parameter name to correctly detect if ColumnHeading was changed from default.
+            var originalParamName = field.HasSchedulableField
+                ? field.GetSchedulableField().GetName(schedule.Document)
+                : fieldName;
+
             var fieldSpec = new ScheduleFieldSpec {
                 ParameterName = fieldName,
-                ColumnHeaderOverride = field.ColumnHeading != fieldName ? field.ColumnHeading : null,
+                ColumnHeaderOverride = field.ColumnHeading != originalParamName ? field.ColumnHeading : null,
                 IsHidden = field.IsHidden,
                 DisplayType = (ScheduleFieldDisplayType)(int)field.DisplayType,
                 ColumnWidth = field.SheetColumnWidth
@@ -262,6 +269,19 @@ public static class ScheduleHelper {
         // Check if there are multiple rows (grouped headers would be in row 0)
         if (headerSection.NumberOfRows < 2) return;
 
+        // Build mapping from visible column index to field index (accounting for hidden fields)
+        var def = schedule.Definition;
+        var visibleColToFieldIdx = new Dictionary<int, int>();
+        var visibleColIndex = 0;
+
+        for (var fieldIdx = 0; fieldIdx < def.GetFieldCount(); fieldIdx++) {
+            var field = def.GetField(fieldIdx);
+            if (!field.IsHidden) {
+                visibleColToFieldIdx[visibleColIndex] = fieldIdx;
+                visibleColIndex++;
+            }
+        }
+
         // Examine the header row (row 0) for merged cells, which indicate header groups
         var groupRow = headerSection.FirstRowNumber;
         var processedColumns = new HashSet<int>();
@@ -277,9 +297,11 @@ public static class ScheduleHelper {
                 var groupName = headerSection.GetCellText(groupRow, col);
 
                 // Mark all fields in this range with the header group
-                for (var fieldIdx = mergedCell.Left; fieldIdx <= mergedCell.Right; fieldIdx++) {
-                    if (fieldIdx < spec.Fields.Count) spec.Fields[fieldIdx].HeaderGroup = groupName;
-                    _ = processedColumns.Add(fieldIdx);
+                // Use the mapping to convert visible column indices to field indices
+                for (var visibleCol = mergedCell.Left; visibleCol <= mergedCell.Right; visibleCol++) {
+                    if (visibleColToFieldIdx.TryGetValue(visibleCol, out var fieldIdx) && fieldIdx < spec.Fields.Count)
+                        spec.Fields[fieldIdx].HeaderGroup = groupName;
+                    _ = processedColumns.Add(visibleCol);
                 }
             } else
                 _ = processedColumns.Add(col);
@@ -406,9 +428,10 @@ public static class ScheduleHelper {
 
             if (canApply)
                 field.DisplayType = targetDisplayType;
-            else
+            else {
                 result.Warnings.Add(
                     $"DisplayType '{fieldSpec.DisplayType}' not supported for field '{fieldSpec.ParameterName}'");
+            }
         }
     }
 
@@ -462,9 +485,10 @@ public static class ScheduleHelper {
         if (spec.Filters == null || spec.Filters.Count == 0) return;
 
         // Maximum of 8 filters per schedule
-        if (spec.Filters.Count > 8)
+        if (spec.Filters.Count > 8) {
             result.Warnings.Add(
                 $"Schedule supports maximum 8 filters, found {spec.Filters.Count}. Only first 8 will be applied.");
+        }
 
         var filtersToApply = spec.Filters.Take(8);
 

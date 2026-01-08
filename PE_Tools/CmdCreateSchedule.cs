@@ -30,7 +30,7 @@ public class CmdCreateSchedule : IExternalCommand {
         try {
             var storage = new Storage("Schedule Manager");
             var settingsManager = storage.SettingsDir();
-            var schedulesSubDir = settingsManager.SubDir("schedules", recursiveDiscovery: true);
+            var schedulesSubDir = settingsManager.SubDir("schedules", true);
 
             // Discover all schedule profile JSON files
             var profiles = ScheduleListItem.DiscoverProfiles(schedulesSubDir);
@@ -48,7 +48,8 @@ public class CmdCreateSchedule : IExternalCommand {
                     .Distinct(StringComparer.OrdinalIgnoreCase)
                     .ToList();
 
-                Debug.WriteLine($"[CmdCreateSchedule] Updating parameter cache for {categories.Count} categories: {string.Join(", ", categories)}");
+                Debug.WriteLine(
+                    $"[CmdCreateSchedule] Updating parameter cache for {categories.Count} categories: {string.Join(", ", categories)}");
                 SchedulableParameterNamesProvider.UpdateCache(doc, categories);
             } catch (Exception ex) {
                 Debug.WriteLine($"[CmdCreateSchedule] Failed to update parameter cache: {ex.Message}");
@@ -153,7 +154,7 @@ public class CmdCreateSchedule : IExternalCommand {
 
     private SchedulePreviewData LoadValidPreviewData(ScheduleListItem profileItem, ScheduleManagerContext context) {
         // Load the profile
-        var profile = context.SettingsManager.SubDir("schedules", recursiveDiscovery: true)
+        var profile = context.SettingsManager.SubDir("schedules", true)
             .Json<ScheduleSpec>($"{profileItem.TextPrimary}.json")
             .Read();
 
@@ -217,7 +218,7 @@ public class CmdCreateSchedule : IExternalCommand {
         }
 
         // Load profile fresh for execution
-        var profile = ctx.SettingsManager.SubDir("schedules", recursiveDiscovery: true)
+        var profile = ctx.SettingsManager.SubDir("schedules", true)
             .Json<ScheduleSpec>($"{ctx.SelectedProfile.TextPrimary}.json")
             .Read();
 
@@ -231,19 +232,59 @@ public class CmdCreateSchedule : IExternalCommand {
         // Write output to storage
         var outputPath = this.WriteCreationOutput(ctx, result);
 
-        // Build balloon message
+        // Build comprehensive balloon message
         var balloon = new Ballogger();
         _ = balloon.Add(Log.INFO, new StackFrame(),
             $"Created schedule '{result.ScheduleName}' from profile '{ctx.SelectedProfile.TextPrimary}'");
 
-        if (result.AppliedHeaderGroups.Count > 0) {
+        // Report applied fields
+        if (result.AppliedFields.Count > 0) {
             _ = balloon.Add(Log.INFO, new StackFrame(),
-                $"Applied {result.AppliedHeaderGroups.Count} header group(s)");
+                $"Applied {result.AppliedFields.Count} field(s)");
         }
 
+        // Report skipped fields with reasons
+        if (result.SkippedFields.Count > 0) {
+            _ = balloon.Add(Log.WARN, new StackFrame(),
+                $"{result.SkippedFields.Count} field(s) skipped:");
+            foreach (var skipped in result.SkippedFields)
+                _ = balloon.Add(Log.WARN, new StackFrame(), $"  • {skipped}");
+        }
+
+        // Report calculated fields
         if (result.SkippedCalculatedFields.Count > 0) {
             _ = balloon.Add(Log.WARN, new StackFrame(),
                 $"{result.SkippedCalculatedFields.Count} calculated field(s) require manual creation - see output file");
+        }
+
+        // Report sort/group issues
+        if (result.SkippedSortGroups.Count > 0) {
+            _ = balloon.Add(Log.WARN, new StackFrame(),
+                $"{result.SkippedSortGroups.Count} sort/group(s) skipped:");
+            foreach (var skipped in result.SkippedSortGroups)
+                _ = balloon.Add(Log.WARN, new StackFrame(), $"  • {skipped}");
+        }
+
+        // Report filter issues
+        if (result.SkippedFilters.Count > 0) {
+            _ = balloon.Add(Log.WARN, new StackFrame(),
+                $"{result.SkippedFilters.Count} filter(s) skipped:");
+            foreach (var skipped in result.SkippedFilters)
+                _ = balloon.Add(Log.WARN, new StackFrame(), $"  • {skipped}");
+        }
+
+        // Report header group issues
+        if (result.SkippedHeaderGroups.Count > 0) {
+            _ = balloon.Add(Log.WARN, new StackFrame(),
+                $"{result.SkippedHeaderGroups.Count} header group(s) skipped:");
+            foreach (var skipped in result.SkippedHeaderGroups)
+                _ = balloon.Add(Log.WARN, new StackFrame(), $"  • {skipped}");
+        }
+
+        // Report general warnings
+        if (result.Warnings.Count > 0) {
+            foreach (var warning in result.Warnings)
+                _ = balloon.Add(Log.WARN, new StackFrame(), warning);
         }
 
         balloon.Show();
@@ -251,13 +292,20 @@ public class CmdCreateSchedule : IExternalCommand {
         // Open the schedule view
         ctx.UiDoc.ActiveView = result.Schedule;
 
-        // Open output file if there are calculated fields
-        if (result.SkippedCalculatedFields.Count > 0 && !string.IsNullOrEmpty(outputPath))
+        // Open output file if there are issues or calculated fields
+        var hasIssues = result.SkippedCalculatedFields.Count > 0 ||
+                        result.SkippedFields.Count > 0 ||
+                        result.SkippedSortGroups.Count > 0 ||
+                        result.SkippedFilters.Count > 0 ||
+                        result.SkippedHeaderGroups.Count > 0 ||
+                        result.Warnings.Count > 0;
+
+        if (hasIssues && !string.IsNullOrEmpty(outputPath))
             FileUtils.OpenInDefaultApp(outputPath);
     }
 
     private void HandlePlaceSampleFamilies(ScheduleManagerContext context) {
-        var profile = context.SettingsManager.SubDir("schedules", recursiveDiscovery: true)
+        var profile = context.SettingsManager.SubDir("schedules", true)
             .Json<ScheduleSpec>($"{context.SelectedProfile.TextPrimary}.json")
             .Read();
 
@@ -321,10 +369,48 @@ public class CmdCreateSchedule : IExternalCommand {
         try {
             var outputData = new {
                 result.ScheduleName,
+                result.CategoryName,
+                result.IsItemized,
                 ProfileName = ctx.SelectedProfile.TextPrimary,
                 CreatedAt = DateTime.Now,
+                Summary =
+                    new {
+                        AppliedFieldsCount = result.AppliedFields.Count,
+                        SkippedFieldsCount = result.SkippedFields.Count,
+                        AppliedSortGroupsCount = result.AppliedSortGroups.Count,
+                        SkippedSortGroupsCount = result.SkippedSortGroups.Count,
+                        AppliedFiltersCount = result.AppliedFilters.Count,
+                        SkippedFiltersCount = result.SkippedFilters.Count,
+                        AppliedHeaderGroupsCount = result.AppliedHeaderGroups.Count,
+                        SkippedHeaderGroupsCount = result.SkippedHeaderGroups.Count,
+                        CalculatedFieldsCount = result.SkippedCalculatedFields.Count,
+                        WarningsCount = result.Warnings.Count
+                    },
+                AppliedFields =
+                    result.AppliedFields.Select(f => new {
+                        f.ParameterName,
+                        f.ColumnHeaderOverride,
+                        f.IsHidden,
+                        f.ColumnWidth,
+                        DisplayType = f.DisplayType.ToString()
+                    }).ToList(),
+                SkippedFields = result.SkippedFields.Select(s => new { Reason = s }).ToList(),
+                AppliedSortGroups =
+                    result.AppliedSortGroups.Select(sg => new {
+                        sg.FieldName,
+                        SortOrder = sg.SortOrder.ToString(),
+                        sg.ShowHeader,
+                        sg.ShowFooter,
+                        sg.ShowBlankLine
+                    }).ToList(),
+                SkippedSortGroups = result.SkippedSortGroups.Select(s => new { Reason = s }).ToList(),
+                AppliedFilters =
+                    result.AppliedFilters.Select(f =>
+                        new { f.FieldName, FilterType = f.FilterType.ToString(), f.Value, f.StorageType }).ToList(),
+                SkippedFilters = result.SkippedFilters.Select(s => new { Reason = s }).ToList(),
                 result.AppliedHeaderGroups,
-                SkippedCalculatedFields = result.SkippedCalculatedFields.Select(f => new {
+                SkippedHeaderGroups = result.SkippedHeaderGroups.Select(s => new { Reason = s }).ToList(),
+                CalculatedFields = result.SkippedCalculatedFields.Select(f => new {
                     f.FieldName,
                     f.CalculatedType,
                     f.Guidance,
