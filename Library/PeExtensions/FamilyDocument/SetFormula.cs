@@ -83,6 +83,32 @@ public static class Formula {
     }
 
     /// <summary>
+    ///     Set a formula on a family parameter using the formula of another parameter.
+    /// </summary>
+    /// <exception cref="Autodesk.Revit.Exceptions.InvalidOperationException">
+    ///     Thrown when a type parameter formula references instance parameters,
+    ///     there is no valid family type, the parameter cannot be assigned a formula, or the operation make a circular chain
+    ///     of references among the formulas.
+    /// </exception>
+    /// <returns>True if the formula was set successfully</returns>
+    public static bool TrySetFormula(this FamilyDocument famDoc, FamilyParameter targetParam, FamilyParameter sourceParam, out string errorMessage) {
+        if (string.IsNullOrWhiteSpace(sourceParam.Formula)) {
+            errorMessage = $"Cannot set formula on parameter '{targetParam.Name()}'. " +
+                           $"Source parameter '{sourceParam.Name()}' has no formula.";
+            return false;
+        }
+
+        var srcDataType = sourceParam.Definition.GetDataType();
+        var tgtDataType = targetParam.Definition.GetDataType();
+        if (srcDataType != tgtDataType) {
+            errorMessage = $"Cannot set formula on parameter '{targetParam.Name()}'. " +
+                           $"Source parameter '{sourceParam.Name()}' has datatype '{srcDataType}' but target parameter '{targetParam.Name()}' has datatype '{tgtDataType}'.";
+            return false;
+        }
+        return famDoc.TrySetFormula(targetParam, sourceParam.Formula, out errorMessage);
+    }
+
+    /// <summary>
     ///     Set a formula on a family parameter without validation.
     ///     Use this for batch operations where you trust the input and need performance.
     ///     Revit will still throw if there's a cycle, but the error will be less descriptive.
