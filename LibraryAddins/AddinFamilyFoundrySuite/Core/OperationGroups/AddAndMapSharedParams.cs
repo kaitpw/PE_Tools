@@ -9,8 +9,10 @@ namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 public class AddAndMapSharedParams(
     MapParamsSettings settings,
     IEnumerable<SharedParameterDefinition> sharedParams)
-    : OperationGroup<MapParamsSettings>("Map and add shared parameters (replace, add unmapped, and remap)",
-        InitializeOperations(settings, sharedParams)) {
+    : OperationGroup<MapParamsSettings>(
+        "Map and add shared parameters (replace, add unmapped, and remap)",
+        InitializeOperations(settings, sharedParams),
+        keySelector: item => ((MappingData)item).NewName) {
     private static List<IOperation> InitializeOperations(
         MapParamsSettings settings,
         IEnumerable<SharedParameterDefinition> sharedParams
@@ -38,13 +40,18 @@ public class PreProcessMappings(
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
+        if (groupContext is null)
+            throw new InvalidOperationException($"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+
         var fm = doc.FamilyManager;
         var sharedParamsDict = sharedParams.ToDictionary(p => p.ExternalDefinition.Name);
 
-        foreach (var mapping in this.Settings.MappingData) {
-            var log = groupContext.GetOrCreate(mapping.NewName);
-            if (log.IsComplete) continue;
+        var data = groupContext.GetAllInComplete().Select(e => {
+            var mapping = this.Settings.MappingData.First(m => e.Key == m.NewName);
+            return (mapping, e.Value);
+        });
 
+        foreach (var (mapping, log) in data) {
             var filteredCurrNames = this.Settings.GetRankedCurrParams(
                 mapping.CurrNames,
                 fm,
@@ -132,17 +139,16 @@ public class AddUnmappedSharedParams(
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
-        // Get already-processed params from GroupContext (completed by MapReplaceParams)
-        var processedParams = groupContext.All
-            .Where(e => e.IsComplete)
-            .Select(e => e.Name)
-            .ToHashSet() ?? [];
+        if (groupContext is null)
+            throw new InvalidOperationException($"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+
+        // Get already-handled params from GroupContext
         var existingParams = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
             .Select(p => p.Definition.Name)
             .ToHashSet();
         var addParams = sharedParams
-            .Where(p => !processedParams.Contains(p.ExternalDefinition.Name))
+            .Where(p => !groupContext.GetAllInComplete().ContainsKey(p.ExternalDefinition.Name))
             .Where(p => !existingParams.Contains(p.ExternalDefinition.Name));
 
         var addSharedParams = new AddSharedParams(addParams) { Name = this.Name };

@@ -1,6 +1,5 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
-using PeExtensions.FamManager;
 using PeExtensions.FamParameter;
 using PeExtensions.FamParameter.Formula;
 
@@ -23,79 +22,90 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
+        if (groupContext is null)
+            throw new InvalidOperationException($"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+
         var fm = doc.FamilyManager;
+        var data = groupContext.GetAllInComplete().Select(e => {
+            var mapping = this.Settings.MappingData.First(m => e.Key == m.NewName);
+            return (mapping, e.Value);
+        });
 
-        foreach (var mapping in this.Settings.MappingData) {
-            var log = groupContext.GetOrCreate(mapping.NewName);
-            if (log.IsComplete) continue;
+        foreach (var (mapping, log) in data) {
+            var filteredCurrNames = this.Settings.GetRankedCurrParams(
+                mapping.CurrNames,
+                fm,
+                processingContext
+            );
 
-            if (!this._sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam)) {
-                _ = log.Skip("Shared parameter not found");
-                continue;
-            }
+            _ = this._sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam);
+            if (sharedParam == null) continue;
 
             // Try each CurrName in priority order until one succeeds
             var foundMatch = false;
-            foreach (var currName in mapping.CurrNames.TakeWhile(_ => !foundMatch)) {
+            foreach (var currParam in filteredCurrNames.TakeWhile(_ => !foundMatch)) {
                 try {
-                    // Validate current parameter exists and is not built-in param. 
-                    var currentParam = fm.FindParameter(currName);
-                    if (currentParam == null) continue;
-                    if (currentParam.IsBuiltInParameter()) continue;
-
-                    // Verify that new parameter does not already exist, replacement errors if it does
-                    if (fm.FindParameter(mapping.NewName) != null) continue;
-
-                    if (currentParam.Definition.GetDataType() != sharedParam.ExternalDefinition.GetDataType()) continue;
+                    if (currParam.IsBuiltInParameter()) continue;
+                    var currParamDataType = currParam.Definition.GetDataType();
+                    if (currParamDataType != sharedParam.ExternalDefinition.GetDataType()) continue;
 
                     var replaced = fm.ReplaceParameter(
-                        currentParam,
+                        currParam,
                         sharedParam.ExternalDefinition,
                         sharedParam.GroupTypeId,
                         sharedParam.IsInstance
                     );
-
+                    if (replaced == null) continue;
                     foundMatch = true;
-
-                    // Formula contains parameters: No further processing if formula exists
-                    // Formula is constant: Unset formula but DO NOT mark as processed, instead set CurrName to NewName 
-                    // (CurrName is gone at this point). This allows SetValue to coerce later which is
-                    // necessary for electrical parameters using ElectricalCoercionStrategy)
-                    var parameters = doc.FamilyManager.Parameters;
-                    var singleReference = parameters.TryGetSingleReference(replaced.Formula);
-                    if (singleReference != null) {
-                        var refName = singleReference.Definition.Name;
-                        var refIsBuiltIn = singleReference.IsBuiltInParameter();
-                        var refIsInCurrNames = mapping.CurrNames.Contains(refName);
-
-                        if (refIsBuiltIn && refIsInCurrNames) {
-                            // NewName inherited formula pointing to a built-in that's in CurrNames.
-                            // Unset formula on NewName, let MapParams copy value from built-in and create backlink.
-                            _ = doc.UnsetFormula(replaced);
-                            // Store the built-in ref name for MapParams to use>
-                            _ = log.Defer($"Replaced {currName}, deferred backlink to {refName}");
-                        } else {
-                            // Standard unwrap: formula points to non-built-in or not in CurrNames
-                            _ = doc.UnsetFormula(singleReference);
-                            _ = log.Success($"{currName} → {replaced.Definition.Name}");
-                        }
-                    } else if (replaced.Formula == null ||
-                               parameters.IsConstant(replaced.Formula)) {
-                        _ = doc.UnsetFormula(replaced);
-                        // skip datatypes that will never need coercion, boosts speed and cleans logs
-                        _ = this.IgnoreCoercionDataTypes.Contains(replaced.Definition.GetDataType())
-                            ? log.Success($"Replaced {currName} → {replaced.Definition.Name}")
-                            : log.Defer($"Replaced {currName}, awaiting coercion");
-                    } else {
-                        // Fallback: formula exists but has no dependencies and is not constant (edge case)
-                        _ = log.Success($"Replaced {currName} → {replaced.Definition.Name}");
-                    }
-                } catch (Exception) {
-                    _ = log.Defer($"{currName} → {mapping.NewName}"); // allow retrying 
+                    this.UnwrapAndLog(doc, currParam, replaced, mapping, log);
+                } catch (Exception ex) {
+                    logs.Add(new LogEntry(mapping.NewName).Error($"{currParam.Definition.Name} → {mapping.NewName}", ex));
                 }
             }
         }
 
         return new OperationLog(this.Name, groupContext.TakeSnapshot());
+    }
+
+    private void UnwrapAndLog(
+        FamilyDocument doc,
+        FamilyParameter currParam,
+        FamilyParameter replaced,
+        MappingData mapping,
+        LogEntry log
+    ) {
+        var parameters = doc.FamilyManager.Parameters;
+        var singleReference = parameters.TryGetSingleReference(replaced.Formula);
+        if (singleReference != null) {
+            var refName = singleReference.Definition.Name;
+            var refIsBuiltIn = singleReference.IsBuiltInParameter();
+            var refIsInCurrNames = mapping.CurrNames.Contains(refName);
+
+            if (refIsBuiltIn && refIsInCurrNames) {
+                // NewName inherited formula pointing to a built-in that's in CurrNames.
+                _ = doc.UnsetFormula(replaced);
+                const string backlinkOp = nameof(BacklinkParamsToBuiltIn);
+                // Don't mark as fully handled - BacklinkParamsToBuiltIn will handle it
+                _ = log.Defer($"Replaced {currParam.Definition.Name}, deferred backlink to {refName} to {backlinkOp}");
+            } else {
+                // Standard unwrap: formula points to non-built-in or not in CurrNames
+                _ = doc.UnsetFormula(singleReference);
+                _ = log.Success($"{currParam.Definition.Name} → {replaced.Definition.Name}");
+            }
+        } else if (replaced.Formula == null || parameters.IsConstant(replaced.Formula)) {
+            _ = doc.UnsetFormula(replaced);
+            var isTerminal = currParam.Definition.GetDataType() == replaced.Definition.GetDataType()
+                             || this.IgnoreCoercionDataTypes.Contains(replaced.Definition.GetDataType());
+            if (isTerminal) {
+                _ = log.Success($"Replaced {currParam.Definition.Name} → {replaced.Definition.Name}");
+            } else {
+                // Don't mark as handled - MapParams will handle coercion
+                _ = log.Defer($"Replaced {currParam.Definition.Name}, awaiting coercion");
+            }
+        } else {
+            // Fallback: formula exists but has no dependencies and is not constant (edge case)
+            // we already replaced the parameter, so this is a success
+            _ = log.Success($"Replaced {currParam.Definition.Name} → {replaced.Definition.Name}");
+        }
     }
 }

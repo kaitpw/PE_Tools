@@ -15,26 +15,39 @@ public class MapParams(MapParamsSettings settings)
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
+        if (groupContext is null)
+            throw new InvalidOperationException(
+                $"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+
         var fm = doc.FamilyManager;
 
-        foreach (var mapping in this.Settings.MappingData) {
-            var log = groupContext.GetOrCreate(mapping.NewName);
-            if (log.IsComplete) continue; // Previous op fully handled it
+        var incomplete = groupContext.GetAllInComplete();
+        if (incomplete.Count == 0) this.AbortOperation("All mappings were handled by prior operations");
 
+        var data = incomplete.Select(e => {
+            var mapping = this.Settings.MappingData.First(m => e.Key == m.NewName);
+            return (mapping, e.Value);
+        });
+
+        foreach (var (mapping, log) in data) {
             var tgtParam = fm.FindParameter(mapping.NewName);
             if (tgtParam == null) continue;
 
             // Try each CurrName in priority order until one succeeds
-            foreach (var currName in mapping.CurrNames) {
-                var srcParam = fm.FindParameter(currName);
-                if (srcParam == null) continue;
-
-                var mappingDesc = $"{currName} → {mapping.NewName}";
+            var prioritizedCurrParams = this.Settings.GetRankedCurrParams(
+                mapping.CurrNames,
+                fm,
+                processingContext
+            );
+            foreach (var currParam in prioritizedCurrParams) {
+                var mappingDesc = $"{currParam.Definition.Name} → {mapping.NewName}";
                 try {
                     if (tgtParam.Formula != null) _ = doc.UnsetFormula(tgtParam);
 
-                    _ = doc.SetValue(tgtParam, srcParam, mapping.MappingStrategy);
-                    _ = log.Defer(tgtParam != srcParam
+                    _ = doc.SetValue(tgtParam, currParam, mapping.MappingStrategy);
+                    // this should really be "success" but the rest of the family types wont process if it is
+                    // TODO: make a new method for marking type ops success
+                    _ = log.Defer(tgtParam != currParam
                         ? $"Coerced {mappingDesc} using {mapping.MappingStrategy}"
                         : $"Set {mappingDesc}");
                     break; // Success - skip remaining CurrNames

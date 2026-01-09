@@ -14,7 +14,7 @@ namespace AddinFamilyFoundrySuite.Core.Operations;
 ///     2. Fallback for Parameters that failed SetGlobalValue (deferred via GroupContext)
 ///     Values are context-aware but must NOT contain parameter references
 ///     (formulas with param refs should use SetParamValues instead).
-/// If a Family Type does not exist, it will NOT be created
+///     If a Family Type does not exist, it will NOT be created
 /// </summary>
 public class SetParamValuesPerType(AddAndSetParamsSettings settings)
     : TypeOperation<AddAndSetParamsSettings>(settings) {
@@ -24,48 +24,54 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
     public override OperationLog Execute(FamilyDocument famDoc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
+        if (groupContext is null)
+            throw new InvalidOperationException(
+                $"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+
         var fm = famDoc.FamilyManager;
         var currentTypeName = fm.CurrentType?.Name;
 
-        foreach (var p in this.Settings.Parameters) {
-            // 1. Handle explicit per-type parameters (ValuesPerType is set)
-            if (p.ValuesPerType?.Count > 0) {
-                // Skip if this type isn't in the dictionary
-                if (currentTypeName is null || !p.ValuesPerType.TryGetValue(currentTypeName, out var value))
-                    continue;
+        // Check if all work items are already handled
+        var incomplete = groupContext.GetAllInComplete();
+        if (incomplete.Count == 0) this.AbortOperation("All parameters were handled by prior operations");
 
-                if (string.IsNullOrWhiteSpace(value)) continue;
+        // Check if any unhandled param has work to do for current type
+        var data = incomplete.Select(e => {
+            var paramModel = this.Settings.Parameters.First(p => e.Key == p.Name);
+            return (paramModel, e.Value);
+        });
 
-                var log = groupContext.GetOrCreate(p.Name);
-                if (log.IsComplete) continue;
+        foreach (var (paramModel, log) in data) {
+            var parameter = fm.FindParameter(paramModel.Name);
+            if (parameter is null) {
+                _ = log.Error($"Parameter '{paramModel.Name}' not found");
+                continue;
+            }
 
-                var parameter = fm.FindParameter(p.Name);
-                if (parameter is null) {
-                    _ = log.Error($"Parameter '{p.Name}' not found");
-                    continue;
+            // Handle fallback for failed global values from SetParamValues
+            if (!string.IsNullOrWhiteSpace(paramModel.ValueOrFormula)) {
+                try {
+                    var success = famDoc.TrySetFormula(parameter, paramModel.ValueOrFormula, out _);
+                    _ = log.Success("Set per-type value (fallback)");
+                    continue; // break early, this is a proper success
+                } catch {
+                    // allow retries by below loop
                 }
+            }
+
+            // 1. Handle explicit per-type parameters (ValuesPerType is set)
+            if (paramModel.ValuesPerType?.Count > 0
+                && currentTypeName is not null
+                && paramModel.ValuesPerType.TryGetValue(currentTypeName, out var value)
+                && !string.IsNullOrWhiteSpace(value)) {
 
                 if (!this.Settings.OverrideExistingValues && famDoc.HasValue(parameter))
                     continue;
 
                 try {
-                    SetPerTypeValue(famDoc, parameter, value);
-                    _ = log.Success("Set per-type");
-                } catch (Exception ex) {
-                    _ = log.Error(ex);
-                }
-            }
-            // 2. Handle fallback for failed global values (ValueOrFormula was set but deferred)
-            else if (!string.IsNullOrWhiteSpace(p.ValueOrFormula)) {
-                var log = groupContext.Get(p.Name);
-                if (log?.IsComplete == true) continue; // Already handled
-
-                var parameter = fm.FindParameter(p.Name);
-                if (parameter is null) continue; // Already logged in SetParamValues
-
-                try {
-                    SetPerTypeValue(famDoc, parameter, p.ValueOrFormula);
-                    _ = log.Success("Set per-type (fallback)");
+                    SetValueForCurrentFamType(famDoc, parameter, value);
+                    _ = log.Success("Set per-type value");
+                    continue;
                 } catch (Exception ex) {
                     _ = log.Error(ex);
                 }
@@ -79,7 +85,7 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
     ///     Set a per-type parameter value using a user-provided string value.
     ///     Rejects values that contain parameter references and strips double-quotes from string literals.
     /// </summary>
-    private static void SetPerTypeValue(FamilyDocument famDoc, FamilyParameter parameter, string userValue) {
+    private static void SetValueForCurrentFamType(FamilyDocument famDoc, FamilyParameter parameter, string userValue) {
         var fm = famDoc.FamilyManager;
 
         // Check for double-quoted string literal: "\"text\"" → strip quotes

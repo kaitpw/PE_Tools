@@ -13,7 +13,14 @@ public class OperationContext {
     public IEnumerable<LogEntry> All => this._entries.Values;
     public IEnumerable<LogEntry> Pending => this.All.Where(e => !e.IsComplete);
 
-    public LogEntry GetOrCreate(string name) {
+    /// <summary>
+    ///     Key selector that extracts a string key from a work item.
+    ///     Set by OperationGroup at construction time.
+    /// </summary>
+    public Func<object, string> KeySelector { get; init; }
+
+    public LogEntry GetOrCreate(object workItem) {
+        var name = this.KeySelector(workItem);
         if (this._entries.TryGetValue(name, out var entry)) {
             // Only mark as touched if not already complete (operation is modifying it)
             if (!entry.IsComplete)
@@ -26,8 +33,10 @@ public class OperationContext {
         return this._entries[name] = new LogEntry(name);
     }
 
-    public LogEntry Get(string name) =>
-        this._entries.GetValueOrDefault(name);
+    public Dictionary<string, LogEntry> GetAllInComplete() =>
+        this._entries
+            .Where(e => !e.Value.IsComplete)
+            .ToDictionary(e => e.Key, e => e.Value);
 
     /// <summary>
     ///     Gets a snapshot of logs touched by the current operation, then clears the touched set.

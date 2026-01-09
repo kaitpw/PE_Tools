@@ -19,13 +19,21 @@ public class SetParamValues(AddAndSetParamsSettings settings)
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
-        var fm = doc.FamilyManager;
+        if (groupContext is null) {
+            throw new InvalidOperationException(
+                $"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+        }
 
-        foreach (var p in this.Settings.Parameters) {
+        var fm = doc.FamilyManager;
+        var incomplete = groupContext.GetAllInComplete();
+        var data = incomplete.Select(e => {
+            var paramModel = this.Settings.Parameters.First(p => e.Key == p.Name);
+            return (paramModel, e.Value);
+        });
+
+        foreach (var (p, log) in data) {
             // Skip if using ValuesPerType (handled by SetParamValuesPerType)
             if (string.IsNullOrWhiteSpace(p.ValueOrFormula)) continue;
-
-            var log = groupContext.GetOrCreate(p.Name);
 
             var parameter = fm.FindParameter(p.Name);
             if (parameter is null) {
@@ -38,14 +46,10 @@ public class SetParamValues(AddAndSetParamsSettings settings)
                 continue;
             }
 
-            try {
-                var result = SetValueOrFormula(doc, parameter, p.ValueOrFormula, p.SetAsFormula);
-                _ = result.NeedsFallback
-                    ? log.Defer("Needs per-type fallback")
-                    : log.Success("Set global value");
-            } catch (Exception ex) {
-                _ = log.Error(ex);
-            }
+            var result = SetValueOrFormula(doc, parameter, p, out var errMsg);
+            _ = result.NeedsFallback
+                ? log.Defer($"Needs per-type fallback: {errMsg}")
+                : log.Success("Set global value");
         }
 
         return new OperationLog(this.Name, groupContext.TakeSnapshot());
@@ -53,15 +57,16 @@ public class SetParamValues(AddAndSetParamsSettings settings)
 
     private static SetResult SetValueOrFormula(FamilyDocument doc,
         FamilyParameter param,
-        string valueOrFormula,
-        bool setAsFormula
+        ParamSettingModel paramModel,
+        out string errorMessage
     ) {
+        errorMessage = null;
         try {
-            if (setAsFormula) {
-                var success = doc.TrySetFormula(param, valueOrFormula, out _);
+            if (paramModel.SetAsFormula) {
+                var success = doc.TrySetFormula(param, paramModel.ValueOrFormula, out errorMessage);
                 return success ? SetResult.Success : SetResult.NeedsFallbackResult;
             } else {
-                var success = doc.SetGlobalValue(param, valueOrFormula);
+                var success = doc.SetGlobalValue(param, paramModel.ValueOrFormula);
                 return success ? SetResult.Success : SetResult.NeedsFallbackResult;
             }
         } catch {

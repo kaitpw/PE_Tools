@@ -16,13 +16,17 @@ public class BacklinkParamsToBuiltIn(MapParamsSettings settings)
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
+        if (groupContext is null)
+            throw new InvalidOperationException($"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+
         var fm = doc.FamilyManager;
 
-        foreach (var mapping in this.Settings.MappingData) {
-            var log = groupContext.GetOrCreate(mapping.NewName);
-            // Only process if deferred or pending - skip if already completed/errored
-            if (log.IsComplete) continue;
+        var data = groupContext.GetAllInComplete().Select(e => {
+            var mapping = this.Settings.MappingData.First(m => e.Key == m.NewName);
+            return (mapping, e.Value);
+        });
 
+        foreach (var (mapping, log) in data) {
             var tgtParam = fm.FindParameter(mapping.NewName);
             if (tgtParam == null) continue;
 
