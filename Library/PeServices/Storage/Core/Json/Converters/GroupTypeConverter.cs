@@ -11,7 +11,8 @@ namespace PeServices.Storage.Core.Json.Converters;
 ///     Special case: "Other" maps to an empty ForgeTypeId (new ForgeTypeId("")).
 /// </summary>
 public class GroupTypeConverter : JsonConverter<ForgeTypeId> {
-    private static readonly Lazy<Dictionary<string, ForgeTypeId>> _labelMap = new(PropertyGroupNamesProvider.GetLabelForgeMap());
+    private static readonly Lazy<Dictionary<string, ForgeTypeId>> _labelMap =
+        new(PropertyGroupNamesProvider.GetLabelForgeMap());
 
     public override void WriteJson(JsonWriter writer, ForgeTypeId value, JsonSerializer serializer) {
         if (value == null) {
@@ -30,7 +31,8 @@ public class GroupTypeConverter : JsonConverter<ForgeTypeId> {
             var label = value.ToLabel();
             writer.WriteValue(label);
         } catch (Exception ex) {
-            Debug.WriteLine($"Failed to get label for GroupType ForgeTypeId: {value.TypeId}\n\t error message: {ex.Message}");
+            Debug.WriteLine(
+                $"Failed to get label for GroupType ForgeTypeId: {value.TypeId}\n\t error message: {ex.Message}");
             writer.WriteValue(value.TypeId);
         }
     }

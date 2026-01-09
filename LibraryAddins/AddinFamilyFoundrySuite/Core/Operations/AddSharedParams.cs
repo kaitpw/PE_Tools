@@ -1,5 +1,4 @@
 using PeExtensions.FamDocument;
-using PeServices.Storage;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -16,7 +15,7 @@ public class AddSharedParams(
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
         var logs = new List<LogEntry>();
-        foreach (var sharedParam in this.SharedParams) { 
+        foreach (var sharedParam in this.SharedParams) {
             var name = sharedParam.ExternalDefinition.Name;
             try {
                 var addedParam = doc.AddSharedParameter(sharedParam);

@@ -1,7 +1,6 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.GetValue;
-using PeExtensions.FamDocument.SetValue;
 using PeExtensions.FamManager;
 using PeExtensions.FamParameter.Formula;
 
@@ -24,9 +23,10 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
     public override OperationLog Execute(FamilyDocument famDoc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
-        if (groupContext is null)
+        if (groupContext is null) {
             throw new InvalidOperationException(
                 $"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+        }
 
         var fm = famDoc.FamilyManager;
         var currentTypeName = fm.CurrentType?.Name;
@@ -64,14 +64,12 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
                 && currentTypeName is not null
                 && paramModel.ValuesPerType.TryGetValue(currentTypeName, out var value)
                 && !string.IsNullOrWhiteSpace(value)) {
-
                 if (!this.Settings.OverrideExistingValues && famDoc.HasValue(parameter))
                     continue;
 
                 try {
                     SetValueForCurrentFamType(famDoc, parameter, value);
                     _ = log.Success("Set per-type value");
-                    continue;
                 } catch (Exception ex) {
                     _ = log.Error(ex);
                 }

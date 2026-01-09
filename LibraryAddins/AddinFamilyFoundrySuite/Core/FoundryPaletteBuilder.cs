@@ -1,9 +1,5 @@
-using AddinFamilyFoundrySuite.Core.Snapshots;
 using AddinFamilyFoundrySuite.Ui;
-using PeRevit.Lib;
-using PeRevit.Ui;
 using PeServices.Storage;
-using PeServices.Storage.Core;
 using PeUi.Components;
 using PeUi.Core;
 using PeUi.Core.Services;
@@ -12,6 +8,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Input;
+using ParameterInfo = AddinFamilyFoundrySuite.Ui.ParameterInfo;
 
 namespace AddinFamilyFoundrySuite.Core;
 
@@ -22,12 +19,12 @@ namespace AddinFamilyFoundrySuite.Core;
 /// </summary>
 /// <typeparam name="TProfile">The profile type (must inherit from BaseProfileSettings)</typeparam>
 public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSettings, new() {
+    private readonly List<FoundryAction<TProfile>> _actions = [];
     private readonly string _commandName;
     private readonly Document _doc;
     private readonly UIDocument _uiDoc;
-    private readonly List<FoundryAction<TProfile>> _actions = [];
-    private Func<TProfile, List<SharedParameterDefinition>, OperationQueue> _queueBuilder;
     private Action<FoundryContext<TProfile>, List<string>> _postProcess;
+    private Func<TProfile, List<SharedParameterDefinition>, OperationQueue> _queueBuilder;
 
     public FoundryPaletteBuilder(string commandName, Document doc, UIDocument uiDoc) {
         this._commandName = commandName;
@@ -46,11 +43,7 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
         Action<FoundryContext<TProfile>> handler,
         Func<FoundryContext<TProfile>, bool> canExecute = null
     ) {
-        this._actions.Add(new FoundryAction<TProfile> {
-            Name = name,
-            Handler = handler,
-            CanExecute = canExecute
-        });
+        this._actions.Add(new FoundryAction<TProfile> { Name = name, Handler = handler, CanExecute = canExecute });
         return this;
     }
 
@@ -87,7 +80,7 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
         var storage = new Storage(this._commandName);
         var settingsManager = storage.SettingsDir();
         var settings = settingsManager.Json<BaseSettings<TProfile>>().Read();
-        var profilesSubDir = settingsManager.SubDir("profiles", recursiveDiscovery: true);
+        var profilesSubDir = settingsManager.SubDir("profiles", true);
 
         // Discover profiles
         var profiles = ProfileListItem.DiscoverProfiles(profilesSubDir);
@@ -180,7 +173,7 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
 
     private PreviewData LoadValidPreviewData(ProfileListItem profileItem, FoundryContext<TProfile> context) {
         // Load the profile
-        var profile = context.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+        var profile = context.SettingsManager.SubDir("profiles", true)
             .Json<TProfile>($"{profileItem.TextPrimary}.json")
             .Read();
 
@@ -197,7 +190,7 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
         var families = profile.GetFamilies(context.Doc);
 
         // Extract APS parameter info
-        var apsParameters = apsParamModels.Select(p => new Ui.ParameterInfo(
+        var apsParameters = apsParamModels.Select(p => new ParameterInfo(
             p.Name,
             p.DownloadOptions.IsInstance,
             GetDataTypeName(p.DownloadOptions.GetSpecTypeId())
@@ -205,7 +198,7 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
 
         // Extract AddAndSet parameter info - this is profile-specific, so we skip it for now
         // Commands can override this if needed
-        var addAndSetParameters = new List<Ui.ParameterInfo>();
+        var addAndSetParameters = new List<ParameterInfo>();
 
         // Extract family info with categories
         var familyInfos = families.Select(f => new FamilyInfo(
@@ -217,8 +210,7 @@ public class FoundryPaletteBuilder<TProfile> where TProfile : BaseProfileSetting
         var profileJson = JsonSerializer.Serialize(
             profile,
             new JsonSerializerOptions {
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
 
         // Check operation enabled status from queue

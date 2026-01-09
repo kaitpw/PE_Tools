@@ -89,7 +89,8 @@ public static class PaletteFactory {
                 options.OnSelectionChangedDebounced(viewModel.SelectedItem);
         }
 
-        palette.Initialize(viewModel, actions, options.CustomKeyBindings, onCtrlReleased, options.Sidebar, options.KeepOpenAfterAction);
+        palette.Initialize(viewModel, actions, options.CustomKeyBindings, onCtrlReleased, options.Sidebar,
+            options.KeepOpenAfterAction);
 
         var window = new EphemeralWindow(palette, title);
 

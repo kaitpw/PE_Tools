@@ -1,7 +1,5 @@
 using PeRevit.Lib;
 using PeUi.Core;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -84,7 +82,9 @@ public class SchedulePreviewPanel : UserControl {
             // Fields list with details
             if (data.Fields.Count > 0) {
                 AddSectionHeader(doc, "Fields");
-                var fieldList = new List { MarkerStyle = TextMarkerStyle.Decimal, Margin = new Thickness(16, 0, 0, 12) };
+                var fieldList = new List {
+                    MarkerStyle = TextMarkerStyle.Decimal, Margin = new Thickness(16, 0, 0, 12)
+                };
                 foreach (var field in data.Fields) {
                     var para = new Paragraph();
                     para.Inlines.Add(new Run(field.ParameterName) { FontWeight = FontWeights.SemiBold });
@@ -160,9 +160,9 @@ public class SchedulePreviewPanel : UserControl {
                     metaPara.Inlines.Add(new Run($"Created: {data.CreatedDate:yyyy-MM-dd HH:mm:ss}"));
                     metaPara.Inlines.Add(new LineBreak());
                 }
-                if (data.ModifiedDate.HasValue) {
+
+                if (data.ModifiedDate.HasValue)
                     metaPara.Inlines.Add(new Run($"Modified: {data.ModifiedDate:yyyy-MM-dd HH:mm:ss}"));
-                }
                 metaPara.Margin = new Thickness(0, 0, 0, 12);
                 metaPara.FontSize = 10;
                 doc.Blocks.Add(metaPara);
@@ -238,4 +238,3 @@ public class SchedulePreviewData {
     public bool IsValid { get; init; } = true;
     public List<string> RemainingErrors { get; init; } = [];
 }
-

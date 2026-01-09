@@ -38,7 +38,7 @@ public class CategoryConverter : JsonConverter<Category> {
             throw new JsonSerializationException("Category name cannot be null or empty.");
 
         var doc = DocumentManager.GetActiveDocument()
-            ?? throw new JsonSerializationException("Cannot deserialize Category: no active Revit document.");
+                  ?? throw new JsonSerializationException("Cannot deserialize Category: no active Revit document.");
 
         // Search through categories to find matching name
         foreach (Category cat in doc.Settings.Categories) {

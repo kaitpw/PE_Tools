@@ -91,7 +91,10 @@ public static class Formula {
     ///     of references among the formulas.
     /// </exception>
     /// <returns>True if the formula was set successfully</returns>
-    public static bool TrySetFormula(this FamilyDocument famDoc, FamilyParameter targetParam, FamilyParameter sourceParam, out string errorMessage) {
+    public static bool TrySetFormula(this FamilyDocument famDoc,
+        FamilyParameter targetParam,
+        FamilyParameter sourceParam,
+        out string errorMessage) {
         if (string.IsNullOrWhiteSpace(sourceParam.Formula)) {
             errorMessage = $"Cannot set formula on parameter '{targetParam.Name()}'. " +
                            $"Source parameter '{sourceParam.Name()}' has no formula.";
@@ -105,6 +108,7 @@ public static class Formula {
                            $"Source parameter '{sourceParam.Name()}' has datatype '{srcDataType}' but target parameter '{targetParam.Name()}' has datatype '{tgtDataType}'.";
             return false;
         }
+
         return famDoc.TrySetFormula(targetParam, sourceParam.Formula, out errorMessage);
     }
 

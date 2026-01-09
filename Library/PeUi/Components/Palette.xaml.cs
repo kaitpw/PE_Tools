@@ -329,7 +329,7 @@ public sealed partial class Palette : RevitHostedUserControl, ICloseRequestable 
         }
 
         this._parentWindow.Closed += ClosedHandler;
-        this.RequestClose(true);
+        this.RequestClose();
     }
 
     private void RequestClose(bool restoreFocus = true) =>

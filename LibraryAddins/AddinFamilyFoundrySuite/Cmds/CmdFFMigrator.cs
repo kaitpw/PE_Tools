@@ -3,7 +3,6 @@ using AddinFamilyFoundrySuite.Core.OperationGroups;
 using AddinFamilyFoundrySuite.Core.Operations;
 using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinFamilyFoundrySuite.Core.Snapshots;
-using PeExtensions.FamDocument;
 using PeRevit.Lib;
 using PeRevit.Ui;
 using PeUtils.Files;
@@ -44,7 +43,7 @@ public class CmdFFMigrator : IExternalCommand {
     }
 
     private void HandlePlaceFamilies(FoundryContext<ProfileRemap> context) {
-        var profile = context.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+        var profile = context.SettingsManager.SubDir("profiles", true)
             .Json<ProfileRemap>($"{context.SelectedProfile.TextPrimary}.json")
             .Read();
         var families = profile.GetFamilies(context.Doc);
@@ -80,7 +79,7 @@ public class CmdFFMigrator : IExternalCommand {
         }
 
         // Load profile fresh for execution
-        var profile = ctx.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+        var profile = ctx.SettingsManager.SubDir("profiles", true)
             .Json<ProfileRemap>($"{ctx.SelectedProfile.TextPrimary}.json")
             .Read();
 
@@ -104,9 +103,9 @@ public class CmdFFMigrator : IExternalCommand {
 
         // Setup result builder for incremental writes
         var resultBuilder = new ProcessingResultBuilder(ctx.Storage)
-            .WithProfile(profile, ctx.SelectedProfile.TextPrimary)
-            .WithOperationMetadata(queue)
-;
+                .WithProfile(profile, ctx.SelectedProfile.TextPrimary)
+                .WithOperationMetadata(queue)
+            ;
         using var processor = new OperationProcessor(ctx.Doc, profile.ExecutionOptions);
         var logs = processor
             .SelectFamilies(() => {
@@ -115,7 +114,7 @@ public class CmdFFMigrator : IExternalCommand {
             })
             .WithPerFamilyCallback(familyCtx =>
                 // Write output for each family as it completes
-                resultBuilder.WriteSingleFamilyOutput(familyCtx, false)
+                resultBuilder.WriteSingleFamilyOutput(familyCtx)
             )
             .ProcessQueue(queue, collectorQueue, outputFolderPath, ctx.OnFinishSettings);
 
@@ -204,7 +203,8 @@ public class ProfileRemap : BaseProfileSettings {
     [Required]
     public PurgeReferencePlanesSettings PurgeReferencePlanes { get; init; } = new();
 
-    [Description("Settings for deleting model lines. Model lines are typically superfluous. most cannot be seen, and the ones that can be are just visual sugar")]
+    [Description(
+        "Settings for deleting model lines. Model lines are typically superfluous. most cannot be seen, and the ones that can be are just visual sugar")]
     [Required]
     public DefaultOperationSettings PurgeModelLines { get; init; } = new();
 

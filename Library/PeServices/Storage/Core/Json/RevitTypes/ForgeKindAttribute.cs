@@ -6,6 +6,7 @@ namespace PeServices.Storage.Core.Json.RevitTypes;
 public enum ForgeKind {
     /// <summary> Spec types (data types like Length, Area, Volume, etc.) </summary>
     Spec,
+
     /// <summary> Group types (property groups like Dimensions, Constraints, etc.) </summary>
     Group
 }

@@ -1,7 +1,5 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using PeServices.Storage.Core.Json.Converters;
-using PeServices.Storage.Core.Json.RevitTypes;
 
 namespace PeServices.Storage.Core.Json.ContractResolvers;
 

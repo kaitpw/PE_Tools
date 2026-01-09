@@ -45,7 +45,7 @@ public static class PltFamilyTypes {
                 },
                 CanExecute = item => {
                     if (item == null) return false;
- 
+
                     // Check if active view is valid for placing families
                     return !activeView.IsTemplate
                            && activeView.ViewType != ViewType.Legend
@@ -58,9 +58,7 @@ public static class PltFamilyTypes {
         };
 
         var window = PaletteFactory.Create($"{family.Name} Types", items, actions,
-            new PaletteOptions<FamilyTypePaletteItem> {
-                SearchConfig = SearchConfig.Default()
-            });
+            new PaletteOptions<FamilyTypePaletteItem> { SearchConfig = SearchConfig.Default() });
 
         return window;
     }

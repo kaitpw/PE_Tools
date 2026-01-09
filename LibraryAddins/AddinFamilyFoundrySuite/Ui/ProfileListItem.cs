@@ -1,4 +1,5 @@
 using Newtonsoft.Json.Linq;
+using PeServices.Storage.Core;
 using PeUi.Core;
 using System.Windows.Media.Imaging;
 using WpfColor = System.Windows.Media.Color;
@@ -34,8 +35,8 @@ public class ProfileListItem : IPaletteListItem {
     public DateTime LastModified => this._fileInfo.LastWriteTime;
 
     /// <summary> Profile filename without extension (or relative path if nested) </summary>
-    public string TextPrimary => this._relativePath != null 
-        ? Path.ChangeExtension(this._relativePath, null) 
+    public string TextPrimary => this._relativePath != null
+        ? Path.ChangeExtension(this._relativePath, null)
         : Path.GetFileNameWithoutExtension(this.FilePath);
 
     /// <summary> Shows $extends value or "Base Profile" </summary>
@@ -54,7 +55,7 @@ public class ProfileListItem : IPaletteListItem {
     /// <summary>
     ///     Extracts the $extends value from a JSON file without fully parsing.
     /// </summary>
-    private static string ExtractExtendsValue(string filePath) { 
+    private static string ExtractExtendsValue(string filePath) {
         try {
             var content = File.ReadAllText(filePath);
             var jObject = JObject.Parse(content);
@@ -70,7 +71,7 @@ public class ProfileListItem : IPaletteListItem {
     ///     Discovers all profile JSON files in a directory, excluding schema files.
     ///     If using a SettingsSubDir with recursive discovery, will find files in nested subdirectories.
     /// </summary>
-    public static List<ProfileListItem> DiscoverProfiles(PeServices.Storage.Core.SettingsSubDir subDir) {
+    public static List<ProfileListItem> DiscoverProfiles(SettingsSubDir subDir) {
         if (!Directory.Exists(subDir.DirectoryPath))
             return [];
 

@@ -1,11 +1,7 @@
-
-
 using NJsonSchema;
-using NJsonSchema.Generation;
 using NJsonSchema.Generation.TypeMappers;
 using PeServices.Storage.Core.Json.Converters;
 using PeServices.Storage.Core.Json.RevitTypes;
-using PeServices.Storage.Core.Json.SchemaProcessors;
 using PeServices.Storage.Core.Json.SchemaProviders;
 
 namespace PeServices.Storage.Core.Json;
@@ -126,7 +122,7 @@ public class RevitTypeMapper : ITypeMapper {
     public bool UseReference => false;
 
     public void GenerateSchema(JsonSchema schema, TypeMapperContext context) {
-        schema.Type = _schemaType;
+        schema.Type = this._schemaType;
         schema.Properties.Clear();
         schema.AdditionalPropertiesSchema = null;
         schema.AllowAdditionalProperties = false;

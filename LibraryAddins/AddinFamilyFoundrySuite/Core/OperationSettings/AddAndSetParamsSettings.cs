@@ -1,6 +1,5 @@
 using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 using PeServices.Storage.Core.Json.SchemaProcessors;
-using PeServices.Storage.Core.Json.SchemaProviders;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 

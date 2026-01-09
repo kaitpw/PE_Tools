@@ -40,7 +40,8 @@ public class JsonValidationException : Exception {
     }
 
     public JsonValidationException(string path, IEnumerable<ValidationError> validationErrors)
-        : this(path, ValidationErrorFormatter.Format(validationErrors)) { }
+        : this(path, ValidationErrorFormatter.Format(validationErrors)) {
+    }
 
     /// <summary>Path to the JSON file that failed validation</summary>
     public string FilePath { get; }

@@ -51,8 +51,7 @@ public static class PltAssociatedElements {
 
         var window = PaletteFactory.Create($"{param.Definition.Name} Associations", items, actions,
             new PaletteOptions<AssociatedElementItem> {
-                SearchConfig = SearchConfig.PrimaryAndSecondary(),
-                FilterKeySelector = item => item.TextPill
+                SearchConfig = SearchConfig.PrimaryAndSecondary(), FilterKeySelector = item => item.TextPill
             });
         window.Show();
     }

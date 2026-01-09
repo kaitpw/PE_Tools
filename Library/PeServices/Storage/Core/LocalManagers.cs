@@ -82,7 +82,9 @@ public class SettingsManager : BaseLocalManager {
 public class SettingsSubDir : SettingsManager {
     private readonly List<string> _excludePatterns;
 
-    public SettingsSubDir(string parentPath, string subDirName, bool recursiveDiscovery,
+    public SettingsSubDir(string parentPath,
+        string subDirName,
+        bool recursiveDiscovery,
         List<string> excludePatterns = null)
         : base(parentPath, subDirName) {
         this.RecursiveDiscovery = recursiveDiscovery;

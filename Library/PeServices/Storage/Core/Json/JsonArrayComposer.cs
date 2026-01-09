@@ -69,11 +69,9 @@ public static class JsonArrayComposer {
         var result = new JArray();
 
         foreach (var item in array) {
-            switch (item)
-            {
+            switch (item) {
             // Check if this item is an $include directive
-            case JObject obj when obj.TryGetValue(IncludeProperty, out var includeToken):
-            {
+            case JObject obj when obj.TryGetValue(IncludeProperty, out var includeToken): {
                 // Validate include value
                 if (includeToken.Type != JTokenType.String || string.IsNullOrWhiteSpace(includeToken.Value<string>())) {
                     throw JsonExtendsException.InvalidIncludeValue(
@@ -101,7 +99,8 @@ public static class JsonArrayComposer {
 
                 // Recursively expand includes within the fragment
                 var expandedFragment =
-                    ExpandArrayIncludes(fragmentArray, Path.GetDirectoryName(fragmentPath)!, newVisited, fragmentSchemaDirectory);
+                    ExpandArrayIncludes(fragmentArray, Path.GetDirectoryName(fragmentPath)!, newVisited,
+                        fragmentSchemaDirectory);
 
                 // Add all fragment items to result
                 foreach (var fragmentItem in expandedFragment) result.Add(fragmentItem.DeepClone());
@@ -109,8 +108,7 @@ public static class JsonArrayComposer {
             }
             // Regular item - just add it
             // If it's an object, recursively process it for nested arrays
-            case JObject itemObj:
-            {
+            case JObject itemObj: {
                 var cloned = (JObject)itemObj.DeepClone();
                 ExpandIncludes(cloned, baseDirectory, visitedFragments, fragmentSchemaDirectory);
                 result.Add(cloned);
@@ -167,9 +165,8 @@ public static class JsonArrayComposer {
             }
 
             // Inject schema reference if schema directory provided and not already present
-            if (fragmentSchemaDirectory != null && !fragmentObj.ContainsKey("$schema")) {
+            if (fragmentSchemaDirectory != null && !fragmentObj.ContainsKey("$schema"))
                 InjectFragmentSchema(fragmentPath, fragmentObj, fragmentSchemaDirectory);
-            }
 
             return array;
         } catch (JsonExtendsException) {

@@ -35,11 +35,64 @@ public class CoerceSimple : ICoercionStrategy {
         };
     }
 
+    public Result<FamilyParameter> Map(CoercionContext context) {
+        var fm = context.FamilyManager;
+        var target = context.TargetParam;
+
+        switch (context.SourceValue) {
+        case bool boolValue when context.TargetStorageType == StorageType.Integer:
+            fm.Set(target, boolValue ? 1 : 0);
+            return target;
+        case double doubleValue:
+            fm.Set(target, doubleValue);
+            return target;
+        case int intValue:
+            if (context.TargetStorageType == StorageType.Double)
+                fm.Set(target, (double)intValue);
+            else
+                fm.Set(target, intValue);
+            return target;
+        case string stringValue:
+            if (context.TargetStorageType == StorageType.Double) {
+                var dataType = context.TargetDataType;
+                // Try unit-formatted parsing first for measurable specs (e.g., "10'", "120V", "35 SF")
+                if (UnitUtils.IsMeasurableSpec(dataType)) {
+                    var units = context.FamilyDocument.GetUnits();
+                    if (UnitFormatUtils.TryParse(units, dataType, stringValue, out var parsed)) {
+                        fm.Set(target, parsed);
+                        return target;
+                    }
+                }
+
+                // Fallback to plain number parsing
+                fm.Set(target, double.Parse(stringValue));
+            } else if (context.TargetStorageType == StorageType.Integer)
+                fm.Set(target, ParseAsInteger(stringValue, context));
+            else if (context.TargetStorageType == StorageType.ElementId) {
+                // Parse ElementId from format: "ElementName [ID:12345]" or "[ID:12345]"
+                if (TryParseElementId(stringValue, out var idValue))
+                    fm.Set(target, new ElementId(idValue));
+                else
+                    return new ArgumentException(
+                        $"Cannot parse ElementId from string: '{stringValue}'. Expected format: 'ElementName [ID:12345]' or '[ID:12345]'");
+            } else
+                fm.Set(target, stringValue);
+
+            return target;
+        case ElementId elementIdValue:
+            fm.Set(target, elementIdValue);
+            return target;
+        default:
+            return new ArgumentException($"Invalid type of value to set ({context.SourceValue.GetType().Name})");
+        }
+    }
+
     private static bool CanParseAsInteger(string str, CoercionContext context) {
         // Handle "Yes"/"No" strings for Yes/No parameters
-        if (context.TargetDataType == SpecTypeId.Boolean.YesNo)
+        if (context.TargetDataType == SpecTypeId.Boolean.YesNo) {
             return str.Equals("Yes", StringComparison.OrdinalIgnoreCase)
                    || str.Equals("No", StringComparison.OrdinalIgnoreCase);
+        }
 
         return int.TryParse(str, out _);
     }
@@ -71,9 +124,7 @@ public class CoerceSimple : ICoercionStrategy {
     ///     Checks if a string can be parsed as an ElementId.
     ///     Supports formats: "[ID:12345]" or "ElementName [ID:12345]"
     /// </summary>
-    private static bool CanParseAsElementId(string str) {
-        return TryParseElementId(str, out _);
-    }
+    private static bool CanParseAsElementId(string str) => TryParseElementId(str, out _);
 
     /// <summary>
     ///     Parses ElementId from string formats: "[ID:12345]" or "ElementName [ID:12345]"
@@ -92,56 +143,5 @@ public class CoerceSimple : ICoercionStrategy {
 
         var idString = str.Substring(idStart + 4, idEnd - idStart - 4);
         return int.TryParse(idString, out idValue);
-    }
-
-    public Result<FamilyParameter> Map(CoercionContext context) {
-        var fm = context.FamilyManager;
-        var target = context.TargetParam;
-
-        switch (context.SourceValue) {
-        case bool boolValue when context.TargetStorageType == StorageType.Integer:
-            fm.Set(target, boolValue ? 1 : 0);
-            return target;
-        case double doubleValue:
-            fm.Set(target, doubleValue);
-            return target;
-        case int intValue:
-            if (context.TargetStorageType == StorageType.Double)
-                fm.Set(target, (double)intValue);
-            else
-                fm.Set(target, intValue);
-            return target;
-        case string stringValue:
-            if (context.TargetStorageType == StorageType.Double) {
-                var dataType = context.TargetDataType;
-                // Try unit-formatted parsing first for measurable specs (e.g., "10'", "120V", "35 SF")
-                if (UnitUtils.IsMeasurableSpec(dataType)) {
-                    var units = context.FamilyDocument.GetUnits();
-                    if (UnitFormatUtils.TryParse(units, dataType, stringValue, out var parsed)) {
-                        fm.Set(target, parsed);
-                        return target;
-                    }
-                }
-                // Fallback to plain number parsing
-                fm.Set(target, double.Parse(stringValue));
-            } else if (context.TargetStorageType == StorageType.Integer) {
-                fm.Set(target, ParseAsInteger(stringValue, context));
-            } else if (context.TargetStorageType == StorageType.ElementId) {
-                // Parse ElementId from format: "ElementName [ID:12345]" or "[ID:12345]"
-                if (TryParseElementId(stringValue, out var idValue)) {
-                    fm.Set(target, new ElementId(idValue));
-                } else {
-                    return new ArgumentException($"Cannot parse ElementId from string: '{stringValue}'. Expected format: 'ElementName [ID:12345]' or '[ID:12345]'");
-                }
-            } else {
-                fm.Set(target, stringValue);
-            }
-            return target;
-        case ElementId elementIdValue:
-            fm.Set(target, elementIdValue);
-            return target;
-        default:
-            return new ArgumentException($"Invalid type of value to set ({context.SourceValue.GetType().Name})");
-        }
     }
 }

@@ -1,5 +1,5 @@
 using Newtonsoft.Json.Linq;
-using PeRevit.Lib;
+using PeServices.Storage.Core;
 using PeUi.Core;
 using System.Windows.Media.Imaging;
 using WpfColor = System.Windows.Media.Color;
@@ -35,8 +35,8 @@ public class ScheduleListItem : IPaletteListItem {
     public DateTime LastModified => this._fileInfo.LastWriteTime;
 
     /// <summary> Profile filename without extension (or relative path if nested) </summary>
-    public string TextPrimary => this._relativePath != null 
-        ? Path.ChangeExtension(this._relativePath, null) 
+    public string TextPrimary => this._relativePath != null
+        ? Path.ChangeExtension(this._relativePath, null)
         : Path.GetFileNameWithoutExtension(this.FilePath);
 
     /// <summary> Shows category name </summary>
@@ -86,7 +86,7 @@ public class ScheduleListItem : IPaletteListItem {
     ///     Discovers all schedule profile JSON files in a directory, excluding schema files.
     ///     If using a SettingsSubDir with recursive discovery, will find files in nested subdirectories.
     /// </summary>
-    public static List<ScheduleListItem> DiscoverProfiles(PeServices.Storage.Core.SettingsSubDir subDir) {
+    public static List<ScheduleListItem> DiscoverProfiles(SettingsSubDir subDir) {
         if (!Directory.Exists(subDir.DirectoryPath))
             return [];
 
@@ -99,4 +99,3 @@ public class ScheduleListItem : IPaletteListItem {
             .ToList();
     }
 }
-

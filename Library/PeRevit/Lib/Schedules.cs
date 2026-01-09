@@ -388,8 +388,7 @@ public static class ScheduleHelper {
 
         foreach (var fieldSpec in calculatedFields) {
             var guidance = new CalculatedFieldGuidance {
-                FieldName = fieldSpec.ParameterName,
-                CalculatedType = fieldSpec.CalculatedType.ToString()
+                FieldName = fieldSpec.ParameterName, CalculatedType = fieldSpec.CalculatedType.ToString()
             };
 
             if (fieldSpec.CalculatedType == CalculatedFieldType.Formula) {

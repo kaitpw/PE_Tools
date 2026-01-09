@@ -28,11 +28,11 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
 
         if (hasProjectData) {
             // Filter out project parameters (which don't have a counterpart in the family, this is an unusual-ish case)
-            snapshot.Parameters.Data = [.. snapshot.Parameters.Data.Where(s => famDoc.FamilyManager.FindParameter(s.Name) != null)];
+            snapshot.Parameters.Data =
+                [.. snapshot.Parameters.Data.Where(s => famDoc.FamilyManager.FindParameter(s.Name) != null)];
             this.SupplementWithFormulas(snapshot, famDoc);
-        } else {
+        } else
             snapshot.Parameters = this.CollectFromFamilyDoc(famDoc);
-        }
     }
 
     // IProjectCollector implementation (preferred - runs first)

@@ -7,6 +7,7 @@ namespace AddinFamilyFoundrySuite.Core.Aggregators;
 ///     Aggregated parameter data across multiple families for CSV output.
 /// </summary>
 public class AggregatedParamData(ParamSnapshot param) {
+    public readonly string DataType = SpecNamesProvider.GetLabelForForge(param.DataType);
     public readonly string DataTypeId = param.DataType.TypeId;
     public readonly bool HasValueForAllTypes = param.HasValueForAllTypes();
     public readonly bool IsBuiltIn = param.IsBuiltIn;
@@ -15,7 +16,6 @@ public class AggregatedParamData(ParamSnapshot param) {
     public readonly string ParamName = param.Name;
     public readonly string SharedGuid = param.SharedGuid.ToString();
     public readonly string StorageType = param.StorageType.ToString();
-    public readonly string DataType = SpecNamesProvider.GetLabelForForge(param.DataType);
     public int FamilyCount => this.FamilyNames.Count;
     public int ScheduleCount => this.ScheduleNames.Count;
     public bool IsFamilyParameter => string.IsNullOrWhiteSpace(this.SharedGuid) && !this.IsBuiltIn;

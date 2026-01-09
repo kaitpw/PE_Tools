@@ -19,7 +19,7 @@ public class DiagnosticLogger : IDisposable {
         _ = Directory.CreateDirectory(outputDirectory);
         this._writer = new StreamWriter(this._logFilePath, true, Encoding.UTF8);
         this.Log("=== Diagnostic Log Started ===");
-        this.Log($"Family: {familyName}"); 
+        this.Log($"Family: {familyName}");
         this.Log($"Timestamp: {timestamp}");
         this.Log("");
     }

@@ -1,14 +1,12 @@
 using Newtonsoft.Json;
 using NJsonSchema;
 using NJsonSchema.Generation;
-using PeServices.Storage.Core.Json.SchemaProcessors;
 
 namespace PeServices.Storage.Core.Json.SchemaProcessors;
 
 /// <summary>
 ///     Unified schema processor that handles all registered Revit-native types.
 ///     Replaces JsonConverterSchemaProcessor and SchemaEnumProcessor with a single, registry-driven approach.
-///     
 ///     For each property:
 ///     1. Check if type is registered in RevitTypeRegistry
 ///     2. If yes, apply schema type (e.g., object → string)
@@ -35,7 +33,7 @@ public class RevitTypeSchemaProcessor : ISchemaProcessor {
                 continue;
 
             // Determine which provider to use
-            Type? providerType = registration.DefaultProvider;
+            var providerType = registration.DefaultProvider;
 
             if (registration.DiscriminatorType != null && registration.ProviderSelector != null) {
                 var discriminatorAttr = property.GetCustomAttribute(registration.DiscriminatorType);
@@ -96,9 +94,7 @@ public class RevitTypeSchemaProcessor : ISchemaProcessor {
 
             // Set enum constraint (clear first to avoid duplicates)
             targetSchema.Enumeration.Clear();
-            foreach (var value in provider.GetExamples()) {
-                targetSchema.Enumeration.Add(value);
-            }
+            foreach (var value in provider.GetExamples()) targetSchema.Enumeration.Add(value);
         } catch {
             // Fail silently - enum constraints are a nicety, not critical
         }

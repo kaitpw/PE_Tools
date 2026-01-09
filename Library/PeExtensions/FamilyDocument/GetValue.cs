@@ -1,5 +1,6 @@
 using PeExtensions.FamManager;
 using PeExtensions.PolyFill;
+
 namespace PeExtensions.FamDocument.GetValue;
 
 public static class FamilyManagerGetValue {
@@ -58,7 +59,8 @@ public static class FamilyManagerGetValue {
     }
 
     /// <summary>
-    ///     Get the string value with a unit (ie. what you see in the family editor) of a parameter using the current family type.
+    ///     Get the string value with a unit (ie. what you see in the family editor) of a parameter using the current family
+    ///     type.
     ///     Handles all storage types correctly:
     ///     - Double: Returns unit-formatted string (e.g., "10'", "120 V")
     ///     - String: Returns the raw string value

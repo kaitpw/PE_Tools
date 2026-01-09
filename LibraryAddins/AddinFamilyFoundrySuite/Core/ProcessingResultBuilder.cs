@@ -225,9 +225,10 @@ public class ProcessingResultBuilder(Storage storage) {
         }
 
         // Find removed parameters
-        foreach (var (key, preParam) in preParams)
+        foreach (var (key, preParam) in preParams) {
             if (!postParams.ContainsKey(key))
                 removed.Add(GetDescription(preParam));
+        }
 
         // Find modified parameters
         foreach (var (key, preParam) in preParams) {
@@ -270,9 +271,7 @@ public class ProcessingResultBuilder(Storage storage) {
             if (preParam.DataType.TypeId != postParam.DataType.TypeId)
                 changes.Add($"DataType: {GetDataTypeLabel(preParam)} → {GetDataTypeLabel(postParam)}");
 
-            if (changes.Any()) {
-                modified.Add(new { Description = GetDescription(preParam), Changes = changes });
-            }
+            if (changes.Any()) modified.Add(new { Description = GetDescription(preParam), Changes = changes });
         }
 
         return new {

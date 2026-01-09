@@ -271,9 +271,7 @@ public class OperationGroup<TSettings> where TSettings : IOperationSettings {
         this.GroupContext = new OperationContext();
 
         // Initialize context entries from work items
-        foreach (var key in groupContextKeys) {
-            this.GroupContext.InitializeEntry(key);
-        }
+        foreach (var key in groupContextKeys) this.GroupContext.InitializeEntry(key);
     }
 
     public string Name => this.GetType().Name;

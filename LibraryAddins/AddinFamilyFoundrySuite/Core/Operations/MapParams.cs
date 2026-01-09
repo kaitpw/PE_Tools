@@ -15,9 +15,10 @@ public class MapParams(MapParamsSettings settings)
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
-        if (groupContext is null)
+        if (groupContext is null) {
             throw new InvalidOperationException(
                 $"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+        }
 
         var fm = doc.FamilyManager;
 

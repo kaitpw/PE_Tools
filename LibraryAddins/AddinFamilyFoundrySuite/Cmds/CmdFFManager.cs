@@ -5,7 +5,6 @@ using AddinFamilyFoundrySuite.Core.OperationSettings;
 using AddinFamilyFoundrySuite.Core.Snapshots;
 using PeRevit.Lib;
 using PeRevit.Ui;
-using PeServices.Storage;
 using PeUtils.Files;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -48,7 +47,7 @@ public class CmdFFManager : IExternalCommand {
         }
 
         // Load profile fresh for execution
-        var profile = ctx.SettingsManager.SubDir("profiles", recursiveDiscovery: true)
+        var profile = ctx.SettingsManager.SubDir("profiles", true)
             .Json<ProfileFamilyManager>($"{ctx.SelectedProfile.TextPrimary}.json")
             .Read();
 
@@ -65,8 +64,7 @@ public class CmdFFManager : IExternalCommand {
 
         // Force this to never be single transaction
         var executionOptions = new ExecutionOptions {
-            SingleTransaction = false,
-            OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
+            SingleTransaction = false, OptimizeTypeOperations = profile.ExecutionOptions.OptimizeTypeOperations
         };
 
         // Request both parameter and refplane snapshots
@@ -116,12 +114,13 @@ public class CmdFFManager : IExternalCommand {
             OverrideExistingValues = profile.AddAndSetParams.OverrideExistingValues,
             DisablePerTypeFallback = profile.AddAndSetParams.DisablePerTypeFallback,
             Parameters = profile.AddAndSetParams.Parameters.Concat(
-                [
-                    new ParamSettingModel {
-                        Name = "_FOUNDRY LAST PROCESSED AT",
-                        DataType = SpecTypeId.String.Text,
-                        ValueOrFormula = $"\"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\""
-        }]).ToList()
+            [
+                new ParamSettingModel {
+                    Name = "_FOUNDRY LAST PROCESSED AT",
+                    DataType = SpecTypeId.String.Text,
+                    ValueOrFormula = $"\"{DateTime.Now:yyyy-MM-dd HH:mm:ss}\""
+                }
+            ]).ToList()
         };
 
         return new OperationQueue()
@@ -134,7 +133,6 @@ public class CmdFFManager : IExternalCommand {
 }
 
 public class ProfileFamilyManager : BaseProfileSettings {
-
     [Description("Settings for making reference planes and dimensions")]
     [Required]
     public MakeRefPlaneAndDimsSettings MakeRefPlaneAndDims { get; init; } = new();

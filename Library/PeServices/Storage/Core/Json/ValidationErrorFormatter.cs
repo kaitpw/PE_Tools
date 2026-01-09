@@ -118,8 +118,8 @@ public static class ValidationErrorFormatter {
             yield return $"{indent}  As {jsonType}:";
 
             foreach (var childErr in childErrors)
-                foreach (var msg in FormatError(childErr, depth + 2))
-                    yield return msg;
+            foreach (var msg in FormatError(childErr, depth + 2))
+                yield return msg;
         }
     }
 
@@ -147,8 +147,8 @@ public static class ValidationErrorFormatter {
             yield return $"{indent}  Alternative {altIndex} ({schemaHint}):";
 
             foreach (var childErr in childErrors)
-                foreach (var msg in FormatError(childErr, depth + 2))
-                    yield return msg;
+            foreach (var msg in FormatError(childErr, depth + 2))
+                yield return msg;
         }
     }
 

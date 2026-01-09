@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using NJsonSchema;
 using NJsonSchema.Generation;
 
@@ -72,8 +73,8 @@ public class IncludableSchemaProcessor : ISchemaProcessor {
                genericDef == typeof(IEnumerable<>);
     }
 
-    private static string GetJsonPropertyName(System.Reflection.PropertyInfo property) {
-        var jsonPropAttr = property.GetCustomAttribute<Newtonsoft.Json.JsonPropertyAttribute>();
+    private static string GetJsonPropertyName(PropertyInfo property) {
+        var jsonPropAttr = property.GetCustomAttribute<JsonPropertyAttribute>();
         return jsonPropAttr?.PropertyName ?? property.Name;
     }
 
@@ -81,10 +82,7 @@ public class IncludableSchemaProcessor : ISchemaProcessor {
     ///     Creates the schema for $include directive objects.
     /// </summary>
     private static JsonSchema CreateIncludeDirectiveSchema() {
-        var schema = new JsonSchema {
-            Type = JsonObjectType.Object,
-            AllowAdditionalProperties = false
-        };
+        var schema = new JsonSchema { Type = JsonObjectType.Object, AllowAdditionalProperties = false };
 
         var includeProperty = new JsonSchemaProperty {
             Type = JsonObjectType.String,

@@ -21,19 +21,17 @@ namespace PeServices.Storage.Core.Json;
 [AttributeUsage(AttributeTargets.Property)]
 public class IncludableAttribute : Attribute {
     /// <summary>
-    ///     Name used for fragment schema file (e.g., "fields" → "schema-fragment-fields.json").
-    ///     If not specified, uses the property name in lowercase.
-    /// </summary>
-    public string FragmentSchemaName { get; }
-
-    /// <summary>
     ///     Marks a List property as supporting $include directives.
     /// </summary>
     /// <param name="fragmentSchemaName">
     ///     Optional name for the fragment schema file.
     ///     Defaults to the property name in lowercase if not specified.
     /// </param>
-    public IncludableAttribute(string fragmentSchemaName = null) {
-        this.FragmentSchemaName = fragmentSchemaName;
-    }
+    public IncludableAttribute(string fragmentSchemaName = null) => this.FragmentSchemaName = fragmentSchemaName;
+
+    /// <summary>
+    ///     Name used for fragment schema file (e.g., "fields" → "schema-fragment-fields.json").
+    ///     If not specified, uses the property name in lowercase.
+    /// </summary>
+    public string FragmentSchemaName { get; }
 }

@@ -51,7 +51,7 @@ public class OneOfSchemaProcessor : ISchemaProcessor {
 ///     Marks a type as having oneOf property constraint.
 ///     Exactly one of the specified properties must be present in the JSON.
 /// </summary>
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
 public class OneOfPropertiesAttribute(params string[] propertyNames) : Attribute {
     /// <summary>The property names - at most one can be present.</summary>
     public string[] PropertyNames { get; } = propertyNames;

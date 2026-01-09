@@ -33,9 +33,7 @@ public class OperationContext {
             .ToDictionary(e => e.Key, e => e.Value);
 
         // Mark all incomplete entries as touched so they appear in TakeSnapshot()
-        foreach (var key in incomplete.Keys) {
-            _ = this._touchedThisOperation.Add(key);
-        }
+        foreach (var key in incomplete.Keys) _ = this._touchedThisOperation.Add(key);
 
         return incomplete;
     }
@@ -113,5 +111,4 @@ public class FamilyProcessingContext {
 
     /// <summary>Checks if a parameter has a (non-empty) value for all family types.</summary>
     public bool HasValueForAllTypes(string paramName) => this.FindParam(paramName).HasValueForAllTypes();
-
 }

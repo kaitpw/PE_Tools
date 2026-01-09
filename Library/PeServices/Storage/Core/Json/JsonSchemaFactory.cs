@@ -38,22 +38,16 @@ public static class JsonSchemaFactory {
         examplesProcessor.Finalize(itemSchema);
 
         // Create wrapper schema with Items property
-        var fragmentSchema = new JsonSchema {
-            Type = NJsonSchema.JsonObjectType.Object,
-            AllowAdditionalProperties = false
-        };
+        var fragmentSchema = new JsonSchema { Type = JsonObjectType.Object, AllowAdditionalProperties = false };
 
         // Add $schema property (optional)
-        fragmentSchema.Properties["$schema"] = new NJsonSchema.JsonSchemaProperty {
-            Type = NJsonSchema.JsonObjectType.String,
-            IsRequired = false
+        fragmentSchema.Properties["$schema"] = new JsonSchemaProperty {
+            Type = JsonObjectType.String, IsRequired = false
         };
 
         // Add Items property (required array of item type)
-        var itemsProperty = new NJsonSchema.JsonSchemaProperty {
-            Type = NJsonSchema.JsonObjectType.Array,
-            Item = itemSchema,
-            IsRequired = true
+        var itemsProperty = new JsonSchemaProperty {
+            Type = JsonObjectType.Array, Item = itemSchema, IsRequired = true
         };
         fragmentSchema.Properties["Items"] = itemsProperty;
         fragmentSchema.RequiredProperties.Add("Items");
@@ -69,8 +63,7 @@ public static class JsonSchemaFactory {
         RevitTypeRegistry.Initialize();
 
         var settings = new NewtonsoftJsonSchemaGeneratorSettings {
-            FlattenInheritanceHierarchy = true,
-            AlwaysAllowAdditionalObjectProperties = false
+            FlattenInheritanceHierarchy = true, AlwaysAllowAdditionalObjectProperties = false
         };
 
         // Add individual TypeMappers for each registered Revit type

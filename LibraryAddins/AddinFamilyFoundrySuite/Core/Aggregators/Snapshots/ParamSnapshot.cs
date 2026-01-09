@@ -6,7 +6,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
 
-
 /// <summary>
 ///     Base definition for parameter identity and creation metadata.
 ///     Shared between ParamSnapshot (audit/replay) and ParamSettingModel (settings).
@@ -18,7 +17,8 @@ public record ParamDefinitionBase {
     [Required]
     public required string Name { get; init; }
 
-    [Description("Whether the parameter is an instance parameter (true) or a type parameter (false). Defaults to true.")]
+    [Description(
+        "Whether the parameter is an instance parameter (true) or a type parameter (false). Defaults to true.")]
     public bool IsInstance { get; init; } = true;
 
     [Description("The properties group of the parameter. Defaults to \"Other\" Properties Palette group.")]
@@ -30,7 +30,6 @@ public record ParamDefinitionBase {
     public ForgeTypeId DataType { get; init; } = SpecTypeId.String.Text;
 }
 
-
 /// <summary>
 ///     Canonical parameter snapshot - single source of truth for:
 ///     - Parameter definition (can recreate the param)
@@ -38,7 +37,6 @@ public record ParamDefinitionBase {
 ///     - Per-type values (audit + replay)
 /// </summary>
 public record ParamSnapshot : ParamDefinitionBase {
-
     // Assignment mode - if Formula != null, it is the authoritative assignment
     public string Formula { get; init; } = null;
 
@@ -71,9 +69,11 @@ public record ParamSnapshot : ParamDefinitionBase {
         if (this is null) return [];
 
         return string.IsNullOrWhiteSpace(this.Formula)
-            ? [.. this.ValuesPerType
-                .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
-                .Select(kv => kv.Key)]
+            ? [
+                .. this.ValuesPerType
+                    .Where(kv => !string.IsNullOrWhiteSpace(kv.Value))
+                    .Select(kv => kv.Key)
+            ]
             : [.. this.ValuesPerType.Keys];
     }
 }

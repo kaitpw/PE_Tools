@@ -1,6 +1,5 @@
 using PeRevit.Lib;
 using PeServices.Storage.Core.Json.SchemaProcessors;
-using System.Diagnostics;
 
 namespace PeServices.Storage.Core.Json.SchemaProviders;
 
@@ -19,7 +18,8 @@ public class SchedulableParameterNamesProvider : IOptionsProvider {
 
         lock (_lock) {
             if (_cachedParameters.Count > 0) {
-                Debug.WriteLine($"[SchedulableParameterNamesProvider] Returning {_cachedParameters.Count} cached parameters (generated: {_cacheGeneratedAt})");
+                Debug.WriteLine(
+                    $"[SchedulableParameterNamesProvider] Returning {_cachedParameters.Count} cached parameters (generated: {_cacheGeneratedAt})");
                 return _cachedParameters.OrderBy(name => name).ToList();
             }
 
@@ -43,7 +43,8 @@ public class SchedulableParameterNamesProvider : IOptionsProvider {
         }
 
         var categoryList = categories.ToList();
-        Debug.WriteLine($"[SchedulableParameterNamesProvider] Updating cache for {categoryList.Count} categories: {string.Join(", ", categoryList)}");
+        Debug.WriteLine(
+            $"[SchedulableParameterNamesProvider] Updating cache for {categoryList.Count} categories: {string.Join(", ", categoryList)}");
 
         var parameterNames = new HashSet<string>(StringComparer.Ordinal);
 
@@ -51,7 +52,8 @@ public class SchedulableParameterNamesProvider : IOptionsProvider {
             try {
                 Debug.WriteLine($"[SchedulableParameterNamesProvider] Querying: {categoryName}");
                 var categoryParams = ScheduleHelper.GetSchedulableParameterNames(doc, categoryName);
-                Debug.WriteLine($"[SchedulableParameterNamesProvider] Found {categoryParams.Count} parameters for {categoryName}");
+                Debug.WriteLine(
+                    $"[SchedulableParameterNamesProvider] Found {categoryParams.Count} parameters for {categoryName}");
                 foreach (var param in categoryParams)
                     _ = parameterNames.Add(param);
             } catch (Exception ex) {
@@ -62,7 +64,8 @@ public class SchedulableParameterNamesProvider : IOptionsProvider {
         lock (_lock) {
             _cachedParameters = parameterNames;
             _cacheGeneratedAt = DateTime.Now;
-            Debug.WriteLine($"[SchedulableParameterNamesProvider] Cache updated with {_cachedParameters.Count} parameters at {_cacheGeneratedAt}");
+            Debug.WriteLine(
+                $"[SchedulableParameterNamesProvider] Cache updated with {_cachedParameters.Count} parameters at {_cacheGeneratedAt}");
         }
     }
 }

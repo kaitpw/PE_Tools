@@ -1,8 +1,8 @@
 #nullable enable
 using PeExtensions.FamDocument.SetValue.CoercionStrategies;
 using BCS = PeExtensions.FamDocument.SetValue.BuiltInCoercionStrategy;
-namespace PeExtensions.FamDocument.SetValue;
 
+namespace PeExtensions.FamDocument.SetValue;
 
 public enum BuiltInCoercionStrategy {
     Strict,

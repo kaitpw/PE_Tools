@@ -1,13 +1,13 @@
-
 using PeExtensions.FamDocument;
+
 namespace AddinFamilyFoundrySuite.Core.Operations;
+
 public class PurgeModelLines(DefaultOperationSettings settings) : DocOperation<DefaultOperationSettings>(settings) {
     public override string Description => "Delete unused model lines from the family";
 
     public override OperationLog Execute(FamilyDocument famDoc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
-
         // make settings later?
         var deleteGroupedLines = true;
         var deleteAlignedLines = true;
@@ -30,13 +30,12 @@ public class PurgeModelLines(DefaultOperationSettings settings) : DocOperation<D
                     .Where(d => d is not ArcLengthDimension)
                     .Where(d => d is not SpotDimension)
                     .ToList()
-                ))
+            ))
             .ToList();
 
         var (grouped, aligned, other) = (0, 0, 0);
 
         foreach (var (line, (groupId, alignments)) in lines) {
-
             if (deleteAlignedLines && alignments.Any()) {
                 var deleted = famDoc.Document.Delete(line.Id);
                 if (deleted.Count != 0) aligned++;

@@ -39,7 +39,9 @@ public class CmdFFParamAggregator : IExternalCommand {
             // Apply category filter if specified
             var families = settings.CategoryFilter.Any()
                 ? familiesQuery.Where(f =>
-                    f.FamilyCategory != null && settings.CategoryFilter.Any(cat => cat.BuiltInCategory == f.FamilyCategory.BuiltInCategory)).ToList()
+                        f.FamilyCategory != null &&
+                        settings.CategoryFilter.Any(cat => cat.BuiltInCategory == f.FamilyCategory.BuiltInCategory))
+                    .ToList()
                 : familiesQuery.ToList();
 
             if (!families.Any()) {

@@ -1,9 +1,7 @@
 using AddinFamilyFoundrySuite.Core.Snapshots;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Nice3point.Revit.Extensions;
 using PeServices.Storage.Core.Json.ContractResolvers;
-using PeServices.Storage.Core.Json.Converters;
 using PeServices.Storage.Core.Json.SchemaProviders;
 
 namespace AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
@@ -14,7 +12,9 @@ public static class SnapshotSerializer {
         ContractResolver = new RequiredAwareContractResolver(),
         Converters = [new StringEnumConverter()]
     };
-    private static readonly string[] CsvHeaders = ["Name", "IsInstance", "IsProjectParameter", "PropertiesGroup", "DataType", "Formula"];
+
+    private static readonly string[] CsvHeaders =
+        ["Name", "IsInstance", "IsProjectParameter", "PropertiesGroup", "DataType", "Formula"];
 
     // JSON
 
@@ -27,6 +27,7 @@ public static class SnapshotSerializer {
             )
         }).ToList();
     }
+
     // CSV (with type columns)
     public static string ToCsv(this List<ParamSnapshot> snapshots) {
         snapshots ??= [];
@@ -37,18 +38,13 @@ public static class SnapshotSerializer {
             .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var lines = new List<string> {
-            string.Join(",",CsvHeaders.Concat(typeNames).Select(EscapeCsvField))
-        };
+        var lines = new List<string> { string.Join(",", CsvHeaders.Concat(typeNames).Select(EscapeCsvField)) };
 
         foreach (var s in snapshots.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase)) {
             var fixedCols = new[] {
-                s.Name,
-                s.IsInstance.ToString(),
-                s.IsProjectParameter.ToString(),
+                s.Name, s.IsInstance.ToString(), s.IsProjectParameter.ToString(),
                 PropertyGroupNamesProvider.GetLabelForForge(s.PropertiesGroup),
-                SpecNamesProvider.GetLabelForForge(s.DataType),
-                s.Formula ?? string.Empty
+                SpecNamesProvider.GetLabelForForge(s.DataType), s.Formula ?? string.Empty
             };
 
             var valueCols = typeNames
@@ -77,7 +73,7 @@ public static class SnapshotSerializer {
 
         var lines = new List<string> {
             string.Join(",", new[] { "Name", "AnchorName", "Placement", "Parameter", "Strength" }
-            .Select(EscapeCsvField))
+                .Select(EscapeCsvField))
         };
 
         foreach (var s in specs.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase)) {
