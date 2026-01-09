@@ -12,7 +12,7 @@ public class AddAndMapSharedParams(
     : OperationGroup<MapParamsSettings>(
         "Map and add shared parameters (replace, add unmapped, and remap)",
         InitializeOperations(settings, sharedParams),
-        keySelector: item => ((MappingData)item).NewName) {
+        settings.MappingData.Select(m => m.NewName)) {
     private static List<IOperation> InitializeOperations(
         MapParamsSettings settings,
         IEnumerable<SharedParameterDefinition> sharedParams
@@ -40,8 +40,10 @@ public class PreProcessMappings(
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
         OperationContext groupContext) {
-        if (groupContext is null)
-            throw new InvalidOperationException($"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+        if (groupContext is null) {
+            throw new InvalidOperationException(
+                $"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
+        }
 
         var fm = doc.FamilyManager;
         var sharedParamsDict = sharedParams.ToDictionary(p => p.ExternalDefinition.Name);
@@ -136,19 +138,17 @@ public class AddUnmappedSharedParams(
     public override string Description =>
         "Add shared parameters that are not already processed by a previous operation";
 
-    public override OperationLog Execute(FamilyDocument doc,
+    public override OperationLog Execute(
+        FamilyDocument doc,
         FamilyProcessingContext processingContext,
-        OperationContext groupContext) {
-        if (groupContext is null)
-            throw new InvalidOperationException($"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
-
+        OperationContext groupContext
+    ) {
         // Get already-handled params from GroupContext
         var existingParams = doc.FamilyManager.Parameters
             .OfType<FamilyParameter>()
             .Select(p => p.Definition.Name)
             .ToHashSet();
         var addParams = sharedParams
-            .Where(p => !groupContext.GetAllInComplete().ContainsKey(p.ExternalDefinition.Name))
             .Where(p => !existingParams.Contains(p.ExternalDefinition.Name));
 
         var addSharedParams = new AddSharedParams(addParams) { Name = this.Name };

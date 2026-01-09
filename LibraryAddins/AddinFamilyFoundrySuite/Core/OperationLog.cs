@@ -21,9 +21,16 @@ public class OperationLog(string operationName, List<LogEntry> entries) {
 public class LogEntry {
     public LogEntry(string name) => this.Name = name;
     public string Name { get; }
-    public string FamilyTypeName { get; private set; } = null;
+    public string FamilyTypeName { get; private set; }
     private List<string> MessageList { get; } = [];
-    public string Message => this.MessageList.Count != 0 ? string.Join("| ", this.MessageList) : null;
+
+    public string Message =>
+        this.MessageList.Count == 0
+            ? string.Empty
+            : string.Join("",
+                this.MessageList.Select((msg, i) =>
+                    $"{i + 1}. {msg}" + $"{(i < this.MessageList.Count - 1 ? "\n" : "")}"));
+
     public LogStatus Status { get; private set; } = LogStatus.Pending;
     public Exception Exception { get; private set; }
     public bool IsComplete => this.Status != LogStatus.Pending;
@@ -62,11 +69,13 @@ public class LogEntry {
         this.EnsurePending();
         this.Status = LogStatus.Error;
         this.MessageList.Add(message);
+        this.MessageList.Add("\n");
+        this.MessageList.Add(ex.ToStringDemystified());
         this.Exception = ex;
         return this;
     }
 
-    // Non-terminal (stays Pending)
+    // Non-terminal (stays Pending) 
     public LogEntry Defer(string action) {
         this.EnsurePending();
         this.MessageList.Add(action);

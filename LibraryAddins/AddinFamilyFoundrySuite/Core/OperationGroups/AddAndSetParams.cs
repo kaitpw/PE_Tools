@@ -16,7 +16,7 @@ public class AddAndSetParams(AddAndSetParamsSettings settings)
     : OperationGroup<AddAndSetParamsSettings>(
         InitializeDescription(settings),
         InitializeOperations(settings),
-        keySelector: item => ((ParamSettingModel)item).Name) {
+        settings.Parameters.Select(p => p.Name)) {
 #pragma warning disable IDE0060 // Remove unused parameter
     public static string InitializeDescription(AddAndSetParamsSettings settings) =>
         $"Set a parameter within the family to a value or formula. " +

@@ -19,24 +19,26 @@ public class OperationContext {
     /// </summary>
     public Func<object, string> KeySelector { get; init; }
 
-    public LogEntry GetOrCreate(object workItem) {
-        var name = this.KeySelector(workItem);
-        if (this._entries.TryGetValue(name, out var entry)) {
-            // Only mark as touched if not already complete (operation is modifying it)
-            if (!entry.IsComplete)
-                _ = this._touchedThisOperation.Add(name);
-            return entry;
-        }
-
-        // New entry - definitely touched
-        _ = this._touchedThisOperation.Add(name);
-        return this._entries[name] = new LogEntry(name);
+    /// <summary>
+    ///     Initializes a log entry with the given key. Called by OperationGroup during construction.
+    /// </summary>
+    internal void InitializeEntry(string key) {
+        if (!this._entries.ContainsKey(key))
+            this._entries[key] = new LogEntry(key);
     }
 
-    public Dictionary<string, LogEntry> GetAllInComplete() =>
-        this._entries
+    public Dictionary<string, LogEntry> GetAllInComplete() {
+        var incomplete = this._entries
             .Where(e => !e.Value.IsComplete)
             .ToDictionary(e => e.Key, e => e.Value);
+
+        // Mark all incomplete entries as touched so they appear in TakeSnapshot()
+        foreach (var key in incomplete.Keys) {
+            _ = this._touchedThisOperation.Add(key);
+        }
+
+        return incomplete;
+    }
 
     /// <summary>
     ///     Gets a snapshot of logs touched by the current operation, then clears the touched set.
@@ -58,7 +60,10 @@ public class OperationContext {
     }
 
     public void Reset() {
-        this._entries.Clear();
+        // Reset entries to Pending state rather than clearing them
+        // This preserves the initialized keys while allowing reuse across families
+        foreach (var key in this._entries.Keys.ToList())
+            this._entries[key] = new LogEntry(key);
         this._touchedThisOperation.Clear();
     }
 }

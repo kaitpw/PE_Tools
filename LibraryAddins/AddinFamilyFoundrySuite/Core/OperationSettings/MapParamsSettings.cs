@@ -21,9 +21,12 @@ public class MapParamsSettings : IOperationSettings {
     /// <summary>
     ///     Returns current parameters from <paramref name="currNames" /> ranked by data quality and user priority.
     ///     Filters to parameters in FamilyManager with snapshot data, deduplicates by value signature (keeping highest
-    ///     priority),
-    ///     then ranks by number of types with values (most first), using user order as tiebreaker.
+    ///     priority), then ranks by number of types with values (most first), using user order as tiebreaker.
     /// </summary>
+    /// <remarks>
+    ///     In an attempt to keep user priority, this DOES NOT rank by matching datatype.
+    ///     You must check datatype equality manually whereever that is a necessary condition.
+    /// </remarks>
     /// <param name="currNames">Ordered list of candidate parameter names (priority order)</param>
     /// <param name="fm">FamilyManager instance for resolving parameters</param>
     /// <param name="processingContext">Optional context for snapshot data and value counts; may be null</param>

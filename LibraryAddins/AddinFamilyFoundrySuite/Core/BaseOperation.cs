@@ -258,13 +258,22 @@ public class DefaultOperationSettings : IOperationSettings {
 /// </summary>
 public class OperationGroup<TSettings> where TSettings : IOperationSettings {
     /// <summary>
-    ///     Creates an operation group with a key selector for inter-operation coordination.
+    ///     Creates an operation group with work items for inter-operation coordination.
     ///     The key selector extracts a string key from work items for tracking handled state.
     /// </summary>
-    protected OperationGroup(string description, List<IOperation> operations, Func<object, string> keySelector) {
+    protected OperationGroup(
+        string description,
+        List<IOperation> operations,
+        IEnumerable<string> groupContextKeys
+    ) {
         this.Description = description;
         this.Operations = operations;
-        this.GroupContext = new OperationContext { KeySelector = keySelector };
+        this.GroupContext = new OperationContext();
+
+        // Initialize context entries from work items
+        foreach (var key in groupContextKeys) {
+            this.GroupContext.InitializeEntry(key);
+        }
     }
 
     public string Name => this.GetType().Name;

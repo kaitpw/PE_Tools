@@ -7,7 +7,7 @@ namespace AddinFamilyFoundrySuite.Core.OperationGroups;
 public class MakeRefPlaneAndDims(MakeRefPlaneAndDimsSettings settings) : OperationGroup<MakeRefPlaneAndDimsSettings>(
     "Make reference planes and dimensions for the family",
     InitializeOperations(settings),
-    keySelector: item => item.ToString()) {
+    settings.Specs.Select(s => s.ToString())) {
     private static List<IOperation> InitializeOperations(
         MakeRefPlaneAndDimsSettings settings) {
         var sharedHelper = new SharedHelper();
