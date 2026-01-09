@@ -61,16 +61,13 @@ public class MakeElecConnector(MakeElecConnectorSettings settings) : DocOperatio
                 var bip = targetParam.Definition.Cast<InternalDefinition>().BuiltInParameter;
                 var tgtAssociations = doc.FamilyManager.GetAssociatedFamilyParameter(targetParam);
                 _ = targetMappings.TryGetValue(bip, out var sourceName);
-                var sourceParam = this.GetSourceParameter(doc, sourceName);
+                if (string.IsNullOrWhiteSpace(sourceName)) continue;
 
+                var sourceParam = this.GetSourceParameter(doc, sourceName);
                 if (sourceParam == null) {
                     logs.Add(new LogEntry(sourceName).Error("Parameter not found"));
                     continue;
                 }
-
-                if (tgtAssociations?.Id == sourceParam.Id)
-                    logs.Add(new LogEntry(sourceName).Skip("Already associated"));
-
 
                 // Dissociate everything and it explicitly
                 if (tgtAssociations != null) {

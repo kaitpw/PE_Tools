@@ -15,36 +15,33 @@ public class BacklinkParamsToBuiltIn(MapParamsSettings settings)
 
     public override OperationLog Execute(FamilyDocument doc,
         FamilyProcessingContext processingContext,
-        OperationContext groupContext) {
-        if (groupContext is null)
-            throw new InvalidOperationException($"{this.Name} requires a GroupContext (must be used within an OperationGroup)");
-
+        OperationContext _) {
         var fm = doc.FamilyManager;
 
-        var data = groupContext.GetAllInComplete().Select(e => {
-            var mapping = this.Settings.MappingData.First(m => e.Key == m.NewName);
-            return (mapping, e.Value);
-        });
+        // Find first built-in in CurrNames (priority order) and backlink it
+        var data = this.Settings.MappingData
+            .Select(m => (
+                newParam: fm.FindParameter(m.NewName),
+                currParams: m.CurrNames.Select(fm.FindParameter)
+                    .Where(p => p is not null)
+                    .Where(p => p.IsBuiltInParameter()).ToList()
+            ))
+            .Where(m => m.newParam is not null)
+            .Where(m => m.currParams.Any())
+            .ToList();
 
-        foreach (var (mapping, log) in data) {
-            var tgtParam = fm.FindParameter(mapping.NewName);
-            if (tgtParam == null) continue;
-
-            // Find first built-in in CurrNames (priority order) and backlink it
-            foreach (var currName in mapping.CurrNames) {
-                var srcParam = fm.FindParameter(currName);
-                if (srcParam == null) continue;
-                if (!srcParam.IsBuiltInParameter()) continue;
-
-                // Set formula: BuiltIn = NewParam
-                var success = doc.TrySetFormulaFast(srcParam, mapping.NewName, out var err);
-                _ = success
-                    ? log.Success($"Backlink {mapping.NewName} → {currName}")
-                    : log.Error($"Backlink {mapping.NewName} → {currName}: {err}");
+        var logs = new List<LogEntry>();
+        foreach (var (newParam, currParams) in data) {
+            foreach (var currParam in currParams) {
+                var success = doc.TrySetFormulaFast(currParam, newParam.Definition.Name, out var err);
+                var log = new LogEntry($"Backlink {newParam.Definition.Name} → {currParam.Definition.Name}");
+                logs.Add(success
+                    ? log.Success("Successfully backlinked")
+                    : log.Error(err ?? "Failed to set formula"));
                 break; // Only backlink first matching built-in per mapping
             }
         }
 
-        return new OperationLog(this.Name, groupContext.TakeSnapshot());
+        return new OperationLog(this.Name, logs);
     }
 }

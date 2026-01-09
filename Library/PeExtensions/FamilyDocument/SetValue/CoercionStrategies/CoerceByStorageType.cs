@@ -8,9 +8,13 @@ namespace PeExtensions.FamDocument.SetValue.CoercionStrategies;
 ///     Implements comprehensive storage type conversions based on Revit's parameter system.
 /// </summary>
 public class CoerceByStorageType : ICoercionStrategy {
-    public bool CanMap(CoercionContext context) =>
-        context.SourceStorageType == context.TargetStorageType
-        || (context.SourceStorageType, context.TargetStorageType) switch {
+    public bool CanMap(CoercionContext context) {
+        // Same storage type - always compatible
+        if (context.SourceStorageType == context.TargetStorageType)
+            return true;
+
+        // Check cross-storage-type conversions      
+        return (context.SourceStorageType, context.TargetStorageType) switch {
             (StorageType.Integer, StorageType.String) => true,
             (StorageType.Integer, StorageType.Double) => true,
             (StorageType.Double, StorageType.String) => true,
@@ -21,6 +25,7 @@ public class CoerceByStorageType : ICoercionStrategy {
                 context.SourceValue.ToString(), out _),
             _ => false
         };
+    }
 
     public Result<FamilyParameter> Map(CoercionContext context) {
         var convertedValue = (context.SourceStorageType, context.TargetStorageType) switch {

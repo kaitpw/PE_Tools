@@ -1,7 +1,14 @@
 #nullable enable
 using PeExtensions.FamDocument.SetValue.CoercionStrategies;
-
+using BCS = PeExtensions.FamDocument.SetValue.BuiltInCoercionStrategy;
 namespace PeExtensions.FamDocument.SetValue;
+
+
+public enum BuiltInCoercionStrategy {
+    Strict,
+    CoerceByStorageType,
+    CoerceMeasurableToNumber
+}
 
 /// <summary>
 ///     Registry for ParamCoercionStrategy implementations.
@@ -11,8 +18,16 @@ public static class ParamCoercionStrategyRegistry {
     private static readonly Dictionary<string, Func<ICoercionStrategy>> _factories = new();
 
     static ParamCoercionStrategyRegistry() {
-        Register("Strict", () => new Strict());
-        Register("CoerceByStorageType", () => new CoerceByStorageType());
+        Register(BCS.Strict.ToString(), () => new Strict());
+        Register(BCS.CoerceByStorageType.ToString(), () => new CoerceByStorageType());
+
+        // CoerceMeasurableToNumber with fallback to CoerceByStorageType
+        // Tries unit conversion first, falls back to raw value copy if no mapping exists
+        Register(BCS.CoerceMeasurableToNumber.ToString(), () => new CompositeStrategy(
+            new CoerceMeasurableToNumber(),
+            new CoerceByStorageType()
+        ));
+
         Register("CoerceElectrical", () => new CoerceElectrical());
     }
 
@@ -21,9 +36,7 @@ public static class ParamCoercionStrategyRegistry {
     /// </summary>
     /// <param name="name">Strategy name (should match enum value for C# usage)</param>
     /// <param name="factory">Factory function to create strategy instances</param>
-    public static void Register(string name, Func<ICoercionStrategy> factory) {
-        _factories[name] = factory;
-    }
+    public static void Register(string name, Func<ICoercionStrategy> factory) => _factories[name] = factory;
 
     /// <summary>
     ///     Get a coercion strategy instance by name.
@@ -55,8 +68,15 @@ public static class ValueCoercionStrategyRegistry {
     private static readonly Dictionary<string, Func<ICoercionStrategy>> _factories = new();
 
     static ValueCoercionStrategyRegistry() {
-        Register("Strict", () => new Strict());
-        Register("CoerceSimple", () => new CoerceSimple());
+        Register(BCS.Strict.ToString(), () => new Strict());
+        Register(BCS.CoerceByStorageType.ToString(), () => new CoerceByStorageType());
+
+        // CoerceMeasurableToNumber with fallback to CoerceByStorageType
+        // Tries unit conversion first, falls back to raw value copy if no mapping exists
+        Register(BCS.CoerceMeasurableToNumber.ToString(), () => new CompositeStrategy(
+            new CoerceMeasurableToNumber(),
+            new CoerceByStorageType()
+        ));
     }
 
     /// <summary>
@@ -64,9 +84,7 @@ public static class ValueCoercionStrategyRegistry {
     /// </summary>
     /// <param name="name">Strategy name (should match enum value for C# usage)</param>
     /// <param name="factory">Factory function to create strategy instances</param>
-    public static void Register(string name, Func<ICoercionStrategy> factory) {
-        _factories[name] = factory;
-    }
+    public static void Register(string name, Func<ICoercionStrategy> factory) => _factories[name] = factory;
 
     /// <summary>
     ///     Get a coercion strategy instance by name.

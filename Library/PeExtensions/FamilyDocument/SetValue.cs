@@ -86,7 +86,7 @@ public static class FamilyDocumentSetValue {
     }
 
     /// <summary>
-    ///     Set a family's parameter value on the <c>FamilyManager.CurrentType</c> using the specified strategy.
+    ///     Set a family's parameter value on the <c>FamilyManager.CurrentType</c> using the specified strategy name.
     ///     If no strategy is specified, uses the <c>Strict</c> strategy.
     /// </summary>
     /// <remarks>
@@ -101,18 +101,18 @@ public static class FamilyDocumentSetValue {
         this FamilyDocument famDoc,
         FamilyParameter targetParam,
         FamilyParameter sourceParam,
-        ParamCoercionStrategy strategy = ParamCoercionStrategy.Strict
+        string strategyName = "Strict"
     ) {
         var context = CoercionContext.FromParam(famDoc, sourceParam, targetParam);
         if (context.SourceValue == null) return null;
 
-        var strategyInstance = ParamCoercionStrategyRegistry.Get(strategy.ToString());
+        var strategyInstance = ParamCoercionStrategyRegistry.Get(strategyName);
 
         if (!strategyInstance.CanMap(context)) {
-            var targetDataType = targetParam?.Definition.GetDataType();
+            var targetDataType = targetParam.Definition.GetDataType();
             var dataTypeDisplay = targetDataType?.TypeId ?? "Unknown";
             throw new Exception(
-                $"Cannot map '{sourceParam.Definition.Name}' to '{targetParam.Definition.Name}' ({dataTypeDisplay}) using strategy '{strategy}'");
+                $"Cannot map '{sourceParam.Definition.Name}' to '{targetParam.Definition.Name}' ({dataTypeDisplay}) using strategy '{strategyName}'");
         }
 
         var (param, err) = strategyInstance.Map(context);
@@ -121,7 +121,7 @@ public static class FamilyDocumentSetValue {
     }
 
     /// <summary>
-    ///     Set a family's parameter value on the <c>FamilyManager.CurrentType</c> using the specified strategy.
+    ///     Set a family's parameter value on the <c>FamilyManager.CurrentType</c> using the specified strategy name.
     ///     If no strategy is specified, uses the <c>Strict</c> strategy.
     /// </summary>
     /// <remarks>
@@ -136,18 +136,18 @@ public static class FamilyDocumentSetValue {
         this FamilyDocument famDoc,
         FamilyParameter targetParam,
         object sourceValue,
-        ValueCoercionStrategy strategy = ValueCoercionStrategy.Strict
+        string strategyName = "Strict"
     ) {
         var context = CoercionContext.FromValue(famDoc, sourceValue, targetParam);
         if (context.SourceValue == null) return null;
 
-        var strategyInstance = ValueCoercionStrategyRegistry.Get(strategy.ToString());
+        var strategyInstance = ValueCoercionStrategyRegistry.Get(strategyName);
 
         if (!strategyInstance.CanMap(context)) {
-            var targetDataType = targetParam?.Definition.GetDataType();
+            var targetDataType = targetParam.Definition.GetDataType();
             var dataTypeDisplay = targetDataType?.TypeId ?? "Unknown";
             throw new Exception(
-                $"Cannot map value '{sourceValue}' to '{targetParam.Definition.Name}' ({dataTypeDisplay}) using strategy '{strategy}'");
+                $"Cannot map value '{sourceValue}' to '{targetParam.Definition.Name}' ({dataTypeDisplay}) using strategy '{strategyName}'");
         }
 
         var (param, err) = strategyInstance.Map(context);

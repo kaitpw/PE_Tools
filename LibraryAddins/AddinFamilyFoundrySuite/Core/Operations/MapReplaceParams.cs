@@ -2,7 +2,7 @@ using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
 using PeExtensions.FamParameter.Formula;
-using PCS = PeExtensions.FamDocument.SetValue.ParamCoercionStrategy;
+using BCS = PeExtensions.FamDocument.SetValue.BuiltInCoercionStrategy;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -82,7 +82,7 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
     private void LogAndUnwrap(
         FamilyDocument doc,
         LogEntry log,
-        PCS mappingStrategy,
+        string mappingStrategy,
         string currParamName,
         FamilyParameter replaced
     ) {
@@ -96,8 +96,7 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
         // A Tale Of Struggles: The actual contents of the formula are irrelevant for this decision 
         var msgBase = $"Replaced {currParamName} → {replaced.Definition.Name}";
         var coercibleDataType = this.IgnoreCoercionDataTypes.Contains(replaced.Definition.GetDataType());
-        var coercionStrategySimple =
-            new[] { PCS.Strict, PCS.CoerceByStorageType }.Contains(mappingStrategy);
+        var coercionStrategySimple = mappingStrategy is nameof(BCS.Strict) or nameof(BCS.CoerceByStorageType);
         _ = coercibleDataType && !coercionStrategySimple
             ? log.Defer($"{msgBase}, awaiting coercion")
             : log.Success($"{msgBase}");

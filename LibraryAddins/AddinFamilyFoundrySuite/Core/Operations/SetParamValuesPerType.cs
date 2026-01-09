@@ -98,7 +98,7 @@ public class SetParamValuesPerType(AddAndSetParamsSettings settings)
                 $"Per-type value '{actualValue}' contains parameter references. Use ValueOrFormula with SetAsFormula=true for formulas, not ValuesPerType.");
         }
 
-        _ = famDoc.SetValue(parameter, actualValue, ValueCoercionStrategy.CoerceSimple);
+        _ = famDoc.SetValue(parameter, actualValue, "CoerceSimple");
     }
 
     /// <summary>

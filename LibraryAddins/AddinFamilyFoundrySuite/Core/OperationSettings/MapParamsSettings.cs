@@ -37,7 +37,8 @@ public class MapParamsSettings : IOperationSettings {
         FamilyProcessingContext processingContext = null) {
         // No context? Return params in user priority order
         if (processingContext == null) {
-            return [.. currNames
+            return [
+                .. currNames
                     .Select(fm.FindParameter)
                     .Where(p => p is not null)
                     .Where(p => {
@@ -47,7 +48,8 @@ public class MapParamsSettings : IOperationSettings {
                         } catch {
                             return false;
                         }
-                    })];
+                    })
+            ];
         }
 
         // 1. Filter to params that currently exist in fm AND have snapshots (for quality metrics)
@@ -58,18 +60,19 @@ public class MapParamsSettings : IOperationSettings {
             .Where(x => x != null)
             .Where(x => x.GetTypesWithValue().Count > 0);
 
-        if (!candidateSnapshots.Any()) return [];
+        var paramSnapshots = candidateSnapshots.ToList();
+        if (!paramSnapshots.Any()) return [];
 
-        var deduplicated = candidateSnapshots
+        var deduplicated = paramSnapshots
             .GroupBy(GetValueSignature)
             .Select(g => g.First());
 
-        if (!deduplicated.Any()) return [];
-
+        var enumerable = deduplicated.ToList();
+        if (!enumerable.Any()) return [];
 
         // 4. Order by quality (most types with values first). exclude 
         return [
-            .. deduplicated
+            .. enumerable
                 .Select(x => (n: x.Name, c: x.GetTypesWithValue().Count))
                 .OrderByDescending(x => x.c)
                 .ThenBy(x => currNames.IndexOf(x.n)) // preserve user priority as tiebreaker
@@ -82,7 +85,7 @@ public class MapParamsSettings : IOperationSettings {
                     } catch {
                         return false;
                     }
-                    })
+                })
         ];
     }
 
@@ -110,5 +113,6 @@ public class MappingData {
 
     [Description(
         "Coercion strategy to use for the remapping. CoerceByStorageType will be used when none is specified.")]
-    public ParamCoercionStrategy MappingStrategy { get; init; } = ParamCoercionStrategy.CoerceByStorageType;
+    [SchemaExamples(typeof(ParamCoercionStrategyProvider))]
+    public string MappingStrategy { get; init; } = nameof(BuiltInCoercionStrategy.CoerceByStorageType);
 }
