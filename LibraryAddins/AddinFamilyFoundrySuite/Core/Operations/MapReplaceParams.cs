@@ -2,6 +2,7 @@ using AddinFamilyFoundrySuite.Core.OperationSettings;
 using PeExtensions.FamDocument;
 using PeExtensions.FamParameter;
 using PeExtensions.FamParameter.Formula;
+using PCS = PeExtensions.FamDocument.SetValue.ParamCoercionStrategy;
 
 namespace AddinFamilyFoundrySuite.Core.Operations;
 
@@ -50,13 +51,12 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
             foreach (var currParam in filteredCurrNames.TakeWhile(_ => !foundMatch)) {
                 try {
                     var currParamName = currParam.Definition.Name;
-                    var currParamDataType = currParam.Definition.GetDataType();
                     if (currParam.IsBuiltInParameter()) continue;
-                    if (currParamDataType != sharedParam.ExternalDefinition.GetDataType()) {
+                    if (currParam.Definition.GetDataType() != sharedParam.ExternalDefinition.GetDataType()) {
                         // Log a message to show user that their priority is respected.
                         _ = log.Defer(
                             $"{sharedParam.ExternalDefinition.Name} cannot replace {currParamName} due to datatype mismatch");
-                        continue;
+                        break;
                     }
 
                     var replaced = fm.ReplaceParameter(
@@ -67,7 +67,7 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                     );
                     if (replaced == null) continue;
                     foundMatch = true;
-                    this.LogAndUnwrap(doc, log, mapping, currParamName, currParamDataType, replaced);
+                    this.LogAndUnwrap(doc, log, mapping.MappingStrategy, currParamName, replaced);
                 } catch {
                     // Not terminated as error because we must allow retrying later
                     _ = log.Defer($"Failed to map {currParam.Definition.Name} → {mapping.NewName}");
@@ -84,39 +84,25 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
     private void LogAndUnwrap(
         FamilyDocument doc,
         LogEntry log,
-        MappingData mapping,
+        PCS mappingStrategy,
         string currParamName,
-        ForgeTypeId currParamDataType,
         FamilyParameter replaced
     ) {
         var parameters = doc.FamilyManager.Parameters;
-        var singleReference = parameters.TryGetSingleReference(replaced.Formula);
 
-        if (singleReference != null) {
-            var refName = singleReference.Definition.Name;
-            var refIsBuiltIn = singleReference.IsBuiltInParameter();
-            var refIsInCurrNames = mapping.CurrNames.Contains(refName);
+        // Unwrap stuff for which we've already captured the value of. Allows more to be purged later.
+        var referencedParam = parameters.TryGetSingleReference(replaced.Formula);
+        if (referencedParam != null) _ = doc.UnsetFormula(referencedParam);
 
-            if (refIsBuiltIn && refIsInCurrNames) {
-                // Don't mark as fully handled - BacklinkParamsToBuiltIn will handle it
-                const string backlinkOp = nameof(BacklinkParamsToBuiltIn);
-                _ = log.Defer($"Replaced {currParamName}, deferred backlink to {refName} to {backlinkOp}");
-                _ = doc.UnsetFormula(replaced); // NewName inherited formula pointing to a CurrNames built-in
-            } else {
-                _ = log.Success($"{currParamName} → {replaced.Definition.Name}");
-                _ = doc.UnsetFormula(singleReference); // Unwrap, formula points to non-CurrNames OR non-built-in 
-            }
-        } else if (replaced.Formula == null || parameters.IsConstant(replaced.Formula)) {
-            var isTerminal = currParamDataType == replaced.Definition.GetDataType()
-                             || this.IgnoreCoercionDataTypes.Contains(replaced.Definition.GetDataType());
-            _ = isTerminal
-                ? log.Success($"Replaced {currParamName} → {replaced.Definition.Name}")
-                : log.Defer($"Replaced {currParamName}, awaiting coercion");
-            _ = doc.UnsetFormula(replaced);
-        } else {
-            // Fallback: formula exists but has no dependencies and is not constant (edge case)
-            // we already replaced the parameter, so this is a success
-            _ = log.Success($"Replaced {currParamName} → {replaced.Definition.Name}");
-        }
+        // Defer only when the value is coercible, and the mapping strategy is not a simple one. 
+        // A Tale Of Struggles: The actual contents of the formula are irreelevant for this decision 
+        var msgBase = $"Replaced {currParamName} → {replaced.Definition.Name}";
+        var coercibleDataType = this.IgnoreCoercionDataTypes.Contains(replaced.Definition.GetDataType());
+        var coercionStrategySimple =
+            new[] { PCS.Strict, PCS.CoerceByStorageType }.Contains(mappingStrategy);
+        _ = coercibleDataType && !coercionStrategySimple
+            ? log.Defer($"{msgBase}, awaiting coercion")
+            : log.Success($"{msgBase}");
+        _ = doc.UnsetFormula(replaced);
     }
 }

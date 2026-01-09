@@ -66,7 +66,7 @@ public class SetParamValues(AddAndSetParamsSettings settings)
                 var success = doc.TrySetFormula(param, paramModel.ValueOrFormula, out errorMessage);
                 return success ? SetResult.Success : SetResult.NeedsFallbackResult;
             } else {
-                var success = doc.SetGlobalValue(param, paramModel.ValueOrFormula);
+                var success = doc.SetUnsetFormula(param, paramModel.ValueOrFormula);
                 return success ? SetResult.Success : SetResult.NeedsFallbackResult;
             }
         } catch {

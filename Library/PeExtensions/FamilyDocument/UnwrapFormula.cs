@@ -68,7 +68,7 @@ public static class FamilyDocumentUnwrapFormula {
             return UnwrapResult.NoChange;
 
         _ = doc.UnsetFormula(param);
-        _ = doc.SetGlobalValue(param, value);
+        _ = doc.SetUnsetFormula(param, value);
 
         return new UnwrapResult(true, param, Array.Empty<FamilyParameter>());
     }
@@ -99,7 +99,7 @@ public static class FamilyDocumentUnwrapFormula {
 
         // Clear our formula and set value globally
         _ = doc.UnsetFormula(param);
-        _ = doc.SetGlobalValue(param, value);
+        _ = doc.SetUnsetFormula(param, value);
 
         // If ultimate source is built-in, set backlink: source.Formula = param.Name
         if (ParameterUtils.IsBuiltInParameter(ultimateSource.Id) &&

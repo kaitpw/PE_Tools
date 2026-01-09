@@ -29,7 +29,11 @@ public class LogEntry {
             ? string.Empty
             : string.Join("",
                 this.MessageList.Select((msg, i) =>
-                    $"{i + 1}. {msg}" + $"{(i < this.MessageList.Count - 1 ? "\n" : "")}"));
+                    this.MessageList.Count switch {
+                        0 => string.Empty,
+                        1 => msg,
+                        _ => $"{i + 1}. {msg}" + $"{(i < this.MessageList.Count - 1 ? "\n" : "")}"
+                    }));
 
     public LogStatus Status { get; private set; } = LogStatus.Pending;
     public Exception Exception { get; private set; }
@@ -88,9 +92,7 @@ public class LogEntry {
     /// </summary>
     public LogEntry Clone() {
         var clone = new LogEntry(this.Name) {
-            FamilyTypeName = this.FamilyTypeName,
-            Status = this.Status,
-            Exception = this.Exception
+            FamilyTypeName = this.FamilyTypeName, Status = this.Status, Exception = this.Exception
         };
         foreach (var msg in this.MessageList)
             clone.MessageList.Add(msg);
