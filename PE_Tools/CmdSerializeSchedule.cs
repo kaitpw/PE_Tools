@@ -31,7 +31,7 @@ public class CmdSerializeSchedule : IExternalCommand {
                             var storage = new Storage("Schedule Manager");
                             var outputDir = storage.OutputDir();
                             var spec = ScheduleHelper.SerializeSchedule(item.Schedule);
-                            var filename = outputDir.Json<ScheduleSpec>(spec.Name).Write(spec);
+                            var filename = outputDir.Json(spec.Name).Write(spec);
 
                             var balloon = new Ballogger();
                             _ = balloon.Add(Log.INFO, new StackFrame(),
@@ -74,7 +74,8 @@ public class CmdSerializeSchedule : IExternalCommand {
 
             var window = PaletteFactory.Create("Schedule Serializer", items, actions,
                 new PaletteOptions<ScheduleSerializePaletteItem> {
-                    SearchConfig = SearchConfig.PrimaryAndSecondary(), FilterKeySelector = item => item.TextPill
+                    SearchConfig = SearchConfig.PrimaryAndSecondary(),
+                    FilterKeySelector = item => item.TextPill
                 });
             window.Show();
 

@@ -16,10 +16,10 @@ public class DiagnosticLogger : IDisposable {
         var sanitizedFamilyName = SanitizeFileName(familyName);
         this._logFilePath = Path.Combine(outputDirectory, $"diagnostic_{sanitizedFamilyName}_{timestamp}.log");
 
-        Directory.CreateDirectory(outputDirectory);
+        _ = Directory.CreateDirectory(outputDirectory);
         this._writer = new StreamWriter(this._logFilePath, true, Encoding.UTF8);
         this.Log("=== Diagnostic Log Started ===");
-        this.Log($"Family: {familyName}");
+        this.Log($"Family: {familyName}"); 
         this.Log($"Timestamp: {timestamp}");
         this.Log("");
     }
@@ -50,7 +50,7 @@ public class DiagnosticLogger : IDisposable {
     public void LogException(string context, Exception ex) {
         this.Log($"EXCEPTION in {context}:");
         this.Log($"  Type: {ex.GetType().FullName}");
-        this.Log($"  Message: {ex.Message}");
+        this.Log($"  Message: {ex.ToStringDemystified()}");
 
         if (ex.StackTrace != null)
             this.Log($"  StackTrace: {ex.StackTrace}");
@@ -95,7 +95,7 @@ public class DiagnosticLogger : IDisposable {
                 }
             }
         } catch (Exception ex) {
-            this.Log($"  ERROR reading SharedParametersFilename: {ex.Message}");
+            this.Log($"  ERROR reading SharedParametersFilename: {ex.ToStringDemystified()}");
         }
     }
 
@@ -107,14 +107,14 @@ public class DiagnosticLogger : IDisposable {
             try {
                 this.Log($"    GUID: {extDef.GUID}");
             } catch (Exception ex) {
-                this.Log($"    GUID: ERROR - {ex.Message}");
+                this.Log($"    GUID: ERROR - {ex.ToStringDemystified()}");
             }
 
             try {
                 var paramType = extDef.GetDataType();
                 this.Log($"    ParameterType: {paramType?.TypeId ?? "(null)"}");
             } catch (Exception ex) {
-                this.Log($"    ParameterType: ERROR - {ex.Message}");
+                this.Log($"    ParameterType: ERROR - {ex.ToStringDemystified()}");
             }
 
             try {
@@ -126,10 +126,10 @@ public class DiagnosticLogger : IDisposable {
                 // We log this limitation for diagnostic purposes
                 if (ownerGroup != null) this.Log("    OwnerGroup exists (DefinitionFile access not available via API)");
             } catch (Exception ex) {
-                this.Log($"    OwnerGroup: ERROR - {ex.Message}");
+                this.Log($"    OwnerGroup: ERROR - {ex.ToStringDemystified()}");
             }
         } catch (Exception ex) {
-            this.Log($"  ERROR examining ExternalDefinition: {ex.Message}");
+            this.Log($"  ERROR examining ExternalDefinition: {ex.ToStringDemystified()}");
         }
     }
 

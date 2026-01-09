@@ -41,8 +41,6 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
                 processingContext
             );
 
-            if (mapping.NewName == "PE_E___Voltage") filteredCurrNames.ForEach(x => Debug.WriteLine(x));
-
             _ = this._sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam);
             if (sharedParam == null) continue;
 
@@ -95,7 +93,7 @@ public class MapReplaceParams : DocOperation<MapParamsSettings> {
         if (referencedParam != null) _ = doc.UnsetFormula(referencedParam);
 
         // Defer only when the value is coercible, and the mapping strategy is not a simple one. 
-        // A Tale Of Struggles: The actual contents of the formula are irreelevant for this decision 
+        // A Tale Of Struggles: The actual contents of the formula are irrelevant for this decision 
         var msgBase = $"Replaced {currParamName} → {replaced.Definition.Name}";
         var coercibleDataType = this.IgnoreCoercionDataTypes.Contains(replaced.Definition.GetDataType());
         var coercionStrategySimple =

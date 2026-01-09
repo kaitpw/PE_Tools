@@ -18,20 +18,15 @@ public static class SnapshotSerializer {
 
     // JSON
 
-    public static string ToJson(this List<ParamSnapshot> snapshots) {
+    public static List<ParamSnapshot> SortAndOrder(this List<ParamSnapshot> snapshots) {
         snapshots ??= [];
-        var sorted = snapshots.Select(s => s with {
+        return snapshots.Select(s => s with {
             ValuesPerType = new Dictionary<string, string>(
                 s.ValuesPerType.OrderBy(kvp => kvp.Key, StringComparer.OrdinalIgnoreCase),
                 StringComparer.Ordinal
             )
         }).ToList();
-        return JsonConvert.SerializeObject(sorted, _settings);
     }
-
-    public static string ToJson(this List<RefPlaneSpec> specs) =>
-        JsonConvert.SerializeObject(specs ?? [], _settings);
-
     // CSV (with type columns)
     public static string ToCsv(this List<ParamSnapshot> snapshots) {
         snapshots ??= [];
@@ -51,8 +46,8 @@ public static class SnapshotSerializer {
                 s.Name,
                 s.IsInstance.ToString(),
                 s.IsProjectParameter.ToString(),
-                _groupTypeLabelMap.TryGetValue(s.PropertiesGroup, out var groupLabel) ? groupLabel : $"Unknown Group Type: {s.PropertiesGroup}",
-                _specTypeLabelMap.TryGetValue(s.DataType, out var specLabel) ? specLabel : $"Unknown Spec Type: {s.DataType}",
+                PropertyGroupNamesProvider.GetLabelForForge(s.PropertiesGroup),
+                SpecNamesProvider.GetLabelForForge(s.DataType),
                 s.Formula ?? string.Empty
             };
 
@@ -65,10 +60,6 @@ public static class SnapshotSerializer {
 
         return string.Join(Environment.NewLine, lines);
     }
-
-    private static Dictionary<ForgeTypeId, string> _groupTypeLabelMap => PropertyGroupNamesProvider.GetLabelMap().ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
-    private static Dictionary<ForgeTypeId, string> _specTypeLabelMap => SpecNamesProvider.GetLabelMap().ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
-
 
     private static string EscapeCsvField(string field) {
         field ??= string.Empty;

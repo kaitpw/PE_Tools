@@ -60,9 +60,6 @@ public class PreProcessMappings(
                 processingContext
             );
 
-            foreach (var currName in filteredCurrNames) Debug.WriteLine(currName.Definition.Name);
-            Debug.WriteLine("--------------------------------");
-
             var sharedParamFound = sharedParamsDict.TryGetValue(mapping.NewName, out var sharedParam);
 
             if (fm.FindParameter(mapping.NewName) != null) {

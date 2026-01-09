@@ -79,12 +79,10 @@ public class CmdFFManager : IExternalCommand {
             .SelectFamilies(() => ctx.Doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(ctx.UiDoc))
             .ProcessQueue(queue, collectorQueue, outputFolderPath, ctx.OnFinishSettings);
 
-        _ = new ProcessingResultBuilder(ctx.Storage)
+        new ProcessingResultBuilder(ctx.Storage)
             .WithProfile(profile, ctx.SelectedProfile.TextPrimary)
             .WithOperationMetadata(queue)
-            .WithFamilyResults(logs.contexts)
-            .WithTotalTime(logs.totalMs)
-            .WriteOutput(ctx.OnFinishSettings.OpenOutputFilesOnCommandFinish);
+            .WriteSingleFamilyOutput(logs.contexts[0], ctx.OnFinishSettings.OpenOutputFilesOnCommandFinish);
 
         var balloon = new Ballogger();
         foreach (var logCtx in logs.contexts)

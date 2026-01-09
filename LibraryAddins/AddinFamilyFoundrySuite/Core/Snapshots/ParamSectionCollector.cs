@@ -3,6 +3,7 @@ using Autodesk.Revit.DB.Structure;
 using Nice3point.Revit.Extensions;
 using PeExtensions.FamDocument;
 using PeExtensions.FamDocument.GetValue;
+using PeExtensions.FamManager;
 using PeExtensions.FamParameter;
 using PeExtensions.PolyFill;
 
@@ -22,11 +23,16 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
 
     // IFamilyDocCollector implementation (supplements project data with formulas, or collects everything)
     void IFamilyDocCollector.Collect(FamilySnapshot snapshot, FamilyDocument famDoc) {
+        // Check if we have project data to supplement
         var hasProjectData = snapshot.Parameters?.Data?.Count > 0;
-        if (hasProjectData)
+
+        if (hasProjectData) {
+            // Filter out project parameters (which don't have a counterpart in the family, this is an unusual-ish case)
+            snapshot.Parameters.Data = [.. snapshot.Parameters.Data.Where(s => famDoc.FamilyManager.FindParameter(s.Name) != null)];
             this.SupplementWithFormulas(snapshot, famDoc);
-        else
+        } else {
             snapshot.Parameters = this.CollectFromFamilyDoc(famDoc);
+        }
     }
 
     // IProjectCollector implementation (preferred - runs first)
@@ -118,6 +124,7 @@ public class ParamSectionCollector : IProjectCollector, IFamilyDocCollector {
         // Always mark as partial - project collection cannot get formulas
         // Family doc collector will supplement with formulas
         // Also partial if we couldn't create temp instances for all symbols
+        // Allow for better filterting out of Proj Parameters in the family collector counterpart
         return new SnapshotSection<ParamSnapshot> {
             Source = SnapshotSource.Project,
             IsPartial = true,

@@ -154,14 +154,24 @@ public class OutputManager : BaseLocalManager {
     public override string Name { get; init; } = "output";
 
     /// <summary>
-    ///     Creates a JSON writer for output files.
-    ///     Write-only, no schema injection, timestamped filename.
+    ///     Creates a JSON writer for output files without timestamp in filename.
+    ///     Write-only, no schema injection.
     /// </summary>
-    public JsonWriter<T> Json<T>(string filename) where T : class, new() =>
-        new ComposableJson<T>(this.GetDatedJsonPath(filename), this.DirectoryPath, JsonBehavior.Output);
+    public JsonWriter<object> Json(string filename) =>
+        new ComposableJson<object>(this.GetJsonPath(filename), this.DirectoryPath, JsonBehavior.Output);
 
-    public CsvWriter<T> Csv<T>(string filename) where T : class, new() =>
-        new Csv<T>(this.GetDatedCsvPath(filename));
+    /// <summary>
+    ///     Creates a JSON writer for output files with timestamp in filename.
+    ///     Write-only, no schema injection.
+    /// </summary>
+    public JsonWriter<object> JsonDated(string filename) =>
+        new ComposableJson<object>(this.GetDatedJsonPath(filename), this.DirectoryPath, JsonBehavior.Output);
+
+    public CsvWriter<object> Csv(string filename) =>
+        new Csv<object>(this.GetCsvPath(filename));
+
+    public CsvWriter<object> CsvDated(string filename) =>
+        new Csv<object>(this.GetDatedCsvPath(filename));
 
     /// <summary>
     ///     Navigate to a subdirectory for accessing files within nested folders.
@@ -173,5 +183,17 @@ public class OutputManager : BaseLocalManager {
             return new OutputManager(this.DirectoryPath, subdirectory);
 
         throw new ArgumentException($"Subdirectory path '{subdirectory}' would escape base directory.");
+    }
+
+    /// <summary>
+    ///     Creates a timestamped subdirectory for organizing output from a single run.
+    ///     Useful for incremental output where multiple files need to be grouped together.
+    /// </summary>
+    /// <param name="prefix">Optional prefix for the timestamped directory (e.g., "run", "batch")</param>
+    /// <returns>OutputManager scoped to the timestamped subdirectory</returns>
+    public OutputManager TimestampedSubDir(string prefix = null) {
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        var dirName = string.IsNullOrWhiteSpace(prefix) ? timestamp : $"{prefix}_{timestamp}";
+        return this.SubDir(dirName);
     }
 }

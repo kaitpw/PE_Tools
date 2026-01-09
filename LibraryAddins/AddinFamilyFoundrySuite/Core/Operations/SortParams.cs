@@ -44,12 +44,7 @@ public class SortParams(SortParamsSettings settings) : DocOperation<SortParamsSe
 
         var nameComparer = this.GetNameComparer();
         if (nameComparer != null) sortedParams = sortedParams.ThenBy(p => p.Definition.Name, nameComparer);
-
         var sortedParamsList = sortedParams.ToList();
-
-        foreach (var p in sortedParamsList)
-            Debug.WriteLine($"{p.Definition.Name} {string.IsNullOrWhiteSpace(p.Formula)} {p.IsDeterminedByFormula}");
-
         doc.FamilyManager.ReorderParameters(sortedParamsList);
 
         logs.Add(new LogEntry($"Sorted {parameters.Count} parameters").Success());

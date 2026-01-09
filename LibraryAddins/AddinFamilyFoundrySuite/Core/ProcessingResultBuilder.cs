@@ -1,8 +1,7 @@
 using AddinFamilyFoundrySuite.Core.Aggregators.Snapshots;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using PeServices.Storage;
-using PeServices.Storage.Core.Json.ContractResolvers;
+using PeServices.Storage.Core;
+using PeServices.Storage.Core.Json.SchemaProviders;
 using PeUtils.Files;
 
 namespace AddinFamilyFoundrySuite.Core;
@@ -10,21 +9,22 @@ namespace AddinFamilyFoundrySuite.Core;
 /// <summary>
 ///     Fluent builder for generating processing result output files.
 /// </summary>
-public class ProcessingResultBuilder {
-    private static readonly JsonSerializerSettings JsonSettings = new() {
-        Formatting = Formatting.Indented,
-        ContractResolver = new RevitTypeContractResolver(),
-        Converters = [new StringEnumConverter()]
-    };
-
-    private readonly Storage _storage;
-    private List<FamilyProcessingContext> _familyContexts = [];
+public class ProcessingResultBuilder(Storage storage) {
+    private readonly List<FamilyProcessingContext> _familyContexts = [];
+    private readonly OutputManager _runOutput = storage.OutputDir().TimestampedSubDir();
     private List<(string Name, string Description, string Type, string IsMerged)> _operationMetadata = [];
     private string _profileName;
     private object _profileSettings;
-    private double _totalMs;
 
-    public ProcessingResultBuilder(Storage storage) => this._storage = storage;
+    private static string GetDescription(ParamSnapshot param) =>
+        $"{GetInstTypeStr(param)}: {param.Name} ({GetDataTypeLabel(param)})";
+
+    private static string GetDataTypeLabel(ParamSnapshot param) => SpecNamesProvider.GetLabelForForge(param.DataType);
+
+    private static string GetPropGroupLabel(ParamSnapshot param) =>
+        PropertyGroupNamesProvider.GetLabelForForge(param.PropertiesGroup);
+
+    private static string GetInstTypeStr(ParamSnapshot param) => param.IsInstance ? "INST" : "TYPE";
 
     public ProcessingResultBuilder WithProfile<T>(T settings, string profileName) where T : BaseProfileSettings {
         this._profileSettings = settings;
@@ -37,59 +37,91 @@ public class ProcessingResultBuilder {
         return this;
     }
 
-    public ProcessingResultBuilder WithFamilyResults(List<FamilyProcessingContext> contexts) {
-        this._familyContexts = contexts;
-        return this;
-    }
+    /// <summary>
+    ///     Writes output for a single family context as it completes.
+    ///     Outputs to a subdirectory named after the family within the run directory.
+    /// </summary>
+    public void WriteSingleFamilyOutput(FamilyProcessingContext ctx, bool openOnFinish = false) {
+        if (this._runOutput == null)
+            throw new InvalidOperationException("Must call InitializeRun() before WriteSingleFamilyOutput()");
 
-    public ProcessingResultBuilder WithTotalTime(double totalMs) {
-        this._totalMs = totalMs;
-        return this;
+        // Track contexts for summary
+        this._familyContexts.Add(ctx);
+
+        var familyDirName = SanitizeDirName(ctx.FamilyName);
+        var familyOutput = this._runOutput.SubDir(familyDirName);
+
+        // Serialize each section separately (pre-processing)
+        if (ctx.PreProcessSnapshot != null)
+            SerializeSnapshotSections(ctx.PreProcessSnapshot, familyOutput, "pre");
+
+        // Serialize each section separately (post-processing)
+        if (ctx.PostProcessSnapshot != null)
+            SerializeSnapshotSections(ctx.PostProcessSnapshot, familyOutput, "post");
+
+        var settingsName = $"snapshot-profile-{this._profileName}.json";
+        var abridgedName = "logs-abridged.json";
+        var detailedName = "logs-detailed.json";
+        var paramDiffName = "snapshot-parameters-diff.json";
+
+        _ = familyOutput.Json(settingsName).Write(this._profileSettings);
+        _ = familyOutput.Json(abridgedName).Write(BuildAbridged(ctx));
+        var detailedPath = familyOutput.Json(detailedName).Write(this.BuildDetailed(ctx))!;
+        _ = familyOutput.Json(paramDiffName).Write(BuildParameterDiff(ctx));
+
+        if (openOnFinish) FileUtils.OpenInDefaultApp(detailedPath);
     }
 
     /// <summary>
-    ///     Writes a timestamped run directory with per-family output files:
-    ///     - pre-snapshot-parameters.json / pre-snapshot-parameters.csv
-    ///     - pre-snapshot-refplanesanddims.json / pre-snapshot-refplanesanddims.csv
-    ///     - post-snapshot-parameters.json / post-snapshot-parameters.csv
-    ///     - post-snapshot-refplanesanddims.json / post-snapshot-refplanesanddims.csv
-    ///     - abridged.json / detailed.json
-    ///     - settings.json
+    ///     Writes a summary file aggregating results from all families processed incrementally.
+    ///     Should be called after all families have been processed.
     /// </summary>
-    /// <returns>Path to the run directory.</returns>
-    public string WriteOutput(bool openOnFinish) {
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        var runDir = Path.Combine(this._storage.OutputDir().DirectoryPath, timestamp);
-        _ = Directory.CreateDirectory(runDir);
+    public void WriteMultiFamilySummary(double totalMs, bool openOnFinish = false) {
+        if (this._runOutput == null)
+            throw new InvalidOperationException("Must call InitializeRun() before WriteMultiFamilySummary()");
 
-        string firstAbridgedPath = null;
+        if (!this._familyContexts.Any()) return;
 
-        foreach (var ctx in this._familyContexts) {
-            var familyDirName = SanitizeDirName(ctx.FamilyName);
-            var familyDir = Path.Combine(runDir, familyDirName);
-            _ = Directory.CreateDirectory(familyDir);
+        var totalErrors = this._familyContexts
+            .SelectMany(ctx => {
+                var (logs, err) = ctx.OperationLogs;
+                if (err != null) return [];
+                return logs?.SelectMany(log => log.Entries.Where(e => e.Status == LogStatus.Error))
+                       ?? [];
+            })
+            .Count();
 
-            // Serialize each section separately (pre-processing)
-            if (ctx.PreProcessSnapshot != null) SerializeSnapshotSections(ctx.PreProcessSnapshot, familyDir, "pre");
+        var familySummaries = this._familyContexts.Select(ctx => {
+            var (logs, err) = ctx.OperationLogs;
+            var errorCount = err != null
+                ? 1
+                : logs?.SelectMany(log => log.Entries.Where(e => e.Status == LogStatus.Error)).Count() ?? 0;
 
-            // Serialize each section separately (post-processing)
-            if (ctx.PostProcessSnapshot != null) SerializeSnapshotSections(ctx.PostProcessSnapshot, familyDir, "post");
+            return new {
+                Family = ctx.FamilyName,
+                Status = err != null ? "Failed" : errorCount > 0 ? "Completed with errors" : "Success",
+                SecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
+                ErrorCount = errorCount
+            };
+        }).ToList();
 
-            var abridgedPath = Path.Combine(familyDir, "abridged.json");
-            var detailedPath = Path.Combine(familyDir, "detailed.json");
-            var settingsPath = Path.Combine(familyDir, "settings.json");
+        var summary = new {
+            Profile = this._profileName,
+            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+            TotalSecondsElapsed = Math.Round(totalMs / 1000.0, 3),
+            Summary = new {
+                TotalFamilies = this._familyContexts.Count,
+                Successful = familySummaries.Count(f => f.Status == "Success"),
+                CompletedWithErrors = familySummaries.Count(f => f.Status == "Completed with errors"),
+                Failed = familySummaries.Count(f => f.Status == "Failed"),
+                TotalErrors = totalErrors
+            },
+            Families = familySummaries
+        };
 
-            WriteJson(settingsPath, new { Profile = this._profileName, ProfileSettings = this._profileSettings });
-            WriteJson(abridgedPath, BuildAbridged(ctx));
-            WriteJson(detailedPath, this.BuildDetailed(ctx));
+        var summaryPath = this._runOutput.Json("run-summary.json").Write(summary);
 
-            firstAbridgedPath ??= abridgedPath;
-        }
-
-        if (openOnFinish && firstAbridgedPath is not null)
-            FileUtils.OpenInDefaultApp(firstAbridgedPath);
-
-        return runDir;
+        if (openOnFinish) FileUtils.OpenInDefaultApp(summaryPath);
     }
 
     private static object BuildAbridged(FamilyProcessingContext ctx) {
@@ -122,27 +154,35 @@ public class ProcessingResultBuilder {
 
     private object BuildDetailed(FamilyProcessingContext ctx) {
         var (logs, err) = ctx.OperationLogs;
-        var operationLogs = err != null ? new List<OperationLog>() : logs ?? [];
+        var operationLogs = err != null ? [] : logs ?? [];
+
+        // Create a lookup for operation metadata by name (handle duplicates by taking first)
+        var metadataLookup = this._operationMetadata
+            .GroupBy(op => op.Name)
+            .ToDictionary(g => g.Key, g => g.First());
 
         return new {
-            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-            RunTotalSecondsElapsed = Math.Round(this._totalMs / 1000.0, 3),
             Family = ctx.FamilyName,
+            Timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
             FamilyTotalSecondsElapsed = Math.Round(ctx.TotalMs / 1000.0, 3),
             FamilyPreCollectionSecondsElapsed = Math.Round(ctx.PreCollectionMs / 1000.0, 3),
             FamilyOperationsSecondsElapsed = Math.Round(ctx.OperationsMs / 1000.0, 3),
             FamilyPostCollectionSecondsElapsed = Math.Round(ctx.PostCollectionMs / 1000.0, 3),
             Error = err?.Message,
             Profile = this._profileName,
-            OperationMetadata =
-                this._operationMetadata.Select(op => new { op.Name, op.Description, op.Type, op.IsMerged }).ToList(),
-            Operations = operationLogs.Select(log => new {
-                log.OperationName,
-                SecondsElapsed = Math.Round(log.MsElapsed / 1000.0, 3),
-                Successes = BuildMessages(log.Entries, LogStatus.Success),
-                Skipped = BuildMessages(log.Entries, LogStatus.Skipped),
-                Errors = BuildMessages(log.Entries, LogStatus.Error),
-                Deferred = BuildMessages(log.Entries, LogStatus.Pending)
+            Operations = operationLogs.Select(log => {
+                var hasMeta = metadataLookup.TryGetValue(log.OperationName, out var meta);
+                return new {
+                    Name = log.OperationName,
+                    Description = hasMeta ? meta.Description : null,
+                    Type = hasMeta ? meta.Type : null,
+                    IsMerged = hasMeta ? meta.IsMerged : null,
+                    SecondsElapsed = Math.Round(log.MsElapsed / 1000.0, 3),
+                    Successes = BuildMessages(log.Entries, LogStatus.Success),
+                    Skipped = BuildMessages(log.Entries, LogStatus.Skipped),
+                    Deferred = BuildMessages(log.Entries, LogStatus.Pending),
+                    Errors = BuildMessages(log.Entries, LogStatus.Error)
+                };
             }).ToList()
         };
     }
@@ -157,27 +197,105 @@ public class ProcessingResultBuilder {
                 return $"{contextsStr}{g.Key.Name}{messageStr}";
             }).ToList();
 
+    private static object BuildParameterDiff(FamilyProcessingContext ctx) {
+        if (ctx.PreProcessSnapshot?.Parameters?.Data == null || ctx.PostProcessSnapshot?.Parameters?.Data == null)
+            return new { Message = "No parameter snapshots available for comparison" };
 
-    private static void WriteJson(string path, object data) {
-        var json = JsonConvert.SerializeObject(data, JsonSettings);
-        File.WriteAllText(path, json);
-    }
+        // Use composite key (Name + IsInstance) to handle duplicate parameter names
+        var preParams = ctx.PreProcessSnapshot.Parameters.Data
+            .GroupBy(p => (p.Name, p.IsInstance))
+            .ToDictionary(g => g.Key, g => g.First());
+        var postParams = ctx.PostProcessSnapshot.Parameters.Data
+            .GroupBy(p => (p.Name, p.IsInstance))
+            .ToDictionary(g => g.Key, g => g.First());
 
-    private static void SerializeSnapshotSections(FamilySnapshot snapshot, string familyDir, string prefix) {
-        // Parameters section
-        if (snapshot.Parameters?.Data != null && snapshot.Parameters.Data.Count > 0) {
-            var paramsData = snapshot.Parameters.Data;
-            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-parameters.json"), paramsData.ToJson());
-            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-parameters.csv"), paramsData.ToCsv());
+        var added = new List<object>();
+        var removed = new List<string>();
+        var modified = new List<object>();
+
+        // Find added parameters
+        foreach (var (key, postParam) in postParams) {
+            if (!preParams.ContainsKey(key)) {
+                added.Add(new {
+                    Description = GetDescription(postParam),
+                    Formula = postParam.Formula ?? null,
+                    HasValueForAllTypes = postParam.Formula != null || postParam.HasValueForAllTypes()
+                });
+            }
         }
 
-        // RefPlanesAndDims section
+        // Find removed parameters
+        foreach (var (key, preParam) in preParams)
+            if (!postParams.ContainsKey(key))
+                removed.Add(GetDescription(preParam));
+
+        // Find modified parameters
+        foreach (var (key, preParam) in preParams) {
+            if (!postParams.TryGetValue(key, out var postParam))
+                continue;
+
+            var changes = new List<string>();
+
+            // Check formula changes
+            if (preParam.Formula != postParam.Formula) {
+                var preFormula = string.IsNullOrWhiteSpace(preParam.Formula) ? "(none)" : preParam.Formula;
+                var postFormula = string.IsNullOrWhiteSpace(postParam.Formula) ? "(none)" : postParam.Formula;
+                changes.Add($"Formula: {preFormula} → {postFormula}");
+            }
+
+            // Check value changes per type
+            var allTypes = preParam.ValuesPerType.Keys.Union(postParam.ValuesPerType.Keys).ToHashSet();
+            var valueChanges = new Dictionary<string, string>();
+
+            foreach (var typeName in allTypes) {
+                var preValue = preParam.ValuesPerType.GetValueOrDefault(typeName);
+                var postValue = postParam.ValuesPerType.GetValueOrDefault(typeName);
+
+                if (preValue != postValue) {
+                    var preDisplay = string.IsNullOrWhiteSpace(preValue) ? "(empty)" : preValue;
+                    var postDisplay = string.IsNullOrWhiteSpace(postValue) ? "(empty)" : postValue;
+                    valueChanges[typeName] = $"{preDisplay} → {postDisplay}";
+                }
+            }
+
+            if (valueChanges.Any()) changes.Add($"Values changed for {valueChanges.Count} type(s)");
+
+            // Check metadata changes
+            if (preParam.IsInstance != postParam.IsInstance)
+                changes.Add($"IsInstance: {preParam.IsInstance} → {postParam.IsInstance}");
+
+            if (preParam.PropertiesGroup.TypeId != postParam.PropertiesGroup.TypeId)
+                changes.Add($"Group: {GetPropGroupLabel(preParam)} → {GetPropGroupLabel(postParam)}");
+
+            if (preParam.DataType.TypeId != postParam.DataType.TypeId)
+                changes.Add($"DataType: {GetDataTypeLabel(preParam)} → {GetDataTypeLabel(postParam)}");
+
+            if (changes.Any()) {
+                modified.Add(new { Description = GetDescription(preParam), Changes = changes });
+            }
+        }
+
+        return new {
+            Family = ctx.FamilyName,
+            Summary = new {
+                ParametersRemoved = removed.Count, ParametersAdded = added.Count, ParametersModified = modified.Count
+            },
+            Removed = removed.Any() ? removed : null,
+            Added = added.Any() ? added : null,
+            Modified = modified.Any() ? modified : null
+        };
+    }
+
+
+    private static void SerializeSnapshotSections(FamilySnapshot snapshot, OutputManager output, string prefix) {
+        if (snapshot.Parameters?.Data != null && snapshot.Parameters.Data.Count > 0) {
+            var paramsData = snapshot.Parameters.Data;
+            _ = output.Json($"snapshot-parameters-{prefix}.json").Write(paramsData.SortAndOrder());
+        }
+
         if (snapshot.RefPlanesAndDims?.Data != null && snapshot.RefPlanesAndDims.Data.Count > 0) {
             var refPlanesData = snapshot.RefPlanesAndDims.Data;
-            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-refplanesanddims.json"),
-                refPlanesData.ToJson());
-            File.WriteAllText(Path.Combine(familyDir, $"{prefix}-snapshot-refplanesanddims.csv"),
-                refPlanesData.ToCsv());
+            _ = output.Json($"snapshot-refplanesanddims-{prefix}.json").Write(refPlanesData);
         }
     }
 
@@ -198,15 +316,13 @@ public class ProcessingResultBuilder {
 /// <summary>
 ///     Builder for dry-run output.
 /// </summary>
-public class DryRunResultBuilder {
-    private readonly Storage _storage;
+public class DryRunResultBuilder(Storage storage) {
+    private readonly Storage _storage = storage;
     private List<SharedParameterDefinition> _apsParams = [];
     private List<Family> _families = [];
     private List<(string Name, string Description, string Type, string IsMerged)> _operationMetadata = [];
     private string _profileName;
     private object _profileSettings;
-
-    public DryRunResultBuilder(Storage storage) => this._storage = storage;
 
     public DryRunResultBuilder WithProfile<T>(T settings, string profileName) where T : BaseProfileSettings {
         this._profileSettings = settings;
@@ -227,23 +343,6 @@ public class DryRunResultBuilder {
     public DryRunResultBuilder WithOperationMetadata(OperationQueue queue) {
         this._operationMetadata = queue.GetExecutableMetadata();
         return this;
-    }
-
-    public string WriteOutput(bool openOnFinish) {
-        var (summary, detailed) = this.GenerateDryRunData();
-
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-        var filename = $"dry-run_{timestamp}.json";
-        var detailedFilename = $"dry-run_{timestamp}_detailed.json";
-
-        _ = this._storage.OutputDir().Json<object>(filename).Write(summary);
-        _ = this._storage.OutputDir().Json<object>(detailedFilename).Write(detailed);
-
-        var logPath = Path.Combine(this._storage.OutputDir().DirectoryPath, filename);
-        if (openOnFinish)
-            FileUtils.OpenInDefaultApp(logPath);
-
-        return logPath;
     }
 
     private (object summary, object detailed) GenerateDryRunData() {

@@ -102,20 +102,25 @@ public class CmdFFMigrator : IExternalCommand {
             .Add(new ParamSectionCollector())
             .Add(new RefPlaneSectionCollector());
 
+        // Setup result builder for incremental writes
+        var resultBuilder = new ProcessingResultBuilder(ctx.Storage)
+            .WithProfile(profile, ctx.SelectedProfile.TextPrimary)
+            .WithOperationMetadata(queue)
+;
         using var processor = new OperationProcessor(ctx.Doc, profile.ExecutionOptions);
         var logs = processor
             .SelectFamilies(() => {
                 var picked = Pickers.GetSelectedFamilies(ctx.UiDoc);
                 return picked.Any() ? picked : profile.GetFamilies(ctx.Doc);
             })
+            .WithPerFamilyCallback(familyCtx =>
+                // Write output for each family as it completes
+                resultBuilder.WriteSingleFamilyOutput(familyCtx, false)
+            )
             .ProcessQueue(queue, collectorQueue, outputFolderPath, ctx.OnFinishSettings);
 
-        _ = new ProcessingResultBuilder(ctx.Storage)
-            .WithProfile(profile, ctx.SelectedProfile.TextPrimary)
-            .WithOperationMetadata(queue)
-            .WithFamilyResults(logs.contexts)
-            .WithTotalTime(logs.totalMs)
-            .WriteOutput(ctx.OnFinishSettings.OpenOutputFilesOnCommandFinish);
+        // Write summary file aggregating all families
+        resultBuilder.WriteMultiFamilySummary(logs.totalMs, ctx.OnFinishSettings.OpenOutputFilesOnCommandFinish);
 
         var balloon = new Ballogger();
         foreach (var logCtx in logs.contexts)

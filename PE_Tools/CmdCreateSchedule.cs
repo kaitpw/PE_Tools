@@ -419,7 +419,7 @@ public class CmdCreateSchedule : IExternalCommand {
                 result.Warnings
             };
 
-            var outputPath = ctx.Storage.OutputDir().Json<object>("schedule-creation").Write(outputData);
+            var outputPath = ctx.Storage.OutputDir().Json("schedule-creation").Write(outputData);
             return outputPath;
         } catch (Exception ex) {
             Debug.WriteLine($"Failed to write output: {ex.Message}");

@@ -93,6 +93,7 @@ public class ComposableJson<T> : JsonReader<T>, JsonWriter<T>, JsonReadWriter<T>
     /// <summary>
     ///     Writes the data to the JSON file. Returns the file path.
     /// </summary>
+    /// <returns>The file path of the written file.</returns>
     public string Write(T data) {
         if (this._behavior == JsonBehavior.Output) {
             // Output mode: no validation, no schema

@@ -1,11 +1,28 @@
-
 using Nice3point.Revit.Extensions;
 using PeServices.Storage.Core.Json.SchemaProcessors;
+
 namespace PeServices.Storage.Core.Json.SchemaProviders;
 
 public class SpecNamesProvider : IOptionsProvider {
     public IEnumerable<string> GetExamples() =>
-        GetLabelMap().Keys;
+        GetLabelToForgeMap().Keys;
+
+    public static Dictionary<string, ForgeTypeId> GetLabelToForgeMap() {
+        var labelMap = new Dictionary<string, ForgeTypeId>();
+
+        foreach (var spec in SpecUtils.GetAllSpecs()) {
+            var label = FormatSpecWithDiscipline(spec);
+            labelMap.TryAdd(label, spec);
+        }
+
+        return labelMap;
+    }
+
+    public static Dictionary<ForgeTypeId, string> GetForgeToLabelMap() =>
+        GetLabelToForgeMap().ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+
+    public static string GetLabelForForge(ForgeTypeId forge) =>
+        GetForgeToLabelMap().TryGetValue(forge, out var label) ? label : forge.TypeId;
 
     private static string FormatSpecWithDiscipline(ForgeTypeId spec) {
         var label = spec.ToLabel();
@@ -18,19 +35,5 @@ public class SpecNamesProvider : IOptionsProvider {
         var disciplineId = UnitUtils.GetDiscipline(spec);
         var disciplineLabel = LabelUtils.GetLabelForDiscipline(disciplineId);
         return !string.IsNullOrEmpty(disciplineLabel) ? $" ({disciplineLabel})" : string.Empty;
-    }
-
-    public static Dictionary<string, ForgeTypeId> GetLabelMap() {
-        var labelMap = new Dictionary<string, ForgeTypeId>();
-
-        foreach (var spec in SpecUtils.GetAllSpecs()) {
-            var label = FormatSpecWithDiscipline(spec);
-            // Skip duplicates - keep first occurrence
-            if (!labelMap.ContainsKey(label)) {
-                labelMap[label] = spec;
-            }
-        }
-
-        return labelMap;
     }
 }

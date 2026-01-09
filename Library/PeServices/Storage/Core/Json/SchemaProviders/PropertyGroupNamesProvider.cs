@@ -1,14 +1,15 @@
 using Nice3point.Revit.Extensions;
 using PeServices.Storage.Core.Json.SchemaProcessors;
+
 namespace PeServices.Storage.Core.Json.SchemaProviders;
 
 public class PropertyGroupNamesProvider : IOptionsProvider {
     public IEnumerable<string> GetExamples() {
-        var labelMap = GetLabelMap();
+        var labelMap = GetLabelForgeMap();
         return labelMap.Keys;
     }
 
-    public static Dictionary<string, ForgeTypeId> GetLabelMap() {
+    public static Dictionary<string, ForgeTypeId> GetLabelForgeMap() {
         var properties = typeof(GroupTypeId).GetProperties(BindingFlags.Public | BindingFlags.Static);
         var labelMap = new Dictionary<string, ForgeTypeId>();
 
@@ -18,12 +19,15 @@ public class PropertyGroupNamesProvider : IOptionsProvider {
             if (value == null) continue;
 
             var label = value.ToLabel();
-            // Skip duplicates - keep first occurrence
-            if (!labelMap.ContainsKey(label)) {
-                labelMap[label] = value;
-            }
+            labelMap.TryAdd(label, value);
         }
 
         return labelMap;
     }
+
+    public static Dictionary<ForgeTypeId, string> GetForgeLabelMap() =>
+        GetLabelForgeMap().ToDictionary(kvp => kvp.Value, kvp => kvp.Key);
+
+    public static string GetLabelForForge(ForgeTypeId forge) =>
+        GetForgeLabelMap().TryGetValue(forge, out var label) ? label : forge.TypeId;
 }

@@ -1,4 +1,5 @@
 using AddinFamilyFoundrySuite.Core.OperationSettings;
+using PeRevit.Lib;
 using PeServices.Storage;
 using PeUtils.Files;
 using System.ComponentModel;
@@ -18,7 +19,7 @@ public class BaseProfileSettings {
         new FilteredElementCollector(doc)
             .OfClass(typeof(Family))
             .Cast<Family>()
-            .Where(this.FilterFamilies.Filter)
+            .Where(f => this.FilterFamilies.Filter(f, doc))
             .ToList();
 
     /// <summary>
@@ -56,19 +57,30 @@ public class BaseProfileSettings {
         }).ToList();
 
     public class FilterFamiliesSettings {
-        [Required] public List<Category> IncludeCategoriesEqualing { get; init; } = [];
+        [Description(
+            "Default true. Whether to process all families regardless (true) or only process families that have an instance placed in the document (false).")]
+        public bool IncludeUnusedFamilies { get; init; } = true;
 
+        [Description("Categories of families to include (eg. Mechanical Equipment, Plumbing Fixtures, etc.)")]
         [Required]
+        public List<Category> IncludeCategoriesEqualing { get; init; } = [];
+
+        [Description(
+            "Optional conditional filter based on family parameter values. Uses schedule filter logic to evaluate parameter conditions. Leave FieldName empty to disable this filter.")]
+        public ScheduleFilterSpec IncludeByCondition { get; init; } = new() { FieldName = "" };
+
         [Description(
             "Filter families by name inclusion. If any include filters are specified (Equaling, Containing, or StartingWith), only families matching at least one filter will pass. If all include filters are empty, all families pass the include check (exclude filters may still apply).")]
+        [Required]
         public IncludeFamilies IncludeNames { get; init; } = new();
 
-        [Required]
         [Description(
             "Filter families by name exclusion. If any exclude filters are specified (Equaling, Containing, or StartingWith), families matching any filter will be removed. If all exclude filters are empty, no families are excluded by this filter.")]
+        [Required]
         public ExcludeFamilies ExcludeNames { get; init; } = new();
 
-        public bool Filter(Family f) {
+
+        public bool Filter(Family f, Document doc) {
             var familyName = f.Name;
             var familyCategory = f.FamilyCategory;
 
@@ -78,7 +90,32 @@ public class BaseProfileSettings {
                     return false;
             }
 
-            return this.IsNameIncluded(familyName) && !this.IsNameExcluded(familyName);
+            // Step 2: Filter by name inclusion/exclusion
+            if (!this.IsNameIncluded(familyName) || this.IsNameExcluded(familyName))
+                return false;
+
+            // Step 3: Filter by placed instances if specified
+            if (!this.IncludeUnusedFamilies) {
+                var hasInstances = new FilteredElementCollector(doc)
+                    .OfClass(typeof(FamilyInstance))
+                    .Cast<FamilyInstance>()
+                    .Any(fi => fi.Symbol?.Family?.Id == f.Id);
+
+                if (!hasInstances)
+                    return false;
+            }
+
+            // Step 4: Filter by conditional parameter filter if specified
+            if (string.IsNullOrEmpty(this.IncludeByCondition.FieldName)) return true;
+
+            // Use ScheduleHelper to evaluate the filter using Revit's native schedule filtering
+            var scheduleSpec = new ScheduleSpec {
+                CategoryName = familyCategory?.Name ?? "",
+                Filters = [this.IncludeByCondition]
+            };
+
+            var matchingFamilies = ScheduleHelper.GetFamiliesMatchingFilters(doc, scheduleSpec, [f]);
+            return matchingFamilies.Contains(f.Name);
         }
 
         private bool IsNameIncluded(string familyName) {

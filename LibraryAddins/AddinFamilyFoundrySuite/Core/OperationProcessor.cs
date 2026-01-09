@@ -16,6 +16,8 @@ public class OperationProcessor(
     /// </summary>
     private Func<List<Family>> _documentFamilySelector;
 
+    private Action<FamilyProcessingContext> _perFamilyCallback;
+
     private Document OpenDoc { get; } = doc;
 
     public void Dispose() { }
@@ -29,6 +31,20 @@ public class OperationProcessor(
             .GroupBy(f => f.Id)
             .Select(g => g.First())
             .ToList();
+        return this;
+    }
+
+    // TODO: make this also return an operationLog?
+    public OperationProcessor WithPerFamilyCallback(Action<FamilyProcessingContext> callback) {
+        this._perFamilyCallback =
+            context => {
+                try {
+                    callback(context);
+                } catch (Exception ex) {
+                    Debug.WriteLine($"Failed to invoke per-family callback for {context.FamilyName}");
+                    Debug.WriteLine(ex.ToStringDemystified());
+                }
+            };
         return this;
     }
 
@@ -123,6 +139,7 @@ public class OperationProcessor(
             if (!famDoc.Close(false))
                 throw new InvalidOperationException($"Failed to close family document for {family.Name}");
             contexts.Add(context);
+            this._perFamilyCallback?.Invoke(context);
         }
 
         return contexts;
@@ -144,7 +161,7 @@ public class OperationProcessor(
                         .CollectPostSnapshot(collectorQueue),
                 out var context);
         // Note: No Close() call - we don't close the active family document
-
+        this._perFamilyCallback?.Invoke(context);
         return [context];
     }
 
@@ -199,10 +216,9 @@ public class OperationProcessor(
             && string.IsNullOrEmpty(outputFolderPath))
             saveLocations.Add(outputFolderPath);
 
-        if (options?.SaveFamilyToOutputDir ?? false) {
-            var saveLocation = famDoc.PathName;
-            saveLocations.Add(saveLocation);
-        }
+        if (!(options?.SaveFamilyToOutputDir ?? false)) return saveLocations;
+        var saveLocation = famDoc.PathName;
+        saveLocations.Add(saveLocation);
 
         return saveLocations;
     }

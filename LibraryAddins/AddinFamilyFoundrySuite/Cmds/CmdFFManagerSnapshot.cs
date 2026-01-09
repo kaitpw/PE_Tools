@@ -42,11 +42,9 @@ public class CmdFFManagerSnapshot : IExternalCommand {
                 .SelectFamilies(() => doc.IsFamilyDocument ? null : Pickers.GetSelectedFamilies(uiDoc))
                 .ProcessQueue(queue, collectorQueue, outputFolderPath);
 
-            _ = new ProcessingResultBuilder(storage)
+            new ProcessingResultBuilder(storage)
                 .WithOperationMetadata(queue)
-                .WithFamilyResults(logs.contexts)
-                .WithTotalTime(logs.totalMs)
-                .WriteOutput(true);
+                .WriteSingleFamilyOutput(logs.contexts[0], true);
 
             var balloon = new Ballogger();
             foreach (var ctx in logs.contexts)
