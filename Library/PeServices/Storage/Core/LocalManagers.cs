@@ -156,7 +156,7 @@ public class OutputManager : BaseLocalManager {
     public override string Name { get; init; } = "output";
 
     /// <summary>
-    ///     Creates a JSON writer for output files without timestamp in filename.
+    ///     Creates a JSON writer for an output file of a provided name. YOU MUST provide a file extension yourself.
     ///     Write-only, no schema injection.
     /// </summary>
     public JsonWriter<object> Json(string filename) =>

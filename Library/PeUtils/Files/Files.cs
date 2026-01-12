@@ -41,7 +41,7 @@ public static class FileUtils {
         if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             throw new ArgumentException($@"Filename contains invalid characters: {fileName}", nameof(filePath));
         if (!string.Equals(fileExt, normalizedExpectedExtension, StringComparison.OrdinalIgnoreCase)) {
-            throw new ArgumentException($@"File must have a '{expectedExt}' extension. Found '{fileExt}'.",
+            throw new ArgumentException($@"File must have a '{expectedExt}' extension. Found '{fileExt ?? "null"}'.",
                 nameof(filePath));
         }
     }
